@@ -1,0 +1,65 @@
+.getpost {
+  border-top: 1px solid #eeeeee;
+  padding-block: 20px;
+}
+
+.getpost h1,
+.getpost p,
+.postdata h1,
+.postdata p,
+.posteddata h1,
+.postitem,
+.posteddatacard {
+  text-align: center;
+}
+
+.functionbuttons {
+  text-align: center;
+}
+
+.btn {
+  background-color: #0a083b;
+  color: #ffffff;
+  border: none;
+  padding-inline: 10px;
+  padding-block: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.postdata {
+  border-top: 1px solid #eeeeee;
+  text-align: center;
+  margin-top: 30px;
+  padding-block: 20px;
+}
+
+.postitemwrapper {
+  display: grid;
+  grid-template-columns: repeat(3, 2fr);
+  gap: 20px;
+  padding-inline: 30px;
+  margin-top: 20px;
+}
+
+.postitem {
+  background-color: #ffffff;
+  border: 1px solid #eeeeee;
+  border-radius: 10px;
+  height: auto;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.postitem h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0a083b;
+}
+
+.postitem p {
+  font-size: 16px;
+  font-weight: 400;
+  color: #000000;
+}

@@ -1,0 +1,98 @@
+.postdata h1,
+.postdata p,
+.posteddata h1,
+.posteddatacard {
+  text-align: center;
+}
+
+.postdata {
+  border-top: 1px solid #eeeeee;
+  margin-top: 30px;
+  padding-block: 20px;
+  text-align: center;
+}
+
+.postitemwrapper {
+  display: grid;
+  grid-template-columns: repeat(3, 2fr);
+  gap: 20px;
+  padding-inline: 30px;
+  margin-top: 20px;
+}
+
+.posteddata {
+  border-top: 1px solid #eeeeee;
+  margin-top: 20px;
+  padding-block: 20px;
+}
+
+.posteddatacard {
+  text-align: center;
+  display: grid;
+  grid-template-columns: repeat(3, 2fr);
+  gap: 20px;
+  padding-inline: 30px;
+  margin-top: 20px;
+}
+
+.postedcard {
+  background-color: #ffffff;
+  border: 1px solid #eeeeee;
+  border-radius: 10px;
+  height: auto;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.postedcard h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #0a083b;
+  text-align: center;
+}
+
+.postedcard p {
+  font-size: 16px;
+  font-weight: 400;
+  color: #000000;
+}
+
+.forminputwrapper {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.forminput {
+  background-color: #ffffff;
+  color: #0a083b;
+  border: 1px solid #0a083b;
+  padding-inline: 10px;
+  padding-block: 10px;
+  border-radius: 10px;
+  height: 50px;
+}
+
+.formtextarea {
+  background-color: #ffffff;
+  color: #0a083b;
+  border: 1px solid #0a083b;
+  padding-inline: 10px;
+  padding-block: 10px;
+  border-radius: 10px;
+  margin-left: 20px;
+  height: 50px;
+  resize: none;
+}
+.btn {
+  background-color: #0a083b;
+  color: #ffffff;
+  border: none;
+  padding-inline: 10px;
+  padding-block: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-left: 10px;
+}

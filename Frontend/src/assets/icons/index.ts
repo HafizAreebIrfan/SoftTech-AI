@@ -1,0 +1,9 @@
+export { default as SunIcon } from './SunIcon/index';
+export { default as MoonIcon } from './MoonIcon/index';
+export { default as UserIcon } from './UserIcon/index';
+export { default as EmailIcon } from './EmailIcon/index';
+export { default as PhoneIcon } from './PhoneIcon/index';
+export { default as RatingStarIcon } from './RatingStarIcon';
+export { default as MenuIcon } from './MenuIcon/index';
+export { default as CloseIcon } from './CloseIcon/index';
+export { default as MapMarkerIcon } from './MapMarkerIcon';
