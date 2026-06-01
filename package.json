@@ -10,10 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.0",
+    "@tanstack/react-form": "^1.33.0",
     "@tanstack/react-query": "^5.100.5",
+    "@tanstack/react-router": "^1.170.10",
     "axios": "^1.15.2",
     "bootstrap": "^5.3.7",
     "google-map-react": "^2.2.5",
+    "motion": "^12.40.0",
     "react": "^19.0.0-rc.1",
     "react-dom": "^19.0.0-rc.1",
     "react-leaflet": "^5.0.0-rc.2",
@@ -22,6 +26,7 @@
     "react-tabs": "^6.1.0",
     "react-toastify": "^11.1.0",
     "socket.io-client": "^4.8.1",
+    "tailwindcss": "^4.3.0",
     "tsconfig": "^7.0.0",
     "typescript": "^6.0.3",
     "yup": "^1.7.1",

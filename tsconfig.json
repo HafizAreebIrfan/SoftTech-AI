@@ -13,6 +13,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "strict": false,
+    "strictNullChecks": true,
     "types": ["vite/client", "react", "react-dom"]
   },
   "include": ["src"]

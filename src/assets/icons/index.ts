@@ -7,3 +7,17 @@ export { default as RatingStarIcon } from './RatingStarIcon';
 export { default as MenuIcon } from './MenuIcon/index';
 export { default as CloseIcon } from './CloseIcon/index';
 export { default as MapMarkerIcon } from './MapMarkerIcon';
+export { default as LeftArrowIcon } from './LeftArrow/index';
+export { default as RightArrowIcon } from './RightArrow/index';
+export { default as HelpIcon } from './HelpIcon/index';
+export { default as LockIcon } from './LockIcon/index';
+export { default as CheckIcon } from './CheckIcon/index';
+export { default as ServerIcon } from './ServerIcon/index';
+export { default as Plus } from './Plus/index';
+export { default as LayoutGridIcon } from './LayoutGridIcon/index';
+export { default as SlidersIcon } from './SlidersIcon/index';
+export { default as DatabaseIcon } from './DatabaseIcon/index';
+export { default as TerminalIcon } from './TerminalIcon/index';
+export { default as RocketIcon } from './RocketIcon/index';
+export { default as KeyIcon } from './KeyIcon/index'
+export { default as TrashIcon } from './TrashIcon/index'

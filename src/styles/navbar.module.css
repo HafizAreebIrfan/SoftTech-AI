@@ -1,85 +1,221 @@
-.navbarwrapper{
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    background-color: #fff;
-    box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
+.navbar {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    z-index: 1000;
-    height: 80px;
-}
-
-.logo{
-    font-size: 35px;
-    font-weight: 600;
-    color: #000;
-}
-
-.menu li{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-}
-
-.menu li a{
-    color: #000000;
-    font-size: 18px;
-    font-weight: 400;
+    width: 100%;
+    z-index: 100;
+    backdrop-filter: blur(20px);
     transition: all 0.3s ease;
-    padding-top: 20px;
 }
 
-.menu li a:hover{
-    color: #000;
-    font-weight: 500;
-}
-
-.menu li a.active{
-    color: #0a083b;
-    font-weight: 500;
-}
-
-.button{
+.container {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    gap: 20px;
+    padding: 1rem 2rem;
+    max-width: 1280px;
+    margin: 0 auto;
 }
 
-.loginbutton{
-    background-color: #0a083b;
+.logoText {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.logoText:hover {
+    transform: scale(1.02);
+}
+
+.navLinks {
+    display: none;
+}
+
+@media (min-width: 1024px) {
+    .navLinks {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+    }
+}
+
+.link {
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.025em;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.link:hover {
+    color: #8b5cf6 !important;
+}
+
+.activeLink {
+    composes: link;
+    font-weight: 700;
+    position: relative;
+}
+
+.activeLink::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    border-radius: 9999px;
+}
+
+.actionGroup {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.themeButton,
+.themeButtonLight {
+    background: none;
+    border: none !important;
+    outline: none !important;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.themeButton:hover {
+    background-color: rgba(255, 255, 255, 0.05) !important;
     color: #ffffff;
+}
+
+.themeButtonLight:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+    color: #0f172a;
+}
+
+.loginBtn {
+    background: none;
     border: none;
-    padding: 10px 30px;
-    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
     cursor: pointer;
+    transition: color 0.2s ease;
+    margin-right: 20px;
+}
+
+
+.getStartedBtn {
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.65rem 1.5rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25);
     transition: all 0.3s ease;
 }
 
-.loginbutton:hover{
-    background-color: #ffffff;
-    color: #000000;
-    border: 1px solid #0a083b;
+.getStartedBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
 }
 
-.registerbutton{
-    background-color: #ffffff;
-    color: #000000;
-    border: 1px solid #0a083b;
-    padding: 10px 30px;
-    border-radius: 10px;
+.getStartedBtn:active {
+    transform: translateY(0);
+}
+
+.hamburger {
+    background: none;
+    border: none;
+    color: #acaab5;
     cursor: pointer;
-    transition: all 0.3s ease;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.registerbutton:hover{
-    background-color: #0a083b;
+@media (min-width: 1024px) {
+    .hamburger {
+        display: none;
+    }
+}
+
+.mobileMenu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: rgba(19, 18, 28, 0.98);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 2rem;
+    gap: 1.25rem;
+    z-index: 99;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
+.mobileMenuLight {
+    composes: mobileMenu;
+    background-color: rgba(248, 250, 252, 0.98);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+}
+
+.mobileLink {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #acaab5;
+    text-decoration: none;
+    padding: 0.5rem 0;
+    cursor: pointer;
+}
+
+.mobileLink:hover {
+    color: #8a95ff;
+}
+
+.mobileLinkActive {
+    composes: mobileLink;
     color: #ffffff;
-    border: 1px solid #ffffff;
+    font-weight: 700;
+}
+
+.mobileLinkActiveLight {
+    composes: mobileLink;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.mobileLinkLight {
+    composes: mobileLink;
+    color: #64748b;
+}
+
+.mobileLinkLight:hover {
+    color: #4f46e5;
+}
+
+.divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 0.5rem 0;
+}
+
+.dividerLight {
+    border: none;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    margin: 0.5rem 0;
 }

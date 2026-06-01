@@ -1,0 +1,11 @@
+.layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+.contentWrapper {
+    flex: 1 0 auto;
+}

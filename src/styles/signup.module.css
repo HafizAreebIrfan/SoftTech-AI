@@ -1,98 +1,202 @@
-.postdata h1,
-.postdata p,
-.posteddata h1,
-.posteddatacard {
-  text-align: center;
+.signupwrapper {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
 }
 
-.postdata {
-  border-top: 1px solid #eeeeee;
-  margin-top: 30px;
-  padding-block: 20px;
-  text-align: center;
-}
-
-.postitemwrapper {
-  display: grid;
-  grid-template-columns: repeat(3, 2fr);
-  gap: 20px;
-  padding-inline: 30px;
-  margin-top: 20px;
-}
-
-.posteddata {
-  border-top: 1px solid #eeeeee;
-  margin-top: 20px;
-  padding-block: 20px;
-}
-
-.posteddatacard {
-  text-align: center;
-  display: grid;
-  grid-template-columns: repeat(3, 2fr);
-  gap: 20px;
-  padding-inline: 30px;
-  margin-top: 20px;
-}
-
-.postedcard {
-  background-color: #ffffff;
-  border: 1px solid #eeeeee;
-  border-radius: 10px;
-  height: auto;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.postedcard h1 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #0a083b;
-  text-align: center;
-}
-
-.postedcard p {
-  font-size: 16px;
-  font-weight: 400;
-  color: #000000;
-}
-
-.forminputwrapper {
-  display: inline-flex;
-  justify-content: center;
+.signupheader {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
+  z-index: 10;
+  padding-block: 2rem;
+  padding-inline: 2rem;
 }
 
-.forminput {
-  background-color: #ffffff;
-  color: #0a083b;
-  border: 1px solid #0a083b;
-  padding-inline: 10px;
-  padding-block: 10px;
-  border-radius: 10px;
-  height: 50px;
+.logoText {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  cursor: pointer;
 }
 
-.formtextarea {
-  background-color: #ffffff;
-  color: #0a083b;
-  border: 1px solid #0a083b;
-  padding-inline: 10px;
-  padding-block: 10px;
-  border-radius: 10px;
-  margin-left: 20px;
-  height: 50px;
+.logoText:hover {
+  transform: scale(1.02);
+}
+
+.themeButton,
+.themeButtonLight {
+  background: none;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.themeButton:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff;
+}
+
+.themeButtonLight:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: #0f172a;
+}
+
+.loginheading {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  cursor: pointer;
+}
+
+.signuptext {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  cursor: pointer;
+}
+
+.signupcard {
+  backdrop-filter: blur(20px);
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  text-align: left;
+}
+
+.formField {
+  margin-block: 5px;
+}
+
+.formField input {
+  width: 100%;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  font-size: 0.875rem;
+  transition: all 0.25s ease;
+}
+
+.formField select {
+  width: 100%;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  font-size: 0.875rem;
+  transition: all 0.25s ease;
+}
+
+.formField textarea {
+  width: 100%;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  font-size: 0.875rem;
+  transition: all 0.25s ease;
   resize: none;
 }
-.btn {
-  background-color: #0a083b;
-  color: #ffffff;
-  border: none;
-  padding-inline: 10px;
-  padding-block: 10px;
-  border-radius: 10px;
+
+.formField label {
+  margin-bottom: 15px;
+}
+
+.formField input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.inputicon {
+  padding-right: 100px;
+}
+
+.uiselectioncard {
+  padding: 30px 24px;
+}
+
+.rightpaneview {
+  padding: 20px;
+  border-radius: 12px;
+}
+
+.apiBlock {
+  position: relative;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+  transition: all 0.3s ease;
+}
+
+.apiBlockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+}
+
+
+.apiBlockTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.apiBlockTitleLight {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.deleteBtn {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
   cursor: pointer;
-  margin-left: 10px;
+  transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+  background-color: #ef4444;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn {
+  padding: 0.85rem;
+  border: none;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
 }

@@ -1,65 +1,126 @@
-.getpost {
-  border-top: 1px solid #eeeeee;
-  padding-block: 20px;
+.loginwrapper {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
 }
 
-.getpost h1,
-.getpost p,
-.postdata h1,
-.postdata p,
-.posteddata h1,
-.postitem,
-.posteddatacard {
-  text-align: center;
+.loginheader {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  padding-block: 2rem;
+  padding-inline: 2rem;
 }
 
-.functionbuttons {
-  text-align: center;
+.logoText {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  cursor: pointer;
+}
+
+.logoText:hover {
+  transform: scale(1.02);
+}
+
+.themeButton,
+.themeButtonLight {
+  background: none;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.themeButton:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff;
+}
+
+.themeButtonLight:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: #0f172a;
+}
+
+.loginheading {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  cursor: pointer;
+}
+
+.logintext {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  cursor: pointer;
+}
+
+.logincard {
+  backdrop-filter: blur(20px);
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  text-align: left;
+}
+
+.formField {
+  margin-block: 10px;
+}
+
+.formField input {
+  width: 100%;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  font-size: 0.875rem;
+  transition: all 0.25s ease;
+}
+
+.formField label {
+  margin-bottom: 15px;
+}
+
+.formField input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.inputicon {
+  padding-right: 100px;
 }
 
 .btn {
-  background-color: #0a083b;
-  color: #ffffff;
+  width: 100%;
+  padding: 0.85rem;
   border: none;
-  padding-inline: 10px;
-  padding-block: 10px;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
   cursor: pointer;
-  margin-left: 10px;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25);
+  transition: all 0.3s ease;
 }
 
-.postdata {
-  border-top: 1px solid #eeeeee;
-  text-align: center;
-  margin-top: 30px;
-  padding-block: 20px;
-}
-
-.postitemwrapper {
-  display: grid;
-  grid-template-columns: repeat(3, 2fr);
-  gap: 20px;
-  padding-inline: 30px;
-  margin-top: 20px;
-}
-
-.postitem {
-  background-color: #ffffff;
-  border: 1px solid #eeeeee;
-  border-radius: 10px;
-  height: auto;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.postitem h1 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #0a083b;
-}
-
-.postitem p {
-  font-size: 16px;
-  font-weight: 400;
-  color: #000000;
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
 }
