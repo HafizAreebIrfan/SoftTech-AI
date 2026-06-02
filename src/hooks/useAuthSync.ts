@@ -7,7 +7,7 @@ import { router } from "../infrastructure/routes/AppRoutes";
 export const useAuthSync = () => {
   const { isAuthenticated, clearAuth } = useAuthStore();
 
-  // 1. Session verification check on refresh/mount
+  // 1. Session verification check on refresh/mount (runs only once on initial app load)
   useEffect(() => {
     const checkSession = async () => {
       if (isAuthenticated) {
@@ -21,7 +21,8 @@ export const useAuthSync = () => {
       }
     };
     checkSession();
-  }, [isAuthenticated, clearAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 2. Socket connection lifecycle
   useEffect(() => {
