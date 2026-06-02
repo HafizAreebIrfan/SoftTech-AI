@@ -10,17 +10,20 @@ export const validateRequest = (schema: z.ZodSchema<any>) => {
         params: req.params,
       });
       
-      req.body = parsed.body;
-      req.query = parsed.query;
-      req.params = parsed.params;
+      if (parsed.body !== undefined) req.body = parsed.body;
+      if (parsed.query !== undefined) req.query = parsed.query;
+      if (parsed.params !== undefined) req.params = parsed.params;
       
       return next();
-    } catch (error) {
-      if (error instanceof ZodError) {
+    } catch (error: any) {
+      console.error("Zod Validation catch block caught error:", error);
+      
+      const isZodError = error instanceof ZodError || (error && error.name === "ZodError");
+      if (isZodError) {
         return res.status(400).json({
           success: false,
           message: "Validation failed",
-          errors: error.issues.map(err => ({
+          errors: error.issues.map((err: any) => ({
             field: err.path.slice(1).join('.'),
             message: err.message
           }))
