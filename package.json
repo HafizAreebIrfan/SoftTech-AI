@@ -30,6 +30,7 @@
     "tsconfig": "^7.0.0",
     "typescript": "^6.0.3",
     "yup": "^1.7.1",
+    "zod": "^4.4.3",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

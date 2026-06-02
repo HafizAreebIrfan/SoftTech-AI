@@ -97,10 +97,20 @@
 }
 
 .formField input:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+  outline: none !important;
+  box-shadow: none !important;
 }
+
+/* Prevent browser autofill background/text color change */
+.formField input:-webkit-autofill,
+.formField input:-webkit-autofill:hover, 
+.formField input:-webkit-autofill:focus, 
+.formField input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--app-bg, #1A1A24) inset !important;
+  -webkit-text-fill-color: var(--app-text-body, #ffffff) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 
 .inputicon {
   padding-right: 100px;

@@ -1,9 +1,26 @@
-import { LoginCredentials, LoginResponse } from "../../domain/entities/User";
+import { LoginCredentials, LoginResponse } from "../../domain/entities/CompanyLogin";
+import { ApisInformation, CompanyUIInformation, SignupResonse } from "../../domain/entities/CompanyRegister";
 import { env } from "../../infrastructure/config/env";
 import { post } from "./httpClient";
 
-const LOGIN_URL = `${env.devServer}/api/auth/login`;
+const LOGIN_URL = `${env.devServer}/api/company/login`;
 
 export const login = async (credentials: LoginCredentials): Promise<LoginResponse> => {
   return post(LOGIN_URL, credentials);
 };
+
+export const registerCompanyInfo = async (payload: any): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
+  const url = `${env.devServer}/api/companies/registerstep`;
+  return post(url, payload);
+};
+
+export const saveCompanyApiDetails = async (companyId: string, apis: ApisInformation[]): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
+  const url = `${env.devServer}/api/companies/${companyId}/apidetailsstep`;
+  return post(url, { apis });
+};
+
+export const saveCompanyUiSelection = async (companyId: string, uiPreference: CompanyUIInformation): Promise<{ success: boolean; message: string; data: SignupResonse; token?: string }> => {
+  const url = `${env.devServer}/api/companies/${companyId}/uiselectionstep`;
+  return post(url, { uiPreference });
+};
+

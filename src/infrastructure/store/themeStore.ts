@@ -122,6 +122,9 @@ export const useApplyGlobalThemeVars = () => {
     root.style.setProperty("--app-bg-grad-2", colors.BackgroundGradientTwo);
     root.style.setProperty("--app-rating-icon", colors.RatingIconColor);
     root.style.setProperty("--app-icon-color", colors.IconColor);
+    root.style.setProperty("--app-warning-text", colors.WarningText);
+    root.style.setProperty("--app-warning-background", colors.WarningBackground);
+    root.style.setProperty("--app-warning-border", colors.WarningBorder);
 
     root.setAttribute("data-theme", isDark ? "dark" : "light");
   }, [colors, isDark]);

@@ -1,0 +1,381 @@
+.dashboardWrapper {
+  min-height: 100vh;
+  display: flex;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Outfit', sans-serif;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 2rem 1.5rem;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  transition: all 0.3s ease;
+}
+
+.mainContent {
+  flex-grow: 1;
+  margin-left: 280px;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  transition: all 0.3s ease;
+}
+
+.logoArea {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+}
+
+.logoText {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.navLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.navLinkActive {
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.1);
+  box-shadow: inset 0 0 12px rgba(99, 102, 241, 0.1);
+}
+
+.navLink:hover:not(.navLinkActive) {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sidebarBottom {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.companyName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.userEmail {
+  font-size: 0.75rem;
+  color: #64748b;
+  word-break: break-all;
+}
+
+.logoutBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+}
+
+.logoutBtn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+}
+
+.dashboardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 1.5rem;
+}
+
+.welcomeTitle {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: #64748b;
+}
+
+.statsGrid {
+  display: grid;
+  grid-cols-1: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.statCard {
+  padding: 1.5rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+.statHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #64748b;
+}
+
+.statValue {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.layoutToggle {
+  display: flex;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.25rem;
+  border-radius: 10px;
+  gap: 0.25rem;
+  width: fit-content;
+}
+
+.layoutToggleBtn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  background: transparent;
+  color: #64748b;
+}
+
+.layoutToggleBtnActive {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818cf8;
+}
+
+.workspaceCard {
+  padding: 2rem;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.01);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.workspaceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.workspaceTitle {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.bentoGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .bentoGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.bentoItem {
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 160px;
+}
+
+.bentoItemLarge {
+  composes: bentoItem;
+}
+
+@media (min-width: 768px) {
+  .bentoItemLarge {
+    grid-column: span 2;
+  }
+}
+
+.listLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.listItem {
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.listItem:hover {
+  transform: translateX(4px);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.cardsLayout {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .cardsLayout {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.cardItem {
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tableLayout {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tableTh {
+  padding: 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #64748b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tableTd {
+  padding: 1rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.methodBadge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.methodGet {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.methodPost {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.methodPut {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+}
+
+.themeBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.themeBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

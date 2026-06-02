@@ -48,7 +48,9 @@ export type ThemeColors = {
     AuthIconColor: string;
     IconColor: string;
     UISelectionCardBackground: string;
-
+    WarningText: string;
+    WarningBackground: string;
+    WarningBorder: string;
 }
 export const darkColors: ThemeColors = {
     Headerbackground: '#1F1F2A',
@@ -100,6 +102,9 @@ export const darkColors: ThemeColors = {
     AuthIconColor: '#acaab5',
     IconColor: '#acaab5',
     UISelectionCardBackground: '#6366f133',
+    WarningText: '#ef4444',
+    WarningBackground: 'rgba(239, 68, 68, 0.08)',
+    WarningBorder: 'rgba(239, 68, 68, 0.2)',
 }
 export const lightColors: ThemeColors = {
     Headerbackground: '#F5F4FF',
@@ -150,5 +155,8 @@ export const lightColors: ThemeColors = {
     RatingIconColor: '#ebd404',
     AuthIconColor: '#0f172a',
     IconColor: '#0f172a',
-    UISelectionCardBackground: '#6366f133'
+    UISelectionCardBackground: '#6366f133',
+    WarningText: '#ef4444',
+    WarningBackground: 'rgba(239, 68, 68, 0.08)',
+    WarningBorder: 'rgba(239, 68, 68, 0.2)',
 }
