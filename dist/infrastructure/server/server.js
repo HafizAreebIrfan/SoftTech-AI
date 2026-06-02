@@ -8,10 +8,12 @@ const http_1 = __importDefault(require("http"));
 const env_1 = require("../config/env");
 const expressApp_1 = require("../web/expressApp");
 const db_1 = require("../database/db");
+const socket_1 = require("../socket/socket");
 const startServer = async () => {
     await (0, db_1.connectDB)();
     const app = (0, expressApp_1.buildApp)();
     const server = http_1.default.createServer(app);
+    (0, socket_1.SocketServer)(server);
     server.listen(env_1.env.PORT, () => {
         console.log("Server running on PORT:", env_1.env.PORT);
     });
@@ -19,6 +21,7 @@ const startServer = async () => {
 };
 exports.startServer = startServer;
 (0, exports.startServer)().catch((error) => {
-    console.error("Failed to start server:", error.message);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Failed to start server:", message);
     process.exit(1);
 });
