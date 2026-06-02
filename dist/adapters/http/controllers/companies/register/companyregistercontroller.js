@@ -40,11 +40,12 @@ async function saveCompanyUiSelectionController(req, res, next) {
         const result = await (0, companyuiselection_1.saveCompanyUiSelection)(companyRepository, req.params.companyId, req.body);
         if (result) {
             const logintoken = (0, authmiddleware_1.createToken)(result._id);
+            const isProd = process.env.NODE_ENV === "production" || req.headers["x-forwarded-proto"] === "https";
             res.cookie("jwt", logintoken, {
                 httpOnly: true,
                 maxAge: authmiddleware_1.maxAge * 1000,
-                secure: false,
-                sameSite: "lax",
+                secure: isProd,
+                sameSite: isProd ? "none" : "lax",
             });
         }
         res.status(200).json({
