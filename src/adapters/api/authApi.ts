@@ -1,7 +1,7 @@
 import { LoginCredentials, LoginResponse } from "../../domain/entities/CompanyLogin";
 import { ApisInformation, CompanyUIInformation, SignupResonse } from "../../domain/entities/CompanyRegister";
 import { env } from "../../infrastructure/config/env";
-import { post } from "./httpClient";
+import { get, post } from "./httpClient";
 
 const LOGIN_URL = `${env.devServer}/api/company/login`;
 
@@ -22,5 +22,10 @@ export const saveCompanyApiDetails = async (companyId: string, apis: ApisInforma
 export const saveCompanyUiSelection = async (companyId: string, uiPreference: CompanyUIInformation): Promise<{ success: boolean; message: string; data: SignupResonse; token?: string }> => {
   const url = `${env.devServer}/api/companies/${companyId}/uiselectionstep`;
   return post(url, { uiPreference });
+};
+
+export const verifySession = async (): Promise<any> => {
+  const url = `${env.devServer}/api/company/me`;
+  return get(url);
 };
 
