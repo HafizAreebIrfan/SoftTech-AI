@@ -26,6 +26,6 @@ export const saveCompanyUiSelection = async (companyId: string, uiPreference: Co
 
 export const verifySession = async (): Promise<any> => {
   const url = `${env.devServer}/api/company/login`;
-  return get(url);
+  return get(url, { skipRedirect: true });
 };
 

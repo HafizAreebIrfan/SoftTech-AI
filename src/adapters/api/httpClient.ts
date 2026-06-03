@@ -1,6 +1,7 @@
 import { showToast } from "../../utils/toasts";
 
-const handleHttpError = (res: Response) => {
+const handleHttpError = (res: Response, skipRedirect?: boolean) => {
+  if (skipRedirect) return;
   if (res.status >= 500) {
     showToast("Server error. Redirecting to status page...", "error");
     window.location.href = '/503';
@@ -10,18 +11,18 @@ const handleHttpError = (res: Response) => {
   }
 };
 
-export const get = async (url: string) => {
+export const get = async (url: string, options?: { skipRedirect?: boolean }) => {
   try {
     const res = await fetch(url, { credentials: "include" });
     if (!res.ok) {
-      handleHttpError(res);
+      handleHttpError(res, options?.skipRedirect);
       const errorData = await res.json().catch(() => ({}));
       throw new Error(errorData.error || errorData.message || errorData.msg || `HTTP error! status: ${res.status}`);
     }
     return res.json();
   } catch (error: any) {
     console.error("Centralized API Get Error:", error);
-    if (error.message && (error.message.includes("Failed to fetch") || error.message.includes("fetch"))) {
+    if (!options?.skipRedirect && error.message && (error.message.includes("Failed to fetch") || error.message.includes("fetch"))) {
       showToast("Server is unreachable. Please try again later.", "error");
       window.location.href = '/503';
     }
@@ -29,7 +30,7 @@ export const get = async (url: string) => {
   }
 };
 
-export const post = async (url: string, payload: unknown) => {
+export const post = async (url: string, payload: unknown, options?: { skipRedirect?: boolean }) => {
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -41,7 +42,7 @@ export const post = async (url: string, payload: unknown) => {
     });
 
     if (!res.ok) {
-      handleHttpError(res);
+      handleHttpError(res, options?.skipRedirect);
       const errorData = await res.json().catch(() => ({}));
       throw new Error(errorData.error || errorData.message || errorData.msg || `HTTP error! status: ${res.status}`);
     }
@@ -49,7 +50,7 @@ export const post = async (url: string, payload: unknown) => {
     return res.json();
   } catch (error: any) {
     console.error("Centralized API Post Error:", error);
-    if (error.message && (error.message.includes("Failed to fetch") || error.message.includes("fetch"))) {
+    if (!options?.skipRedirect && error.message && (error.message.includes("Failed to fetch") || error.message.includes("fetch"))) {
       showToast("Server is unreachable. Please try again later.", "error");
       window.location.href = '/503';
     }
