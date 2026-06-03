@@ -1,7 +1,7 @@
 import React, { FC } from "react";
 import { useMutation } from "@tanstack/react-query";
 import styles from "../../../../styles/login.module.css";
-import { login, verifySession } from "../../../../adapters/api/authApi";
+import { login } from "../../../../adapters/api/authApi";
 import { EmailIcon, HelpIcon, LeftArrowIcon, LockIcon, MoonIcon, RightArrowIcon, SunIcon } from "../../../../assets/icons";
 import { useThemeStore, useAuthStore } from "../../../../hooks";
 import { useNavigate } from "@tanstack/react-router";
@@ -22,25 +22,16 @@ const Login: FC = () => {
 
   const { mutate: loginMutate, isPending, error: loginError } = useMutation({
     mutationFn: login,
-    onSuccess: async (data) => {
-      try {
-        const session = await verifySession();
-        if (session?.user) {
-          setAuth(session.user);
-        } else if (data?.user) {
-          setAuth(data.user);
-        }
-        showToast("Logged in successfully!", "success");
-        navigate({ to: '/dashboard', replace: true });
-      } catch {
-        if (data?.user) {
-          setAuth(data.user);
-          showToast("Logged in successfully!", "success");
-          navigate({ to: '/dashboard', replace: true });
-          return;
-        }
-        showToast("Login succeeded, but session could not be verified.", "error");
-      }
+    onSuccess: (data) => {
+      const user = {
+        id: data?._id || data?.user?._id || data?.user?.id || "",
+        name: data?.companyName || data?.user?.name || "",
+        email: data?.email || data?.user?.email || "",
+      };
+
+      setAuth(user);
+      showToast("Logged in successfully!", "success");
+      navigate({ to: '/dashboard', replace: true });
     },
     onError: (err: any) => {
       showToast(err.message || "Failed to log in. Please check your credentials.", "error");

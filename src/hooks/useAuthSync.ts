@@ -6,21 +6,21 @@ export const useAuthSync = () => {
   const { setAuth, clearAuth, setAuthReady } = useAuthStore();
 
   useEffect(() => {
-    const bootstrapAuth = async () => {
+    const getUserInfo = async () => {
       try {
         const session = await verifySession();
         if (session?.user) {
           setAuth(session.user);
+        } else {
+          clearAuth();
         }
       } catch {
-        if (import.meta.env.DEV) {
-          console.debug("Auth session bootstrap skipped or failed, keeping persisted auth state.");
-        }
+        clearAuth();
       } finally {
         setAuthReady(true);
       }
     };
 
-    bootstrapAuth();
-  }, [clearAuth, setAuth, setAuthReady]);
+    getUserInfo();
+  }, [setAuth, clearAuth, setAuthReady]);
 };
