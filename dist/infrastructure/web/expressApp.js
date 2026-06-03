@@ -7,7 +7,6 @@ exports.buildApp = void 0;
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
-const env_1 = require("../config/env");
 const healthRoutes_1 = require("../../adapters/http/routes/healthRoutes");
 const companyregisterroutes_1 = require("../../adapters/http/routes/companies/register/companyregisterroutes");
 const error_1 = require("../middlewares/ErrorMiddleware/error");
@@ -17,8 +16,9 @@ const companylogoutroute_1 = require("../../adapters/http/routes/companies/logou
 const buildApp = () => {
     const app = (0, express_1.default)();
     (0, helmet_1.helmetMiddleware)(app);
+    app.set("trust proxy", 1);
     app.use((0, cors_1.default)({
-        origin: env_1.env.CORS_ORIGINS,
+        origin: ["https://softtech-ai.vercel.app", "http://localhost:5173"],
         credentials: true,
     }));
     app.use(express_1.default.json());

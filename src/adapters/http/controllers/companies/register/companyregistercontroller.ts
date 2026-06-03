@@ -47,8 +47,8 @@ export async function saveCompanyUiSelectionController(req: Request, res: Respon
       req.body,
     );
 
-    if (result) {
-      const logintoken = createToken((result as any)._id);
+    const logintoken = result ? createToken((result as any)._id) : undefined;
+    if (result && logintoken) {
       res.cookie("jwt", logintoken, {
         httpOnly: true,
         maxAge: maxAge * 1000,
@@ -62,6 +62,7 @@ export async function saveCompanyUiSelectionController(req: Request, res: Respon
       success: true,
       message: "UI selection saved successfully",
       data: result,
+      token: logintoken,
     });
   } catch (error) {
     next(error);

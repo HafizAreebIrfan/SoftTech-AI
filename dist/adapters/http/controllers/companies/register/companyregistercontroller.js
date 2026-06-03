@@ -38,8 +38,8 @@ async function saveCompanyApiDetailsController(req, res, next) {
 async function saveCompanyUiSelectionController(req, res, next) {
     try {
         const result = await (0, companyuiselection_1.saveCompanyUiSelection)(companyRepository, req.params.companyId, req.body);
-        if (result) {
-            const logintoken = (0, authmiddleware_1.createToken)(result._id);
+        const logintoken = result ? (0, authmiddleware_1.createToken)(result._id) : undefined;
+        if (result && logintoken) {
             res.cookie("jwt", logintoken, {
                 httpOnly: true,
                 maxAge: authmiddleware_1.maxAge * 1000,
@@ -52,6 +52,7 @@ async function saveCompanyUiSelectionController(req, res, next) {
             success: true,
             message: "UI selection saved successfully",
             data: result,
+            token: logintoken,
         });
     }
     catch (error) {

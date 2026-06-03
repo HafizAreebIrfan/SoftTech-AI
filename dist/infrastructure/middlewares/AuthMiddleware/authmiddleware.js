@@ -15,7 +15,10 @@ const createToken = (id) => {
 };
 exports.createToken = createToken;
 const GetrequireAuth = (req, res) => {
-    const token = req.cookies?.jwt;
+    let token = req.cookies?.jwt;
+    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+        token = req.headers.authorization.split(" ")[1];
+    }
     if (!token) {
         return res.status(401).json({ error: "Not Authenticated" });
     }
@@ -53,6 +56,7 @@ const PostrequireAuth = async (req, res) => {
         });
         return res.status(200).json({
             _id: user._id,
+            token: logintoken,
         });
     }
     catch (e) {

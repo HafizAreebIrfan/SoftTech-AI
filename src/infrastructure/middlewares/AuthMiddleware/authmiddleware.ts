@@ -12,7 +12,11 @@ export const createToken = (id: any): string => {
 };
 
 export const GetrequireAuth = (req: Request, res: Response): any => {
-  const token = req.cookies?.jwt;
+  let token = req.cookies?.jwt;
+  if (!token && req.headers.authorization?.startsWith("Bearer ")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+
   if (!token) {
     return res.status(401).json({ error: "Not Authenticated" });
   }
@@ -48,6 +52,7 @@ export const PostrequireAuth = async (req: Request, res: Response): Promise<any>
     });
     return res.status(200).json({
       _id: user._id,
+      token: logintoken,
     });
   } catch (e: any) {
     return res.status(400).json({ error: e.message });

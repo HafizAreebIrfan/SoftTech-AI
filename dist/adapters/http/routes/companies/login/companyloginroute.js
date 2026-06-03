@@ -10,5 +10,4 @@ const validation_1 = require("../../../../../infrastructure/middlewares/Validati
 const schemas_1 = require("../../../../../infrastructure/middlewares/ValidationMiddleware/schemas");
 exports.CompanyLoginRoutes = express_1.default.Router();
 exports.CompanyLoginRoutes.post("/login", (0, validation_1.validateRequest)(schemas_1.loginSchema), authmiddleware_1.PostrequireAuth);
-exports.CompanyLoginRoutes.post("/logout", authmiddleware_1.LogoutUser);
 exports.CompanyLoginRoutes.get("/login", authmiddleware_1.GetrequireAuth);
