@@ -1,12 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { User } from "../../domain/entities/CompanyLogin";
-import { CompanyApiInformation, CompanyInformation, CompanyUIInformation } from "../../domain/entities/CompanyRegister";
+import {
+  CompanyApiInformation,
+  CompanyInformation,
+  CompanyUIInformation,
+} from "../../domain/entities/CompanyRegister";
 
 export interface ApiConnection {
   id: string;
   apiName: string;
-  apiMethod: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  apiMethod: "GET" | "POST" | "PUT" | "DELETE";
   apiEndpoint: string;
   apiAuthType: string;
   apiCredentials?: string;
@@ -19,7 +23,6 @@ export interface ApiConnection {
 }
 
 type AuthStore = {
-  token: string | null;
   user: User | null;
   isAuthenticated: boolean;
   companyId: string | null;
@@ -27,21 +30,22 @@ type AuthStore = {
   companyapisinfo: CompanyApiInformation | null;
   companyuiinfo: CompanyUIInformation | null;
   apisList: ApiConnection[];
-  selectedLayout: 'grid' | 'list' | 'cards' | 'table';
-  setAuth: (token: string, user: User) => void;
+  selectedLayout: "grid" | "list" | "cards" | "table";
+  setAuth: (user: User) => void;
   setCompanyId: (id: string | null) => void;
   setCompanyRegisterInfo: (companyregisterinfo: CompanyInformation) => void;
   setCompanyApisInfo: (companyapisinfo: CompanyApiInformation) => void;
   setCompanyUIInfo: (companyuiinfo: CompanyUIInformation) => void;
-  setApisList: (apis: ApiConnection[] | ((prev: ApiConnection[]) => ApiConnection[])) => void;
-  setSelectedLayout: (layout: 'grid' | 'list' | 'cards' | 'table') => void;
+  setApisList: (
+    apis: ApiConnection[] | ((prev: ApiConnection[]) => ApiConnection[]),
+  ) => void;
+  setSelectedLayout: (layout: "grid" | "list" | "cards" | "table") => void;
   clearAuth: () => void;
 };
 
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
-      token: null,
       user: null,
       isAuthenticated: false,
       companyId: null,
@@ -50,56 +54,60 @@ export const useAuthStore = create<AuthStore>()(
       companyuiinfo: null,
       apisList: [
         {
-          id: 'api-1',
-          apiName: '',
-          apiMethod: 'GET',
-          apiEndpoint: '',
-          apiAuthType: 'No Auth',
-          apiCredentials: '',
-          apiQueryParams: '',
-          apiCheckoutTemplate: '',
-          apiAuthHeader: '',
-          oauthTokenUrl: '',
-          oauthClientId: '',
-          apiHeaders: '',
-        }
+          id: "api-1",
+          apiName: "",
+          apiMethod: "GET",
+          apiEndpoint: "",
+          apiAuthType: "No Auth",
+          apiCredentials: "",
+          apiQueryParams: "",
+          apiCheckoutTemplate: "",
+          apiAuthHeader: "",
+          oauthTokenUrl: "",
+          oauthClientId: "",
+          apiHeaders: "",
+        },
       ],
-      selectedLayout: 'grid',
-      setAuth: (token: string, user: User) => set({ token, user, isAuthenticated: true }),
+      selectedLayout: "grid",
+      setAuth: (user: User) => set({ user, isAuthenticated: true }),
       setCompanyId: (id: string | null) => set({ companyId: id }),
-      setCompanyRegisterInfo: (companyregisterinfo: CompanyInformation) => set({ companyregisterinfo }),
-      setCompanyApisInfo: (companyapisinfo: CompanyApiInformation) => set({ companyapisinfo }),
-      setCompanyUIInfo: (companyuiinfo: CompanyUIInformation) => set({ companyuiinfo }),
-      setApisList: (apis) => set((state) => ({
-        apisList: typeof apis === 'function' ? apis(state.apisList) : apis
-      })),
+      setCompanyRegisterInfo: (companyregisterinfo: CompanyInformation) =>
+        set({ companyregisterinfo }),
+      setCompanyApisInfo: (companyapisinfo: CompanyApiInformation) =>
+        set({ companyapisinfo }),
+      setCompanyUIInfo: (companyuiinfo: CompanyUIInformation) =>
+        set({ companyuiinfo }),
+      setApisList: (apis) =>
+        set((state) => ({
+          apisList: typeof apis === "function" ? apis(state.apisList) : apis,
+        })),
       setSelectedLayout: (layout) => set({ selectedLayout: layout }),
-      clearAuth: () => set({
-        token: null,
-        user: null,
-        isAuthenticated: false,
-        companyId: null,
-        selectedLayout: 'grid',
-        apisList: [
-          {
-            id: 'api-1',
-            apiName: '',
-            apiMethod: 'GET',
-            apiEndpoint: '',
-            apiAuthType: 'No Auth',
-            apiCredentials: '',
-            apiQueryParams: '',
-            apiCheckoutTemplate: '',
-            apiAuthHeader: '',
-            oauthTokenUrl: '',
-            oauthClientId: '',
-            apiHeaders: '',
-          }
-        ]
-      }),
+      clearAuth: () =>
+        set({
+          user: null,
+          isAuthenticated: false,
+          companyId: null,
+          selectedLayout: "grid",
+          apisList: [
+            {
+              id: "api-1",
+              apiName: "",
+              apiMethod: "GET",
+              apiEndpoint: "",
+              apiAuthType: "No Auth",
+              apiCredentials: "",
+              apiQueryParams: "",
+              apiCheckoutTemplate: "",
+              apiAuthHeader: "",
+              oauthTokenUrl: "",
+              oauthClientId: "",
+              apiHeaders: "",
+            },
+          ],
+        }),
     }),
     {
       name: "softtech-auth-store",
-    }
-  )
+    },
+  ),
 );

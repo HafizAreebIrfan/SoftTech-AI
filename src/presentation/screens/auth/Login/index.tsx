@@ -5,7 +5,7 @@ import { login } from "../../../../adapters/api/authApi";
 import { EmailIcon, HelpIcon, LeftArrowIcon, LockIcon, MoonIcon, RightArrowIcon, SunIcon } from "../../../../assets/icons";
 import { useThemeStore, useAuthStore } from "../../../../hooks";
 import { useNavigate } from "@tanstack/react-router";
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { useForm } from "@tanstack/react-form";
 import { showToast } from "../../../../utils/toasts";
 import { z } from "zod";
@@ -23,9 +23,9 @@ const Login: FC = () => {
   const { mutate: loginMutate, isPending, error: loginError } = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
-      if (data && ((data as any)._id || data.token)) {
-        const user = (data as any).user || { id: (data as any)._id || data.token || "session-active", name: "Company", email: loginForm.state.values.email };
-        setAuth(data.token || "session-active", user);
+      if (data) {
+        const user = (data as any).user || { id: (data as any)._id };
+        setAuth(user);
         showToast("Logged in successfully!", "success");
         navigate({ to: '/dashboard', replace: true });
       } else {
@@ -71,7 +71,7 @@ const Login: FC = () => {
         <div className="flex items-center gap-6">
           <button
             onClick={() => navigate({ to: '/' })}
-            className="flex items-center gap-2 text-slate-400 transition-colors group cursor-pointer"
+            className="flex items-center gap-2transition-colors group cursor-pointer"
           >
             <LeftArrowIcon size={18} color={colors.AuthIconColor} />
           </button>
