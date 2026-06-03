@@ -1,4 +1,5 @@
 import { showToast } from "../../utils/toasts";
+import { useAuthStore } from "../../infrastructure/store/authStore";
 
 const handleHttpError = (res: Response, skipRedirect?: boolean) => {
   if (skipRedirect) return;
@@ -13,7 +14,16 @@ const handleHttpError = (res: Response, skipRedirect?: boolean) => {
 
 export const get = async (url: string, options?: { skipRedirect?: boolean }) => {
   try {
-    const res = await fetch(url, { credentials: "include" });
+    const token = useAuthStore.getState().token;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(url, { 
+      headers,
+      credentials: "include" 
+    });
     if (!res.ok) {
       handleHttpError(res, options?.skipRedirect);
       const errorData = await res.json().catch(() => ({}));
@@ -32,12 +42,18 @@ export const get = async (url: string, options?: { skipRedirect?: boolean }) => 
 
 export const post = async (url: string, payload: unknown, options?: { skipRedirect?: boolean }) => {
   try {
+    const token = useAuthStore.getState().token;
+    const headers: Record<string, string> = {
+      "Content-type": "application/json; charset=UTF-8",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(url, {
       method: "POST",
       body: JSON.stringify(payload),
-      headers: {
-        "Content-type": "application/json; charset=UTF-8",
-      },
+      headers,
       credentials: "include"
     });
 

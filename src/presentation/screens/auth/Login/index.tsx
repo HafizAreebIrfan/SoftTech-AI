@@ -25,7 +25,7 @@ const Login: FC = () => {
     onSuccess: (data) => {
       if (data && ((data as any)._id || data.token)) {
         const user = (data as any).user || { id: (data as any)._id || data.token || "session-active", name: "Company", email: loginForm.state.values.email };
-        setAuth("session-active", user);
+        setAuth(data.token || "session-active", user);
         showToast("Logged in successfully!", "success");
         navigate({ to: '/dashboard', replace: true });
       } else {
