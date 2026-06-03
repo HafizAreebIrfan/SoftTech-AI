@@ -7,4 +7,4 @@ export const CompanyLoginRoutes = express.Router();
 
 CompanyLoginRoutes.post("/login", validateRequest(loginSchema), PostrequireAuth);
 CompanyLoginRoutes.post("/logout", LogoutUser);
-CompanyLoginRoutes.get("/me", GetrequireAuth);
+CompanyLoginRoutes.get("/login", GetrequireAuth);
