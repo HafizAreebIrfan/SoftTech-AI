@@ -13,6 +13,6 @@ export const env: IEnv = {
   MONGO_URI: process.env.MONGO_URI || process.env.MONGODB_URI || "",
   CORS_ORIGINS: process.env.CORS_ORIGINS 
     ? process.env.CORS_ORIGINS.split(",") 
-    : ["http://localhost:5173", "http://localhost:5174"],
+    : ["http://localhost:5173", "https://softtech-ai.vercel.app"],
   JWT_SECRET: process.env.JWT_SECRET || "",
 };
