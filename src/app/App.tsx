@@ -5,6 +5,8 @@ import { router } from "../infrastructure/routes/AppRoutes";
 import { ToastContainer } from "react-toastify";
 import { useAuthSync } from "../hooks";
 import "react-toastify/dist/ReactToastify.css";
+import { SpeedInsights } from "@vercel/speed-insights/react"
+import { Analytics } from "@vercel/analytics/next"
 
 const App: React.FC = () => {
   useApplyGlobalThemeVars();
@@ -14,6 +16,8 @@ const App: React.FC = () => {
     <>
       <RouterProvider router={router} />
       <ToastContainer />
+      <SpeedInsights />
+      <Analytics/>
     </>
   );
 };
