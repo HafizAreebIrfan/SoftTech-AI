@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: softtech-ai-frontend
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://softtech-ai.onrender.com
+      - key: VITE_SOCKET_URL
+        value: https://softtech-ai.onrender.com
