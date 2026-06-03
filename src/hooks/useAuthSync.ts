@@ -2,36 +2,43 @@ import { useEffect } from "react";
 import { useAuthStore } from "./useAuth";
 import { socket } from "../infrastructure/socket/socketService";
 import { verifySession } from "../adapters/api/authApi";
-import { router } from "../infrastructure/routes/AppRoutes";
 import { showToast } from "../utils";
 
 export const useAuthSync = () => {
-  const { isAuthenticated, clearAuth } = useAuthStore();
+  const { isAuthenticated, authReady, setAuth, clearAuth, setAuthReady } = useAuthStore();
 
   useEffect(() => {
-    const checkSession = async () => {
-      if (isAuthenticated) {
-        try {
-          await verifySession();
-        } catch (error) {
-          showToast(
-            `Session expired or invalid, logging out ${error}`,
-            "error",
-          );
+    const bootstrapAuth = async () => {
+      try {
+        const session = await verifySession();
+        if (session?.user) {
+          setAuth(session.user);
+        } else {
           clearAuth();
-          router.navigate({ to: "/login", replace: true });
         }
+      } catch (error) {
+        clearAuth();
+        if (import.meta.env.DEV) {
+          console.debug("Auth session bootstrap failed:", error);
+        }
+      } finally {
+        setAuthReady(true);
       }
     };
-    checkSession();
-  }, []);
+
+    bootstrapAuth();
+  }, [clearAuth, setAuth, setAuthReady]);
 
   useEffect(() => {
+    if (!authReady) {
+      return;
+    }
+
     if (isAuthenticated) {
       socket.connect();
 
       const onConnectError = (error: Error) => {
-        showToast(`Socket connection error: ${error}`, "error");
+        showToast(`Socket connection error: ${error.message}`, "error");
       };
 
       socket.on("connect_error", onConnectError);
@@ -40,8 +47,8 @@ export const useAuthSync = () => {
         socket.off("connect_error", onConnectError);
         socket.disconnect();
       };
-    } else {
-      socket.disconnect();
     }
-  }, [isAuthenticated]);
+
+    socket.disconnect();
+  }, [authReady, isAuthenticated]);
 };

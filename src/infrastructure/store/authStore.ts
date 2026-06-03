@@ -25,6 +25,7 @@ export interface ApiConnection {
 type AuthStore = {
   user: User | null;
   isAuthenticated: boolean;
+  authReady: boolean;
   companyId: string | null;
   companyregisterinfo: CompanyInformation | null;
   companyapisinfo: CompanyApiInformation | null;
@@ -32,6 +33,7 @@ type AuthStore = {
   apisList: ApiConnection[];
   selectedLayout: "grid" | "list" | "cards" | "table";
   setAuth: (user: User) => void;
+  setAuthReady: (ready: boolean) => void;
   setCompanyId: (id: string | null) => void;
   setCompanyRegisterInfo: (companyregisterinfo: CompanyInformation) => void;
   setCompanyApisInfo: (companyapisinfo: CompanyApiInformation) => void;
@@ -48,6 +50,7 @@ export const useAuthStore = create<AuthStore>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      authReady: false,
       companyId: null,
       companyregisterinfo: null,
       companyapisinfo: null,
@@ -70,6 +73,7 @@ export const useAuthStore = create<AuthStore>()(
       ],
       selectedLayout: "grid",
       setAuth: (user: User) => set({ user, isAuthenticated: true }),
+      setAuthReady: (authReady: boolean) => set({ authReady }),
       setCompanyId: (id: string | null) => set({ companyId: id }),
       setCompanyRegisterInfo: (companyregisterinfo: CompanyInformation) =>
         set({ companyregisterinfo }),
@@ -108,6 +112,16 @@ export const useAuthStore = create<AuthStore>()(
     }),
     {
       name: "softtech-auth-store",
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+        companyId: state.companyId,
+        companyregisterinfo: state.companyregisterinfo,
+        companyapisinfo: state.companyapisinfo,
+        companyuiinfo: state.companyuiinfo,
+        apisList: state.apisList,
+        selectedLayout: state.selectedLayout,
+      }),
     },
   ),
 );

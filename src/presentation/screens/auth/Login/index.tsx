@@ -1,7 +1,7 @@
 import React, { FC } from "react";
 import { useMutation } from "@tanstack/react-query";
 import styles from "../../../../styles/login.module.css";
-import { login } from "../../../../adapters/api/authApi";
+import { login, verifySession } from "../../../../adapters/api/authApi";
 import { EmailIcon, HelpIcon, LeftArrowIcon, LockIcon, MoonIcon, RightArrowIcon, SunIcon } from "../../../../assets/icons";
 import { useThemeStore, useAuthStore } from "../../../../hooks";
 import { useNavigate } from "@tanstack/react-router";
@@ -22,14 +22,24 @@ const Login: FC = () => {
 
   const { mutate: loginMutate, isPending, error: loginError } = useMutation({
     mutationFn: login,
-    onSuccess: (data) => {
-      if (data) {
-        const user = (data as any).user || { id: (data as any)._id };
-        setAuth(user);
+    onSuccess: async (data) => {
+      try {
+        const session = await verifySession();
+        if (session?.user) {
+          setAuth(session.user);
+        } else if (data?.user) {
+          setAuth(data.user);
+        }
         showToast("Logged in successfully!", "success");
         navigate({ to: '/dashboard', replace: true });
-      } else {
-        showToast((data as any)?.message || "Invalid credentials or response from server.", "error");
+      } catch {
+        if (data?.user) {
+          setAuth(data.user);
+          showToast("Logged in successfully!", "success");
+          navigate({ to: '/dashboard', replace: true });
+          return;
+        }
+        showToast("Login succeeded, but session could not be verified.", "error");
       }
     },
     onError: (err: any) => {
@@ -218,38 +228,15 @@ const Login: FC = () => {
                   <div className="flex items-center justify-between">
                     <span style={{ color: colors.TextBody }}>Admin access:</span>
                     <button
-                      onClick={() => fillCredentials('admin@acme.com')}
-                      className="font-bold hover:underline cursor-pointer"
-                      style={{ color: colors.TextHighlightedHeading }}
+                      type="button"
+                      onClick={() => fillCredentials("admin@softtech.ai")}
+                      className="font-bold px-2.5 py-1 rounded-md transition-colors"
+                      style={{ color: colors.TextHighlightedHeading, background: colors.BackgroundSecondary }}
                     >
-                      admin@acme.com
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span style={{ color: colors.TextBody }}>Standard testing:</span>
-                    <button
-                      onClick={() => fillCredentials('admin@admin.com')}
-                      className="font-bold hover:underline cursor-pointer"
-                      style={{ color: colors.TextHighlightedHeading }}
-                    >
-                      admin@admin.com
+                      Fill
                     </button>
                   </div>
                 </div>
-              </div>
-
-              <div className={`mt-8 pt-4 text-center`}>
-                <p className="text-slate-400 text-xs text-center flex items-center justify-center gap-1.5">
-                  New company?{" "}
-                  <button
-                    onClick={() => { navigate({ to: '/signup' }) }}
-                    className={"font-bold hover:underline cursor-pointer"}
-                    style={{ color: colors.TextHighlightedHeading }}
-                  >
-                    Create account
-                  </button>
-                  <RightArrowIcon color={colors.TextHighlightedHeading} size={16} />
-                </p>
               </div>
             </div>
           </div>

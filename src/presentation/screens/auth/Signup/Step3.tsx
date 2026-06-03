@@ -19,13 +19,12 @@ const SignupStep3: FC = () => {
     onSuccess: (res) => {
       if (res && res.success && res.data) {
         console.log("data in register step 3", res.data);
-        const token = res.token || "session-active";
         const user = {
           id: res.data._id,
           name: res.data.companyName,
           email: res.data.email
         };
-        setAuth(token, user);
+        setAuth(user);
         showToast("Registration completed successfully! Welcome aboard.", "success");
         navigate({ to: '/dashboard' });
       } else {

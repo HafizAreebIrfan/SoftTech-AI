@@ -3,5 +3,6 @@ export const env = {
   companyHQ: 'SoftTech, Gulshan e Iqbal, Karachi, Pakistan ❤️',
   supportEmail: 'support@softtechai.io',
   supportPhone: '+92-332-3941018',
-  devServer: 'https://softtech-ai.onrender.com',
+  apiBaseUrl: import.meta.env.DEV ? 'http://localhost:4100' : 'https://softtech-ai.onrender.com',
+  socketUrl: import.meta.env.DEV ? 'http://localhost:4100' : 'https://softtech-ai.onrender.com',
 } as const;
