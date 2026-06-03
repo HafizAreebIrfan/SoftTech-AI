@@ -8,7 +8,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 exports.env = {
     PORT: process.env.PORT || 4100,
-    MONGO_URI: process.env.MONGO_URI || "",
+    MONGO_URI: process.env.MONGO_URI || process.env.MONGODB_URI || "",
     CORS_ORIGINS: process.env.CORS_ORIGINS
         ? process.env.CORS_ORIGINS.split(",")
         : ["http://localhost:5173", "http://localhost:5174"],
