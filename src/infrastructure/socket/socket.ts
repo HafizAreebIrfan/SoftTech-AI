@@ -5,7 +5,7 @@ import { env } from "../config/env";
 export const SocketServer = (server: http.Server): SocketIOServer => {
   const io = new SocketIOServer(server, {
     cors: {
-      origin: env.CORS_ORIGINS,
+      origin: ["https://softtech-ai.vercel.app", "http://localhost:5173"],
       credentials: true,
     },
   });

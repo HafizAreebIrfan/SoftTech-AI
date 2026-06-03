@@ -17,7 +17,7 @@ export const buildApp = (): Express => {
 
   app.use(
     cors({
-      origin: env.CORS_ORIGINS,
+      origin: ["https://softtech-ai.vercel.app", "http://localhost:5173"],
       credentials: true,
     }),
   );
