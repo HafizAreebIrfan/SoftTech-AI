@@ -6,6 +6,7 @@ import { ToastContainer } from "react-toastify";
 import { useAuthSync } from "../hooks";
 import { useAuthStore } from "../infrastructure/store/authStore";
 import "react-toastify/dist/ReactToastify.css";
+import AppLoading from "../presentation/components/common/apploading";
 
 const App: React.FC = () => {
   useApplyGlobalThemeVars();
@@ -14,14 +15,7 @@ const App: React.FC = () => {
   const authReady = useAuthStore((state) => state.authReady);
 
   if (!authReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100">
-        <div className="text-center space-y-2">
-          <div className="text-lg font-semibold">Loading session...</div>
-          <div className="text-sm text-slate-400">Restoring your authentication state</div>
-        </div>
-      </div>
-    );
+    return <AppLoading />;
   }
 
   return (
