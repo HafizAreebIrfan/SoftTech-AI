@@ -6,5 +6,4 @@ import { loginSchema } from "../../../../../infrastructure/middlewares/Validatio
 export const CompanyLoginRoutes = express.Router();
 
 CompanyLoginRoutes.post("/login", validateRequest(loginSchema), PostrequireAuth);
-CompanyLoginRoutes.post("/logout", LogoutUser);
 CompanyLoginRoutes.get("/login", GetrequireAuth);
