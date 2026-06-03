@@ -3,7 +3,7 @@ import { createCompanyRepository } from "../../../../persistence/mongo/companies
 import { registerCompanyInfo } from "../../../../../application/useCases/company/register/registercompanyinfo";
 import { saveCompanyApiDetails } from "../../../../../application/useCases/company/register/companyapidetails";
 import { saveCompanyUiSelection } from "../../../../../application/useCases/company/register/companyuiselection";
-import { createToken, maxAge } from "../../../../../infrastructure/middlewares/AuthMiddleware/authmiddleware";
+import { authCookieOptions, createToken } from "../../../../../infrastructure/middlewares/AuthMiddleware/authmiddleware";
 
 const companyRepository = createCompanyRepository();
 
@@ -49,13 +49,7 @@ export async function saveCompanyUiSelectionController(req: Request, res: Respon
 
     const logintoken = result ? createToken((result as any)._id) : undefined;
     if (result && logintoken) {
-      res.cookie("jwt", logintoken, {
-        httpOnly: true,
-        maxAge: maxAge * 1000,
-        secure: true,
-        sameSite: "none",
-        path: "/",
-      });
+      res.cookie("jwt", logintoken, authCookieOptions);
     }
 
     res.status(200).json({

@@ -1,7 +1,7 @@
 import express, { Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { env } from "../config/env";
+import { allowedOrigins } from "../config/corsOrigins";
 import { healthRoutes } from "../../adapters/http/routes/healthRoutes";
 import { CompanyRoutes } from "../../adapters/http/routes/companies/register/companyregisterroutes";
 import { errorMiddleware } from "../middlewares/ErrorMiddleware/error";
@@ -17,7 +17,7 @@ export const buildApp = (): Express => {
 
   app.use(
     cors({
-      origin: ["https://softtech-ai.vercel.app", "http://localhost:5173"],
+      origin: allowedOrigins,
       credentials: true,
     }),
   );

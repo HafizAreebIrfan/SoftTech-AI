@@ -1,11 +1,11 @@
 import { Server as SocketIOServer } from "socket.io";
 import http from "http";
-import { env } from "../config/env";
+import { allowedOrigins } from "../config/corsOrigins";
 
 export const SocketServer = (server: http.Server): SocketIOServer => {
   const io = new SocketIOServer(server, {
     cors: {
-      origin: ["https://softtech-ai.vercel.app", "http://localhost:5173"],
+      origin: allowedOrigins,
       credentials: true,
     },
   });

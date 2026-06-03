@@ -5,6 +5,16 @@ import { CompanyModel } from "../../../adapters/persistence/models/companies/reg
 
 export const maxAge = 3 * 60 * 60;
 
+const isProduction = process.env.NODE_ENV === "production";
+
+export const authCookieOptions = {
+  httpOnly: true,
+  maxAge: maxAge * 1000,
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  path: "/",
+};
+
 export const createToken = (id: any): string => {
   return jwt.sign({ id }, env.JWT_SECRET, {
     expiresIn: maxAge,
@@ -12,31 +22,27 @@ export const createToken = (id: any): string => {
 };
 
 export const GetrequireAuth = (req: Request, res: Response): any => {
-  let token = req.cookies.jwt;
+  const token = req.cookies.jwt;
   if (!token) {
     return res.status(401).json({ error: "Not Authenticated" });
   }
 
-  jwt.verify(
-    token,
-    process.env.JWT_SECRET,
-    async (err: any, decodedToken: any) => {
-      if (err) {
-        console.log(err.message);
-        return res.status(401).json({ error: "Invalid Token" });
-      } else {
-        try {
-          const user = await CompanyModel.findById(decodedToken.id);
-          if (!user) {
-            return res.status(404).json({ error: "User not found" });
-          }
-          return res.status(200).json({ user });
-        } catch (e: any) {
-          return res.status(400).json({ error: e.message });
-        }
+  jwt.verify(token, env.JWT_SECRET, async (err: any, decodedToken: any) => {
+    if (err) {
+      console.log(err.message);
+      return res.status(401).json({ error: "Invalid Token" });
+    }
+
+    try {
+      const user = await CompanyModel.findById(decodedToken.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
       }
-    },
-  );
+      return res.status(200).json({ user });
+    } catch (e: any) {
+      return res.status(400).json({ error: e.message });
+    }
+  });
 };
 
 export const PostrequireAuth = async (
@@ -47,15 +53,10 @@ export const PostrequireAuth = async (
   try {
     const user = await CompanyModel.login(email, password);
     const logintoken = createToken(user._id);
-    res.cookie("jwt", logintoken, {
-      httpOnly: true,
-      maxAge: maxAge * 1000,
-      secure: true,
-      sameSite: "none",
-      path: "/",
-    });
+    res.cookie("jwt", logintoken, authCookieOptions);
     return res.status(200).json({
       _id: user._id,
+      token: logintoken,
     });
   } catch (e: any) {
     return res.status(400).json({ error: e.message });
@@ -64,11 +65,8 @@ export const PostrequireAuth = async (
 
 export const LogoutUser = (req: Request, res: Response): any => {
   res.cookie("jwt", "", {
+    ...authCookieOptions,
     maxAge: 0,
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/",
   });
   return res
     .status(200)
