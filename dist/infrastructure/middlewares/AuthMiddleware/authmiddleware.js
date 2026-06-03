@@ -44,12 +44,12 @@ const PostrequireAuth = async (req, res) => {
     try {
         const user = await companyinfo_1.CompanyModel.login(email, password);
         const logintoken = (0, exports.createToken)(user._id);
-        const isProd = process.env.NODE_ENV === "production" || req.headers["x-forwarded-proto"] === "https";
         res.cookie("jwt", logintoken, {
             httpOnly: true,
             maxAge: exports.maxAge * 1000,
-            secure: isProd,
-            sameSite: isProd ? "none" : "lax",
+            secure: true,
+            sameSite: "none",
+            path: "/",
         });
         return res.status(200).json({
             _id: user._id,
@@ -61,12 +61,12 @@ const PostrequireAuth = async (req, res) => {
 };
 exports.PostrequireAuth = PostrequireAuth;
 const LogoutUser = (req, res) => {
-    const isProd = process.env.NODE_ENV === "production" || req.headers["x-forwarded-proto"] === "https";
     res.cookie("jwt", "", {
         httpOnly: true,
         expires: new Date(0),
-        secure: isProd,
-        sameSite: isProd ? "none" : "lax",
+        secure: true,
+        sameSite: "none",
+        path: "/",
     });
     return res.status(200).json({ success: true, message: "Logged out successfully" });
 };

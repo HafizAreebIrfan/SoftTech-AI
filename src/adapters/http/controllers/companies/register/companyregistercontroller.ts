@@ -49,12 +49,12 @@ export async function saveCompanyUiSelectionController(req: Request, res: Respon
 
     if (result) {
       const logintoken = createToken((result as any)._id);
-      const isProd = process.env.NODE_ENV === "production" || req.headers["x-forwarded-proto"] === "https";
       res.cookie("jwt", logintoken, {
         httpOnly: true,
         maxAge: maxAge * 1000,
-        secure: isProd,
-        sameSite: isProd ? "none" : "lax",
+        secure: true,
+        sameSite: "none",
+        path: "/",
       });
     }
 
