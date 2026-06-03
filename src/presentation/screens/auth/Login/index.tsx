@@ -197,7 +197,7 @@ const Login: FC = () => {
                 </div>
 
                 {loginError && (
-                  <div className="p-3 rounded-lg text-xs font-semibold text-center" style={{ color: colors.WarningText, backgroundColor: colors.WarningBackground, borderColor: colors.WarningBorder }}>
+                  <div className="mb-3 p-3 rounded-lg text-xs font-semibold text-center" style={{ color: colors.WarningText, backgroundColor: colors.WarningBackground, borderColor: colors.WarningBorder }}>
                     {(loginError as any).message || "Invalid credentials. Please verify your details."}
                   </div>
                 )}
