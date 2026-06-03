@@ -12,33 +12,37 @@ export const createToken = (id: any): string => {
 };
 
 export const GetrequireAuth = (req: Request, res: Response): any => {
-  let token = req.cookies?.jwt;
-  if (!token && req.headers.authorization?.startsWith("Bearer ")) {
-    token = req.headers.authorization.split(" ")[1];
-  }
-
+  let token = req.cookies.jwt;
   if (!token) {
     return res.status(401).json({ error: "Not Authenticated" });
   }
-  jwt.verify(token, env.JWT_SECRET, async (err: any, decodedToken: any) => {
-    if (err) {
-      console.log(err.message);
-      return res.status(401).json({ error: "Invalid Token" });
-    } else {
-      try {
-        const user = await CompanyModel.findById(decodedToken.id);
-        if (!user) {
-          return res.status(404).json({ error: "User not found" });
+
+  jwt.verify(
+    token,
+    process.env.JWT_SECRET,
+    async (err: any, decodedToken: any) => {
+      if (err) {
+        console.log(err.message);
+        return res.status(401).json({ error: "Invalid Token" });
+      } else {
+        try {
+          const user = await CompanyModel.findById(decodedToken.id);
+          if (!user) {
+            return res.status(404).json({ error: "User not found" });
+          }
+          return res.status(200).json({ user });
+        } catch (e: any) {
+          return res.status(400).json({ error: e.message });
         }
-        return res.status(200).json({ user });
-      } catch (e: any) {
-        return res.status(400).json({ error: e.message });
       }
-    }
-  });
+    },
+  );
 };
 
-export const PostrequireAuth = async (req: Request, res: Response): Promise<any> => {
+export const PostrequireAuth = async (
+  req: Request,
+  res: Response,
+): Promise<any> => {
   const { email, password } = req.body;
   try {
     const user = await CompanyModel.login(email, password);
@@ -52,7 +56,6 @@ export const PostrequireAuth = async (req: Request, res: Response): Promise<any>
     });
     return res.status(200).json({
       _id: user._id,
-      token: logintoken,
     });
   } catch (e: any) {
     return res.status(400).json({ error: e.message });
@@ -61,11 +64,13 @@ export const PostrequireAuth = async (req: Request, res: Response): Promise<any>
 
 export const LogoutUser = (req: Request, res: Response): any => {
   res.cookie("jwt", "", {
+    maxAge: 0,
     httpOnly: true,
-    expires: new Date(0),
     secure: true,
     sameSite: "none",
     path: "/",
   });
-  return res.status(200).json({ success: true, message: "Logged out successfully" });
+  return res
+    .status(200)
+    .json({ success: true, message: "Logged out successfully" });
 };
