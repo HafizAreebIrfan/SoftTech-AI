@@ -40,13 +40,7 @@ async function saveCompanyUiSelectionController(req, res, next) {
         const result = await (0, companyuiselection_1.saveCompanyUiSelection)(companyRepository, req.params.companyId, req.body);
         const logintoken = result ? (0, authmiddleware_1.createToken)(result._id) : undefined;
         if (result && logintoken) {
-            res.cookie("jwt", logintoken, {
-                httpOnly: true,
-                maxAge: authmiddleware_1.maxAge * 1000,
-                secure: true,
-                sameSite: "none",
-                path: "/",
-            });
+            res.cookie("jwt", logintoken, authmiddleware_1.authCookieOptions);
         }
         res.status(200).json({
             success: true,

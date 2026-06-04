@@ -1,8 +1,8 @@
 import express, { Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { allowedOrigins } from "../config/corsOrigins";
-import { healthRoutes } from "../../adapters/http/routes/healthRoutes";
+import { env } from "../config/env";
+import { healthRoutes } from "../../adapters/http/routes/root/healthRoutes";
 import { CompanyRoutes } from "../../adapters/http/routes/companies/register/companyregisterroutes";
 import { errorMiddleware } from "../middlewares/ErrorMiddleware/error";
 import { helmetMiddleware } from "../middlewares/SecurityMiddleware/helmet";
@@ -17,7 +17,7 @@ export const buildApp = (): Express => {
 
   app.use(
     cors({
-      origin: allowedOrigins,
+      origin: env.CORS_ORIGINS,
       credentials: true,
     }),
   );

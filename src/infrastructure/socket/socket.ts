@@ -1,11 +1,11 @@
 import { Server as SocketIOServer } from "socket.io";
 import http from "http";
-import { allowedOrigins } from "../config/corsOrigins";
+import { env } from "../config/env";
 
 export const SocketServer = (server: http.Server): SocketIOServer => {
   const io = new SocketIOServer(server, {
     cors: {
-      origin: allowedOrigins,
+      origin: env.CORS_ORIGINS,
       credentials: true,
     },
   });
