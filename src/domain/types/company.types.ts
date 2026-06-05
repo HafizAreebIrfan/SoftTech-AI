@@ -6,6 +6,11 @@ export interface IApi {
   authType?: string;
   headers?: string[];
   params?: string[];
+  bearerToken?: string;
+  apiKey?: string;
+  oauthTokenUrl?: string;
+  oauthClientId?: string;
+  oauthClientSecret?: string;
 }
 
 export interface IUiPreference {
