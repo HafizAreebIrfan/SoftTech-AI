@@ -407,12 +407,15 @@ const SignupStep2: FC = () => {
                         <ServerIcon size={18} color={colors.IconColor} />
                       </span>
                       <input
-                        type="url"
-                        placeholder="https://api.domain.com/v1/data"
-                        value={api.apiEndpoint}
-                        onChange={(e) =>
-                          updateApiField(api.id, "apiEndpoint", e.target.value)
-                        }
+                        type="text"
+                        value={api.apiEndpoint || "https://"}
+                        onChange={(e) => {
+                          let val = e.target.value;
+                          if (!val.startsWith("https://")) {
+                            val = "https://" + val.replace(/^https?:\/\//, "");
+                          }
+                          updateApiField(api.id, "apiEndpoint", val);
+                        }}
                         className={`block w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all text-sm font-label`}
                         style={{
                           background: colors.BackgroundSecondary,
@@ -420,6 +423,14 @@ const SignupStep2: FC = () => {
                           color: colors.TextBody,
                         }}
                       />
+                      {(!api.apiEndpoint || api.apiEndpoint === "https://") && (
+                        <span
+                          className="absolute left-[106px] top-3.5 pointer-events-none text-sm font-label"
+                          style={{ color: colors.TextBody, opacity: 0.4 }}
+                        >
+                          api.domain.com/v1/data
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -594,16 +605,19 @@ const SignupStep2: FC = () => {
                                 />
                               </span>
                               <input
-                                type="url"
-                                placeholder="https://api.domain.com/oauth/token"
-                                value={api.oauthTokenUrl || ""}
-                                onChange={(e) =>
+                                type="text"
+                                value={api.oauthTokenUrl || "https://"}
+                                onChange={(e) => {
+                                  let val = e.target.value;
+                                  if (!val.startsWith("https://")) {
+                                    val = "https://" + val.replace(/^https?:\/\//, "");
+                                  }
                                   updateApiField(
                                     api.id,
                                     "oauthTokenUrl",
-                                    e.target.value,
+                                    val,
                                   )
-                                }
+                                }}
                                 className={`block w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all text-sm font-label`}
                                 style={{
                                   background: colors.BackgroundSecondary,
@@ -611,6 +625,14 @@ const SignupStep2: FC = () => {
                                   color: colors.TextBody,
                                 }}
                               />
+                              {(!api.oauthTokenUrl || api.oauthTokenUrl === "https://") && (
+                                <span
+                                  className="absolute left-[106px] top-3.5 pointer-events-none text-sm font-label"
+                                  style={{ color: colors.TextBody, opacity: 0.4 }}
+                                >
+                                  api.domain.com/oauth/token
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div>
