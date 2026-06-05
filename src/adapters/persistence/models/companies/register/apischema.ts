@@ -9,11 +9,12 @@ export const ApiSchema = new mongoose.Schema(
     authType: { type: String, default: "NONE" },
     headers: [{ type: String }],
     params: [{ type: String }],
-    bearerToken: { type: String },
     apiKey: { type: String },
+    AuthHeader: { type: String },
     oauthTokenUrl: { type: String },
     oauthClientId: { type: String },
     oauthClientSecret: { type: String },
+    bearerToken: { type: String },
   },
   { _id: false },
 );
