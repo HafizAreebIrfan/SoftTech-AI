@@ -14,9 +14,15 @@ export interface CompanyApiInformation {
 export interface ApisInformation {
   name: string;
   method: string;
-  endpointurl: string;
+  baseUrl: string;
+  endpoint: string;
   authtype: string;
-  samplequery: any;
+  headers: any[];
+  params: any[];
+  credentials?: string;
+  authHeader?: string;
+  oauthTokenUrl?: string;
+  oauthClientId?: string;
 }
 
 export interface CompanyUIInformation {
@@ -28,6 +34,7 @@ export interface SignupResonse {
   companyName: string;
   industry: string;
   email: string;
+  password: string;
   phone: string;
   apis: ApisInformation[] | null;
   uiPreference: {} | string | null;
