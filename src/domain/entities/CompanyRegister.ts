@@ -19,10 +19,12 @@ export interface ApisInformation {
   authtype: string;
   headers: any[];
   params: any[];
-  credentials?: string;
   authHeader?: string;
+  apiKey?: string;
   oauthTokenUrl?: string;
   oauthClientId?: string;
+  oauthClientSecret?: string;
+  bearerToken?: string;
 }
 
 export interface CompanyUIInformation {

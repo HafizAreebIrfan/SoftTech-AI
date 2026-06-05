@@ -225,6 +225,7 @@ const SignupStep2: FC = () => {
         api.apiAuthType === "API Key"
           ? {
               apiKey: api.apiCredentials,
+              authHeader: api.apiAuthHeader,
             }
           : {};
       const isoauth =
