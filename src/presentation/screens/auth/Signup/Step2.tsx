@@ -402,40 +402,43 @@ const SignupStep2: FC = () => {
                       Endpoint URL{" "}
                       <span style={{ color: colors.WarningText }}>*</span>
                     </label>
-                      <div className="flex w-full font-label">
-                        <div
-                          className={`pl-4 pr-3 flex items-center gap-2 rounded-l-xl border-r border-white/5 text-slate-400 font-label text-xs tracking-wider`}
+                    <div className="flex w-full font-label">
+                      <div
+                        className={`pl-4 px-3 flex items-center gap-2 rounded-l-xl border-r font-label text-xs tracking-wider ${styles.inputunedit}`}
+                        style={{
+                          background: colors.Background,
+                          border: `1px solid ${colors.CardBorder}`,
+                          color: colors.TextBody,
+                        }}
+                      >
+                        <ServerIcon size={16} color={colors.IconColor} />
+                        <span>https://</span>
+                      </div>
+                      <div className="relative flex-grow">
+                        <input
+                          type="text"
+                          placeholder="api.domain.com/v1/data"
+                          value={(api.apiEndpoint || "").replace(
+                            /^https?:\/\//,
+                            "",
+                          )}
+                          onChange={(e) =>
+                            updateApiField(
+                              api.id,
+                              "apiEndpoint",
+                              "https://" +
+                                e.target.value.replace(/^https?:\/\//, ""),
+                            )
+                          }
+                          className={`block w-full px-4 py-3 rounded-r-xl outline-none transition-all text-sm font-label`}
                           style={{
-                            background: colors.Background,
-                            opacity: 0.7,
-                            border: `1px solid ${colors.CardBorder}`,
+                            background: colors.BackgroundSecondary,
+                            borderColor: colors.CardBorder,
                             color: colors.TextBody,
                           }}
-                        >
-                          <ServerIcon size={16} color={colors.IconColor} />
-                          <span>https://</span>
-                        </div>
-                        <div className="relative flex-grow">
-                          <input
-                            type="text"
-                            placeholder="api.domain.com/v1/data"
-                            value={(api.apiEndpoint || "").replace(/^https?:\/\//, "")}
-                            onChange={(e) =>
-                              updateApiField(
-                                api.id,
-                                "apiEndpoint",
-                                "https://" + e.target.value.replace(/^https?:\/\//, ""),
-                              )
-                            }
-                            className={`block w-full px-4 py-3 rounded-r-xl outline-none transition-all text-sm font-label`}
-                            style={{
-                              background: colors.BackgroundSecondary,
-                              borderColor: colors.CardBorder,
-                              color: colors.TextBody,
-                            }}
-                          />
-                        </div>
+                        />
                       </div>
+                    </div>
                   </div>
 
                   <div className={styles.formField}>
@@ -590,8 +593,8 @@ const SignupStep2: FC = () => {
                       )}
 
                       {api.apiAuthType === "OAuth 2.0" && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="md:col-span-1">
+                        <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                          <div className="md:col-span-2 mb-0">
                             <label
                               className="font-label text-[10px] uppercase tracking-widest font-bold mb-2 block"
                               style={{ color: colors.TextBody }}
@@ -601,44 +604,53 @@ const SignupStep2: FC = () => {
                                 *
                               </span>
                             </label>
-                             <div className="flex w-full font-label">
-                                <div
-                                  className={`pl-4 pr-3 flex items-center gap-2 rounded-l-xl border-r border-white/5 text-slate-400 font-label text-xs tracking-wider`}
+                            <div className="flex w-full font-label">
+                              <div
+                                className={`pl-4 px-3 flex items-center gap-2 rounded-l-xl border-r font-label text-xs tracking-wider ${styles.inputunedit}`}
+                                style={{
+                                  background: colors.Background,
+                                  border: `1px solid ${colors.CardBorder}`,
+                                  color: colors.TextBody,
+                                }}
+                              >
+                                <ServerIcon
+                                  size={16}
+                                  color={colors.IconColor}
+                                />
+                                <span>https://</span>
+                              </div>
+                              <div className="relative flex-grow">
+                                <input
+                                  type="text"
+                                  placeholder="api.domain.com/oauth/token"
+                                  value={(api.oauthTokenUrl || "").replace(
+                                    /^https?:\/\//,
+                                    "",
+                                  )}
+                                  onChange={(e) =>
+                                    updateApiField(
+                                      api.id,
+                                      "oauthTokenUrl",
+                                      "https://" +
+                                        e.target.value.replace(
+                                          /^https?:\/\//,
+                                          "",
+                                        ),
+                                    )
+                                  }
+                                  className={`block w-full px-4 py-3 rounded-r-xl outline-none transition-all text-sm font-label`}
                                   style={{
-                                    background: colors.Background,
-                                    opacity: 0.7,
-                                    border: `1px solid ${colors.CardBorder}`,
+                                    background: colors.BackgroundSecondary,
+                                    borderColor: colors.CardBorder,
                                     color: colors.TextBody,
                                   }}
-                                >
-                                  <ServerIcon size={16} color={colors.IconColor} />
-                                  <span>https://</span>
-                                </div>
-                                <div className="relative flex-grow">
-                                  <input
-                                    type="text"
-                                    placeholder="api.domain.com/oauth/token"
-                                    value={(api.oauthTokenUrl || "").replace(/^https?:\/\//, "")}
-                                    onChange={(e) =>
-                                      updateApiField(
-                                        api.id,
-                                        "oauthTokenUrl",
-                                        "https://" + e.target.value.replace(/^https?:\/\//, ""),
-                                      )
-                                    }
-                                    className={`block w-full px-4 py-3 rounded-r-xl outline-none transition-all text-sm font-label`}
-                                    style={{
-                                      background: colors.BackgroundSecondary,
-                                      borderColor: colors.CardBorder,
-                                      color: colors.TextBody,
-                                    }}
-                                  />
-                                </div>
+                                />
                               </div>
+                            </div>
                           </div>
                           <div>
                             <label
-                              className="font-label text-[10px] uppercase tracking-widest font-bold mb-2 block"
+                              className="font-label text-[10px] uppercase tracking-widest font-bold mb-0 block"
                               style={{ color: colors.TextBody }}
                             >
                               Client ID{" "}
@@ -672,7 +684,7 @@ const SignupStep2: FC = () => {
                           </div>
                           <div>
                             <label
-                              className="font-label text-[10px] uppercase tracking-widest font-bold mb-2 block"
+                              className="font-label text-[10px] uppercase tracking-widest font-bold mb-0 block"
                               style={{ color: colors.TextBody }}
                             >
                               Client Secret{" "}
@@ -712,11 +724,14 @@ const SignupStep2: FC = () => {
                   {/* Optional Custom Headers Field */}
                   <div className={styles.formField}>
                     <label
-                      className="font-label text-[10px] uppercase tracking-widest font-bold mb-2 block"
+                      className="mt-3 font-label text-[10px] uppercase tracking-widest font-bold mb-2 block"
                       style={{ color: colors.TextBody }}
                     >
                       Custom Headers (JSON string){" "}
-                      <span className="text-slate-500 font-medium">
+                      <span
+                        className="font-medium text-[9px]"
+                        style={{ color: colors.TextBody }}
+                      >
                         (Optional)
                       </span>
                     </label>
