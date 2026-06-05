@@ -414,7 +414,7 @@ const SignupStep2: FC = () => {
                         <ServerIcon size={16} color={colors.IconColor} />
                         <span>https://</span>
                       </div>
-                      <div className="relative flex-grow">
+                      <div className="relative grow">
                         <input
                           type="text"
                           placeholder="api.domain.com/v1/data"
@@ -619,7 +619,7 @@ const SignupStep2: FC = () => {
                                 />
                                 <span>https://</span>
                               </div>
-                              <div className="relative flex-grow">
+                              <div className="relative grow">
                                 <input
                                   type="text"
                                   placeholder="api.domain.com/oauth/token"
