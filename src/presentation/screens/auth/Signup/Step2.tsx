@@ -1,13 +1,8 @@
 import React, { FC } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { useThemeStore } from "../../../../infrastructure/store/themeStore";
-import {
-  useAuthStore,
-  ApiConnection,
-} from "../../../../infrastructure/store/authStore";
-import { saveCompanyApiDetails } from "../../../../adapters/api/authApi";
+import { useThemeStore, useSignupStore } from "../../../../hooks";
+import { stepTwoSchema } from "../../../../infrastructure/validation/signupSchemas";
 import {
   DatabaseIcon,
   TrashIcon,
@@ -21,238 +16,54 @@ import {
 } from "../../../../assets/icons";
 import { showToast } from "../../../../utils/toasts";
 import styles from "../../../../styles/signup.module.css";
-import { ApisInformation } from "../../../../domain/entities/CompanyRegister";
-
-const getBaseUrl = (urlStr: string): string => {
-  try {
-    const url = new URL(urlStr);
-    return `${url.protocol}//${url.host}`;
-  } catch (e) {
-    return urlStr;
-  }
-};
-
-const getEndpointPath = (urlStr: string): string => {
-  try {
-    const url = new URL(urlStr);
-    return url.pathname + url.search;
-  } catch (e) {
-    return "/";
-  }
-};
 
 const SignupStep2: FC = () => {
   const navigate = useNavigate();
   const { colors } = useThemeStore();
-  const { companyId, apisList, setApisList } = useAuthStore();
+  const {
+    apisList,
+    updateApiField,
+    handleAddApi,
+    handleDeleteApi,
+    apiTestStates,
+    isStepTwoPending,
+    handleTestApi,
+    handleStepTwoSubmit,
+  } = useSignupStore();
 
-  const { mutate: stepTwoMutate, isPending: isStepTwoPending } = useMutation({
-    mutationFn: ({ id, apis }: { id: string; apis: ApisInformation[] }) =>
-      saveCompanyApiDetails(id, apis),
-    onSuccess: (res) => {
-      if (res && res.success) {
-        showToast("API configurations saved successfully!", "success");
-        navigate({ to: "/signup/step3" });
-      } else {
-        showToast(res?.message || "Failed to save API details.", "error");
-      }
-    },
-    onError: (err: any) => {
-      showToast(err.message || "An error occurred during Step 2.", "error");
-    },
-  });
+  const allApisTestedSuccessfully = apisList.every(
+    (api) => apiTestStates[api.id]?.status === "success",
+  );
 
-  const handleAddApi = () => {
-    const newId = `api-${Date.now()}`;
-    setApisList((prev) => [
-      ...prev,
-      {
-        id: newId,
-        apiName: "",
-        apiMethod: "GET",
-        apiEndpoint: "",
-        apiAuthType: "No Auth",
-        apiCredentials: "",
-        apiQueryParams: "",
-        apiCheckoutTemplate: "",
-        apiAuthHeader: "",
-        oauthTokenUrl: "",
-        oauthClientId: "",
-        apiHeaders: "",
-      },
-    ]);
+  const anyApiHasError = apisList.some(
+    (api) => apiTestStates[api.id]?.status === "error",
+  );
+
+  const getButtonText = () => {
+    if (isStepTwoPending) return "Saving...";
+    if (anyApiHasError) return "Fix API Errors to Continue";
+    if (!allApisTestedSuccessfully) return "Test APIs to Continue";
+    return "Continue";
   };
 
-  const handleDeleteApi = (id: string) => {
-    if (apisList.length > 1) {
-      setApisList((prev) => prev.filter((api) => api.id !== id));
-    }
-  };
-
-  const updateApiField = (
-    id: string,
-    field: keyof ApiConnection,
-    value: string,
-  ) => {
-    setApisList((prev) =>
-      prev.map((api) => (api.id === id ? { ...api, [field]: value } : api)),
-    );
-  };
-
-  const handleStepTwoSubmit = () => {
-    if (!companyId) {
-      showToast("Company ID is missing. Please restart signup.", "error");
-      navigate({ to: "/signup/step1" });
+  const handleStepTwoSubmitWithValidation = () => {
+    const result = stepTwoSchema.safeParse(apisList);
+    if (!result.success) {
+      const errorMsg =
+        result.error.issues[0]?.message || "Please fix validation errors.";
+      showToast(errorMsg, "warning");
       return;
     }
 
-    // Validate fields
-    for (const api of apisList) {
-      if (!api.apiName.trim()) {
-        showToast("API Name is required.", "warning");
-        return;
-      }
-      if (!api.apiEndpoint.trim()) {
-        showToast(`Endpoint URL is required for "${api.apiName}".`, "warning");
-        return;
-      }
-
-      // Check URL format
-      try {
-        new URL(api.apiEndpoint);
-      } catch (e) {
-        showToast(
-          `Invalid URL format in Endpoint URL for "${api.apiName}".`,
-          "warning",
-        );
-        return;
-      }
-
-      // Auth validation
-      if (api.apiAuthType === "Bearer Token" && !api.apiCredentials?.trim()) {
-        showToast(`Bearer Token is required for "${api.apiName}".`, "warning");
-        return;
-      }
-      if (api.apiAuthType === "API Key") {
-        if (!api.apiAuthHeader?.trim()) {
-          showToast(
-            `API Key Header Name is required for "${api.apiName}".`,
-            "warning",
-          );
-          return;
-        }
-        if (!api.apiCredentials?.trim()) {
-          showToast(
-            `API Key Value is required for "${api.apiName}".`,
-            "warning",
-          );
-          return;
-        }
-      }
-      if (api.apiAuthType === "OAuth 2.0") {
-        if (!api.oauthTokenUrl?.trim()) {
-          showToast(
-            `OAuth 2.0 Token URL is required for "${api.apiName}".`,
-            "warning",
-          );
-          return;
-        }
-        try {
-          new URL(api.oauthTokenUrl);
-        } catch (e) {
-          showToast(
-            `Invalid OAuth Token URL format for "${api.apiName}".`,
-            "warning",
-          );
-          return;
-        }
-        if (!api.oauthClientId?.trim()) {
-          showToast(
-            `OAuth 2.0 Client ID is required for "${api.apiName}".`,
-            "warning",
-          );
-          return;
-        }
-        if (!api.apiCredentials?.trim()) {
-          showToast(
-            `OAuth 2.0 Client Secret is required for "${api.apiName}".`,
-            "warning",
-          );
-          return;
-        }
-      }
-
-      // Custom headers (optional, but must be valid JSON)
-      if (api.apiHeaders && api.apiHeaders.trim()) {
-        try {
-          JSON.parse(api.apiHeaders);
-        } catch (e) {
-          showToast(
-            `Invalid JSON structure in Custom Headers for "${api.apiName}".`,
-            "error",
-          );
-          return;
-        }
-      }
-
-      // Query Parameters (required, must be valid JSON)
-      if (!api.apiQueryParams || !api.apiQueryParams.trim()) {
-        showToast(
-          `Query Parameters are required for "${api.apiName}".`,
-          "warning",
-        );
-        return;
-      }
-      try {
-        JSON.parse(api.apiQueryParams);
-      } catch (e) {
-        showToast(
-          `Invalid JSON structure in Query Parameters for "${api.apiName}".`,
-          "error",
-        );
-        return;
-      }
+    if (!allApisTestedSuccessfully) {
+      showToast(
+        "Please test all API configurations successfully before continuing.",
+        "warning",
+      );
+      return;
     }
 
-    const apisPayload = apisList.map((api) => {
-      const isbearertoken =
-        api.apiAuthType === "Bearer Token"
-          ? {
-              bearerToken: api.apiCredentials,
-            }
-          : {};
-      const isapikey =
-        api.apiAuthType === "API Key"
-          ? {
-              apiKey: api.apiCredentials,
-              authHeader: api.apiAuthHeader,
-            }
-          : {};
-      const isoauth =
-        api.apiAuthType === "OAuth 2.0"
-          ? {
-              oauthTokenUrl: api.oauthTokenUrl,
-              oauthClientId: api.oauthClientId,
-              oauthClientSecret: api.apiCredentials,
-            }
-          : {};
-      return {
-        name: api.apiName,
-        method: api.apiMethod,
-        baseUrl: getBaseUrl(api.apiEndpoint),
-        endpoint: getEndpointPath(api.apiEndpoint),
-        authtype: api.apiAuthType,
-        samplequery: api.apiQueryParams,
-        authType: api.apiAuthType,
-        headers: api.apiHeaders ? [api.apiHeaders] : [],
-        params: api.apiQueryParams ? [api.apiQueryParams] : [],
-        ...isbearertoken,
-        ...isapikey,
-        ...isoauth,
-      };
-    });
-
-    stepTwoMutate({ id: companyId, apis: apisPayload });
+    handleStepTwoSubmit(navigate);
   };
 
   return (
@@ -414,7 +225,7 @@ const SignupStep2: FC = () => {
                         <ServerIcon size={16} color={colors.IconColor} />
                         <span>https://</span>
                       </div>
-                      <div className="relative grow">
+                      <div className="relative grow flex items-center">
                         <input
                           type="text"
                           placeholder="api.domain.com/v1/data"
@@ -430,13 +241,34 @@ const SignupStep2: FC = () => {
                                 e.target.value.replace(/^https?:\/\//, ""),
                             )
                           }
-                          className={`block w-full px-4 py-3 rounded-r-xl outline-none transition-all text-sm font-label`}
+                          className={`block w-full px-3 py-3 rounded-r-xl outline-none transition-all text-sm font-label`}
                           style={{
                             background: colors.BackgroundSecondary,
                             borderColor: colors.CardBorder,
                             color: colors.TextBody,
                           }}
                         />
+                        <div
+                          className={`pl-4 px-3 py-4 flex items-center gap-2 rounded-l-xl border-l font-label text-xs tracking-wider`}
+                          style={{
+                            background: colors.Background,
+                            border: `1px solid ${colors.CardBorder}`,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => handleTestApi(api)}
+                            className="absolute right-0 px-3 py-3 text-xs font-semibold hover:opacity-90 transition-all cursor-pointer select-none"
+                            style={{
+                              background: `linear-gradient(90deg,${colors.ButtonGradientOne} , ${colors.ButtonGradientTwo})`,
+                              color: colors.TextHeading,
+                            }}
+                          >
+                            {apiTestStates[api.id]?.status === "loading"
+                              ? "Testing..."
+                              : "Test API"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -840,59 +672,103 @@ const SignupStep2: FC = () => {
                       className="font-label text-[10px] uppercase tracking-widest font-bold mb-2 block"
                       style={{ color: colors.TextBody }}
                     >
-                      Sample JSON Response
+                      {apiTestStates[api.id]
+                        ? "API Connection Logs & Output"
+                        : "Sample JSON Response"}
                     </span>
                     <div
-                      className="text-[11px] p-4 font-mono leading-relaxed max-h-[220px] overflow-y-auto"
+                      className="text-[11px] p-4 font-mono leading-relaxed h-[220px] overflow-y-auto"
                       style={{
-                        border: `1px solid ${colors.CardBorder}`,
+                        border: `1px solid ${
+                          apiTestStates[api.id]?.status === "error"
+                            ? "#ef4444"
+                            : apiTestStates[api.id]?.status === "success"
+                              ? "#10b981"
+                              : colors.CardBorder
+                        }`,
                         borderRadius: "12px",
                         backgroundColor: colors.Background,
                       }}
                     >
                       <pre
-                        className="text-left"
-                        style={{ color: colors.TextBody }}
+                        className="text-left whitespace-pre-wrap break-all"
+                        style={{
+                          color:
+                            apiTestStates[api.id]?.status === "error"
+                              ? "#f87171"
+                              : apiTestStates[api.id]?.status === "success"
+                                ? "#34d399"
+                                : colors.TextBody,
+                        }}
                       >
-                        <span style={{ color: colors.TextHighlightedHeading }}>
-                          "status"
-                        </span>
-                        :{" "}
-                        <span style={{ color: colors.TextBody }}>"active"</span>
-                        ,{"\n"}
-                        <span style={{ color: colors.TextHighlightedHeading }}>
-                          "data"
-                        </span>
-                        : &#123;{"\n"}
-                        &nbsp;&nbsp;
-                        <span style={{ color: colors.TextHighlightedHeading }}>
-                          "coordinates"
-                        </span>
-                        : [
-                        <span style={{ color: colors.TextBody }}>"X-89"</span>,{" "}
-                        <span style={{ color: colors.TextBody }}>"Y-22"</span>],
-                        {"\n"}
-                        &nbsp;&nbsp;
-                        <span style={{ color: colors.TextHighlightedHeading }}>
-                          "telemetry"
-                        </span>
-                        : <span style={{ color: colors.TextBody }}>true</span>,
-                        {"\n"}
-                        &nbsp;&nbsp;
-                        <span style={{ color: colors.TextHighlightedHeading }}>
-                          "nodes"
-                        </span>
-                        :{" "}
-                        <span style={{ color: colors.TextBody }}>"1,244"</span>
-                        {"\n"}
-                        &#125;,{"\n"}
-                        <span style={{ color: colors.TextHighlightedHeading }}>
-                          "timestamp"
-                        </span>
-                        :{" "}
-                        <span style={{ color: colors.TextBody }}>
-                          "2026-05-30T17:12Z"
-                        </span>
+                        {apiTestStates[api.id] ? (
+                          apiTestStates[api.id].logs
+                        ) : (
+                          <>
+                            <span
+                              style={{ color: colors.TextHighlightedHeading }}
+                            >
+                              "status"
+                            </span>
+                            :{" "}
+                            <span style={{ color: colors.TextBody }}>
+                              "active"
+                            </span>
+                            ,{"\n"}
+                            <span
+                              style={{ color: colors.TextHighlightedHeading }}
+                            >
+                              "data"
+                            </span>
+                            : &#123;{"\n"}
+                            &nbsp;&nbsp;
+                            <span
+                              style={{ color: colors.TextHighlightedHeading }}
+                            >
+                              "coordinates"
+                            </span>
+                            : [
+                            <span style={{ color: colors.TextBody }}>
+                              "X-89"
+                            </span>
+                            ,{" "}
+                            <span style={{ color: colors.TextBody }}>
+                              "Y-22"
+                            </span>
+                            ],
+                            {"\n"}
+                            &nbsp;&nbsp;
+                            <span
+                              style={{ color: colors.TextHighlightedHeading }}
+                            >
+                              "telemetry"
+                            </span>
+                            :{" "}
+                            <span style={{ color: colors.TextBody }}>true</span>
+                            ,{"\n"}
+                            &nbsp;&nbsp;
+                            <span
+                              style={{ color: colors.TextHighlightedHeading }}
+                            >
+                              "nodes"
+                            </span>
+                            :{" "}
+                            <span style={{ color: colors.TextBody }}>
+                              "1,244"
+                            </span>
+                            {"\n"}
+                            &#125;,{"\n"}
+                            <span
+                              style={{ color: colors.TextHighlightedHeading }}
+                            >
+                              "timestamp"
+                            </span>
+                            :{" "}
+                            <span style={{ color: colors.TextBody }}>
+                              "2026-05-30T17:12Z"
+                            </span>
+                          </>
+                        )}
                       </pre>
                     </div>
                   </div>
@@ -936,15 +812,30 @@ const SignupStep2: FC = () => {
               Step 2 of 3
             </span>
             <button
-              onClick={handleStepTwoSubmit}
+              onClick={handleStepTwoSubmitWithValidation}
               className={`${styles.btn}`}
               style={{
-                background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
-                opacity: isStepTwoPending ? 0.7 : 1,
+                background:
+                  isStepTwoPending || !allApisTestedSuccessfully
+                    ? colors.Background
+                    : `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
+                color:
+                  isStepTwoPending || !allApisTestedSuccessfully
+                    ? colors.TextBody
+                    : colors.TextHeading,
+                border:
+                  isStepTwoPending || !allApisTestedSuccessfully
+                    ? `1px solid ${colors.CardBorder}`
+                    : "none",
+                cursor:
+                  isStepTwoPending || !allApisTestedSuccessfully
+                    ? "not-allowed"
+                    : "pointer",
+                opacity: 1,
               }}
-              disabled={isStepTwoPending}
+              disabled={isStepTwoPending || !allApisTestedSuccessfully}
             >
-              {isStepTwoPending ? "Saving..." : "Continue"}
+              {getButtonText()}
             </button>
           </div>
         </div>

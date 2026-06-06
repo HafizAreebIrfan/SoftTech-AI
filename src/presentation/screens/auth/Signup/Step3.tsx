@@ -2,8 +2,7 @@ import React, { FC } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
-import { useThemeStore } from "../../../../infrastructure/store/themeStore";
-import { useAuthStore } from "../../../../infrastructure/store/authStore";
+import { useThemeStore, useAuthStore, useSignupStore } from "../../../../hooks";
 import { saveCompanyUiSelection } from "../../../../adapters/api/authApi";
 import {
   LayoutGridIcon,
@@ -14,13 +13,15 @@ import {
   LeftArrowIcon,
 } from "../../../../assets/icons";
 import { showToast } from "../../../../utils/toasts";
+import { stepThreeSchema } from "../../../../infrastructure/validation/signupSchemas";
 import styles from "../../../../styles/signup.module.css";
 
 const SignupStep3: FC = () => {
   const navigate = useNavigate();
   const { colors } = useThemeStore();
-  const { companyId, selectedLayout, setSelectedLayout, setAuth } =
-    useAuthStore();
+  const { companyId, selectedLayout, setSelectedLayout, clearSignupProgress } =
+    useSignupStore();
+  const { setAuth } = useAuthStore();
 
   const { mutate: stepThreeMutate, isPending: isStepThreePending } =
     useMutation({
@@ -39,6 +40,7 @@ const SignupStep3: FC = () => {
             email: res.data.email,
           };
           setAuth(user);
+          clearSignupProgress();
           showToast(
             "Registration completed successfully! Welcome aboard.",
             "success",
@@ -57,6 +59,14 @@ const SignupStep3: FC = () => {
     if (!companyId) {
       showToast("Company ID is missing. Please restart signup.", "error");
       navigate({ to: "/signup/step1" });
+      return;
+    }
+    const result = stepThreeSchema.safeParse({ layout: selectedLayout });
+    if (!result.success) {
+      showToast(
+        result.error.issues[0]?.message || "Invalid layout selection.",
+        "error",
+      );
       return;
     }
     stepThreeMutate({

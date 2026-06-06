@@ -3,7 +3,7 @@ import { useAuthStore } from "./useAuth";
 import { verifySession } from "../adapters/api/authApi";
 
 export const useAuthSync = () => {
-  const { setAuth, clearAuth, setAuthReady } = useAuthStore();
+  const { setAuth, clearAuth, setAuthReady, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     const getUserInfo = async () => {
@@ -12,15 +12,19 @@ export const useAuthSync = () => {
         if (session?.user) {
           setAuth(session.user);
         } else {
-          clearAuth();
+          if (isAuthenticated) {
+            clearAuth();
+          }
         }
       } catch {
-        clearAuth();
+        if (isAuthenticated) {
+          clearAuth();
+        }
       } finally {
         setAuthReady(true);
       }
     };
 
     getUserInfo();
-  }, [setAuth, clearAuth, setAuthReady]);
+  }, [setAuth, clearAuth, setAuthReady, isAuthenticated]);
 };

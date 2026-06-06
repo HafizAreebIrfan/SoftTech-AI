@@ -212,7 +212,6 @@
 .btn {
   padding: 0.85rem;
   border: none;
-  color: #ffffff;
   font-weight: 700;
   font-size: 0.875rem;
   border-radius: 0.5rem;
@@ -222,5 +221,4 @@
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
 }

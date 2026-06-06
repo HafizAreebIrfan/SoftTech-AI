@@ -11,7 +11,7 @@ import {
   RightArrowIcon,
   SunIcon,
 } from "../../../../assets/icons";
-import { useThemeStore, useAuthStore } from "../../../../hooks";
+import { useThemeStore, useAuthStore, useLoginStore } from "../../../../hooks";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useForm } from "@tanstack/react-form";
@@ -26,6 +26,13 @@ const loginSchema = z.object({
 const Login: FC = () => {
   const { colors, isDark, toggleTheme } = useThemeStore();
   const { setAuth } = useAuthStore();
+  const {
+    email,
+    password,
+    setEmail,
+    setPassword,
+    fillCredentials: fillCredentialsStore,
+  } = useLoginStore();
   const navigate = useNavigate();
 
   const {
@@ -55,8 +62,8 @@ const Login: FC = () => {
 
   const loginForm = useForm({
     defaultValues: {
-      email: "",
-      password: "",
+      email: email || "",
+      password: password || "",
     },
     onSubmit: async ({ value }) => {
       const parsed = loginSchema.safeParse(value);
@@ -71,8 +78,9 @@ const Login: FC = () => {
     },
   });
 
-  const fillCredentials = (email: string) => {
-    loginForm.setFieldValue("email", email);
+  const fillCredentials = (targetEmail: string) => {
+    fillCredentialsStore(targetEmail);
+    loginForm.setFieldValue("email", targetEmail);
     loginForm.setFieldValue("password", "password123");
   };
 
@@ -203,7 +211,10 @@ const Login: FC = () => {
                           placeholder="you@company.com"
                           value={field.state.value}
                           onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
+                          onChange={(e) => {
+                            field.handleChange(e.target.value);
+                            setEmail(e.target.value);
+                          }}
                           className={`block w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all text-sm font-label `}
                           style={{
                             background: colors.Background,
@@ -264,7 +275,10 @@ const Login: FC = () => {
                           placeholder="••••••••"
                           value={field.state.value}
                           onBlur={field.handleBlur}
-                          onChange={(e) => field.handleChange(e.target.value)}
+                          onChange={(e) => {
+                            field.handleChange(e.target.value);
+                            setPassword(e.target.value);
+                          }}
                           className={`block w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all text-sm font-label`}
                           style={{
                             background: colors.Background,

@@ -3,25 +3,18 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { useThemeStore, useAuthStore } from "../../../../hooks";
+import { useThemeStore, useSignupStore } from "../../../../hooks";
 import { registerCompanyInfo } from "../../../../adapters/api/authApi";
 import { LeftArrowIcon, EmailIcon, LockIcon } from "../../../../assets/icons";
 import { showToast } from "../../../../utils/toasts";
-import { z } from "zod";
+import { stepOneSchema } from "../../../../infrastructure/validation/signupSchemas";
 import styles from "../../../../styles/signup.module.css";
-
-const stepOneSchema = z.object({
-  companyName: z.string().min(2, "Company Name must be at least 2 characters"),
-  adminEmail: z.string().min(1, "Email is required").email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  subdomain: z.string().min(2, "Subdomain must be at least 2 characters").regex(/^[a-zA-Z0-9-]+$/, "Only letters, numbers, and hyphens"),
-  primaryIndustry: z.string().min(1, "Please select an industry")
-});
+import z from "zod";
 
 const SignupStep1: FC = () => {
   const navigate = useNavigate();
   const { colors } = useThemeStore();
-  const { setCompanyId } = useAuthStore();
+  const { setCompanyId, stepOneData, setStepOneData } = useSignupStore();
 
   const { mutate: stepOneMutate, isPending: isStepOnePending } = useMutation({
     mutationFn: registerCompanyInfo,
@@ -29,23 +22,26 @@ const SignupStep1: FC = () => {
       if (res && res.success && res.data) {
         setCompanyId(res.data._id);
         showToast("Company information saved successfully!", "success");
-        navigate({ to: '/signup/step2' });
+        navigate({ to: "/signup/step2" });
       } else {
-        showToast(res?.message || "Failed to save company information.", "error");
+        showToast(
+          res?.message || "Failed to save company information.",
+          "error",
+        );
       }
     },
     onError: (err: any) => {
       showToast(err.message || "An error occurred during Step 1.", "error");
-    }
+    },
   });
 
   const signupForm = useForm({
     defaultValues: {
-      companyName: '',
-      adminEmail: '',
-      password: '',
-      subdomain: '',
-      primaryIndustry: 'saas'
+      companyName: stepOneData.companyName || "",
+      adminEmail: stepOneData.adminEmail || "",
+      password: stepOneData.password || "",
+      subdomain: stepOneData.subdomain || "",
+      primaryIndustry: stepOneData.primaryIndustry || "saas",
     },
     onSubmit: async ({ value }) => {
       const parsed = stepOneSchema.safeParse(value);
@@ -58,9 +54,9 @@ const SignupStep1: FC = () => {
         email: value.adminEmail,
         password: value.password,
         industry: value.primaryIndustry,
-        subdomain: value.subdomain
+        subdomain: value.subdomain,
       });
-    }
+    },
   });
 
   const handleStepOneSubmit = () => {
@@ -75,26 +71,59 @@ const SignupStep1: FC = () => {
       exit={{ opacity: 0, scale: 0.98 }}
       className="mt-4 w-full max-w-4xl text-left space-y-8 mx-auto"
     >
-      <div className={styles.signupcard} style={{ background: colors.BackgroundSecondary, border: `1px solid ${colors.CardBorder}`, borderLeft: `4px solid ${colors.CardActiveBorder}`, boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}` }}>
+      <div
+        className={styles.signupcard}
+        style={{
+          background: colors.BackgroundSecondary,
+          border: `1px solid ${colors.CardBorder}`,
+          borderLeft: `4px solid ${colors.CardActiveBorder}`,
+          boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`,
+        }}
+      >
         <div className="space-y-2">
-          <h2 className="text-4xl md:text-5xl font-headline font-bold tracking-tight mb-2" style={{ color: colors.TextHeading }}>Company Information</h2>
-          <p className="font-medium text-lg leading-relaxed max-w-2xl" style={{ color: colors.TextBody }}>
-            Initialize your interstellar workspace identity. Connect your brand to the protocol.
+          <h2
+            className="text-4xl md:text-5xl font-headline font-bold tracking-tight mb-2"
+            style={{ color: colors.TextHeading }}
+          >
+            Company Information
+          </h2>
+          <p
+            className="font-medium text-lg leading-relaxed max-w-2xl"
+            style={{ color: colors.TextBody }}
+          >
+            Initialize your interstellar workspace identity. Connect your brand
+            to the protocol.
           </p>
         </div>
 
         <div className={`relative p-8 md:p-12 backdrop-blur-xl`}>
-          <form className="grid grid-cols-1 md:grid-cols-2 gap-8" onSubmit={(e) => { e.preventDefault(); handleStepOneSubmit(); }}>
+          <form
+            className="grid grid-cols-1 md:grid-cols-2 gap-8"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleStepOneSubmit();
+            }}
+          >
             <div className={`${styles.formField} md:col-span-2`}>
               <div className="flex flex-col gap-2">
-                <label className="font-label text-[10px] uppercase tracking-widest font-bold" style={{ color: colors.TextBody }}>Legal Company Name</label>
+                <label
+                  className="font-label text-[10px] uppercase tracking-widest font-bold"
+                  style={{ color: colors.TextBody }}
+                >
+                  Legal Company Name
+                </label>
                 <signupForm.Field
                   name="companyName"
                   validators={{
                     onChange: ({ value }) => {
-                      const res = z.string().min(2, "Company Name must be at least 2 characters").safeParse(value);
-                      return res.success ? undefined : res.error.issues[0].message;
-                    }
+                      const res = z
+                        .string()
+                        .min(2, "Company Name must be at least 2 characters")
+                        .safeParse(value);
+                      return res.success
+                        ? undefined
+                        : res.error.issues[0].message;
+                    },
                   }}
                   children={(field) => (
                     <div className="relative">
@@ -106,12 +135,25 @@ const SignupStep1: FC = () => {
                         placeholder="e.g. Nexus Corp"
                         value={field.state.value}
                         onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                          setStepOneData({ companyName: e.target.value });
+                        }}
                         className={`block w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all text-sm font-label`}
-                        style={{ background: colors.Background, borderColor: field.state.meta.errors?.length > 0 ? "#ef4444" : colors.CardBorder, color: colors.TextBody }}
+                        style={{
+                          background: colors.Background,
+                          borderColor:
+                            field.state.meta.errors?.length > 0
+                              ? "#ef4444"
+                              : colors.CardBorder,
+                          color: colors.TextBody,
+                        }}
                       />
                       {field.state.meta.errors?.length > 0 && (
-                        <span className="text-[11px] text-red-500 mt-1 block font-semibold">
+                        <span
+                          className={`text-[11px] mt-1 block font-semibold`}
+                          style={{ color: colors.WarningText }}
+                        >
                           {field.state.meta.errors.join(", ")}
                         </span>
                       )}
@@ -123,14 +165,25 @@ const SignupStep1: FC = () => {
 
             <div className={styles.formField}>
               <div className="flex flex-col gap-2">
-                <label className="font-label text-[10px] uppercase tracking-widest font-bold" style={{ color: colors.TextBody }}>Admin Email Address</label>
+                <label
+                  className="font-label text-[10px] uppercase tracking-widest font-bold"
+                  style={{ color: colors.TextBody }}
+                >
+                  Admin Email Address
+                </label>
                 <signupForm.Field
                   name="adminEmail"
                   validators={{
                     onChange: ({ value }) => {
-                      const res = z.string().min(1, "Email is required").email("Invalid email address").safeParse(value);
-                      return res.success ? undefined : res.error.issues[0].message;
-                    }
+                      const res = z
+                        .string()
+                        .min(1, "Email is required")
+                        .email("Invalid email address")
+                        .safeParse(value);
+                      return res.success
+                        ? undefined
+                        : res.error.issues[0].message;
+                    },
                   }}
                   children={(field) => (
                     <div className="relative">
@@ -142,9 +195,19 @@ const SignupStep1: FC = () => {
                         placeholder="you@company.com"
                         value={field.state.value}
                         onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                          setStepOneData({ adminEmail: e.target.value });
+                        }}
                         className={`block w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all text-sm font-label `}
-                        style={{ background: colors.Background, borderColor: field.state.meta.errors?.length > 0 ? "#ef4444" : colors.CardBorder, color: colors.TextBody }}
+                        style={{
+                          background: colors.Background,
+                          borderColor:
+                            field.state.meta.errors?.length > 0
+                              ? "#ef4444"
+                              : colors.CardBorder,
+                          color: colors.TextBody,
+                        }}
                       />
                       {field.state.meta.errors?.length > 0 && (
                         <span className="text-[11px] text-red-500 mt-1 block font-semibold">
@@ -159,26 +222,48 @@ const SignupStep1: FC = () => {
 
             <div className={styles.formField}>
               <div className="flex flex-col gap-2">
-                <label className="font-label text-[10px] uppercase tracking-widest font-bold" style={{ color: colors.TextBody }}>System Password</label>
+                <label
+                  className="font-label text-[10px] uppercase tracking-widest font-bold"
+                  style={{ color: colors.TextBody }}
+                >
+                  System Password
+                </label>
                 <signupForm.Field
                   name="password"
                   validators={{
                     onChange: ({ value }) => {
-                      const res = z.string().min(6, "Password must be at least 6 characters").safeParse(value);
-                      return res.success ? undefined : res.error.issues[0].message;
-                    }
+                      const res = z
+                        .string()
+                        .min(6, "Password must be at least 6 characters")
+                        .safeParse(value);
+                      return res.success
+                        ? undefined
+                        : res.error.issues[0].message;
+                    },
                   }}
                   children={(field) => (
                     <div className="relative">
-                      <span className="absolute left-4 top-4.5"><LockIcon size={18} color={colors.IconColor} /></span>
+                      <span className="absolute left-4 top-4.5">
+                        <LockIcon size={18} color={colors.IconColor} />
+                      </span>
                       <input
                         type="password"
                         placeholder="••••••••••••"
                         value={field.state.value}
                         onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                          setStepOneData({ password: e.target.value });
+                        }}
                         className={`block w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all text-sm font-label`}
-                        style={{ background: colors.Background, borderColor: field.state.meta.errors?.length > 0 ? "#ef4444" : colors.CardBorder, color: colors.TextBody }}
+                        style={{
+                          background: colors.Background,
+                          borderColor:
+                            field.state.meta.errors?.length > 0
+                              ? "#ef4444"
+                              : colors.CardBorder,
+                          color: colors.TextBody,
+                        }}
                       />
                       {field.state.meta.errors?.length > 0 && (
                         <span className="text-[11px] text-red-500 mt-1 block font-semibold">
@@ -193,31 +278,65 @@ const SignupStep1: FC = () => {
 
             <div className={styles.formField}>
               <div className="flex flex-col gap-2">
-                <label className="font-label text-[10px] uppercase tracking-widest font-bold" style={{ color: colors.TextBody }}>Workspace Subdomain</label>
+                <label
+                  className="font-label text-[10px] uppercase tracking-widest font-bold"
+                  style={{ color: colors.TextBody }}
+                >
+                  Workspace Subdomain
+                </label>
                 <signupForm.Field
                   name="subdomain"
                   validators={{
                     onChange: ({ value }) => {
-                      const res = z.string().min(2, "Subdomain must be at least 2 characters").regex(/^[a-zA-Z0-9-]+$/, "Only letters, numbers, and hyphens").safeParse(value);
-                      return res.success ? undefined : res.error.issues[0].message;
-                    }
+                      const res = z
+                        .string()
+                        .min(2, "Subdomain must be at least 2 characters")
+                        .regex(
+                          /^[a-zA-Z0-9-]+$/,
+                          "Only letters, numbers, and hyphens",
+                        )
+                        .safeParse(value);
+                      return res.success
+                        ? undefined
+                        : res.error.issues[0].message;
+                    },
                   }}
                   children={(field) => (
                     <div className="flex flex-col w-full">
                       <div className="flex w-full">
-                        <div className="relative flex-grow">
-                          <span className="absolute left-4 top-4.5"><LockIcon size={18} color={colors.IconColor} /></span>
+                        <div className="relative grow">
+                          <span className="absolute left-4 top-4.5">
+                            <LockIcon size={18} color={colors.IconColor} />
+                          </span>
                           <input
                             type="text"
                             placeholder="nexus"
                             value={field.state.value}
                             onBlur={field.handleBlur}
-                            onChange={(e) => field.handleChange(e.target.value)}
+                            onChange={(e) => {
+                              field.handleChange(e.target.value);
+                              setStepOneData({ subdomain: e.target.value });
+                            }}
                             className={`block w-full pl-12 pr-4 py-3 rounded-l-xl outline-none transition-all text-sm font-label `}
-                            style={{ background: colors.Background, borderColor: field.state.meta.errors?.length > 0 ? "#ef4444" : colors.CardBorder, color: colors.TextBody }}
+                            style={{
+                              background: colors.Background,
+                              borderColor:
+                                field.state.meta.errors?.length > 0
+                                  ? "#ef4444"
+                                  : colors.CardBorder,
+                              color: colors.TextBody,
+                            }}
                           />
                         </div>
-                        <div className={`px-4 flex items-center rounded-r-xl border-l border-white/5 text-slate-400 font-label text-xs tracking-wider`} style={{ background: colors.Background, opacity: 0.7, border: `1px solid ${colors.CardBorder}`, color: colors.TextBody }}>
+                        <div
+                          className={`px-4 flex items-center rounded-r-xl border-l border-white/5 text-slate-400 font-label text-xs tracking-wider`}
+                          style={{
+                            background: colors.Background,
+                            opacity: 0.7,
+                            border: `1px solid ${colors.CardBorder}`,
+                            color: colors.TextBody,
+                          }}
+                        >
                           .softtechai.com
                         </div>
                       </div>
@@ -234,17 +353,31 @@ const SignupStep1: FC = () => {
 
             <div className={styles.formField}>
               <div className="flex flex-col gap-2">
-                <label className="font-label text-[10px] uppercase tracking-widest font-bold" style={{ color: colors.TextBody }}>Primary Industry</label>
+                <label
+                  className="font-label text-[10px] uppercase tracking-widest font-bold"
+                  style={{ color: colors.TextBody }}
+                >
+                  Primary Industry
+                </label>
                 <signupForm.Field
                   name="primaryIndustry"
                   children={(field) => (
                     <div className="relative">
-                      <span className="absolute left-4 top-4"><LockIcon size={18} color={colors.IconColor} /></span>
+                      <span className="absolute left-4 top-4">
+                        <LockIcon size={18} color={colors.IconColor} />
+                      </span>
                       <select
                         value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                          setStepOneData({ primaryIndustry: e.target.value });
+                        }}
                         className={`block w-full py-3 text-sm font-label`}
-                        style={{ background: colors.Background, borderColor: colors.CardBorder, color: colors.TextBody }}
+                        style={{
+                          background: colors.Background,
+                          borderColor: colors.CardBorder,
+                          color: colors.TextBody,
+                        }}
                       >
                         <option value="ecommerce">E-Commerce</option>
                         <option value="saas">SaaS Development</option>
@@ -261,9 +394,12 @@ const SignupStep1: FC = () => {
         </div>
 
         {/* FOOTER ACTION BAR FOR STEP 1 */}
-        <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4 pt-3" style={{ borderTop: `1px solid ${colors.Border}` }}>
+        <div
+          className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4 pt-3"
+          style={{ borderTop: `1px solid ${colors.Border}` }}
+        >
           <button
-            onClick={() => navigate({ to: '/login' })}
+            onClick={() => navigate({ to: "/login" })}
             className="w-full sm:w-auto px-6 py-3 font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer"
             style={{ color: colors.TextBody }}
           >
@@ -271,11 +407,19 @@ const SignupStep1: FC = () => {
           </button>
 
           <div className="flex flex-row items-center gap-4 w-full sm:w-auto justify-center">
-            <span className={`text-xs font-semibold uppercase tracking-wider`} style={{ color: colors.TextBody }}>Step 1 of 3</span>
+            <span
+              className={`text-xs font-semibold uppercase tracking-wider`}
+              style={{ color: colors.TextBody }}
+            >
+              Step 1 of 3
+            </span>
             <button
               onClick={handleStepOneSubmit}
               className={`${styles.btn}`}
-              style={{ background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`, opacity: isStepOnePending ? 0.7 : 1 }}
+              style={{
+                background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
+                opacity: isStepOnePending ? 0.7 : 1,
+              }}
               disabled={isStepOnePending}
             >
               {isStepOnePending ? "Saving..." : "Continue"}
