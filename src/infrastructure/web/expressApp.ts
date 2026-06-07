@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { env } from "../config/env";
 import { healthRoutes } from "../../adapters/http/routes/root/healthRoutes";
 import { CompanyRoutes } from "../../adapters/http/routes/companies/register/companyregisterroutes";
+import { CompanyForgetPasswordRoutes } from "../../adapters/http/routes/companies/forget_password/companyforgetpasswordroute";
 import { errorMiddleware } from "../middlewares/ErrorMiddleware/error";
 import { helmetMiddleware } from "../middlewares/SecurityMiddleware/helmet";
 import { CompanyLoginRoutes } from "../../adapters/http/routes/companies/login/companyloginroute";
@@ -34,6 +35,7 @@ export const buildApp = (): Express => {
   app.use("/api/companies", CompanyRoutes);
   app.use("/api/company", CompanyLoginRoutes);
   app.use("/api/company", CompanyLogoutRoutes);
+  app.use("/api/company", CompanyForgetPasswordRoutes);
 
   app.use(errorMiddleware);
 

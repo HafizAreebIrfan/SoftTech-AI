@@ -13,6 +13,8 @@ export interface ICompanyDocument extends Document {
   uiPreference?: any;
   onboardingStep: number;
   status: string;
+  passwordResetOTP?: string;
+  passwordResetOTPExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +34,8 @@ const CompanySchema = new mongoose.Schema<ICompanyDocument, ICompanyModel>(
     uiPreference: UiPreferenceSchema,
     onboardingStep: { type: Number, default: 1 },
     status: { type: String, default: "draft" },
+    passwordResetOTP: { type: String },
+    passwordResetOTPExpires: { type: Date },
   },
   { timestamps: true },
 );
