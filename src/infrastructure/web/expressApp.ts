@@ -8,6 +8,7 @@ import { errorMiddleware } from "../middlewares/ErrorMiddleware/error";
 import { helmetMiddleware } from "../middlewares/SecurityMiddleware/helmet";
 import { CompanyLoginRoutes } from "../../adapters/http/routes/companies/login/companyloginroute";
 import { CompanyLogoutRoutes } from "../../adapters/http/routes/companies/logout/companylogoutroute";
+import { mcpRoutes } from "../../adapters/http/routes/mcp/mcpRoutes";
 
 export const buildApp = (): Express => {
   const app = express();
@@ -34,6 +35,7 @@ export const buildApp = (): Express => {
   app.use("/api/companies", CompanyRoutes);
   app.use("/api/company", CompanyLoginRoutes);
   app.use("/api/company", CompanyLogoutRoutes);
+  app.use("/mcp", mcpRoutes);
 
   app.use(errorMiddleware);
 

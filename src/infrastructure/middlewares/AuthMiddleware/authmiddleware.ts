@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
 import { CompanyModel } from "../../../adapters/persistence/models/companies/register/companyinfo";
 
-export const maxAge = 3 * 60 * 60;
+export const maxAge = 15 * 60; // 15 minutes in seconds
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -38,6 +38,14 @@ export const GetrequireAuth = (req: Request, res: Response): any => {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+
+      const secondsRemaining =
+        (decodedToken as any).exp - Math.floor(Date.now() / 1000);
+      if (secondsRemaining < 5 * 60) {
+        const newToken = createToken(user._id);
+        res.cookie("jwt", newToken, authCookieOptions);
+      }
+
       return res.status(200).json({ user });
     } catch (e: any) {
       return res.status(400).json({ error: e.message });

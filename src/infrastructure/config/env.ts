@@ -6,6 +6,8 @@ export interface IEnv {
   MONGO_URI: string;
   JWT_SECRET: string;
   CORS_ORIGINS: string[];
+  WEATHERAPIKEY: string;
+  AIRQUALITYAPIKEY: string;
 }
 
 export const env: IEnv = {
@@ -20,4 +22,6 @@ export const env: IEnv = {
         "http://localhost:5173",
         "http://localhost:4000",
       ],
+  WEATHERAPIKEY: process.env.WEATHERAPIKEY || "",
+  AIRQUALITYAPIKEY: process.env.AIRQUALITYAPIKEY || "",
 };

@@ -13,8 +13,10 @@ exports.ApiSchema = new mongoose_1.default.Schema({
     authType: { type: String, default: "NONE" },
     headers: [{ type: String }],
     params: [{ type: String }],
-    credentials: { type: String },
-    authHeader: { type: String },
+    apiKey: { type: String },
+    AuthHeader: { type: String },
     oauthTokenUrl: { type: String },
-    oauthClientId: { type: String }
+    oauthClientId: { type: String },
+    oauthClientSecret: { type: String },
+    bearerToken: { type: String },
 }, { _id: false });
