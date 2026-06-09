@@ -5,3 +5,4 @@ export const mcpRoutes = express.Router();
 
 mcpRoutes.get("/weathermcp", McpTransportLayer);
 mcpRoutes.post("/weathermcp", McpTransportLayer);
+mcpRoutes.delete("/weathermcp", McpTransportLayer);
