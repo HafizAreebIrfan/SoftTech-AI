@@ -12,33 +12,38 @@ export const getWeatherOutputSchema = z.object({
   humidity: z.number(),
 });
 
-export const getForecastOutputSchema = z.object({
-  city: z.string(),
+const forecastDaySchema = z.object({
   date: z.string(),
   maxtemp_c: z.number(),
   mintemp_c: z.number(),
   maxwind_kph: z.number(),
   avghumidity: z.number(),
   condition: z.string(),
+  condition_icon: z.string(),
   uv: z.number(),
   sunrise: z.string(),
   sunset: z.string(),
   moonrise: z.string(),
   moonset: z.string(),
-  moonphase: z.string(),
-  moonillumination: z.number(),
+  moon_phase: z.string(),
+  moon_illumination: z.number(),
+});
+
+export const getForecastOutputSchema = z.object({
+  city: z.string(),
+  forecast: z.array(forecastDaySchema).min(1),
 });
 
 export const getAirQualityOutputSchema = z.object({
   city: z.string(),
   aqi: z.number(),
   aqi_category: z.string(),
-  co: z.number(),
-  no: z.number(),
-  no2: z.number(),
-  o3: z.number(),
-  so2: z.number(),
-  pm2_5: z.number(),
-  pm10: z.number(),
-  nh3: z.number(),
+  aqi_co: z.number(),
+  aqi_no: z.number(),
+  aqi_no2: z.number(),
+  aqi_o3: z.number(),
+  aqi_so2: z.number(),
+  aqi_pm2_5: z.number(),
+  aqi_pm10: z.number(),
+  aqi_nh3: z.number(),
 });
