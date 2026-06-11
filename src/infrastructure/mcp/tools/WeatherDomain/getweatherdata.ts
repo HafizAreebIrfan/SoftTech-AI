@@ -1,41 +1,43 @@
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { env } from "../../../config/env";
-import { WeatherServer } from "../../server/mcpserver";
 import { WeatherApiResponse } from "../../../../domain/interface/weatherinterface";
 import { getWeatherInputSchema } from "../../Schemas/InputSchema/weatherinputschema";
 import { getWeatherOutputSchema } from "../../Schemas/OutputSchema/weatheroutputschema";
 
-registerAppTool(
-  WeatherServer,
-  "get_weather_data",
-  {
-    title: "Show Weather Data",
-    description: "Returns current weather details for a city in Celsius.",
-    inputSchema: getWeatherInputSchema,
-    outputSchema: getWeatherOutputSchema,
-    _meta: {
-      ui: {
-        resourceUri: "ui://weather/current-weather.html",
+export const registerCurrentWeatherTool = (server: McpServer) => {
+  registerAppTool(
+    server,
+    "get_weather_data",
+    {
+      title: "Show Weather Data",
+      description: "Returns current weather details for a city in Celsius.",
+      inputSchema: getWeatherInputSchema,
+      outputSchema: getWeatherOutputSchema,
+      _meta: {
+        ui: {
+          resourceUri: "ui://weather/current-weather.html",
+        },
       },
     },
-  },
-  async ({ city }) => {
-    const weatherData = await loadWeatherData(city);
-    return {
-      structuredContent: weatherData,
-      content: [
-        {
-          type: "text",
-          text: `${weatherData.city}: ${weatherData.temperature}C, ${weatherData.condition}, humidity ${weatherData.humidity}%`,
+    async ({ city }) => {
+      const weatherData = await loadWeatherData(city);
+      return {
+        structuredContent: weatherData,
+        content: [
+          {
+            type: "text",
+            text: `${weatherData.city}: ${weatherData.temperature}C, ${weatherData.condition}, humidity ${weatherData.humidity}%`,
+          },
+        ],
+        _meta: {
+          lastFetched: new Date().toISOString(),
+          source: "weatherapi.com",
         },
-      ],
-      _meta: {
-        lastFetched: new Date().toISOString(),
-        source: "weatherapi.com",
-      },
-    };
-  },
-);
+      };
+    },
+  );
+};
 
 async function loadWeatherData(city: string) {
   if (!env.WEATHERAPIKEY) {

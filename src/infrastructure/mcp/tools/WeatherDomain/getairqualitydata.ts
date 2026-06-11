@@ -1,6 +1,6 @@
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { env } from "../../../config/env";
-import { WeatherServer } from "../../server/mcpserver";
 import {
   AirQualityApiResponse,
   ForecastApiResponse,
@@ -8,37 +8,39 @@ import {
 import { getAirQualityInputSchema } from "../../Schemas/InputSchema/weatherinputschema";
 import { getAirQualityOutputSchema } from "../../Schemas/OutputSchema/weatheroutputschema";
 
-registerAppTool(
-  WeatherServer,
-  "get_airquality_data",
-  {
-    title: "Show Air Quality Data",
-    description: "Returns air quality details for a city.",
-    inputSchema: getAirQualityInputSchema,
-    outputSchema: getAirQualityOutputSchema,
-    _meta: {
-      ui: {
-        resourceUri: "ui://weather/airquality-weather.html",
+export const registerAirQualityWeatherTool = (server: McpServer) => {
+  registerAppTool(
+    server,
+    "get_airquality_data",
+    {
+      title: "Show Air Quality Data",
+      description: "Returns air quality details for a city.",
+      inputSchema: getAirQualityInputSchema,
+      outputSchema: getAirQualityOutputSchema,
+      _meta: {
+        ui: {
+          resourceUri: "ui://weather/airquality-weather.html",
+        },
       },
     },
-  },
-  async ({ city }) => {
-    const airqualityData = await loadAirQualityData(city);
-    return {
-      structuredContent: airqualityData,
-      content: [
-        {
-          type: "text",
-          text: `${airqualityData.city}: AQI ${airqualityData.aqi}, ${airqualityData.aqi_category}`,
+    async ({ city }) => {
+      const airqualityData = await loadAirQualityData(city);
+      return {
+        structuredContent: airqualityData,
+        content: [
+          {
+            type: "text",
+            text: `${airqualityData.city}: AQI ${airqualityData.aqi}, ${airqualityData.aqi_category}`,
+          },
+        ],
+        _meta: {
+          lastFetched: new Date().toISOString(),
+          source: "openweathermap.org",
         },
-      ],
-      _meta: {
-        lastFetched: new Date().toISOString(),
-        source: "openweathermap.org",
-      },
-    };
-  },
-);
+      };
+    },
+  );
+};
 
 async function loadAirQualityData(city: string) {
   if (!env.AIRQUALITYAPIKEY || !env.WEATHERAPIKEY) {
