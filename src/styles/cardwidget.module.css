@@ -1,0 +1,144 @@
+.widgetShell {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--app-card-border);
+  border-radius: 24px;
+  background: var(--app-bg-secondary);
+  box-shadow: var(--app-box-shadow);
+  color: var(--app-text-heading);
+  max-width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+  line-height: 1.1;
+  font-weight: 800;
+  color: var(--app-text-heading);
+}
+
+.description {
+  margin: 0.4rem 0 0;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: var(--app-text-body);
+  text-align: left !important;
+}
+
+.temperaturePill {
+  flex-shrink: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--app-bg-grad-1), var(--app-bg-grad-2));
+  color: var(--app-text-overlay);
+  font-size: 1.2rem;
+  font-weight: 800;
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--app-box-shadow) 24%, transparent);
+}
+
+.summaryPanel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-radius: 12px;
+  gap: 10px;
+}
+
+.summaryMetric,
+.detailCard {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.95rem;
+  border: 1px solid var(--app-card-border);
+  border-radius: 12px;
+  background-color: var(--app-bg);
+}
+
+.metricLabel,
+.detailLabel,
+.footerItem,
+.debugPanel summary {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-text-body);
+}
+
+.metricValue,
+.detailValue {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--widget-heading);
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.footer {
+  padding-top: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.footerItem {
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+}
+
+.emptyState {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+}
+
+.debugPanel {
+  padding: 0.8rem 0.95rem;
+  border: 1px solid var(--app-card-border);
+  border-radius: 12px;
+  background: var(--app-bg-secondary);
+}
+
+.debugPanel summary {
+  cursor: pointer;
+}
+
+.debugText {
+  margin: 0.75rem 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--widget-body);
+}
+
+@media (max-width: 640px) {
+  .widgetShell {
+    padding: 1rem;
+    border-radius: 20px;
+  }
+
+  .header,
+  .summaryPanel,
+  .detailGrid {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .temperaturePill {
+    width: fit-content;
+  }
+}

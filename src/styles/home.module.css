@@ -4,7 +4,9 @@
     align-items: center;
     justify-content: center;
     width: 100%;
-    height: 40vh;
+}
+.homecontent{
+    margin-top: 120px;
 }
 .homewrapper h4, .homewrapper h1, .homewrapper p{
     text-align: center;
