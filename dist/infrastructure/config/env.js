@@ -18,4 +18,6 @@ exports.env = {
             "http://localhost:5173",
             "http://localhost:4000",
         ],
+    WEATHERAPIKEY: process.env.WEATHERAPIKEY || "",
+    AIRQUALITYAPIKEY: process.env.AIRQUALITYAPIKEY || "",
 };
