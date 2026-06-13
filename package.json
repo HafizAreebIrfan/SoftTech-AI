@@ -19,6 +19,7 @@
     "bootstrap": "^5.3.7",
     "google-map-react": "^2.2.5",
     "motion": "^12.40.0",
+    "node": "^26.3.0",
     "react": "^19.0.0-rc.1",
     "react-dom": "^19.0.0-rc.1",
     "react-leaflet": "^5.0.0-rc.2",
