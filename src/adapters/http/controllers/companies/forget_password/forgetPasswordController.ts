@@ -48,7 +48,14 @@ export async function resetCompanyPasswordController(
       success: true,
       message: "Password updated successfully.",
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === "New password must be different from the current password") {
+      res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+      return;
+    }
     next(error);
   }
 }

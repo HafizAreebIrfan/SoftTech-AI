@@ -63,6 +63,10 @@ export async function resetCompanyPassword(
     throw new Error("Invalid OTP");
   }
 
+  if (company.password && (await comparePassword(password, company.password))) {
+    throw new Error("New password must be different from the current password");
+  }
+
   const updatedCompany = await repo.resetPassword((company as any)._id as string, password);
   if (!updatedCompany) {
     throw new Error("Failed to update password");
