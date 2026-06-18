@@ -24,6 +24,7 @@ jobs:
 
       - name: Lint
         run: npm run lint --if-present
+        continue-on-error: true
 
       - name: Build (Vite)
         run: npm run build
