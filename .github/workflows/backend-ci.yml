@@ -22,11 +22,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
       - name: Build TypeScript
         run: npm run build
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
 
       - name: Notify Render deploy (backend)
         if: github.ref == 'refs/heads/backend-branch'
         run: |
           curl -s "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}" \
             -X POST
+
+      - name: Notify Slack on failure
+        if: failure()
+        run: |
+          curl -X POST "${{ secrets.SLACK_WEBHOOK }}" \
+            -H 'Content-type: application/json' \
+            --data '{"text":"Backend pipeline failed on ${{ github.ref }} by ${{ github.actor }}"}'
