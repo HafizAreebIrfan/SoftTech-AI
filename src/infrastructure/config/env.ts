@@ -8,6 +8,7 @@ export interface IEnv {
   CORS_ORIGINS: string[];
   WEATHERAPIKEY: string;
   AIRQUALITYAPIKEY: string;
+  WEATHERWAY_MCP_URL: string;
 }
 
 export const env: IEnv = {
@@ -24,4 +25,5 @@ export const env: IEnv = {
       ],
   WEATHERAPIKEY: process.env.WEATHERAPIKEY || "",
   AIRQUALITYAPIKEY: process.env.AIRQUALITYAPIKEY || "",
+  WEATHERWAY_MCP_URL: process.env.WEATHERWAY_MCP_URL || "",
 };

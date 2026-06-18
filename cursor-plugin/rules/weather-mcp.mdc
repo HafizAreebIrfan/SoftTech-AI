@@ -1,0 +1,14 @@
+---
+description: Use WeatherWay MCP tools for weather questions instead of guessing values
+alwaysApply: true
+---
+
+# WeatherWay MCP
+
+When the user asks about weather, forecast, or air quality:
+
+1. Call the WeatherWay MCP tools (`get_weather_data`, `get_forecast_data`, `get_airquality_data`).
+2. Use Celsius for temperatures.
+3. Do not fabricate weather values if a tool call fails.
+
+The server exposes MCP Apps UI widgets for interactive weather cards when supported by the client.

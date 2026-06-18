@@ -1,0 +1,12 @@
+---
+description: Use {{PLUGIN_TITLE}} MCP tools instead of guessing values
+alwaysApply: false
+---
+
+# {{PLUGIN_TITLE}} MCP
+
+When the user asks about {{TRIGGER_KEYWORDS}}:
+
+1. Call the MCP tools ({{TOOL_NAMES}}).
+2. Follow server instructions: {{SERVER_INSTRUCTIONS_SHORT}}
+3. Do not fabricate values if a tool call fails.
