@@ -49,7 +49,6 @@ jobs:
 
       - name: Collect failure details
         if: failure()
-        id: failure_info
         run: |
           echo "RUN_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
           echo "BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
@@ -72,6 +71,7 @@ except:
 
       - name: Send failure email
         if: failure()
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -99,4 +99,4 @@ except:
             - If a specific package has no fix yet, check https://github.com/advisories
             - For Vite build failures: check for missing env variables or broken imports
 
-            Full logs: ${{ env.RUN_URD }}
+            Full logs: ${{ env.RUN_URL }}
