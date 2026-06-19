@@ -45,9 +45,7 @@ jobs:
 
       - name: Collect failure details
         if: failure()
-        id: failure_info
         run: |
-          echo "FAILED_STEP=$(echo ${{ toJson(steps) }} | python3 -c "import sys,json; steps=json.load(sys.stdin); failed=[k for k,v in steps.items() if v.get('conclusion')=='failure']; print(', '.join(failed) if failed else 'unknown')")" >> $GITHUB_ENV
           echo "RUN_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
           echo "BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
           echo "ACTOR=${{ github.actor }}" >> $GITHUB_ENV
@@ -60,7 +58,7 @@ try:
     vulns = data.get('vulnerabilities', {})
     high = [(k, v['severity'], v.get('fixAvailable', False)) for k, v in vulns.items() if v['severity'] in ['high', 'critical']]
     if high:
-        print('AUDIT_ISSUES=' + '; '.join([f'{name} ({sev}) - fix: {fix}' for name, sev, fix in high[:5]]))
+        print('AUDIT_ISSUES=' + '; '.join([f'{name} ({sev}) - fix available: {fix}' for name, sev, fix in high[:5]]))
     else:
         print('AUDIT_ISSUES=none')
 except:
@@ -69,6 +67,7 @@ except:
 
       - name: Send failure email
         if: failure()
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -87,8 +86,6 @@ except:
             Commit:     ${{ env.COMMIT }}
             Message:    ${{ env.COMMIT_MSG }}
 
-            Failed step(s): ${{ env.FAILED_STEP }}
-
             Dependency vulnerabilities found:
             ${{ env.AUDIT_ISSUES }}
 
@@ -97,4 +94,4 @@ except:
             - For breaking changes: npm audit fix --force (review changes first)
             - If a specific package has no fix yet, check https://github.com/advisories
 
-            Full logs: ${{ env.RUN_URL }}
+            Full logs: ${{ env.RUN_UR }}
