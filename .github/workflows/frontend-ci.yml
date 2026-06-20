@@ -43,31 +43,37 @@ jobs:
 
       - name: Notify Render deploy (frontend)
         if: github.ref == 'refs/heads/frontend-branch'
-        run: |
-          curl -s "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}" \
-            -X POST
+        run: curl -s -X POST \"${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}\"
 
       - name: Collect failure details
         if: failure()
         run: |
-          echo "RUN_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
-          echo "BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
-          echo "ACTOR=${{ github.actor }}" >> $GITHUB_ENV
-          echo "COMMIT=${{ github.sha }}" >> $GITHUB_ENV
-          echo "COMMIT_MSG=$(git log -1 --pretty=%B | head -1)" >> $GITHUB_ENV
-          npm audit --json 2>/dev/null | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    vulns = data.get('vulnerabilities', {})
-    high = [(k, v['severity'], v.get('fixAvailable', False)) for k, v in vulns.items() if v['severity'] in ['high', 'critical']]
-    if high:
-        print('AUDIT_ISSUES=' + '; '.join([f'{name} ({sev}) - fix available: {fix}' for name, sev, fix in high[:5]]))
-    else:
-        print('AUDIT_ISSUES=none')
-except:
-    print('AUDIT_ISSUES=could not parse')
-" >> $GITHUB_ENV || echo "AUDIT_ISSUES=audit not run" >> $GITHUB_ENV
+          echo \"RUN_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\" >> $GITHUBE_ENV
+          echo \"BRANCH=${{ github.ref_name }}\" >> $GITHUB_ENV
+          echo \"ACTOR=${{ github.actor }}\" >> $GITHUB_ENV
+          echo \"COMMIT=${{ github.sha }}\" >> $GITHUB_ENV
+          git log -1 --pretty=%B | head -1 | xargs -I{} echo \"COMMIT_MSG={}\" >> $GITHUB_ENV
+          npm audit --json 2>/dev/null > /tmp/audit.json || true
+          python3 /tmp/parse_audit.py >> $GITHUBE_ENV || echo \"AUDIT_ISSUES=could not parse\" >> $GITHUBE_ENV
+
+      - name: Write audit parser
+        if: failure()
+        run: |
+          cat > /tmp/parse_audit.py << 'EOF'
+          import json, sys
+          try:
+              with open('/tmp/audit.json') as f:
+                  data = json.load(f)
+              vulns = data.get('vulnerabilities', {})
+              high = [(k, v['severity'], v.get('fixAvailable', False)) for k, v in vulns.items() if v['severity'] in ['high', 'critical']]
+              if high:
+                  issues = '; '.join([f'{n} ({s}) - fix available: {fx}' for n, s, fx in high[:5]])
+                  print(f'AUDIT_ISSUES={issues}')
+              else:
+                  print('AUDIT_ISSUES=none')
+          except Exception as e:
+              print(f'AUDIT_ISSUES=parse error: {e}')
+          EOF
 
       - name: Send failure email
         if: failure()
@@ -81,7 +87,7 @@ except:
           password: ${{ secrets.EMAIL_PASSWORD }}
           to: ${{ secrets.NOTIFY_EMAIL }}
           from: SoftTech AI CI <${{ secrets.EMAIL_USERNAME }}>
-          subject: "Frontend CI Failed - ${{ env.BRANCH }} - ${{ env.ACTOR }}"
+          subject: \"Frontend CI Failed - ${{ env.BRANCH }} - ${{ env.ACTOR }}\"
           body: |
             Frontend CI pipeline failed.
 
@@ -96,7 +102,7 @@ except:
             Common fixes:
             - Run: npm audit fix
             - For breaking changes: npm audit fix --force (review changes first)
-            - If a specific package has no fix yet, check https://github.com/advisories
+            - Check https://github.com/advisories for packages with no fix yet
             - For Vite build failures: check for missing env variables or broken imports
 
             Full logs: ${{ env.RUN_URL }}
