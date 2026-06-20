@@ -111,4 +111,4 @@ jobs:
             - Check https://github.com/advisories for packages with no fix yet
             - For Vite build failures: check for missing env variables or broken imports
 
-            Full logs: ${{ env.RUN_UR }}
+            Full logs: ${{ env.RUN_URL }}
