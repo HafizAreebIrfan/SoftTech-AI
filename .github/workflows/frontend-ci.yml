@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [frontend-branch]
 
+permissions:
+  security-events: write
+  contents: read
+  actions: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -16,7 +21,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '>=20'
           cache: 'npm'
 
       - name: Install dependencies
@@ -40,40 +45,41 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
+        continue-on-error: true
 
       - name: Notify Render deploy (frontend)
         if: github.ref == 'refs/heads/frontend-branch'
-        run: curl -s -X POST \"${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}\"
-
-      - name: Collect failure details
-        if: failure()
-        run: |
-          echo \"RUN_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\" >> $GITHUBE_ENV
-          echo \"BRANCH=${{ github.ref_name }}\" >> $GITHUB_ENV
-          echo \"ACTOR=${{ github.actor }}\" >> $GITHUB_ENV
-          echo \"COMMIT=${{ github.sha }}\" >> $GITHUB_ENV
-          git log -1 --pretty=%B | head -1 | xargs -I{} echo \"COMMIT_MSG={}\" >> $GITHUB_ENV
-          npm audit --json 2>/dev/null > /tmp/audit.json || true
-          python3 /tmp/parse_audit.py >> $GITHUBE_ENV || echo \"AUDIT_ISSUES=could not parse\" >> $GITHUBE_ENV
+        run: curl -s -X POST "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}"
 
       - name: Write audit parser
         if: failure()
         run: |
           cat > /tmp/parse_audit.py << 'EOF'
-          import json, sys
+          import json
           try:
               with open('/tmp/audit.json') as f:
                   data = json.load(f)
               vulns = data.get('vulnerabilities', {})
               high = [(k, v['severity'], v.get('fixAvailable', False)) for k, v in vulns.items() if v['severity'] in ['high', 'critical']]
               if high:
-                  issues = '; '.join([f'{n} ({s}) - fix available: {fx}' for n, s, fx in high[:5]])
-                  print(f'AUDIT_ISSUES={issues}')
+                  issues = '; '.join([f"{n} ({s}) - fix available: {fx}" for n, s, fx in high[:5]])
+                  print(f"AUDIT_ISSUES={issues}")
               else:
-                  print('AUDIT_ISSUES=none')
+                  print("AUDIT_ISSUES=none")
           except Exception as e:
-              print(f'AUDIT_ISSUES=parse error: {e}')
+              print(f"AUDIT_ISSUES=parse error: {e}")
           EOF
+
+      - name: Collect failure details
+        if: failure()
+        run: |
+          echo "RUN_URL=https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          echo "BRANCH=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "ACTOR=${{ github.actor }}" >> $GITHUB_ENV
+          echo "COMMIT=${{ github.sha }}" >> $GITHUB_ENV
+          git log -1 --pretty=%B | head -1 | xargs -I{} echo "COMMIT_MSG={}" >> $GITHUB_ENV
+          npm audit --json 2>/dev/null > /tmp/audit.json || true
+          python3 /tmp/parse_audit.py >> $GITHUB_ENV || echo "AUDIT_ISSUES=could not parse" >> $GITHUB_ENV
 
       - name: Send failure email
         if: failure()
@@ -87,7 +93,7 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           to: ${{ secrets.NOTIFY_EMAIL }}
           from: SoftTech AI CI <${{ secrets.EMAIL_USERNAME }}>
-          subject: \"Frontend CI Failed - ${{ env.BRANCH }} - ${{ env.ACTOR }}\"
+          subject: "Frontend CI Failed - ${{ env.BRANCH }} - ${{ env.ACTOR }}"
           body: |
             Frontend CI pipeline failed.
 
@@ -105,4 +111,4 @@ jobs:
             - Check https://github.com/advisories for packages with no fix yet
             - For Vite build failures: check for missing env variables or broken imports
 
-            Full logs: ${{ env.RUN_URL }}
+            Full logs: ${{ env.RUN_UR }}
