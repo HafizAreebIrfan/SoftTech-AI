@@ -14,6 +14,9 @@ export interface IEnv {
   SMTP_USER?: string;
   SMTP_PASS?: string;
   MAIL_FROM?: string;
+  WEATHERAPIKEY: string;
+  AIRQUALITYAPIKEY: string;
+  WEATHERWAY_MCP_URL: string;
 }
 
 export const env: IEnv = {
@@ -33,4 +36,7 @@ export const env: IEnv = {
   SMTP_USER: process.env.SMTP_USER,
   SMTP_PASS: process.env.SMTP_PASS,
   MAIL_FROM: process.env.MAIL_FROM,
+  WEATHERAPIKEY: process.env.WEATHERAPIKEY || "",
+  AIRQUALITYAPIKEY: process.env.AIRQUALITYAPIKEY || "",
+  WEATHERWAY_MCP_URL: process.env.WEATHERWAY_MCP_URL || "",
 };

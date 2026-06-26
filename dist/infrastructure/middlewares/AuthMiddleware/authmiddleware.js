@@ -7,7 +7,7 @@ exports.LogoutUser = exports.PostrequireAuth = exports.GetrequireAuth = exports.
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const env_1 = require("../../config/env");
 const companyinfo_1 = require("../../../adapters/persistence/models/companies/register/companyinfo");
-exports.maxAge = 3 * 60 * 60;
+exports.maxAge = 15 * 60; // 15 minutes in seconds
 const isProduction = process.env.NODE_ENV === "production";
 exports.authCookieOptions = {
     httpOnly: true,
@@ -36,6 +36,11 @@ const GetrequireAuth = (req, res) => {
             const user = await companyinfo_1.CompanyModel.findById(decodedToken.id);
             if (!user) {
                 return res.status(404).json({ error: "User not found" });
+            }
+            const secondsRemaining = decodedToken.exp - Math.floor(Date.now() / 1000);
+            if (secondsRemaining < 5 * 60) {
+                const newToken = (0, exports.createToken)(user._id);
+                res.cookie("jwt", newToken, exports.authCookieOptions);
             }
             return res.status(200).json({ user });
         }

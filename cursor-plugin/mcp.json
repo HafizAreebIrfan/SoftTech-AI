@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "weatherwayapp": {
+      "url": "${env:WEATHERWAY_MCP_URL}",
+      "headers": {
+        "Content-Type": "application/json"
+      }
+    }
+  }
+}

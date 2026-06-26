@@ -1,0 +1,9 @@
+{
+  "name": "weatherwayapp",
+  "description": "Weather, forecast, and air quality tools powered by WeatherWayApp developed by SoftTech",
+  "version": "1.0.0",
+  "author": {
+    "name": "SoftTech AI"
+  },
+  "keywords": ["mcp", "weather", "forecast", "air-quality", "ext-apps"]
+}

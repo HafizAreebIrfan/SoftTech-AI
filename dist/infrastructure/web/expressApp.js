@@ -14,6 +14,7 @@ const error_1 = require("../middlewares/ErrorMiddleware/error");
 const helmet_1 = require("../middlewares/SecurityMiddleware/helmet");
 const companyloginroute_1 = require("../../adapters/http/routes/companies/login/companyloginroute");
 const companylogoutroute_1 = require("../../adapters/http/routes/companies/logout/companylogoutroute");
+const mcpRoutes_1 = require("../../adapters/http/routes/mcp/mcpRoutes");
 const buildApp = () => {
     const app = (0, express_1.default)();
     (0, helmet_1.helmetMiddleware)(app);
@@ -32,6 +33,7 @@ const buildApp = () => {
     app.use("/api/companies", companyregisterroutes_1.CompanyRoutes);
     app.use("/api/company", companyloginroute_1.CompanyLoginRoutes);
     app.use("/api/company", companylogoutroute_1.CompanyLogoutRoutes);
+    app.use("/mcp", mcpRoutes_1.mcpRoutes);
     app.use(error_1.errorMiddleware);
     return app;
 };

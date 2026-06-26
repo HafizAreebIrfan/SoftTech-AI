@@ -11,6 +11,8 @@
     "server": "nodemon --exec ts-node src/infrastructure/server/server.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.4",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -22,6 +24,7 @@
     "http": "^0.0.1-security",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",
+    "ngrok": "^5.0.0-beta.2",
     "nodemailer": "^6.9.4",
     "nodemon": "^3.1.14",
     "socket.io": "^4.8.3",
