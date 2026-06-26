@@ -12,10 +12,23 @@ export function createCompanyRepository(): ICompanyRepository {
       return await CompanyModel.findById(companyId).lean();
     },
 
+    async findByEmail(email: string): Promise<any> {
+      return await CompanyModel.findOne({ email }).lean();
+    },
+
     async update(companyId: string, updates: Partial<ICompany>): Promise<any> {
       return await CompanyModel.findByIdAndUpdate(companyId, updates, {
         returnDocument: "after",
       }).lean();
+    },
+
+    async resetPassword(companyId: string, newPassword: string): Promise<any> {
+      const company = await CompanyModel.findById(companyId);
+      if (!company) return null;
+      company.password = newPassword;
+      company.passwordResetOTP = undefined;
+      company.passwordResetOTPExpires = undefined;
+      return await company.save();
     },
   };
 }

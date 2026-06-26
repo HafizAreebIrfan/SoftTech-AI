@@ -28,6 +28,8 @@ export interface ICompany {
   uiPreference?: IUiPreference | null;
   onboardingStep?: number;
   status?: string;
+  passwordResetOTP?: string;
+  passwordResetOTPExpires?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
