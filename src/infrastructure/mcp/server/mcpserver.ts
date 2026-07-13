@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WeatherInstructions } from "../ServerInstructions/weatherserverinstructions";
-import { registerCurrentWeatherWidgetResource } from "../resources/WeatherDomain/currentweatherwidgetresource";
+import { registerWeatherWidgetResources } from "../resources/WeatherDomain/currentweatherwidgetresource";
 import { registerCurrentWeatherTool } from "../tools/WeatherDomain/getweatherdata";
 import { registerForecastWeatherTool } from "../tools/WeatherDomain/getforecastdata";
 import { registerAirQualityWeatherTool } from "../tools/WeatherDomain/getairqualitydata";
@@ -11,7 +11,7 @@ export const createWeatherServer = () => {
     { instructions: WeatherInstructions },
   );
 
-  registerCurrentWeatherWidgetResource(server);
+  registerWeatherWidgetResources(server);
   registerCurrentWeatherTool(server);
   registerForecastWeatherTool(server);
   registerAirQualityWeatherTool(server);
