@@ -15,6 +15,7 @@ import {
 } from "../../../../assets/icons";
 import styles from "../../../../styles/dashboard.module.css";
 import { logout } from "../../../../adapters/api/authApi";
+import CardWidget from "../../../widgets/card";
 
 const Dashboard: FC = () => {
   const navigate = useNavigate();
@@ -300,24 +301,25 @@ const Dashboard: FC = () => {
               }}
             >
               <div className={styles.workspaceHeader}>
+               
                 <div>
                   <h3
                     className={styles.workspaceTitle}
                     style={{ color: colors.TextHeading }}
                   >
-                    Curated Interface Visualizer ({selectedLayout.toUpperCase()}
-                    )
+                    GPT Interface Visualizer
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Live simulation of user telemetry nodes matching your
+                    Simulation of GPT widget UI according to
                     selected layout preference.
                   </p>
                 </div>
               </div>
 
               {/* Dynamic rendering based on selected preference */}
-              <div className="mt-2">
-                {selectedLayout === "grid" && (
+              <div className="mt-2" style={{width: "400px"}}>
+                 <CardWidget/>
+                {/* {selectedLayout === "grid" && (
                   <div className={styles.bentoGrid}>
                     {mockCuratorItems.map((item, index) => (
                       <div
@@ -555,7 +557,7 @@ const Dashboard: FC = () => {
                       </tbody>
                     </table>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           </>
