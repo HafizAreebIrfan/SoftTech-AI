@@ -5,5 +5,6 @@ export { useAuthStore } from "./useAuth";
 export { useSignupStore } from "./useSignup";
 export { useLoginStore } from "./useLogin";
 export { useAuthSync } from "./useAuthSync";
-
+export { useHomeState } from "./useHomeState";
+export { useHomeAnimation } from "./useHomeAnimation";
 

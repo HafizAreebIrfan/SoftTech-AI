@@ -21,3 +21,8 @@ export { default as TerminalIcon } from './TerminalIcon/index';
 export { default as RocketIcon } from './RocketIcon/index';
 export { default as KeyIcon } from './KeyIcon/index'
 export { default as TrashIcon } from './TrashIcon/index'
+export { default as SparklesIcon } from './SparklesIcon/index';
+export { default as BoltIcon } from './BoltIcon/index';
+export { default as ChevronDownIcon } from './ChevronDownIcon/index';
+export { default as ChevronUpIcon } from './ChevronUpIcon/index';
+export { default as HeartIcon } from './HeartIcon/index';

@@ -126,6 +126,22 @@ export const useApplyGlobalThemeVars = () => {
     root.style.setProperty("--app-warning-background", colors.WarningBackground);
     root.style.setProperty("--app-warning-border", colors.WarningBorder);
 
+    // Wavy and Brand colors mapping
+    root.style.setProperty("--app-wavy-indigo", colors.WavyIndigo);
+    root.style.setProperty("--app-wavy-purple", colors.WavyPurple);
+    root.style.setProperty("--app-wavy-blue", colors.WavyBlue);
+    root.style.setProperty("--app-wavy-emerald", colors.WavyEmerald);
+    root.style.setProperty("--app-wavy-fuchsia", colors.WavyFuchsia);
+    root.style.setProperty("--app-wavy-white", colors.WavyWhite);
+    root.style.setProperty("--app-brand-indigo", colors.BrandIndigo);
+    root.style.setProperty("--app-brand-indigo-hover", colors.BrandIndigoHover);
+    root.style.setProperty("--app-brand-emerald", colors.BrandEmerald);
+    root.style.setProperty("--app-brand-emerald-hover", colors.BrandEmeraldHover);
+    root.style.setProperty("--app-brand-blue", colors.BrandBlue);
+    root.style.setProperty("--app-brand-blue-hover", colors.BrandBlueHover);
+    root.style.setProperty("--app-brand-fuchsia", colors.BrandFuchsia);
+    root.style.setProperty("--app-brand-fuchsia-hover", colors.BrandFuchsiaHover);
+
     root.setAttribute("data-theme", isDark ? "dark" : "light");
   }, [colors, isDark]);
 };

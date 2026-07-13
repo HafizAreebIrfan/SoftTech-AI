@@ -51,7 +51,22 @@ export type ThemeColors = {
     WarningText: string;
     WarningBackground: string;
     WarningBorder: string;
+    WavyIndigo: string;
+    WavyPurple: string;
+    WavyBlue: string;
+    WavyEmerald: string;
+    WavyFuchsia: string;
+    WavyWhite: string;
+    BrandIndigo: string;
+    BrandIndigoHover: string;
+    BrandEmerald: string;
+    BrandEmeraldHover: string;
+    BrandBlue: string;
+    BrandBlueHover: string;
+    BrandFuchsia: string;
+    BrandFuchsiaHover: string;
 }
+
 export const darkColors: ThemeColors = {
     Headerbackground: '#1F1F2A',
     HeaderBoxShadow: 'rgba(0, 0, 0, 0.5)',
@@ -105,7 +120,22 @@ export const darkColors: ThemeColors = {
     WarningText: '#ef4444',
     WarningBackground: 'rgba(239, 68, 68, 0.08)',
     WarningBorder: 'rgba(239, 68, 68, 0.2)',
+    WavyIndigo: '#818cf8',
+    WavyPurple: '#c084fc',
+    WavyBlue: '#60a5fa',
+    WavyEmerald: '#34d399',
+    WavyFuchsia: '#e879f9',
+    WavyWhite: 'rgba(255, 255, 255, 0.55)',
+    BrandIndigo: '#4f46e5',
+    BrandIndigoHover: '#3f37c9',
+    BrandEmerald: '#059669',
+    BrandEmeraldHover: '#047857',
+    BrandBlue: '#2563eb',
+    BrandBlueHover: '#1d4ed8',
+    BrandFuchsia: '#c026d3',
+    BrandFuchsiaHover: '#a21caf',
 }
+
 export const lightColors: ThemeColors = {
     Headerbackground: '#F5F4FF',
     HeaderBoxShadow: 'rgba(0, 0, 0, 0.05)',
@@ -122,8 +152,8 @@ export const lightColors: ThemeColors = {
     CardBorder: '#D9D9E6',
     CardBorderSecondary: '#D9D9E6',
     CardActiveBorder: '#4F46E5',
-    TextPrimary: '#E7E4F0',
-    TextSecondary: '#ACAAB5',
+    TextPrimary: '#0C0C1E',
+    TextSecondary: '#484751',
     TextOverlay: '#ffffff',
     ButtonGradientOne: '#4F46E5',
     ButtonGradientTwo: '#7C3AED',
@@ -145,11 +175,11 @@ export const lightColors: ThemeColors = {
     FooterHeading: '#0C0C1E',
     TextHeading: '#0C0C1E',
     TextBody: '#484751',
-    TextGradientOne: '#818CF8',
-    TextGradientTwo: '#A78BFA',
-    TextGradientThree: '#22D3EE',
-    TextHighlightedHeading: '#818CF8',
-    Border: '#ffffff',
+    TextGradientOne: '#6366F1',
+    TextGradientTwo: '#8B5CF6',
+    TextGradientThree: '#4F46E5',
+    TextHighlightedHeading: '#4F46E5',
+    Border: '#D9D9E6',
     BackgroundGradientOne: '#4338CA',
     BackgroundGradientTwo: '#4C1D95',
     RatingIconColor: '#ebd404',
@@ -159,4 +189,18 @@ export const lightColors: ThemeColors = {
     WarningText: '#ef4444',
     WarningBackground: 'rgba(239, 68, 68, 0.08)',
     WarningBorder: 'rgba(239, 68, 68, 0.2)',
+    WavyIndigo: '#4f46e5',
+    WavyPurple: '#7c3aed',
+    WavyBlue: '#2563eb',
+    WavyEmerald: '#059669',
+    WavyFuchsia: '#c026d3',
+    WavyWhite: 'rgba(15, 23, 42, 0.55)',
+    BrandIndigo: '#4f46e5',
+    BrandIndigoHover: '#3f37c9',
+    BrandEmerald: '#059669',
+    BrandEmeraldHover: '#047857',
+    BrandBlue: '#2563eb',
+    BrandBlueHover: '#1d4ed8',
+    BrandFuchsia: '#c026d3',
+    BrandFuchsiaHover: '#a21caf',
 }
