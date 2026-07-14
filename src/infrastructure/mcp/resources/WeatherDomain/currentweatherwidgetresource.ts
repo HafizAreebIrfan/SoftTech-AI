@@ -39,6 +39,11 @@ const escapeRegExp = (value: string) =>
 const resolveWidgetAssetUrl = (href: string) =>
   new URL(href, WIDGET_BASE_URL).toString();
 
+const rewriteAssetUrls = (html: string) =>
+  html
+    .replaceAll('href="/assets/', `href="${WIDGET_BASE_URL}/assets/`)
+    .replaceAll('src="/assets/', `src="${WIDGET_BASE_URL}/assets/`);
+
 const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
   let html = await fetchText(widgetUrl);
 
@@ -60,7 +65,7 @@ const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
     );
   }
 
-  return html;
+  return rewriteAssetUrls(html);
 };
 
 export const registerWeatherWidgetResources = (server: any) => {
