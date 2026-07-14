@@ -23,29 +23,45 @@ const WEATHER_WIDGETS = [
   },
 ];
 
-const inlineWeatherWidgetHtml = (widgetUrl: string) => `
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="/assets/weatherCard-YjrL11lu.css">
-    <title>Weather Widget</title>
-    <style>
-      html, body, iframe {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        border: 0;
-      }
-    </style>
-  </head>
-  <body>
-    <iframe src="${widgetUrl}" title="Weather Widget"></iframe>
-    <script type="module" crossorigin src="/assets/weatherCard-BmFwow1m.js"></script>
-  </body>
-</html>
-`;
+const fetchText = async (url: string) => {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${url}: ${response.status}`);
+  }
+
+  return response.text();
+};
+
+const escapeRegExp = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const resolveWidgetAssetUrl = (href: string) =>
+  new URL(href, WIDGET_BASE_URL).toString();
+
+const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
+  let html = await fetchText(widgetUrl);
+
+  const stylesheetHrefs = [
+    ...html.matchAll(
+      /<link rel="stylesheet" crossorigin href="([^"]+)"\s*\/?>/g,
+    ),
+  ].map((match) => match[1]);
+
+  for (const href of stylesheetHrefs) {
+    const css = await fetchText(resolveWidgetAssetUrl(href));
+
+    html = html.replace(
+      new RegExp(
+        `<link rel="stylesheet" crossorigin href="${escapeRegExp(href)}"\\s*\\/?>`,
+        "g",
+      ),
+      `<style>${css}</style>`,
+    );
+  }
+
+  return html;
+};
 
 export const registerWeatherWidgetResources = (server: any) => {
   WEATHER_WIDGETS.forEach((widget) => {
@@ -61,7 +77,7 @@ export const registerWeatherWidgetResources = (server: any) => {
           {
             uri: widget.uri,
             mimeType: RESOURCE_MIME_TYPE,
-            text: inlineWeatherWidgetHtml(widget.url),
+            text: await inlineRemoteWidgetHtml(widget.url),
             _meta: {
               ui: {
                 prefersBorder: true,
