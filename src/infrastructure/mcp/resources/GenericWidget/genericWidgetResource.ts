@@ -120,12 +120,17 @@ export const registerGenericWidgetResources = (server: any) => {
               ui: {
                 prefersBorder: true,
               },
-              "openai/widgetPrefersBorder": true,
-              "openai/widgetCSP": {
-                connect_domains: [WIDGET_BASE_URL],
-                resource_domains: [WIDGET_BASE_URL, "data:"],
+              csp: {
+                connectDomains: [WIDGET_BASE_URL],
+                resourceDomains: [WIDGET_BASE_URL, "data:"],
+                domain: WIDGET_BASE_URL,
+                "openai/widgetPrefersBorder": true,
+                "openai/widgetCSP": {
+                  connect_domains: [WIDGET_BASE_URL],
+                  resource_domains: [WIDGET_BASE_URL, "data:"],
+                },
+                "openai/widgetDomain": WIDGET_BASE_URL,
               },
-              "openai/widgetDomain": WIDGET_BASE_URL,
             },
           },
         ],
