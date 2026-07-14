@@ -3,16 +3,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { IApi, ICompany } from "../../../../domain/types/company.types";
 import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwidgetoutputschema";
+import { genericWidgetInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
 import { normalizeApiResponseToWidget } from "./genericwidgetnormalizer";
-
-const dynamicToolInputSchema = z.object({
-  query: z.string().optional().describe("A general search or lookup value"),
-  city: z.string().optional().describe("City name when the API needs a city"),
-  params: z
-    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
-    .optional()
-    .describe("Extra API parameters by key"),
-});
 
 export const registerCompanyApiTools = (
   server: McpServer,
@@ -34,7 +26,7 @@ export const registerCompanyApiTools = (
         description:
           api.mcpDescription ||
           `Calls ${api.name || "a registered company API"} and returns a generic widget response.`,
-        inputSchema: dynamicToolInputSchema,
+        inputSchema: genericWidgetInputSchema,
         outputSchema: genericWidgetOutputSchema,
         _meta: {
           ui: {
@@ -71,7 +63,7 @@ export const registerCompanyApiTools = (
 
 const callRegisteredApi = async (
   api: IApi,
-  input: z.infer<typeof dynamicToolInputSchema>,
+  input: z.infer<typeof genericWidgetInputSchema>,
 ) => {
   const url = buildApiUrl(api, input);
   const response = await fetch(url, {
@@ -90,14 +82,21 @@ const callRegisteredApi = async (
 
 const buildApiUrl = (
   api: IApi,
-  input: z.infer<typeof dynamicToolInputSchema>,
+  input: z.infer<typeof genericWidgetInputSchema>,
 ) => {
   const baseUrl = api.baseUrl.endsWith("/") ? api.baseUrl : `${api.baseUrl}/`;
   let endpoint = api.endpoint.replace(/^\//, "");
   const allParams = {
     ...(input.params ?? {}),
-    ...(input.city ? { city: input.city } : {}),
-    ...(input.query ? { query: input.query, q: input.query } : {}),
+    ...(input.city ? { city: input.city, q: input.city } : {}),
+    ...(input.location ? { location: input.location, q: input.location } : {}),
+    ...(input.query ? { query: input.query, q: input.query, search: input.query } : {}),
+    ...(input.itemId ? { itemId: input.itemId, id: input.itemId, uuid: input.itemId } : {}),
+    ...(input.limit !== undefined ? { limit: input.limit, count: input.limit, size: input.limit } : {}),
+    ...(input.page !== undefined ? { page: input.page, offset: input.page } : {}),
+    ...(input.startDate ? { startDate: input.startDate, fromDate: input.startDate, start: input.startDate } : {}),
+    ...(input.endDate ? { endDate: input.endDate, toDate: input.endDate, end: input.endDate } : {}),
+    ...(input.status ? { status: input.status, filter: input.status, state: input.status } : {}),
   };
 
   Object.entries(allParams).forEach(([key, value]) => {

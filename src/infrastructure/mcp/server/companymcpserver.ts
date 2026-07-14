@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ICompany } from "../../../domain/types/company.types";
-import { registerWeatherWidgetResources } from "../resources/WeatherDomain/currentweatherwidgetresource";
+import { registerGenericWidgetResources } from "../resources/GenericWidget/genericWidgetResource";
+import { getCompanyMcpInstructions } from "../ServerInstructions/companyserverinstructions";
 import { registerCompanyApiTools } from "../tools/DynamicDomain/registercompanyapitools";
 
 export const createCompanyMcpServer = (company: ICompany) => {
@@ -10,13 +11,11 @@ export const createCompanyMcpServer = (company: ICompany) => {
       version: "1.0.0",
     },
     {
-      instructions:
-        `You are an MCP server for ${company.companyName}. ` +
-        "Use the registered tools to call company APIs and return generic widget data.",
+      instructions: getCompanyMcpInstructions(company),
     },
   );
 
-  registerWeatherWidgetResources(server);
+  registerGenericWidgetResources(server);
   registerCompanyApiTools(server, company);
 
   return server;

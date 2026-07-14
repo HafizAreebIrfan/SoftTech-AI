@@ -2,7 +2,6 @@ import { randomUUID } from "crypto";
 import { Request, Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createWeatherServer } from "../../../../infrastructure/mcp/server/mcpserver";
 import { createCompanyMcpServer } from "../../../../infrastructure/mcp/server/companymcpserver";
 import { CompanyModel } from "../../../persistence/models/companies/register/companyinfo";
 
@@ -152,10 +151,7 @@ const closeSession = async (sessionId: string) => {
 
   mcpSessions.delete(sessionId);
 
-  await Promise.allSettled([
-    session.server.close(),
-    session.transport.close(),
-  ]);
+  await Promise.allSettled([session.server.close(), session.transport.close()]);
 };
 
 /**
@@ -209,10 +205,6 @@ const createServerForRequest = async (req: Request) => {
 
   if (company) {
     return createCompanyMcpServer(company as any);
-  }
-
-  if (mcpSlug === "weathermcp") {
-    return createWeatherServer();
   }
 
   throw new Error(`No MCP app registered for slug "${mcpSlug}"`);

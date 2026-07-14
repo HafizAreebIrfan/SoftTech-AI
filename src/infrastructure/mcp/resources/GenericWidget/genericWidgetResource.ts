@@ -5,25 +5,10 @@ import {
 
 const WIDGET_BASE_URL = "https://softtech-ai-app.onrender.com";
 
-const WEATHER_WIDGETS = [
+const GENERIC_WIDGET_RESOURCES = [
   {
     name: "Generic Widget",
     uri: "ui://generic/widgets.html",
-    url: `${WIDGET_BASE_URL}/widgets.html`,
-  },
-  {
-    name: "Weather Current Widget",
-    uri: "ui://weather/current-weather.html",
-    url: `${WIDGET_BASE_URL}/widgets.html`,
-  },
-  {
-    name: "Weather Forecast Widget",
-    uri: "ui://weather/forecast-weather.html",
-    url: `${WIDGET_BASE_URL}/widgets.html`,
-  },
-  {
-    name: "Weather Air Quality Widget",
-    uri: "ui://weather/airquality-weather.html",
     url: `${WIDGET_BASE_URL}/widgets.html`,
   },
 ];
@@ -49,13 +34,19 @@ const rewriteAssetUrls = (html: string) =>
     .replaceAll('href="/assets/', `href="${WIDGET_BASE_URL}/assets/`)
     .replaceAll('src="/assets/', `src="${WIDGET_BASE_URL}/assets/`);
 
+const resolveRelativeUrl = (relativePath: string, baseUrl: string) => {
+  return new URL(relativePath, baseUrl).toString();
+};
+
 const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
   let html = await fetchText(widgetUrl);
 
+  // 1. Remove modulepreload links to prevent redundant resource preloads
+  html = html.replace(/<link rel="modulepreload"[^>]*>/g, "");
+
+  // 2. Inline stylesheet files
   const stylesheetHrefs = [
-    ...html.matchAll(
-      /<link rel="stylesheet" crossorigin href="([^"]+)"\s*\/?>/g,
-    ),
+    ...html.matchAll(/<link rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g),
   ].map((match) => match[1]);
 
   for (const href of stylesheetHrefs) {
@@ -63,24 +54,61 @@ const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
 
     html = html.replace(
       new RegExp(
-        `<link rel="stylesheet" crossorigin href="${escapeRegExp(href)}"\\s*\\/?>`,
+        `<link rel="stylesheet"[^>]*href="${escapeRegExp(href)}"[^>]*>`,
         "g",
       ),
       `<style>${css}</style>`,
     );
   }
 
+  // 3. Inline script modules and resolve their imports as local data URIs
+  const scriptSrcs = [
+    ...html.matchAll(
+      /<script\s+type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g,
+    ),
+  ].map((match) => match[1]);
+
+  for (const src of scriptSrcs) {
+    const absoluteScriptUrl = resolveWidgetAssetUrl(src);
+    let jsContent = await fetchText(absoluteScriptUrl);
+
+    // Find relative imports like: from "./index-XXXX.js" or from"./index-XXXX.js"
+    const importMatches = [
+      ...jsContent.matchAll(/from\s*["'](\.\/[^"']+\.js)["']/g),
+    ];
+
+    for (const match of importMatches) {
+      const relativePath = match[1];
+      const absoluteImportUrl = resolveRelativeUrl(
+        relativePath,
+        absoluteScriptUrl,
+      );
+      const importedJs = await fetchText(absoluteImportUrl);
+      const dataUri = `data:text/javascript;base64,${Buffer.from(importedJs).toString("base64")}`;
+
+      jsContent = jsContent.replaceAll(match[0], `from "${dataUri}"`);
+    }
+
+    html = html.replace(
+      new RegExp(
+        `<script\\s+type="module"[^>]*src="${escapeRegExp(src)}"[^>]*><\\/script>`,
+        "g",
+      ),
+      `<script type="module">${jsContent}</script>`,
+    );
+  }
+
   return rewriteAssetUrls(html);
 };
 
-export const registerWeatherWidgetResources = (server: any) => {
-  WEATHER_WIDGETS.forEach((widget) => {
+export const registerGenericWidgetResources = (server: any) => {
+  GENERIC_WIDGET_RESOURCES.forEach((widget) => {
     registerAppResource(
       server,
       widget.name,
       widget.uri,
       {
-        description: "Interactive weather widget for ChatGPT.",
+        description: "Interactive generic widget visualizer.",
       },
       async () => ({
         contents: [
@@ -95,7 +123,7 @@ export const registerWeatherWidgetResources = (server: any) => {
               "openai/widgetPrefersBorder": true,
               "openai/widgetCSP": {
                 connect_domains: [WIDGET_BASE_URL],
-                resource_domains: [WIDGET_BASE_URL],
+                resource_domains: [WIDGET_BASE_URL, "data:"],
               },
               "openai/widgetDomain": WIDGET_BASE_URL,
             },
