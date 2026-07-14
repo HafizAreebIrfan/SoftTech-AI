@@ -4,7 +4,7 @@ export const stepOneSchema = z.object({
   companyName: z.string().min(2, "Company Name must be at least 2 characters"),
   adminEmail: z.string().min(1, "Email is required").email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  subdomain: z.string().min(2, "Subdomain must be at least 2 characters").regex(/^[a-zA-Z0-9-]+$/, "Only letters, numbers, and hyphens"),
+  mcpSlug: z.string().min(2, "Subdomain must be at least 2 characters").regex(/^[a-zA-Z0-9-]+$/, "Only letters, numbers, and hyphens"),
   primaryIndustry: z.string().min(1, "Please select an industry")
 });
 
