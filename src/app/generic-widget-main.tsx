@@ -7,10 +7,19 @@
 //     <GenericWidgetRenderer />
 //   </StrictMode>,
 // );
-const root = document.getElementById("root");
+import { createRoot } from "react-dom/client";
 
-root!.innerHTML = `
-<h1 style="color:white">
-Widget Loaded
-</h1>
-`;
+const root = createRoot(document.getElementById("root")!);
+
+root.render(
+  <div
+    style={{
+      color: "white",
+      background: "#222",
+      padding: "20px",
+      fontSize: "20px",
+    }}
+  >
+    React Mounted
+  </div>,
+);
