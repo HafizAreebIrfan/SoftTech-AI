@@ -37,18 +37,21 @@ type WidgetBlock =
 export type GenericWidgetContent = {
   title: string;
   subtitle?: string;
+  layout: string;
   blocks: WidgetBlock[];
 };
 
 export const normalizeApiResponseToWidget = (
   apiName: string,
   response: unknown,
+  layout: string,
 ): GenericWidgetContent => {
   const blocks = buildBlocks(response);
 
   return {
     title: apiName,
     subtitle: "Live API response",
+    layout: layout || "dashboard",
     blocks:
       blocks.length > 0
         ? blocks
@@ -95,9 +98,11 @@ const buildArrayBlocks = (items: unknown[]): WidgetBlock[] => {
         type: "table",
         title: "Items",
         tableHeaders: headers,
-        tableRows: records.slice(0, 10).map((record) =>
-          headers.map((header) => stringifyCell(record[header])),
-        ),
+        tableRows: records
+          .slice(0, 10)
+          .map((record) =>
+            headers.map((header) => stringifyCell(record[header])),
+          ),
       },
     ];
   }

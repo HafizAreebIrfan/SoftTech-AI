@@ -46,5 +46,6 @@ const widgetBlockSchema = z.object({
 export const genericWidgetOutputSchema = z.object({
   title: z.string(),
   subtitle: z.string().optional(),
+  layout: z.string().optional(),
   blocks: z.array(widgetBlockSchema),
 });

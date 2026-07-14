@@ -14,7 +14,10 @@ const dynamicToolInputSchema = z.object({
     .describe("Extra API parameters by key"),
 });
 
-export const registerCompanyApiTools = (server: McpServer, company: ICompany) => {
+export const registerCompanyApiTools = (
+  server: McpServer,
+  company: ICompany,
+) => {
   const apis = company.apis ?? [];
 
   apis.forEach((api, index) => {
@@ -44,6 +47,7 @@ export const registerCompanyApiTools = (server: McpServer, company: ICompany) =>
         const widgetContent = normalizeApiResponseToWidget(
           api.name || company.companyName,
           rawResponse,
+          company.uiPreference?.layout,
         );
 
         return {
@@ -98,8 +102,14 @@ const buildApiUrl = (
 
   Object.entries(allParams).forEach(([key, value]) => {
     endpoint = endpoint
-      .replace(new RegExp(`:${escapeRegExp(key)}\\b`, "g"), encodeURIComponent(String(value)))
-      .replace(new RegExp(`\\{${escapeRegExp(key)}\\}`, "g"), encodeURIComponent(String(value)));
+      .replace(
+        new RegExp(`:${escapeRegExp(key)}\\b`, "g"),
+        encodeURIComponent(String(value)),
+      )
+      .replace(
+        new RegExp(`\\{${escapeRegExp(key)}\\}`, "g"),
+        encodeURIComponent(String(value)),
+      );
   });
 
   const url = new URL(endpoint, baseUrl);
