@@ -9,8 +9,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         app: resolve(process.cwd(), 'index.html'),
-        weatherCard: resolve(process.cwd(), 'weather-card.html'),
-      },
+        Widgets: resolve(process.cwd(), "widgets.html"),
+        },
     },
   },
 })
