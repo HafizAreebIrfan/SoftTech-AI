@@ -8,11 +8,28 @@ import { WidgetBlock } from "../../../../domain/entities/GenericWidget";
 import styles from "../../../../styles/genericwidgetrenderer.module.css";
 
 export const GenericWidgetRenderer: React.FC = () => {
-  const toolResult = useMcpToolResult();
+  let toolResult;
 
+  try {
+    toolResult = useMcpToolResult();
+    console.log("toolResult", toolResult);
+  } catch (e) {
+    console.error("HOOK FAILED", e);
+    return (
+      <div
+        style={{
+          color: "white",
+          background: "#222",
+          padding: "20px",
+          fontSize: "20px",
+        }}
+      >
+        Hook crashed
+      </div>
+    );
+  }
   const debugText =
-    toolResult?.content?.find((entry) => entry.type === "text")?.text ??
-    null;
+    toolResult?.content?.find((entry) => entry.type === "text")?.text ?? null;
 
   // Validate presence of structured content, title, and blocks array
   if (
@@ -26,14 +43,21 @@ export const GenericWidgetRenderer: React.FC = () => {
       <div className={styles.emptyState}>
         <h3 className={styles.emptyTitle}>No custom interface loaded</h3>
         <p className={styles.emptyDesc}>
-          The widget is ready, but no structured MCP interface data is active right now.
+          The widget is ready, but no structured MCP interface data is active
+          right now.
         </p>
         {debugText && <pre className={styles.debugText}>{debugText}</pre>}
       </div>
     );
   }
 
-  const { title, subtitle, blocks, layout = "dashboard", meta } = toolResult.structuredContent;
+  const {
+    title,
+    subtitle,
+    blocks,
+    layout = "dashboard",
+    meta,
+  } = toolResult.structuredContent;
 
   // Filter out invalid blocks or blocks with no items
   const validBlocks = blocks.filter((block: WidgetBlock) => {
@@ -44,7 +68,9 @@ export const GenericWidgetRenderer: React.FC = () => {
       case "list":
         return Array.isArray(block.listItems) && block.listItems.length > 0;
       case "keyValue":
-        return Array.isArray(block.keyValueItems) && block.keyValueItems.length > 0;
+        return (
+          Array.isArray(block.keyValueItems) && block.keyValueItems.length > 0
+        );
       case "table":
         return Array.isArray(block.tableRows) && block.tableRows.length > 0;
       default:
@@ -91,7 +117,7 @@ export const GenericWidgetRenderer: React.FC = () => {
     if (!isoString) return "";
     const date = new Date(isoString);
     if (isNaN(date.getTime())) return isoString;
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
@@ -101,7 +127,7 @@ export const GenericWidgetRenderer: React.FC = () => {
           <span className={styles.previewBadge}>Preview Fallback</span>
         </div>
       )}
-      
+
       <header className={styles.header}>
         <h2 className={styles.title}>{title}</h2>
         {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
