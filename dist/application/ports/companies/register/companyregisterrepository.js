@@ -6,6 +6,8 @@ function createCompanyRepositoryPort(repository) {
         throw new Error("create function is required");
     if (!repository.findById)
         throw new Error("findById function is required");
+    if (!repository.findByEmail)
+        throw new Error("findByEmail function is required");
     if (!repository.update)
         throw new Error("update function is required");
     return repository;

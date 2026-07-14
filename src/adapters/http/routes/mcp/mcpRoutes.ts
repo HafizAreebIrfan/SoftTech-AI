@@ -3,6 +3,6 @@ import { McpTransportLayer } from "../../controllers/mcp/mcptransportlayer";
 
 export const mcpRoutes = express.Router();
 
-mcpRoutes.get("/weathermcp", McpTransportLayer);
-mcpRoutes.post("/weathermcp", McpTransportLayer);
-mcpRoutes.delete("/weathermcp", McpTransportLayer);
+mcpRoutes.get("/:mcpSlug", McpTransportLayer);
+mcpRoutes.post("/:mcpSlug", McpTransportLayer);
+mcpRoutes.delete("/:mcpSlug", McpTransportLayer);

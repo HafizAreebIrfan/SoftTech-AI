@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createWeatherServer } from "../../../../infrastructure/mcp/server/mcpserver";
+import { createCompanyMcpServer } from "../../../../infrastructure/mcp/server/companymcpserver";
+import { CompanyModel } from "../../../persistence/models/companies/register/companyinfo";
 
 type McpSession = {
   server: McpServer;
@@ -12,7 +14,7 @@ type McpSession = {
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const SESSION_SWEEP_INTERVAL_MS = 5 * 60 * 1000;
-const weatherSessions = new Map<string, McpSession>();
+const mcpSessions = new Map<string, McpSession>();
 
 /**
  * Main MCP HTTP entrypoint.
@@ -49,12 +51,12 @@ export const McpTransportLayer = async (req: Request, res: Response) => {
  * Handles the very first initialize call by creating a fresh weather server and transport pair.
  */
 const handleInitializeRequest = async (req: Request, res: Response) => {
-  const server = createWeatherServer();
+  const server = await createServerForRequest(req);
   let initializedSessionId: string | undefined;
 
   const transport = buildTransport(server, (sessionId) => {
     initializedSessionId = sessionId;
-    weatherSessions.set(sessionId, {
+    mcpSessions.set(sessionId, {
       server,
       transport,
       lastSeenAt: Date.now(),
@@ -80,7 +82,7 @@ const handleExistingSessionRequest = async (
   res: Response,
   sessionId: string,
 ) => {
-  const session = weatherSessions.get(sessionId);
+  const session = mcpSessions.get(sessionId);
 
   if (!session) {
     sendSessionNotFound(res);
@@ -128,7 +130,7 @@ const isInitializeRequest = (req: Request) =>
  * Refreshes the last-seen time so active sessions do not get swept as expired.
  */
 const touchSession = (sessionId: string) => {
-  const session = weatherSessions.get(sessionId);
+  const session = mcpSessions.get(sessionId);
 
   if (!session) {
     return;
@@ -142,13 +144,13 @@ const touchSession = (sessionId: string) => {
  * This runs when the client explicitly closes the session or when the sweeper expires it.
  */
 const closeSession = async (sessionId: string) => {
-  const session = weatherSessions.get(sessionId);
+  const session = mcpSessions.get(sessionId);
 
   if (!session) {
     return;
   }
 
-  weatherSessions.delete(sessionId);
+  mcpSessions.delete(sessionId);
 
   await Promise.allSettled([
     session.server.close(),
@@ -161,7 +163,7 @@ const closeSession = async (sessionId: string) => {
  */
 const sweepExpiredSessions = async () => {
   const now = Date.now();
-  const expiredSessionIds = [...weatherSessions.entries()]
+  const expiredSessionIds = [...mcpSessions.entries()]
     .filter(([, session]) => now - session.lastSeenAt > SESSION_TTL_MS)
     .map(([sessionId]) => sessionId);
 
@@ -194,6 +196,34 @@ const logMcpError = (req: Request, error: unknown) => {
     requestBody: req.body,
     error,
   });
+};
+
+const createServerForRequest = async (req: Request) => {
+  const mcpSlug = normalizeMcpSlug(req.params.mcpSlug);
+
+  if (!mcpSlug) {
+    throw new Error("MCP slug is required");
+  }
+
+  const company = await CompanyModel.findOne({ mcpSlug }).lean();
+
+  if (company) {
+    return createCompanyMcpServer(company as any);
+  }
+
+  if (mcpSlug === "weathermcp") {
+    return createWeatherServer();
+  }
+
+  throw new Error(`No MCP app registered for slug "${mcpSlug}"`);
+};
+
+const normalizeMcpSlug = (value: unknown) => {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().toLowerCase();
 };
 
 /**

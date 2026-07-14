@@ -3,7 +3,7 @@ import { ICompany } from "../../../../domain/types/company.types";
 import { createCompanyRepositoryPort, ICompanyRepository } from "../../../ports/companies/register/companyregisterrepository";
 
 export async function registerCompanyInfo(companyRepository: ICompanyRepository, payload: any): Promise<ICompany> {
-  const { companyName, industry, email, password, phone } = payload;
+  const { companyName, industry, email, password, phone, mcpSlug } = payload;
   const repo = createCompanyRepositoryPort(companyRepository);
 
   if (!companyName || !industry || !email || !password) {
@@ -12,6 +12,7 @@ export async function registerCompanyInfo(companyRepository: ICompanyRepository,
 
   const company = createCompany({
     companyName,
+    mcpSlug,
     industry,
     email,
     password,

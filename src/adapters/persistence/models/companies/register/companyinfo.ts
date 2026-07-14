@@ -2,9 +2,11 @@ import mongoose, { Document, Model } from "mongoose";
 import { ApiSchema } from "./apischema";
 import { UiPreferenceSchema } from "./uipreferenceschema";
 import { Hashpassword, comparePassword } from "../../../../../infrastructure/middlewares/SecurityMiddleware/bcrypt";
+import { ICompanyForgotPassword, CompanyForgotPasswordFields } from "../forgetPassword/companyForgotPasswordInfo";
 
-export interface ICompanyDocument extends Document {
+export interface ICompanyDocument extends Document, ICompanyForgotPassword {
   companyName: string;
+  mcpSlug?: string;
   industry: string;
   email: string;
   password?: string;
@@ -13,8 +15,6 @@ export interface ICompanyDocument extends Document {
   uiPreference?: any;
   onboardingStep: number;
   status: string;
-  passwordResetOTP?: string;
-  passwordResetOTPExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,6 +26,14 @@ export interface ICompanyModel extends Model<ICompanyDocument> {
 const CompanySchema = new mongoose.Schema<ICompanyDocument, ICompanyModel>(
   {
     companyName: { type: String, required: true },
+    mcpSlug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      lowercase: true,
+      trim: true,
+      match: /^[a-z0-9-]+$/,
+    },
     industry: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -34,8 +42,7 @@ const CompanySchema = new mongoose.Schema<ICompanyDocument, ICompanyModel>(
     uiPreference: UiPreferenceSchema,
     onboardingStep: { type: Number, default: 1 },
     status: { type: String, default: "draft" },
-    passwordResetOTP: { type: String },
-    passwordResetOTPExpires: { type: Date },
+    ...CompanyForgotPasswordFields,
   },
   { timestamps: true },
 );

@@ -10,6 +10,7 @@ const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const env_1 = require("../config/env");
 const healthRoutes_1 = require("../../adapters/http/routes/root/healthRoutes");
 const companyregisterroutes_1 = require("../../adapters/http/routes/companies/register/companyregisterroutes");
+const companyforgetpasswordroute_1 = require("../../adapters/http/routes/companies/forget_password/companyforgetpasswordroute");
 const error_1 = require("../middlewares/ErrorMiddleware/error");
 const helmet_1 = require("../middlewares/SecurityMiddleware/helmet");
 const companyloginroute_1 = require("../../adapters/http/routes/companies/login/companyloginroute");
@@ -33,6 +34,7 @@ const buildApp = () => {
     app.use("/api/companies", companyregisterroutes_1.CompanyRoutes);
     app.use("/api/company", companyloginroute_1.CompanyLoginRoutes);
     app.use("/api/company", companylogoutroute_1.CompanyLogoutRoutes);
+    app.use("/api/company", companyforgetpasswordroute_1.CompanyForgetPasswordRoutes);
     app.use("/mcp", mcpRoutes_1.mcpRoutes);
     app.use(error_1.errorMiddleware);
     return app;

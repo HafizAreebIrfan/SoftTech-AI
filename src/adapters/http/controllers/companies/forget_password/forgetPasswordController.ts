@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import { createCompanyRepository } from "../../../../persistence/mongo/companies/register/companyregisterrepository";
+import { createCompanyForgotPasswordRepository } from "../../../../persistence/mongo/companies/forgetPassword/companyforgetpasswordrepository";
 import { resetCompanyPassword, sendForgotPasswordOtp } from "../../../../../application/useCases/company/forgetPassword/forgetPassword";
 
-const companyRepository = createCompanyRepository();
+const companyRepository = createCompanyForgotPasswordRepository();
 
 export async function sendForgotPasswordOtpController(
   req: Request,

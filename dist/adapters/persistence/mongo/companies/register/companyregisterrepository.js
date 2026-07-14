@@ -10,6 +10,9 @@ function createCompanyRepository() {
         async findById(companyId) {
             return await companyinfo_1.CompanyModel.findById(companyId).lean();
         },
+        async findByEmail(email) {
+            return await companyinfo_1.CompanyModel.findOne({ email }).lean();
+        },
         async update(companyId, updates) {
             return await companyinfo_1.CompanyModel.findByIdAndUpdate(companyId, updates, {
                 returnDocument: "after",

@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 export const ApiSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
+    mcpToolName: { type: String },
+    mcpDescription: { type: String },
     baseUrl: { type: String, required: true },
     endpoint: { type: String, required: true },
     method: { type: String, default: "GET" },
@@ -15,6 +17,11 @@ export const ApiSchema = new mongoose.Schema(
     oauthClientId: { type: String },
     oauthClientSecret: { type: String },
     bearerToken: { type: String },
+    inputFieldMap: { type: mongoose.Schema.Types.Mixed },
+    outputFieldMap: { type: mongoose.Schema.Types.Mixed },
+    sampleResponse: { type: mongoose.Schema.Types.Mixed },
+    fallbackWidget: { type: mongoose.Schema.Types.Mixed },
+    mcpResourceUri: { type: String },
   },
   { _id: false },
 );

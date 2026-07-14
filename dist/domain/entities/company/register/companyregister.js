@@ -4,6 +4,7 @@ exports.createCompany = createCompany;
 function createCompany(data) {
     return {
         companyName: data.companyName,
+        mcpSlug: data.mcpSlug,
         industry: data.industry,
         email: data.email,
         password: data.password,

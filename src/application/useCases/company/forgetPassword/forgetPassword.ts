@@ -1,4 +1,4 @@
-import { createCompanyRepositoryPort, ICompanyRepository } from "../../../ports/companies/register/companyregisterrepository";
+import { createCompanyForgotPasswordRepositoryPort, ICompanyForgotPasswordRepository } from "../../../ports/companies/forgetPassword/companyforgetpasswordrepository";
 import { comparePassword, Hashpassword } from "../../../../infrastructure/middlewares/SecurityMiddleware/bcrypt";
 import { sendPasswordResetOtpEmail } from "../../../../infrastructure/services/emailService";
 
@@ -9,11 +9,11 @@ const generateOtp = (): string => {
 };
 
 export async function sendForgotPasswordOtp(
-  companyRepository: ICompanyRepository,
+  companyRepository: ICompanyForgotPasswordRepository,
   email: string,
   options?: { returnOtp?: boolean },
 ): Promise<string | void> {
-  const repo = createCompanyRepositoryPort(companyRepository);
+  const repo = createCompanyForgotPasswordRepositoryPort(companyRepository);
   const company = await repo.findByEmail(email);
 
   if (!company) {
@@ -38,12 +38,12 @@ export async function sendForgotPasswordOtp(
 }
 
 export async function resetCompanyPassword(
-  companyRepository: ICompanyRepository,
+  companyRepository: ICompanyForgotPasswordRepository,
   email: string,
   otp: string,
   password: string,
 ): Promise<void> {
-  const repo = createCompanyRepositoryPort(companyRepository);
+  const repo = createCompanyForgotPasswordRepositoryPort(companyRepository);
   const company = await repo.findByEmail(email);
 
   if (!company) {

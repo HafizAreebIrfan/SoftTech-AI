@@ -21,14 +21,5 @@ export function createCompanyRepository(): ICompanyRepository {
         returnDocument: "after",
       }).lean();
     },
-
-    async resetPassword(companyId: string, newPassword: string): Promise<any> {
-      const company = await CompanyModel.findById(companyId);
-      if (!company) return null;
-      company.password = newPassword;
-      company.passwordResetOTP = undefined;
-      company.passwordResetOTPExpires = undefined;
-      return await company.save();
-    },
   };
 }

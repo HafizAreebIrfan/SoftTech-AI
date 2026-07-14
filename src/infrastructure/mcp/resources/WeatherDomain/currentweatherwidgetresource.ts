@@ -7,19 +7,24 @@ const WIDGET_BASE_URL = "https://softtech-ai-app.onrender.com";
 
 const WEATHER_WIDGETS = [
   {
+    name: "Generic Widget",
+    uri: "ui://generic/widgets.html",
+    url: `${WIDGET_BASE_URL}/widgets.html`,
+  },
+  {
     name: "Weather Current Widget",
     uri: "ui://weather/current-weather.html",
-    url: `${WIDGET_BASE_URL}/weather-card.html`,
+    url: `${WIDGET_BASE_URL}/widgets.html`,
   },
   {
     name: "Weather Forecast Widget",
     uri: "ui://weather/forecast-weather.html",
-    url: `${WIDGET_BASE_URL}/forecast-card.html`,
+    url: `${WIDGET_BASE_URL}/widgets.html`,
   },
   {
     name: "Weather Air Quality Widget",
     uri: "ui://weather/airquality-weather.html",
-    url: `${WIDGET_BASE_URL}/airquality-card.html`,
+    url: `${WIDGET_BASE_URL}/widgets.html`,
   },
 ];
 

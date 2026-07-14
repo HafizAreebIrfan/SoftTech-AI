@@ -8,8 +8,17 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const apischema_1 = require("./apischema");
 const uipreferenceschema_1 = require("./uipreferenceschema");
 const bcrypt_1 = require("../../../../../infrastructure/middlewares/SecurityMiddleware/bcrypt");
+const companyForgotPasswordInfo_1 = require("../forgetPassword/companyForgotPasswordInfo");
 const CompanySchema = new mongoose_1.default.Schema({
     companyName: { type: String, required: true },
+    mcpSlug: {
+        type: String,
+        unique: true,
+        sparse: true,
+        lowercase: true,
+        trim: true,
+        match: /^[a-z0-9-]+$/,
+    },
     industry: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
@@ -18,6 +27,7 @@ const CompanySchema = new mongoose_1.default.Schema({
     uiPreference: uipreferenceschema_1.UiPreferenceSchema,
     onboardingStep: { type: Number, default: 1 },
     status: { type: String, default: "draft" },
+    ...companyForgotPasswordInfo_1.CompanyForgotPasswordFields,
 }, { timestamps: true });
 CompanySchema.pre("save", async function () {
     if (this.isModified("password") && this.password) {
