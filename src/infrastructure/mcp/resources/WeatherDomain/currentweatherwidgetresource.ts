@@ -92,6 +92,12 @@ export const registerWeatherWidgetResources = (server: any) => {
               ui: {
                 prefersBorder: true,
               },
+              "openai/widgetPrefersBorder": true,
+              "openai/widgetCSP": {
+                connect_domains: [WIDGET_BASE_URL],
+                resource_domains: [WIDGET_BASE_URL],
+              },
+              "openai/widgetDomain": WIDGET_BASE_URL,
             },
           },
         ],
