@@ -29,6 +29,7 @@ const inlineWeatherWidgetHtml = (widgetUrl: string) => `
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/assets/weatherCard-YjrL11lu.css">
     <title>Weather Widget</title>
     <style>
       html, body, iframe {
@@ -41,6 +42,7 @@ const inlineWeatherWidgetHtml = (widgetUrl: string) => `
   </head>
   <body>
     <iframe src="${widgetUrl}" title="Weather Widget"></iframe>
+    <script type="module" crossorigin src="/assets/weatherCard-BmFwow1m.js"></script>
   </body>
 </html>
 `;
