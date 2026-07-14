@@ -10,6 +10,7 @@ import { showToast } from "../../../../utils/toasts";
 import { stepOneSchema } from "../../../../infrastructure/validation/signupSchemas";
 import styles from "../../../../styles/signup.module.css";
 import z from "zod";
+import { IndustryOptions } from "../../../../types/industryoptions";
 
 const SignupStep1: FC = () => {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ const SignupStep1: FC = () => {
       companyName: stepOneData.companyName || "",
       adminEmail: stepOneData.adminEmail || "",
       password: stepOneData.password || "",
-      subdomain: stepOneData.subdomain || "",
+      mcpSlug: stepOneData.subdomain || "",
       primaryIndustry: stepOneData.primaryIndustry || "saas",
     },
     onSubmit: async ({ value }) => {
@@ -54,7 +55,7 @@ const SignupStep1: FC = () => {
         email: value.adminEmail,
         password: value.password,
         industry: value.primaryIndustry,
-        subdomain: value.subdomain,
+        mcpSlug: value.mcpSlug,
       });
     },
   });
@@ -144,7 +145,7 @@ const SignupStep1: FC = () => {
                           background: colors.Background,
                           borderColor:
                             field.state.meta.errors?.length > 0
-                              ? "#ef4444"
+                              ? colors.Bordererror
                               : colors.CardBorder,
                           color: colors.TextBody,
                         }}
@@ -204,7 +205,7 @@ const SignupStep1: FC = () => {
                           background: colors.Background,
                           borderColor:
                             field.state.meta.errors?.length > 0
-                              ? "#ef4444"
+                              ? colors.Bordererror
                               : colors.CardBorder,
                           color: colors.TextBody,
                         }}
@@ -260,7 +261,7 @@ const SignupStep1: FC = () => {
                           background: colors.Background,
                           borderColor:
                             field.state.meta.errors?.length > 0
-                              ? "#ef4444"
+                              ? colors.Bordererror
                               : colors.CardBorder,
                           color: colors.TextBody,
                         }}
@@ -285,7 +286,7 @@ const SignupStep1: FC = () => {
                   Workspace Subdomain
                 </label>
                 <signupForm.Field
-                  name="subdomain"
+                  name="mcpSlug"
                   validators={{
                     onChange: ({ value }) => {
                       const res = z
@@ -322,7 +323,7 @@ const SignupStep1: FC = () => {
                               background: colors.Background,
                               borderColor:
                                 field.state.meta.errors?.length > 0
-                                  ? "#ef4444"
+                                  ? colors.Bordererror
                                   : colors.CardBorder,
                               color: colors.TextBody,
                             }}
@@ -379,11 +380,12 @@ const SignupStep1: FC = () => {
                           color: colors.TextBody,
                         }}
                       >
-                        <option value="ecommerce">E-Commerce</option>
-                        <option value="saas">SaaS Development</option>
-                        <option value="fintech">FinTech</option>
-                        <option value="ai">AI Research</option>
-                        <option value="logistics">Deep Space Logistics</option>
+                        <option value="">Select Industry</option>
+                        {IndustryOptions.map((industry, index) => (
+                          <option key={index} value={industry.value}>
+                            {industry.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   )}

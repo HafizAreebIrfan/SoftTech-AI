@@ -43,7 +43,12 @@ export interface WidgetBlock {
 export interface GenericWidgetContent {
   title: string;
   subtitle?: string;
+  layout?: "dashboard" | "detail" | "table" | "report";
   blocks: WidgetBlock[];
+  meta?: {
+    source?: string;
+    lastFetched?: string;
+  };
 }
 
 export interface McpToolResultPayload {
