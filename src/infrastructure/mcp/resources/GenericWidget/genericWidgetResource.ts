@@ -19,8 +19,6 @@ const widgetHtml = fs.readFileSync(
   "utf8",
 );
 
-console.log(widgetHtml);
-
 export const registerGenericWidgetResources = (server: any) => {
   GENERIC_WIDGET_RESOURCES.forEach((widget) => {
     registerAppResource(
@@ -30,28 +28,34 @@ export const registerGenericWidgetResources = (server: any) => {
       {
         description: "Interactive generic widget visualizer.",
       },
-      async () => ({
-        contents: [
-          {
-            uri: widget.uri,
-            mimeType: RESOURCE_MIME_TYPE,
-            text: widgetHtml,
-            _meta: {
-              "openai/outputTemplate": widget.uri,
-              "openai/widgetAccessible": true,
-              "openai/toolInvocation/invoking": "Loading...",
-              "openai/toolInvocation/invoked": "Loaded",
-              ui: {
-                prefersBorder: true,
-              },
-              csp: {
-                connectDomains: [WIDGET_BASE_URL],
-                resourceDomains: [WIDGET_BASE_URL, "data:"],
+      async () => {
+        console.log("========== WIDGET RESOURCE REQUESTED ==========");
+        console.log("URI:", widget.uri);
+        console.log("Serving widget HTML");
+        console.log("==============================================");
+        return {
+          contents: [
+            {
+              uri: widget.uri,
+              mimeType: RESOURCE_MIME_TYPE,
+              text: widgetHtml,
+              _meta: {
+                "openai/outputTemplate": widget.uri,
+                "openai/widgetAccessible": true,
+                "openai/toolInvocation/invoking": "Loading...",
+                "openai/toolInvocation/invoked": "Loaded",
+                ui: {
+                  prefersBorder: true,
+                },
+                csp: {
+                  connectDomains: [WIDGET_BASE_URL],
+                  resourceDomains: [WIDGET_BASE_URL, "data:"],
+                },
               },
             },
-          },
-        ],
-      }),
+          ],
+        };
+      },
     );
   });
 };
