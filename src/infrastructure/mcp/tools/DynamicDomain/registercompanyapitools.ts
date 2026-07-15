@@ -36,11 +36,13 @@ export const registerCompanyApiTools = (
       },
       async (input) => {
         const rawResponse = await callRegisteredApi(api, input);
+        console.log("Raw response", rawResponse);
         const widgetContent = normalizeApiResponseToWidget(
           api.name || company.companyName,
           rawResponse,
           company.uiPreference?.layout,
         );
+        console.log("Widget content", widgetContent);
 
         return {
           structuredContent: widgetContent,
@@ -90,13 +92,31 @@ const buildApiUrl = (
     ...(input.params ?? {}),
     ...(input.city ? { city: input.city, q: input.city } : {}),
     ...(input.location ? { location: input.location, q: input.location } : {}),
-    ...(input.query ? { query: input.query, q: input.query, search: input.query } : {}),
-    ...(input.itemId ? { itemId: input.itemId, id: input.itemId, uuid: input.itemId } : {}),
-    ...(input.limit !== undefined ? { limit: input.limit, count: input.limit, size: input.limit } : {}),
-    ...(input.page !== undefined ? { page: input.page, offset: input.page } : {}),
-    ...(input.startDate ? { startDate: input.startDate, fromDate: input.startDate, start: input.startDate } : {}),
-    ...(input.endDate ? { endDate: input.endDate, toDate: input.endDate, end: input.endDate } : {}),
-    ...(input.status ? { status: input.status, filter: input.status, state: input.status } : {}),
+    ...(input.query
+      ? { query: input.query, q: input.query, search: input.query }
+      : {}),
+    ...(input.itemId
+      ? { itemId: input.itemId, id: input.itemId, uuid: input.itemId }
+      : {}),
+    ...(input.limit !== undefined
+      ? { limit: input.limit, count: input.limit, size: input.limit }
+      : {}),
+    ...(input.page !== undefined
+      ? { page: input.page, offset: input.page }
+      : {}),
+    ...(input.startDate
+      ? {
+          startDate: input.startDate,
+          fromDate: input.startDate,
+          start: input.startDate,
+        }
+      : {}),
+    ...(input.endDate
+      ? { endDate: input.endDate, toDate: input.endDate, end: input.endDate }
+      : {}),
+    ...(input.status
+      ? { status: input.status, filter: input.status, state: input.status }
+      : {}),
   };
 
   Object.entries(allParams).forEach(([key, value]) => {

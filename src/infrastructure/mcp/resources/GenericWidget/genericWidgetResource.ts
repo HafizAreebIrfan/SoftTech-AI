@@ -39,10 +39,17 @@ const resolveRelativeUrl = (relativePath: string, baseUrl: string) => {
 };
 
 const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
-  let html = await fetchText(widgetUrl);
+  let html = "";
+  try {
+    html = await fetchText(widgetUrl);
+    console.log(html);
+    html = html.replace(/<link rel="modulepreload"[^>]*>/g, "");
+  } catch (e) {
+    console.log("Error fetching widget html: ", e);
+    return "";
+  }
 
   // 1. Remove modulepreload links to prevent redundant resource preloads
-  html = html.replace(/<link rel="modulepreload"[^>]*>/g, "");
 
   // 2. Inline stylesheet files
   const stylesheetHrefs = [
