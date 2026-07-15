@@ -42,7 +42,6 @@ const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
   let html = "";
   try {
     html = await fetchText(widgetUrl);
-    console.log(html);
     html = html.replace(/<link rel="modulepreload"[^>]*>/g, "");
   } catch (e) {
     console.log("Error fetching widget html: ", e);
@@ -53,7 +52,7 @@ const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
 
   // 2. Inline stylesheet files
   const stylesheetHrefs = [
-    ...html.matchAll(/<link rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g),
+    ...html.matchAll(/<link\s+rel="stylesheet"[^>]*href="([^"]+)"[^>]*>/g),
   ].map((match) => match[1]);
 
   for (const href of stylesheetHrefs) {
@@ -61,7 +60,7 @@ const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
 
     html = html.replace(
       new RegExp(
-        `<link rel="stylesheet"[^>]*href="${escapeRegExp(href)}"[^>]*>`,
+        `<link\\s+rel="stylesheet"[^>]*href="${escapeRegExp(href)}"[^>]*>`,
         "g",
       ),
       `<style>${css}</style>`,
@@ -71,11 +70,12 @@ const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
   // 3. Inline script modules and resolve their imports as local data URIs
   const scriptSrcs = [
     ...html.matchAll(
-      /<script\s+type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g,
+      /<script\s+type="module"[^>]*crossorigin\s+src="([^"]+)"[^>]*><\/script>|<script\s+type="module"[^>]*src="([^"]+)"[^>]*><\/script>/g,
     ),
-  ].map((match) => match[1]);
+  ].map((match) => match[1] || match[2]);
 
   for (const src of scriptSrcs) {
+    if (!src) continue;
     const absoluteScriptUrl = resolveWidgetAssetUrl(src);
     let jsContent = await fetchText(absoluteScriptUrl);
 
@@ -98,7 +98,7 @@ const inlineRemoteWidgetHtml = async (widgetUrl: string) => {
 
     html = html.replace(
       new RegExp(
-        `<script\\s+type="module"[^>]*src="${escapeRegExp(src)}"[^>]*><\\/script>`,
+        `<script\\s+type="module"[^>]*src="${escapeRegExp(src)}"[^>]*><\\/script>|<script\\s+type="module"[^>]*crossorigin\\s+src="${escapeRegExp(src)}"[^>]*><\\/script>`,
         "g",
       ),
       `<script type="module">${jsContent}</script>`,
@@ -117,31 +117,28 @@ export const registerGenericWidgetResources = (server: any) => {
       {
         description: "Interactive generic widget visualizer.",
       },
-      async () => ({
-        contents: [
-          {
-            uri: widget.uri,
-            mimeType: RESOURCE_MIME_TYPE,
-            text: await inlineRemoteWidgetHtml(widget.url),
-            _meta: {
-              ui: {
-                prefersBorder: true,
-              },
-              csp: {
-                connectDomains: [WIDGET_BASE_URL],
-                resourceDomains: [WIDGET_BASE_URL, "data:"],
-                domain: WIDGET_BASE_URL,
-                "openai/widgetPrefersBorder": true,
-                "openai/widgetCSP": {
-                  connect_domains: [WIDGET_BASE_URL],
-                  resource_domains: [WIDGET_BASE_URL, "data:"],
+      async () => {
+        const inlinedHtml = await inlineRemoteWidgetHtml(widget.url);
+        
+        return {
+          contents: [
+            {
+              uri: widget.uri,
+              mimeType: RESOURCE_MIME_TYPE,
+              text: inlinedHtml,
+              _meta: {
+                ui: {
+                  prefersBorder: true,
                 },
-                "openai/widgetDomain": WIDGET_BASE_URL,
+                csp: {
+                  connectDomains: [WIDGET_BASE_URL],
+                  resourceDomains: [WIDGET_BASE_URL, "data:"],
+                },
               },
             },
-          },
-        ],
-      }),
+          ],
+        };
+      },
     );
   });
 };

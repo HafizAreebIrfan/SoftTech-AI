@@ -32,6 +32,10 @@ export const registerCompanyApiTools = (
           ui: {
             resourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
           },
+          "openai/outputTemplate": api.mcpResourceUri || "ui://generic/widgets.html",
+          "openai/widgetAccessible": true,
+          "openai/toolInvocation/invoking": "Loading...",
+          "openai/toolInvocation/invoked": "Loaded",
         },
       },
       async (input) => {
@@ -53,6 +57,12 @@ export const registerCompanyApiTools = (
             },
           ],
           _meta: {
+            ui: {
+              resourceUri: "ui://generic/widgets.html",
+            },
+            "openai/widgetAccessible": true,
+            "openai/toolInvocation/invoking": "Loading...",
+            "openai/toolInvocation/invoked": "Loaded",
             company: company.companyName,
             source: buildApiUrl(api, input).toString(),
             lastFetched: new Date().toISOString(),
