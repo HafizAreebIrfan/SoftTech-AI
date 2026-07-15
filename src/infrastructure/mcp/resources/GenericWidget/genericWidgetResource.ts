@@ -14,12 +14,6 @@ const GENERIC_WIDGET_RESOURCES = [
     url: `${WIDGET_BASE_URL}/widgets.html`,
   },
 ];
-const widgetHtml = fs
-  .readFileSync(path.join(process.cwd(), "dist", "widgets.html"), "utf8")
-  .replaceAll('src="/assets/', `src="${WIDGET_BASE_URL}/assets/`)
-  .replaceAll('href="/assets/', `href="${WIDGET_BASE_URL}/assets/`);
-
-console.log(widgetHtml.split("\n").slice(0, 15).join("\n"));
 
 export const registerGenericWidgetResources = (server: any) => {
   GENERIC_WIDGET_RESOURCES.forEach((widget) => {
@@ -31,10 +25,17 @@ export const registerGenericWidgetResources = (server: any) => {
         description: "Interactive generic widget visualizer.",
       },
       async () => {
-        console.log("========== WIDGET RESOURCE REQUESTED ==========");
-        console.log("URI:", widget.uri);
-        console.log("Serving widget HTML");
-        console.log("==============================================");
+        const response = await fetch(`${WIDGET_BASE_URL}/widgets.html`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch widget HTML: ${response.status}`);
+        }
+
+        let widgetHtml = await response.text();
+
+        widgetHtml = widgetHtml
+          .replaceAll('src="/assets/', `src="${WIDGET_BASE_URL}/assets/`)
+          .replaceAll('href="/assets/', `href="${WIDGET_BASE_URL}/assets/`);
         return {
           contents: [
             {
