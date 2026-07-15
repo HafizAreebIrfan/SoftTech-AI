@@ -19,6 +19,8 @@ const widgetHtml = fs.readFileSync(
   "utf8",
 );
 
+console.log(widgetHtml);
+
 export const registerGenericWidgetResources = (server: any) => {
   GENERIC_WIDGET_RESOURCES.forEach((widget) => {
     registerAppResource(
