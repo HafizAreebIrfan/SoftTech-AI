@@ -14,10 +14,12 @@ const GENERIC_WIDGET_RESOURCES = [
     url: `${WIDGET_BASE_URL}/widgets.html`,
   },
 ];
-const widgetHtml = fs.readFileSync(
-  path.join(process.cwd(), "dist", "widgets.html"),
-  "utf8",
-);
+const widgetHtml = fs
+  .readFileSync(path.join(process.cwd(), "dist", "widgets.html"), "utf8")
+  .replaceAll('src="/assets/', `src="${WIDGET_BASE_URL}/assets/`)
+  .replaceAll('href="/assets/', `href="${WIDGET_BASE_URL}/assets/`);
+
+console.log(widgetHtml.split("\n").slice(0, 15).join("\n"));
 
 export const registerGenericWidgetResources = (server: any) => {
   GENERIC_WIDGET_RESOURCES.forEach((widget) => {
