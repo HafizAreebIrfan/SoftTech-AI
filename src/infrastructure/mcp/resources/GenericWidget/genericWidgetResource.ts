@@ -32,6 +32,12 @@ export const registerGenericWidgetResources = (server: any) => {
           throw new Error(`Failed to fetch widget HTML: ${response.status}`);
         }
         let widgetHtml = await response.text();
+        widgetHtml = widgetHtml
+          .replaceAll('src="/assets/', `src="${WIDGET_BASE_URL}/assets/`)
+          .replaceAll('href="/assets/', `href="${WIDGET_BASE_URL}/assets/`);
+        console.log("===== HTML AFTER REPLACEMENT =====");
+        console.log(widgetHtml);
+        console.log("==================================");
         return {
           contents: [
             {
