@@ -33,10 +33,6 @@ export const registerGenericWidgetResources = (server: any) => {
 
         let widgetHtml = await response.text();
 
-        widgetHtml = widgetHtml
-          .replaceAll('src="/assets/', `src="${WIDGET_BASE_URL}/assets/`)
-          .replaceAll('href="/assets/', `href="${WIDGET_BASE_URL}/assets/`);
-
         console.log("===== WIDGET HTML =====");
         console.log(widgetHtml.split("\n").slice(0, 15).join("\n"));
         console.log("=======================");
@@ -45,7 +41,7 @@ export const registerGenericWidgetResources = (server: any) => {
           contents: [
             {
               uri: widget.uri,
-              mimeType: RESOURCE_MIME_TYPE,
+              mimeType: "text/html+skybridge",
               text: widgetHtml,
               _meta: {
                 "openai/outputTemplate": widget.uri,
