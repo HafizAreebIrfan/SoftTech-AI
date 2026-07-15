@@ -6,6 +6,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
+  base: "https://softtech-ai-app.onrender.com/",
   plugins: [react(), tailwindcss()],
   build: {
     rollupOptions: {
