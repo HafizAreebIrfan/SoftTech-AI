@@ -5,7 +5,6 @@ import {
   OpenAiGlobals,
 } from "../../domain/entities/GenericWidget";
 import { useApp } from "@modelcontextprotocol/ext-apps/react";
-import { App } from "@modelcontextprotocol/ext-apps";
 
 export const TOOL_RESULT_NOTIFICATION = "ui/notifications/tool-result";
 
@@ -105,10 +104,14 @@ export const useMcpToolResult = () => {
     },
     capabilities: {},
     onAppCreated: (app) => {
-      app.ontoolresult = (result) => {
-        console.log("[MCP Apps Bridge] ✅ tool result via useApp:", result);
-        setToolResult((result as unknown as McpToolResultPayload) ?? null);
-      };
+      try {
+        app.ontoolresult = (result) => {
+          console.log("[MCP Apps Bridge] ✅ tool result via useApp:", result);
+          setToolResult((result as unknown as McpToolResultPayload) ?? null);
+        };
+      } catch (e) {
+        console.log("Bridge fails to build via useApp", e);
+      }
     },
   });
   useEffect(() => {
@@ -133,5 +136,5 @@ export const useMcpToolResult = () => {
       window.removeEventListener("openai:set_globals", handleGlobals);
   }, [setToolResult]);
 
-  return toolResult ?? previewGenericToolResult;
+  return toolResult;
 };
