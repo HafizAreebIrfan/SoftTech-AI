@@ -13,8 +13,6 @@ export const GenericWidgetRenderer: React.FC = () => {
   try {
     toolResult = useMcpToolResult();
     console.log("toolResult", toolResult);
-    console.log("window.openai", window.openai);
-    console.log("window.openai.toolOutput", window.openai?.toolOutput);
   } catch (e) {
     console.error("HOOK FAILED", e);
     return (
