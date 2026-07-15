@@ -79,7 +79,12 @@ export const previewGenericToolResult: McpToolResultPayload = {
         tableHeaders: ["Date", "Condition", "Max Temp", "Min Temp"],
         tableRows: [
           ["Today", { value: "Sunny", tone: "warning" }, "34°C", "28°C"],
-          ["Tomorrow", { value: "Partly Cloudy", tone: "default" }, "33°C", "27°C"],
+          [
+            "Tomorrow",
+            { value: "Partly Cloudy", tone: "default" },
+            "33°C",
+            "27°C",
+          ],
           ["Day 3", { value: "Rain Showers", tone: "good" }, "30°C", "26°C"],
         ],
       },
@@ -93,41 +98,39 @@ export const previewGenericToolResult: McpToolResultPayload = {
  */
 export const useMcpToolResult = () => {
   const { toolResult, setToolResult } = useMcpWidgetStore();
-
+  useApp({
+    appInfo: {
+      name: toolResult?.structuredContent.title || "Your MCP",
+      version: "1.0.0",
+    },
+    capabilities: {},
+    onAppCreated: (app) => {
+      app.ontoolresult = (result) => {
+        console.log("[MCP Apps Bridge] ✅ tool result via useApp:", result);
+        setToolResult((result as unknown as McpToolResultPayload) ?? null);
+      };
+    },
+  });
   useEffect(() => {
-    // Initial read
     if (window.openai?.toolOutput) {
-      console.log("[ChatGPT Bridge] 📥 Initial toolResult loaded from window.openai:", window.openai.toolOutput);
+      console.log(
+        "[ChatGPT Bridge] 📥 Initial toolResult loaded from window.openai:",
+        window.openai.toolOutput,
+      );
       setToolResult(window.openai.toolOutput as McpToolResultPayload);
-    } else if (window.openai) {
-      console.log("[ChatGPT Bridge] 🤝 window.openai exists, waiting for toolOutput.");
-    } else {
-      console.warn("[ChatGPT Bridge] ❌ window.openai is undefined. Make sure this widget is rendering inside ChatGPT.");
     }
 
     const handleGlobals = (event: Event) => {
       const customEvent = event as CustomEvent<{ globals?: OpenAiGlobals }>;
-      console.log("[ChatGPT Bridge] 🔄 openai:set_globals event received:", customEvent.detail?.globals);
-      setToolResult((customEvent.detail?.globals?.toolOutput as McpToolResultPayload) ?? null);
-    };
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.source !== window.parent) return;
-
-      const message = event.data;
-      if (message?.method === TOOL_RESULT_NOTIFICATION) {
-        console.log("[ChatGPT Bridge] ✅ ui/notifications/tool-result received via postMessage:", message.params);
-        setToolResult(message.params as McpToolResultPayload ?? null);
-      }
+      const output = customEvent.detail?.globals?.toolOutput;
+      if (output === undefined) return;
+      console.log("[ChatGPT Bridge] 🔄 openai:set_globals received:", output);
+      setToolResult((output as McpToolResultPayload) ?? null);
     };
 
     window.addEventListener("openai:set_globals", handleGlobals);
-    window.addEventListener("message", handleMessage);
-
-    return () => {
+    return () =>
       window.removeEventListener("openai:set_globals", handleGlobals);
-      window.removeEventListener("message", handleMessage);
-    };
   }, [setToolResult]);
 
   return toolResult ?? previewGenericToolResult;
