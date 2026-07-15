@@ -6,9 +6,11 @@ import { KeyValueBlock } from "../KeyValueBlock";
 import { TableBlock } from "../TableBlock";
 import { WidgetBlock } from "../../../../domain/entities/GenericWidget";
 import styles from "../../../../styles/genericwidgetrenderer.module.css";
+import { useThemeStore } from "../../../../hooks";
 
 export const GenericWidgetRenderer: React.FC = () => {
   let toolResult;
+  const { colors, isDark } = useThemeStore();
 
   try {
     toolResult = useMcpToolResult();
@@ -40,13 +42,32 @@ export const GenericWidgetRenderer: React.FC = () => {
     !Array.isArray(toolResult.structuredContent.blocks)
   ) {
     return (
-      <div className={styles.emptyState}>
-        <h3 className={styles.emptyTitle}>No custom interface loaded</h3>
-        <p className={styles.emptyDesc}>
+      <div
+        className={styles.emptyState}
+        style={{
+          background: colors.Background,
+          border: `1px solid ${colors.CardBorder}`,
+        }}
+      >
+        <h3 className={styles.emptyTitle} style={{ color: colors.TextHeading }}>
+          No custom interface loaded
+        </h3>
+        <p className={styles.emptyDesc} style={{ color: colors.TextBody }}>
           The widget is ready, but no structured MCP interface data is active
           right now.
         </p>
-        {debugText && <pre className={styles.debugText}>{debugText}</pre>}
+        {debugText && (
+          <pre
+            className={styles.debugText}
+            style={{
+              color: colors.TextBody,
+              background: colors.Background,
+              border: `1px solid ${colors.CardBorder}`,
+            }}
+          >
+            {debugText}
+          </pre>
+        )}
       </div>
     );
   }

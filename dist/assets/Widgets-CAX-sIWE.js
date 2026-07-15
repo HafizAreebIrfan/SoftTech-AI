@@ -1,0 +1,1 @@
+import{ew as t,fl as e,fV as r,aU as o}from"./index-yzaOqzqS.js";t.createRoot(document.getElementById("root")).render(e.jsxs(r.StrictMode,{children:[e.jsx("div",{style:{color:"white",background:"#222",padding:"20px",fontSize:"20px"},children:"React Mounted"}),e.jsx(o,{})]}));
