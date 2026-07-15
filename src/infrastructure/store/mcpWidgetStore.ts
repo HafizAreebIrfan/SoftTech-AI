@@ -135,13 +135,13 @@ export const useMcpToolResult = () => {
     onAppCreated: (app: App) => {
       // Called when ChatGPT passes the tool input arguments to the widget
       app.ontoolinput = (params: any) => {
-        console.log("ontoolinput received:", params);
+        console.log("[ChatGPT Bridge] 📥 ontoolinput received (tool arguments):", params);
         // Sometimes arguments are passed directly, or wrapped in a tool_call
       };
       
       // Called when the backend returns the tool result and ChatGPT forwards it
       app.ontoolresult = (params: any) => {
-        console.log("ontoolresult received:", params);
+        console.log("[ChatGPT Bridge] ✅ ontoolresult received (correct data returned?):", params);
         
         // If the params contains the expected structure
         if (params && params.structuredContent) {
@@ -156,7 +156,7 @@ export const useMcpToolResult = () => {
 
       // Handle host context changes if needed
       app.onhostcontextchanged = (params: any) => {
-        console.log("host context changed:", params);
+        console.log("[ChatGPT Bridge] 🔄 host context changed:", params);
         // Can read globals here if needed, or theme changes
         if (params?.globals?.toolOutput) {
            setToolResult(params.globals.toolOutput as McpToolResultPayload);
@@ -164,6 +164,18 @@ export const useMcpToolResult = () => {
       };
     },
   });
+
+  useEffect(() => {
+    if (isConnected) {
+      console.log("[ChatGPT Bridge] 🤝 JSON-RPC Handshake Successful! ChatGPT bridged correctly.");
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (error) {
+      console.error("[ChatGPT Bridge] ❌ JSON-RPC Handshake Error:", error);
+    }
+  }, [error]);
 
   return toolResult ?? previewGenericToolResult;
 };
