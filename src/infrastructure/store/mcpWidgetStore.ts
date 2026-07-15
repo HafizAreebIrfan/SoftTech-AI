@@ -129,53 +129,41 @@ export const previewGenericToolResult: McpToolResultPayload = {
 export const useMcpToolResult = () => {
   const { toolResult, setToolResult } = useMcpWidgetStore();
 
-  const { isConnected, error } = useApp({
-    appInfo: { name: "GenericWidget", version: "1.0.0" },
-    capabilities: {},
-    onAppCreated: (app: App) => {
-      // Called when ChatGPT passes the tool input arguments to the widget
-      app.ontoolinput = (params: any) => {
-        console.log("[ChatGPT Bridge] 📥 ontoolinput received (tool arguments):", params);
-        // Sometimes arguments are passed directly, or wrapped in a tool_call
-      };
-      
-      // Called when the backend returns the tool result and ChatGPT forwards it
-      app.ontoolresult = (params: any) => {
-        console.log("[ChatGPT Bridge] ✅ ontoolresult received (correct data returned?):", params);
-        
-        // If the params contains the expected structure
-        if (params && params.structuredContent) {
-          setToolResult(params as McpToolResultPayload);
-        } else if (params && params.content) {
-           // Maybe it's wrapped? We fallback to setting params directly
-          setToolResult(params as McpToolResultPayload);
-        } else {
-           setToolResult(params as McpToolResultPayload);
-        }
-      };
-
-      // Handle host context changes if needed
-      app.onhostcontextchanged = (params: any) => {
-        console.log("[ChatGPT Bridge] 🔄 host context changed:", params);
-        // Can read globals here if needed, or theme changes
-        if (params?.globals?.toolOutput) {
-           setToolResult(params.globals.toolOutput as McpToolResultPayload);
-        }
-      };
-    },
-  });
-
   useEffect(() => {
-    if (isConnected) {
-      console.log("[ChatGPT Bridge] 🤝 JSON-RPC Handshake Successful! ChatGPT bridged correctly.");
+    // Initial read
+    if (window.openai?.toolOutput) {
+      console.log("[ChatGPT Bridge] 📥 Initial toolResult loaded from window.openai:", window.openai.toolOutput);
+      setToolResult(window.openai.toolOutput as McpToolResultPayload);
+    } else if (window.openai) {
+      console.log("[ChatGPT Bridge] 🤝 window.openai exists, waiting for toolOutput.");
+    } else {
+      console.warn("[ChatGPT Bridge] ❌ window.openai is undefined. Make sure this widget is rendering inside ChatGPT.");
     }
-  }, [isConnected]);
 
-  useEffect(() => {
-    if (error) {
-      console.error("[ChatGPT Bridge] ❌ JSON-RPC Handshake Error:", error);
-    }
-  }, [error]);
+    const handleGlobals = (event: Event) => {
+      const customEvent = event as CustomEvent<{ globals?: OpenAiGlobals }>;
+      console.log("[ChatGPT Bridge] 🔄 openai:set_globals event received:", customEvent.detail?.globals);
+      setToolResult((customEvent.detail?.globals?.toolOutput as McpToolResultPayload) ?? null);
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.source !== window.parent) return;
+
+      const message = event.data;
+      if (message?.method === TOOL_RESULT_NOTIFICATION) {
+        console.log("[ChatGPT Bridge] ✅ ui/notifications/tool-result received via postMessage:", message.params);
+        setToolResult(message.params as McpToolResultPayload ?? null);
+      }
+    };
+
+    window.addEventListener("openai:set_globals", handleGlobals);
+    window.addEventListener("message", handleMessage);
+
+    return () => {
+      window.removeEventListener("openai:set_globals", handleGlobals);
+      window.removeEventListener("message", handleMessage);
+    };
+  }, [setToolResult]);
 
   return toolResult ?? previewGenericToolResult;
 };
