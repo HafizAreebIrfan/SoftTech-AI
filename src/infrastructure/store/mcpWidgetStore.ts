@@ -22,100 +22,65 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
 }));
 
 export const previewGenericToolResult: McpToolResultPayload = {
+  _meta: {
+    company: "WeatherWay",
+    source: "https://api.weatherapi.com/v1/forecast.json?q=Karachi&days=3",
+    lastFetched: new Date().toISOString(),
+    isPreview: true,
+  },
+  content: [
+    {
+      type: "text",
+      text: "Get Weather Data: 3 widget block(s) returned.",
+    },
+  ],
   structuredContent: {
-    title: "System Integration Dashboard",
-    subtitle: "Connected APIs telemetry logs and webhooks status",
+    title: "Karachi Weather",
+    subtitle: "Current conditions and 3-day forecast",
+    layout: "dashboard",
     blocks: [
       {
         type: "metrics",
-        title: "Key Performance Indicators",
+        title: "Current Conditions",
         metrics: [
           {
-            label: "API Latency",
-            value: "142 ms",
-            tone: "good",
-            change: "-18ms",
-            changeTone: "good",
-          },
-          {
-            label: "Active Webhooks",
-            value: "2,481",
-            tone: "default",
-            change: "+12 today",
-            changeTone: "default",
-          },
-          {
-            label: "Error Rate",
-            value: "4.12%",
-            tone: "danger",
-            change: "+1.2%",
+            label: "Temperature",
+            value: "32°C",
+            tone: "warning",
+            change: "Feels like 38°C",
             changeTone: "danger",
+          },
+          {
+            label: "Humidity",
+            value: "78%",
+            tone: "default",
+          },
+          {
+            label: "Wind Speed",
+            value: "14 km/h",
+            tone: "good",
+            change: "SW",
+            changeTone: "default",
           },
         ],
       },
       {
         type: "keyValue",
-        title: "Integration Configuration",
+        title: "Location Details",
         keyValueItems: [
-          {
-            key: "Gateway URL",
-            value: "https://api.softtech.ai/v1",
-            tone: "default",
-          },
-          { key: "SSL Verification", value: "Enabled", tone: "good" },
-          { key: "API Key Rotation", value: "Required (30d)", tone: "warning" },
-        ],
-      },
-      {
-        type: "list",
-        title: "Recent Triggers",
-        listItems: [
-          {
-            title: "customer.created",
-            description: "Successfully routed to CRM hook",
-            icon: "bolt",
-            tone: "good",
-            meta: "200 OK",
-          },
-          {
-            title: "invoice.payment_failed",
-            description: "Retry scheduled for tomorrow",
-            icon: "help",
-            tone: "warning",
-            meta: "402 Failure",
-          },
-          {
-            title: "auth.user_deleted",
-            description: "Cleaned up customer session data",
-            icon: "lock",
-            tone: "default",
-            meta: "Processed",
-          },
+          { key: "Region", value: "Sindh", tone: "default" },
+          { key: "Country", value: "Pakistan", tone: "default" },
+          { key: "Local Time", value: "16:25", tone: "good" },
         ],
       },
       {
         type: "table",
-        title: "Recent API Requests Logs",
-        tableHeaders: ["Timestamp", "Endpoint", "Status", "Duration"],
+        title: "3-Day Forecast",
+        tableHeaders: ["Date", "Condition", "Max Temp", "Min Temp"],
         tableRows: [
-          [
-            "14:10:22",
-            "/v1/users",
-            { value: "201 Created", tone: "good" },
-            "120ms",
-          ],
-          [
-            "14:09:15",
-            "/v1/charges",
-            { value: "402 Failed", tone: "danger" },
-            "240ms",
-          ],
-          [
-            "14:08:01",
-            "/v1/webhooks",
-            { value: "200 Success", tone: "good" },
-            "98ms",
-          ],
+          ["Today", { value: "Sunny", tone: "warning" }, "34°C", "28°C"],
+          ["Tomorrow", { value: "Partly Cloudy", tone: "default" }, "33°C", "27°C"],
+          ["Day 3", { value: "Rain Showers", tone: "good" }, "30°C", "26°C"],
         ],
       },
     ],
