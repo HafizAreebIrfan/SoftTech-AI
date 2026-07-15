@@ -36,6 +36,11 @@ export const registerGenericWidgetResources = (server: any) => {
         widgetHtml = widgetHtml
           .replaceAll('src="/assets/', `src="${WIDGET_BASE_URL}/assets/`)
           .replaceAll('href="/assets/', `href="${WIDGET_BASE_URL}/assets/`);
+
+        console.log("===== WIDGET HTML =====");
+        console.log(widgetHtml.split("\n").slice(0, 15).join("\n"));
+        console.log("=======================");
+
         return {
           contents: [
             {
