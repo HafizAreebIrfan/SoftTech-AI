@@ -1,6 +1,9 @@
 import { create } from "zustand";
 import { useEffect } from "react";
-import { McpToolResultPayload, OpenAiGlobals } from "../../domain/entities/GenericWidget";
+import {
+  McpToolResultPayload,
+  OpenAiGlobals,
+} from "../../domain/entities/GenericWidget";
 
 export const TOOL_RESULT_NOTIFICATION = "ui/notifications/tool-result";
 
@@ -30,54 +33,91 @@ export const previewGenericToolResult: McpToolResultPayload = {
             value: "142 ms",
             tone: "good",
             change: "-18ms",
-            changeTone: "good"
+            changeTone: "good",
           },
           {
             label: "Active Webhooks",
             value: "2,481",
             tone: "default",
             change: "+12 today",
-            changeTone: "default"
+            changeTone: "default",
           },
           {
             label: "Error Rate",
             value: "4.12%",
             tone: "danger",
             change: "+1.2%",
-            changeTone: "danger"
-          }
-        ]
+            changeTone: "danger",
+          },
+        ],
       },
       {
         type: "keyValue",
         title: "Integration Configuration",
         keyValueItems: [
-          { key: "Gateway URL", value: "https://api.softtech.ai/v1", tone: "default" },
+          {
+            key: "Gateway URL",
+            value: "https://api.softtech.ai/v1",
+            tone: "default",
+          },
           { key: "SSL Verification", value: "Enabled", tone: "good" },
-          { key: "API Key Rotation", value: "Required (30d)", tone: "warning" }
-        ]
+          { key: "API Key Rotation", value: "Required (30d)", tone: "warning" },
+        ],
       },
       {
         type: "list",
         title: "Recent Triggers",
         listItems: [
-          { title: "customer.created", description: "Successfully routed to CRM hook", icon: "bolt", tone: "good", meta: "200 OK" },
-          { title: "invoice.payment_failed", description: "Retry scheduled for tomorrow", icon: "help", tone: "warning", meta: "402 Failure" },
-          { title: "auth.user_deleted", description: "Cleaned up customer session data", icon: "lock", tone: "default", meta: "Processed" }
-        ]
+          {
+            title: "customer.created",
+            description: "Successfully routed to CRM hook",
+            icon: "bolt",
+            tone: "good",
+            meta: "200 OK",
+          },
+          {
+            title: "invoice.payment_failed",
+            description: "Retry scheduled for tomorrow",
+            icon: "help",
+            tone: "warning",
+            meta: "402 Failure",
+          },
+          {
+            title: "auth.user_deleted",
+            description: "Cleaned up customer session data",
+            icon: "lock",
+            tone: "default",
+            meta: "Processed",
+          },
+        ],
       },
       {
         type: "table",
         title: "Recent API Requests Logs",
         tableHeaders: ["Timestamp", "Endpoint", "Status", "Duration"],
         tableRows: [
-          ["14:10:22", "/v1/users", { value: "201 Created", tone: "good" }, "120ms"],
-          ["14:09:15", "/v1/charges", { value: "402 Failed", tone: "danger" }, "240ms"],
-          ["14:08:01", "/v1/webhooks", { value: "200 Success", tone: "good" }, "98ms"]
-        ]
-      }
-    ]
-  }
+          [
+            "14:10:22",
+            "/v1/users",
+            { value: "201 Created", tone: "good" },
+            "120ms",
+          ],
+          [
+            "14:09:15",
+            "/v1/charges",
+            { value: "402 Failed", tone: "danger" },
+            "240ms",
+          ],
+          [
+            "14:08:01",
+            "/v1/webhooks",
+            { value: "200 Success", tone: "good" },
+            "98ms",
+          ],
+        ],
+      },
+    ],
+  },
 };
 
 /**
@@ -91,6 +131,7 @@ export const useMcpToolResult = () => {
     // Initial read
     if (window.openai?.toolOutput) {
       setToolResult(window.openai.toolOutput);
+      console.log("window.openai.toolOutput", window.openai.toolOutput);
     }
 
     const handleGlobals = (event: Event) => {
