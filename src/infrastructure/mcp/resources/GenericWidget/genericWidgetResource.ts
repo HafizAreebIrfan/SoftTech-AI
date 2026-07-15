@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 
 const WIDGET_BASE_URL = "https://softtech-ai-app.onrender.com";
+const WIDGET_SERVER_URL = "https://softtech-ai.onrender.com";
 
 const GENERIC_WIDGET_RESOURCES = [
   {
@@ -30,18 +31,12 @@ export const registerGenericWidgetResources = (server: any) => {
         if (!response.ok) {
           throw new Error(`Failed to fetch widget HTML: ${response.status}`);
         }
-
         let widgetHtml = await response.text();
-
-        console.log("===== WIDGET HTML =====");
-        console.log(widgetHtml.split("\n").slice(0, 15).join("\n"));
-        console.log("=======================");
-
         return {
           contents: [
             {
               uri: widget.uri,
-              mimeType: "text/html+skybridge",
+              mimeType: RESOURCE_MIME_TYPE,
               text: widgetHtml,
               _meta: {
                 "openai/outputTemplate": widget.uri,
@@ -50,10 +45,11 @@ export const registerGenericWidgetResources = (server: any) => {
                 "openai/toolInvocation/invoked": "Loaded",
                 ui: {
                   prefersBorder: true,
-                },
-                csp: {
-                  connectDomains: [WIDGET_BASE_URL],
-                  resourceDomains: [WIDGET_BASE_URL, "data:"],
+                  domain: WIDGET_SERVER_URL,
+                  csp: {
+                    connectDomains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
+                    resourceDomains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
+                  },
                 },
               },
             },

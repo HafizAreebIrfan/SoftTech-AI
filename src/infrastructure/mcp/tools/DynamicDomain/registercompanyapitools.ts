@@ -30,12 +30,8 @@ export const registerCompanyApiTools = (
         outputSchema: genericWidgetOutputSchema,
         _meta: {
           ui: {
-            resourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
+            resourceUri: "ui://generic/widgets.html",
           },
-          "openai/outputTemplate": api.mcpResourceUri || "ui://generic/widgets.html",
-          "openai/widgetAccessible": true,
-          "openai/toolInvocation/invoking": "Loading...",
-          "openai/toolInvocation/invoked": "Loaded",
         },
       },
       async (input) => {
