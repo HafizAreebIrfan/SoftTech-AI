@@ -6,8 +6,8 @@ import { readFileSync } from "node:fs";
 
 const WIDGET_BASE_URL = "https://softtech-ai-app.onrender.com";
 const WIDGET_SERVER_URL = "https://softtech-ai.onrender.com";
-const HTML = readFileSync("web/dist/kanban.js", "utf8");
-const CSS = readFileSync("web/dist/kanban.css", "utf8");
+const HTML = readFileSync("dist/widget.js", "utf8");
+const CSS = readFileSync("dist/widget.css", "utf8");
 
 const GENERIC_WIDGET_RESOURCES = [
   {
