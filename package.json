@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:widget": "vite build",
+    "build:widget": "esbuild src/app/generic-widget-main.tsx --bundle --format=esm --outfile=dist/widget.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
