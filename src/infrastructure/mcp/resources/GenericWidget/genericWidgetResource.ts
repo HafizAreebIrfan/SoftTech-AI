@@ -2,12 +2,9 @@ import {
   registerAppResource,
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
-import { readFileSync } from "node:fs";
 
 const WIDGET_BASE_URL = "https://softtech-ai-app.onrender.com";
 const WIDGET_SERVER_URL = "https://softtech-ai.onrender.com";
-const HTML = readFileSync("dist/widget.js", "utf8");
-const CSS = readFileSync("dist/widget.css", "utf8");
 
 const GENERIC_WIDGET_RESOURCES = [
   {
@@ -27,12 +24,12 @@ export const registerGenericWidgetResources = (server: any) => {
         description: "Interactive generic widget visualizer.",
       },
       async () => {
-        // const response = await fetch(`${WIDGET_BASE_URL}/widgets.html`);
-
-        // if (!response.ok) {
-        //   throw new Error(`Failed to fetch widget HTML: ${response.status}`);
-        // }
-        // let widgetHtml = await response.text();
+        const HTML = await fetch(`${WIDGET_BASE_URL}/widget.js`).then((r) =>
+          r.text(),
+        );
+        const CSS = await fetch(`${WIDGET_BASE_URL}/widget.css`).then((r) =>
+          r.text(),
+        );
         let widgetHtml = `
         <div id='${widget.name} root'></div>
         <style>${CSS}</style>
