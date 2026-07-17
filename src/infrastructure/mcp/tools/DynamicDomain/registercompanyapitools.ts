@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { IApi, ICompany } from "../../../../domain/types/company.types";
 import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwidgetoutputschema";
-import { genericWidgetInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
+import { buildCustomMcpInputSchema } from "../../../middlewares/ValidationMiddleware/schemas";
 import { normalizeApiResponseToWidget } from "./genericwidgetnormalizer";
 
 export const registerCompanyApiTools = (
@@ -18,6 +18,8 @@ export const registerCompanyApiTools = (
       index,
     );
 
+    const customInputSchema = buildCustomMcpInputSchema(api.params ?? []);
+
     registerAppTool(
       server,
       toolName,
@@ -25,8 +27,8 @@ export const registerCompanyApiTools = (
         title: api.name || `API ${index + 1}`,
         description:
           api.mcpDescription ||
-          `Calls ${api.name || "a registered company API"} and returns a generic widget response.`,
-        inputSchema: genericWidgetInputSchema,
+          `Calls ${company.companyName} -> ${api.name} and returns a generic widget response.`,
+        inputSchema: customInputSchema,
         outputSchema: genericWidgetOutputSchema,
         _meta: {
           ui: {
@@ -34,16 +36,13 @@ export const registerCompanyApiTools = (
           },
         },
       },
-      async (input) => {
+      async (input: any) => {
         const rawResponse = await callRegisteredApi(api, input);
-        console.log("Raw response", rawResponse);
         const widgetContent = normalizeApiResponseToWidget(
           api.name || company.companyName,
           rawResponse,
           company.uiPreference?.layout,
         );
-        console.log("Widget content", widgetContent);
-
         return {
           structuredContent: widgetContent,
           content: [
@@ -56,11 +55,7 @@ export const registerCompanyApiTools = (
             ui: {
               resourceUri: "ui://generic/widgets.html",
             },
-            "openai/widgetAccessible": true,
-            "openai/toolInvocation/invoking": "Loading...",
-            "openai/toolInvocation/invoked": "Loaded",
             company: company.companyName,
-            source: buildApiUrl(api, input).toString(),
             lastFetched: new Date().toISOString(),
           },
         };
@@ -69,10 +64,7 @@ export const registerCompanyApiTools = (
   });
 };
 
-const callRegisteredApi = async (
-  api: IApi,
-  input: z.infer<typeof genericWidgetInputSchema>,
-) => {
+const callRegisteredApi = async (api: IApi, input: any) => {
   const url = buildApiUrl(api, input);
   const response = await fetch(url, {
     method: (api.method || "GET").toUpperCase(),
@@ -88,10 +80,7 @@ const callRegisteredApi = async (
   return response.json();
 };
 
-const buildApiUrl = (
-  api: IApi,
-  input: z.infer<typeof genericWidgetInputSchema>,
-) => {
+const buildApiUrl = (api: IApi, input: any) => {
   const baseUrl = api.baseUrl.endsWith("/") ? api.baseUrl : `${api.baseUrl}/`;
   let endpoint = api.endpoint.replace(/^\//, "");
   const allParams = {

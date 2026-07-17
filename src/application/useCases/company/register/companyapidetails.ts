@@ -27,16 +27,44 @@ export async function saveCompanyApiDetails(
     throw new Error("apis must be a non-empty array");
   }
 
-  const apis = payload.apis.map((api: any, index: number) => ({
-    ...api,
-    mcpToolName: api.mcpToolName || toToolName(api.name || "", index),
-    mcpDescription:
-      api.mcpDescription ||
-      `Calls ${api.name || "a registered company API"} and returns a generic widget response.`,
-    mcpResourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
-    inputFieldMap: api.inputFieldMap || {},
-    outputFieldMap: api.outputFieldMap || {},
-  }));
+  const apis = payload.apis.map((api: any, index: number) => {
+    let keys: string[] = [];
+    if (api.apiQueryParams) {
+      try {
+        const parsed = JSON.parse(api.apiQueryParams);
+        if (typeof parsed === "object" && parsed !== null) {
+          keys = Object.keys(parsed);
+        }
+      } catch {
+        keys = [api.apiQueryParams];
+      }
+    }
+
+    let headersList: string[] = [];
+    if (api.apiHeaders) {
+      try {
+        const parsed = JSON.parse(api.apiHeaders);
+        if (typeof parsed === "object" && parsed !== null) {
+          headersList = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`);
+        }
+      } catch {
+        headersList = [api.apiHeaders];
+      }
+    }
+
+    return {
+      ...api,
+      mcpToolName: api.mcpToolName || toToolName(api.name || "", index),
+      mcpDescription:
+        api.mcpDescription ||
+        `Calls ${api.name || "a registered company API"} and returns a generic widget response.`,
+      mcpResourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
+      inputFieldMap: api.inputFieldMap || {},
+      outputFieldMap: api.outputFieldMap || {},
+      params: keys,
+      headers: headersList,
+    };
+  });
 
   return await companyRepository.update(companyId, {
     apis,
