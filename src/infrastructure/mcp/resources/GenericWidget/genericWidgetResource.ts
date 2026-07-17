@@ -42,12 +42,12 @@ export const registerGenericWidgetResources = (server: any) => {
     "ui://widget/todo.html",
     {},
     async () => {
-      const todoJs = await fetch(`${WIDGET_SERVER_URL}/assets/index.js`).then(
+      const todoJs = await fetch(`${WIDGET_SERVER_URL}/assets/widget.js`).then(
         (r) => r.text(),
       );
-      const todoCss = await fetch(`${WIDGET_SERVER_URL}/assets/index.css`).then(
-        (r) => r.text(),
-      );
+      const todoCss = await fetch(
+        `${WIDGET_SERVER_URL}/assets/widget.css`,
+      ).then((r) => r.text());
 
       const todoHtml = `
       <!DOCTYPE html>
