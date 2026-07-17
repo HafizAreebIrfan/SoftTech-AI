@@ -1,0 +1,79 @@
+.main {
+  width: 100%;
+  max-width: 360px;
+  min-height: 260px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.title {
+  margin: 0 0 16px;
+  font-size: 1.25rem;
+}
+
+.form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cad3e0;
+  font-size: 0.95rem;
+}
+
+.button {
+  border: none;
+  border-radius: 10px;
+  background: #111bf5;
+  color: white;
+  font-weight: 600;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.checkbox {
+  accent-color: #111bf5;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  background: #f2f4fb;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.itemSpan {
+  flex: 1;
+}
+
+.completed {
+  text-decoration: line-through;
+  color: #6c768a;
+}
+
+.busy {
+  opacity: 0.7;
+}

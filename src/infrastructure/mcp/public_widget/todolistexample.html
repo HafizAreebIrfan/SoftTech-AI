@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Todo list</title>
+    <style>
+      :root {
+        color: #0b0b0f;
+        font-family:
+          "Inter",
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+
+      html,
+      body {
+        width: 100%;
+        min-height: 100%;
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+        background: #f6f8fb;
+      }
+
+      main {
+        width: 100%;
+        max-width: 360px;
+        min-height: 260px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+      }
+
+      h2 {
+        margin: 0 0 16px;
+        font-size: 1.25rem;
+      }
+
+      form {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      form input {
+        flex: 1;
+        padding: 10px 12px;
+        border-radius: 10px;
+        border: 1px solid #cad3e0;
+        font-size: 0.95rem;
+      }
+
+      form button {
+        border: none;
+        border-radius: 10px;
+        background: #111bf5;
+        color: white;
+        font-weight: 600;
+        padding: 0 16px;
+        cursor: pointer;
+      }
+
+      form button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      input[type="checkbox"] {
+        accent-color: #111bf5;
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      li {
+        background: #f2f4fb;
+        border-radius: 12px;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      li span {
+        flex: 1;
+      }
+
+      li[data-completed="true"] span {
+        text-decoration: line-through;
+        color: #6c768a;
+      }
+
+      li[data-busy="true"] {
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h2>Todo list</h2>
+      <form id="add-form" autocomplete="off">
+        <input id="todo-input" name="title" placeholder="Add a task" />
+        <button type="submit">Add</button>
+      </form>
+      <ul id="todo-list"></ul>
+    </main>
+
+    <script type="module">
+      const listEl = document.querySelector("#todo-list");
+      const formEl = document.querySelector("#add-form");
+      const inputEl = document.querySelector("#todo-input");
+      const addButtonEl = formEl.querySelector('button[type="submit"]');
+      const addButtonText = addButtonEl.textContent;
+
+      let tasks = [];
+      let isAdding = false;
+      const busyTodoIds = new Set();
+
+      const render = () => {
+        listEl.innerHTML = "";
+        tasks.forEach((task) => {
+          const li = document.createElement("li");
+          li.dataset.id = task.id;
+          li.dataset.completed = String(Boolean(task.completed));
+          li.dataset.busy = String(busyTodoIds.has(task.id));
+
+          const label = document.createElement("label");
+          label.style.display = "flex";
+          label.style.alignItems = "center";
+          label.style.gap = "10px";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = Boolean(task.completed);
+          checkbox.disabled = busyTodoIds.has(task.id);
+
+          const span = document.createElement("span");
+          span.textContent = task.title;
+
+          label.appendChild(checkbox);
+          label.appendChild(span);
+          li.appendChild(label);
+          listEl.appendChild(li);
+        });
+      };
+
+      const updateFromResponse = (response) => {
+        if (response?.structuredContent?.tasks) {
+          tasks = response.structuredContent.tasks;
+          render();
+        }
+      };
+
+      // MCP Apps standard bridge: JSON-RPC messages over postMessage.
+      //
+      // - Initialize the bridge with `ui/initialize`.
+      // - Confirm readiness with `ui/notifications/initialized`.
+      // - Call tools with `tools/call`.
+      // - Listen for `ui/notifications/tool-result` to react to model-initiated tool calls.
+      let rpcId = 0;
+      const pendingRequests = new Map();
+
+      const rpcNotify = (method, params) => {
+        window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
+      };
+
+      const rpcRequest = (method, params) =>
+        new Promise((resolve, reject) => {
+          const id = ++rpcId;
+          pendingRequests.set(id, { resolve, reject });
+          window.parent.postMessage(
+            { jsonrpc: "2.0", id, method, params },
+            "*"
+          );
+        });
+
+      window.addEventListener(
+        "message",
+        (event) => {
+          if (event.source !== window.parent) return;
+          const message = event.data;
+          if (!message || message.jsonrpc !== "2.0") return;
+
+          // Responses
+          if (typeof message.id === "number") {
+            const pending = pendingRequests.get(message.id);
+            if (!pending) return;
+            pendingRequests.delete(message.id);
+
+            if (message.error) {
+              pending.reject(message.error);
+              return;
+            }
+
+            pending.resolve(message.result);
+            return;
+          }
+
+          // Notifications
+          if (typeof message.method !== "string") return;
+          if (message.method === "ui/notifications/tool-result") {
+            updateFromResponse(message.params);
+          }
+        },
+        { passive: true }
+      );
+
+      const initializeBridge = async () => {
+        const appInfo = { name: "todo-widget", version: "0.1.0" };
+        const appCapabilities = {};
+        const protocolVersion = "2026-01-26";
+
+        try {
+          await rpcRequest("ui/initialize", {
+            appInfo,
+            appCapabilities,
+            protocolVersion,
+          });
+          rpcNotify("ui/notifications/initialized", {});
+        } catch (error) {
+          console.error("Failed to initialize the MCP Apps bridge:", error);
+          throw error;
+        }
+      };
+
+      const bridgeReady = initializeBridge();
+
+      const callTodoTool = async (name, payload) => {
+        await bridgeReady;
+        const response = await rpcRequest("tools/call", {
+          name,
+          arguments: payload,
+        });
+        updateFromResponse(response);
+      };
+
+      formEl.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const title = inputEl.value.trim();
+        if (!title || isAdding) return;
+
+        isAdding = true;
+        addButtonEl.disabled = true;
+        addButtonEl.textContent = "Adding…";
+
+        try {
+          await callTodoTool("add_todo", { title });
+          inputEl.value = "";
+        } catch (error) {
+          console.error("Failed to add todo:", error);
+        } finally {
+          isAdding = false;
+          addButtonEl.disabled = false;
+          addButtonEl.textContent = addButtonText;
+        }
+      });
+
+      listEl.addEventListener("change", async (event) => {
+        const checkbox = event.target;
+        if (!checkbox.matches('input[type="checkbox"]')) return;
+        const id = checkbox.closest("li")?.dataset.id;
+        if (!id) return;
+
+        if (!checkbox.checked) {
+          checkbox.checked = true;
+          return;
+        }
+
+        if (busyTodoIds.has(id)) return;
+        busyTodoIds.add(id);
+        checkbox.disabled = true;
+        const rowEl = checkbox.closest("li");
+        if (rowEl) rowEl.dataset.busy = "true";
+
+        try {
+          await callTodoTool("complete_todo", { id });
+        } catch (error) {
+          console.error("Failed to complete todo:", error);
+        } finally {
+          busyTodoIds.delete(id);
+          render();
+        }
+      });
+
+      render();
+    </script>
+  </body>
+</html>
