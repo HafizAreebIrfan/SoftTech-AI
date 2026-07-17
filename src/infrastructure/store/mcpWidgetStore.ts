@@ -99,7 +99,7 @@ export const useMcpToolResult = () => {
   const { toolResult, setToolResult } = useMcpWidgetStore();
   useApp({
     appInfo: {
-      name: toolResult?.structuredContent.title || "Your MCP",
+      name: toolResult?.structuredContent?.title || "Your MCP",
       version: "1.0.0",
     },
     capabilities: {},

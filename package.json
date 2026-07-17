@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "build:widget": "esbuild src/app/generic-widget-main.tsx --bundle --format=esm --outfile=dist/widget.js",
+    "build": "vite build && npm run build:widget",
+    "build:widget": "vite build --config vite.config.widget.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
