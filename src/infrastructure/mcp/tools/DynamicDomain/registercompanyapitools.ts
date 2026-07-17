@@ -168,11 +168,19 @@ const buildHeaders = (api: IApi) => {
     }
   });
 
-  if (api.authType?.toUpperCase() === "BEARER" && api.bearerToken) {
+  const authTypeUpper = (api.authType || "").toUpperCase();
+
+  if (
+    (authTypeUpper === "BEARER" || authTypeUpper === "BEARER TOKEN") &&
+    api.bearerToken
+  ) {
     headers.Authorization = `Bearer ${api.bearerToken}`;
   }
 
-  if (api.authType?.toUpperCase() === "API_KEY" && api.apiKey) {
+  if (
+    (authTypeUpper === "API_KEY" || authTypeUpper === "API KEY") &&
+    api.apiKey
+  ) {
     headers[api.authHeader || "x-api-key"] = api.apiKey;
   }
 

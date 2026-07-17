@@ -16,7 +16,7 @@ export const createCompanyMcpServer = (company: ICompany) => {
   );
 
   registerGenericWidgetResources(server);
-  // registerCompanyApiTools(server, company);
+  registerCompanyApiTools(server, company);
 
   return server;
 };
