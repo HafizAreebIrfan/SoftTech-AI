@@ -18,10 +18,25 @@ interface TodoState {
   completeTodo: (id: string) => Promise<void>;
 }
 
-// MCP bridge setup
+// Custom type declaration for window.openai
+declare global {
+  interface Window {
+    openai?: {
+      toolOutput?: {
+        structuredContent?: {
+          tasks?: Task[];
+        };
+      };
+    };
+  }
+}
+
+// MCP bridge setup (fallback tool calling if needed)
 let rpcId = 0;
 const pendingRequests = new Map<number, { resolve: (val: any) => void; reject: (err: any) => void }>();
 
+/* 
+// Commented out standard JSON-RPC initialization handshake
 const rpcNotify = (method: string, params: any) => {
   window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
 };
@@ -55,55 +70,89 @@ const initializeBridge = async () => {
 };
 
 const bridgeReady = initializeBridge();
+*/
 
+// Dynamic tool calling using direct postMessage (without initial handshake wait)
 const callTodoTool = async (name: string, payload: any, setTasks: (tasks: Task[]) => void) => {
-  await bridgeReady;
-  const response = await rpcRequest("tools/call", {
-    name,
-    arguments: payload,
-  }) as any;
-  if (response?.structuredContent?.tasks) {
-    setTasks(response.structuredContent.tasks);
-  }
+  const id = ++rpcId;
+  pendingRequests.set(id, {
+    resolve: (response: any) => {
+      if (response?.structuredContent?.tasks) {
+        setTasks(response.structuredContent.tasks);
+      }
+    },
+    reject: (err: any) => {
+      console.error("Tool call failed:", err);
+    }
+  });
+
+  window.parent.postMessage(
+    {
+      jsonrpc: "2.0",
+      id,
+      method: "tools/call",
+      params: { name, arguments: payload },
+    },
+    "*"
+  );
 };
 
 export const useTodoStore = create<TodoState>((set, get) => {
-  // Listen for model-initiated tool calls
-  window.addEventListener(
-    "message",
-    (event) => {
-      if (event.source !== window.parent) return;
-      const message = event.data;
-      if (!message || message.jsonrpc !== "2.0") return;
+  // Listen for window.openai globals updates via custom event
+  const handleGlobals = (event: Event) => {
+    const customEvent = event as CustomEvent<{ globals?: any }>;
+    console.log("[ChatGPT Bridge] 🔄 openai:set_globals event received:", customEvent.detail?.globals);
+    const newTasks = customEvent.detail?.globals?.toolOutput?.structuredContent?.tasks;
+    if (newTasks) {
+      set({ tasks: newTasks });
+    }
+  };
 
-      // Responses
-      if (typeof message.id === "number") {
-        const pending = pendingRequests.get(message.id);
-        if (!pending) return;
-        pendingRequests.delete(message.id);
+  // Listen for standard postMessage fallback messages
+  const handleMessage = (event: MessageEvent) => {
+    if (event.source !== window.parent) return;
+    const message = event.data;
+    if (!message || message.jsonrpc !== "2.0") return;
 
-        if (message.error) {
-          pending.reject(message.error);
-          return;
-        }
+    // Responses
+    if (typeof message.id === "number") {
+      const pending = pendingRequests.get(message.id);
+      if (!pending) return;
+      pendingRequests.delete(message.id);
 
-        pending.resolve(message.result);
+      if (message.error) {
+        pending.reject(message.error);
         return;
       }
 
-      // Notifications
-      if (typeof message.method !== "string") return;
-      if (message.method === "ui/notifications/tool-result") {
-        if (message.params?.structuredContent?.tasks) {
-          set({ tasks: message.params.structuredContent.tasks });
-        }
+      pending.resolve(message.result);
+      return;
+    }
+
+    // Notifications
+    if (typeof message.method !== "string") return;
+    if (message.method === "ui/notifications/tool-result") {
+      if (message.params?.structuredContent?.tasks) {
+        set({ tasks: message.params.structuredContent.tasks });
       }
-    },
-    { passive: true }
-  );
+    }
+  };
+
+  window.addEventListener("openai:set_globals", handleGlobals);
+  window.addEventListener("message", handleMessage);
+
+  // Initial read check on initialization
+  if (window.openai?.toolOutput) {
+    console.log("[ChatGPT Bridge] 📥 Initial toolResult loaded from window.openai:", window.openai.toolOutput);
+  } else if (window.openai) {
+    console.log("[ChatGPT Bridge] 🤝 window.openai exists, waiting for toolOutput.");
+  } else {
+    console.warn("[ChatGPT Bridge] ❌ window.openai is undefined. Make sure this widget is rendering inside ChatGPT.");
+  }
 
   return {
-    tasks: [],
+    // Read from window.openai initially if available
+    tasks: window.openai?.toolOutput?.structuredContent?.tasks || [],
     isAdding: false,
     busyTodoIds: [],
     setTasks: (tasks) => set({ tasks }),
