@@ -10,23 +10,6 @@ const WIDGET_BASE_URL = "https://softtech-ai-app.onrender.com";
 const WIDGET_SERVER_URL = "https://softtech-ai.onrender.com";
 const WIDGET_NGROK_URL = "https://scone-hatchling-relenting.ngrok-free.dev";
 
-const todoJs = readFileSync("todo-widget/dist/assets/index.js", "utf8");
-const todoCss = readFileSync("todo-widget/dist/assets/index.css", "utf8");
-
-const todoHtml = `
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Todo list</title>
-    <style>${todoCss}</style>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module">${todoJs}</script>
-  </body>
-</html>
-`;
 const addTodoInputSchema = {
   title: z.string().min(1),
 };
@@ -58,37 +41,60 @@ export const registerGenericWidgetResources = (server: any) => {
     "todo-widget",
     "ui://widget/todo.html",
     {},
-    async () => ({
-      contents: [
-        {
-          uri: "ui://widget/todo.html",
-          mimeType: RESOURCE_MIME_TYPE,
-          text: todoHtml,
-          _meta: {
-            "openai/outputTemplate": "ui://widget/todo.html",
-            "openai/widgetAccessible": true,
-            "openai/toolInvocation/invoking": "Loading...",
-            "openai/toolInvocation/invoked": "Loaded",
-            ui: {
-              prefersBorder: true,
-              domain: WIDGET_SERVER_URL,
-              csp: {
-                connectDomains: [
-                  WIDGET_BASE_URL,
-                  WIDGET_NGROK_URL,
-                  WIDGET_SERVER_URL,
-                ],
-                resourceDomains: [
-                  WIDGET_BASE_URL,
-                  WIDGET_NGROK_URL,
-                  WIDGET_SERVER_URL,
-                ],
+    async () => {
+      const todoJs = await fetch(`${WIDGET_SERVER_URL}/assets/index.js`).then(
+        (r) => r.text(),
+      );
+      const todoCss = await fetch(`${WIDGET_SERVER_URL}/assets/index.css`).then(
+        (r) => r.text(),
+      );
+
+      const todoHtml = `
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <title>Todo list</title>
+          <style>${todoCss}</style>
+        </head>
+        <body>
+          <div id="root"></div>
+          <script type="module">${todoJs}</script>
+        </body>
+      </html>
+`;
+      return {
+        contents: [
+          {
+            uri: "ui://widget/todo.html",
+            mimeType: RESOURCE_MIME_TYPE,
+            text: todoHtml,
+            _meta: {
+              "openai/outputTemplate": "ui://widget/todo.html",
+              "openai/widgetAccessible": true,
+              "openai/toolInvocation/invoking": "Loading...",
+              "openai/toolInvocation/invoked": "Loaded",
+              ui: {
+                prefersBorder: true,
+                domain: WIDGET_SERVER_URL,
+                csp: {
+                  connectDomains: [
+                    WIDGET_BASE_URL,
+                    WIDGET_NGROK_URL,
+                    WIDGET_SERVER_URL,
+                  ],
+                  resourceDomains: [
+                    WIDGET_BASE_URL,
+                    WIDGET_NGROK_URL,
+                    WIDGET_SERVER_URL,
+                  ],
+                },
               },
             },
           },
-        },
-      ],
-    }),
+        ],
+      };
+    },
   );
   registerAppTool(
     server,
