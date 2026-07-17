@@ -38,6 +38,7 @@ export type GenericWidgetContent = {
   title: string;
   subtitle?: string;
   layout: string;
+  industry?: string;
   blocks: WidgetBlock[];
 };
 
@@ -45,6 +46,7 @@ export const normalizeApiResponseToWidget = (
   apiName: string,
   response: unknown,
   layout: string,
+  industry?: string,
 ): GenericWidgetContent => {
   const blocks = buildBlocks(response);
 
@@ -52,6 +54,7 @@ export const normalizeApiResponseToWidget = (
     title: apiName,
     subtitle: "Live API response",
     layout: layout || "dashboard",
+    industry,
     blocks:
       blocks.length > 0
         ? blocks

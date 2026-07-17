@@ -47,5 +47,6 @@ export const genericWidgetOutputSchema = z.object({
   title: z.string(),
   subtitle: z.string().optional(),
   layout: z.string().optional(),
+  industry: z.string().optional(),
   blocks: z.array(widgetBlockSchema),
 });

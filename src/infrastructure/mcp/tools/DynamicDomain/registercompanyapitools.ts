@@ -42,6 +42,7 @@ export const registerCompanyApiTools = (
           api.name || company.companyName,
           rawResponse,
           company.uiPreference?.layout,
+          company.industry,
         );
         return {
           structuredContent: widgetContent,
