@@ -21,5 +21,12 @@ export function createCompanyRepository(): ICompanyRepository {
         returnDocument: "after",
       }).lean();
     },
+
+    async findLatestCompanies(limit: number): Promise<any> {
+      return await CompanyModel.find({})
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+    },
   };
 }

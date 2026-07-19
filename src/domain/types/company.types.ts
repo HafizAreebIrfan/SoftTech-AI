@@ -26,6 +26,7 @@ export interface IUiPreference {
 }
 
 export interface ICompany {
+  _id?: string;
   companyName: string;
   mcpSlug?: string;
   industry: string;
@@ -36,6 +37,7 @@ export interface ICompany {
   uiPreference?: IUiPreference | null;
   onboardingStep?: number;
   status?: string;
+  plan?: string;
   passwordResetOTP?: string;
   passwordResetOTPExpires?: Date;
   createdAt?: Date;
