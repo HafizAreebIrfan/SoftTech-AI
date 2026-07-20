@@ -84,61 +84,79 @@ const callRegisteredApi = async (api: IApi, input: any) => {
 const buildApiUrl = (api: IApi, input: any) => {
   const baseUrl = api.baseUrl.endsWith("/") ? api.baseUrl : `${api.baseUrl}/`;
   let endpoint = api.endpoint.replace(/^\//, "");
-  const allParams = {
-    ...(input.params ?? {}),
-    ...(input.city ? { city: input.city, q: input.city } : {}),
-    ...(input.location ? { location: input.location, q: input.location } : {}),
-    ...(input.query
-      ? { query: input.query, q: input.query, search: input.query }
-      : {}),
-    ...(input.itemId
-      ? { itemId: input.itemId, id: input.itemId, uuid: input.itemId }
-      : {}),
-    ...(input.limit !== undefined
-      ? { limit: input.limit, count: input.limit, size: input.limit }
-      : {}),
-    ...(input.page !== undefined
-      ? { page: input.page, offset: input.page }
-      : {}),
-    ...(input.startDate
-      ? {
-          startDate: input.startDate,
-          fromDate: input.startDate,
-          start: input.startDate,
-        }
-      : {}),
-    ...(input.endDate
-      ? { endDate: input.endDate, toDate: input.endDate, end: input.endDate }
-      : {}),
-    ...(input.status
-      ? { status: input.status, filter: input.status, state: input.status }
-      : {}),
+
+  const rawInput = typeof input === "object" && input !== null ? input : {};
+  const queryOrLocation =
+    rawInput.city ||
+    rawInput.location ||
+    rawInput.query ||
+    rawInput.q ||
+    rawInput.search;
+
+  const allParams: Record<string, any> = {
+    ...(rawInput.params ?? {}),
+    ...rawInput,
   };
 
+  if (queryOrLocation) {
+    allParams.q = queryOrLocation;
+    allParams.city = queryOrLocation;
+    allParams.location = queryOrLocation;
+    allParams.query = queryOrLocation;
+  }
+
+  // 1. Replace template placeholders in path/query (e.g., {city}, {location}, {q}, :city)
   Object.entries(allParams).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    const valStr = encodeURIComponent(String(value));
     endpoint = endpoint
-      .replace(
-        new RegExp(`:${escapeRegExp(key)}\\b`, "g"),
-        encodeURIComponent(String(value)),
-      )
-      .replace(
-        new RegExp(`\\{${escapeRegExp(key)}\\}`, "g"),
-        encodeURIComponent(String(value)),
-      );
+      .replace(new RegExp(`:${escapeRegExp(key)}\\b`, "gi"), valStr)
+      .replace(new RegExp(`\\{${escapeRegExp(key)}\\}`, "gi"), valStr);
   });
+
+  // Global placeholder fallback if input didn't match exact key name
+  if (queryOrLocation) {
+    const valStr = encodeURIComponent(String(queryOrLocation));
+    endpoint = endpoint
+      .replace(/\{city\}/gi, valStr)
+      .replace(/\{location\}/gi, valStr)
+      .replace(/\{q\}/gi, valStr)
+      .replace(/\{query\}/gi, valStr)
+      .replace(/:city\b/gi, valStr)
+      .replace(/:location\b/gi, valStr)
+      .replace(/:q\b/gi, valStr);
+  }
 
   const url = new URL(endpoint, baseUrl);
 
+  // 2. Overwrite existing search parameters if passed dynamically
+  if (queryOrLocation) {
+    if (url.searchParams.has("q")) url.searchParams.set("q", String(queryOrLocation));
+    if (url.searchParams.has("city")) url.searchParams.set("city", String(queryOrLocation));
+    if (url.searchParams.has("location")) url.searchParams.set("location", String(queryOrLocation));
+    if (url.searchParams.has("query")) url.searchParams.set("query", String(queryOrLocation));
+  }
+
+  // 3. Attach any configured parameters if GET method
   if ((api.method || "GET").toUpperCase() === "GET") {
     const configuredParams = api.params ?? [];
 
     configuredParams.forEach((key) => {
       const value = allParams[key];
-
-      if (value !== undefined && !url.searchParams.has(key)) {
+      if (value !== undefined && value !== null) {
         url.searchParams.set(key, String(value));
       }
     });
+
+    // Fallback search param if no location query key was set on url
+    if (
+      queryOrLocation &&
+      !url.searchParams.has("q") &&
+      !url.searchParams.has("city") &&
+      !url.searchParams.has("location")
+    ) {
+      url.searchParams.set("q", String(queryOrLocation));
+    }
   }
 
   return url;
