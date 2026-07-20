@@ -32,6 +32,9 @@ type WidgetBlock =
       title?: string;
       tableHeaders: string[];
       tableRows: Array<Array<string | number>>;
+      totalItems?: number;
+      totalPages?: number;
+      currentPage?: number;
     };
 
 export type GenericWidgetContent = {
@@ -169,12 +172,27 @@ const buildArrayBlocks = (items: unknown[], apiName?: string): WidgetBlock[] => 
       .forEach(([key, stats]) => {
         const label = toLabel(key);
         const isPrice =
-          key.toLowerCase().includes("price") ||
-          key.toLowerCase().includes("amount") ||
-          key.toLowerCase().includes("total") ||
-          key.toLowerCase().includes("cost") ||
-          key.toLowerCase().includes("fee") ||
-          key.toLowerCase().includes("sales");
+          (key.toLowerCase().includes("price") ||
+            key.toLowerCase().includes("amount") ||
+            key.toLowerCase().includes("cost") ||
+            key.toLowerCase().includes("fee") ||
+            key.toLowerCase().includes("sales") ||
+            key.toLowerCase().includes("revenue") ||
+            key.toLowerCase().includes("income") ||
+            key.toLowerCase().includes("spend") ||
+            key.toLowerCase().includes("spent") ||
+            key.toLowerCase().includes("total")) &&
+          !key.toLowerCase().includes("count") &&
+          !key.toLowerCase().includes("orders") &&
+          !key.toLowerCase().includes("pages") &&
+          !key.toLowerCase().includes("customers") &&
+          !key.toLowerCase().includes("qty") &&
+          !key.toLowerCase().includes("quantity") &&
+          !key.toLowerCase().includes("items") &&
+          !key.toLowerCase().includes("users") &&
+          !key.toLowerCase().includes("page") &&
+          !key.toLowerCase().includes("number") &&
+          !key.toLowerCase().includes("no");
 
         metrics.push({
           label: label.startsWith("Total") ? label : `Total ${label}`,
@@ -214,6 +232,29 @@ const buildArrayBlocks = (items: unknown[], apiName?: string): WidgetBlock[] => 
       })),
     },
   ];
+};
+
+const extractPaginationMeta = (parentObj: Record<string, unknown>) => {
+  let totalItems: number | undefined;
+  let totalPages: number | undefined;
+  let currentPage: number | undefined;
+
+  Object.entries(parentObj).forEach(([k, v]) => {
+    const lower = k.toLowerCase();
+    if (typeof v === "number") {
+      if (lower === "total" || lower === "totalcount" || lower === "count" || lower === "totalitems" || lower === "records" || lower.includes("total")) {
+        if (!lower.includes("page") && !lower.includes("limit") && !lower.includes("size")) {
+          totalItems = v;
+        }
+      } else if (lower === "totalpages" || lower === "pages") {
+        totalPages = v;
+      } else if (lower === "currentpage" || lower === "page") {
+        currentPage = v;
+      }
+    }
+  });
+
+  return { totalItems, totalPages, currentPage };
 };
 
 const buildObjectBlocks = (record: Record<string, unknown>): WidgetBlock[] => {
@@ -272,14 +313,24 @@ const buildObjectBlocks = (record: Record<string, unknown>): WidgetBlock[] => {
     });
   }
 
+  const pagMeta = extractPaginationMeta(record);
+
   // Handle nested arrays (e.g. forecastday)
   for (const [key, value] of Object.entries(record)) {
     if (Array.isArray(value) && value.length > 0) {
       blocks.push(
-        ...buildArrayBlocks(value, key).map((block) => ({
-          ...block,
-          title: toLabel(key),
-        }))
+        ...buildArrayBlocks(value, key).map((block) => {
+          const updatedBlock = {
+            ...block,
+            title: toLabel(key),
+          };
+          if (updatedBlock.type === "table" && pagMeta.totalItems !== undefined) {
+            updatedBlock.totalItems = pagMeta.totalItems;
+            updatedBlock.totalPages = pagMeta.totalPages;
+            updatedBlock.currentPage = pagMeta.currentPage;
+          }
+          return updatedBlock;
+        })
       );
     }
   }
