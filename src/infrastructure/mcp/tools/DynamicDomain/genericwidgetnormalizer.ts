@@ -54,7 +54,7 @@ export const normalizeApiResponseToWidget = (
     title: apiName,
     subtitle: "Live API response",
     layout: layout || "dashboard",
-    industry,
+    industry: normalizeIndustry(industry),
     blocks:
       blocks.length > 0
         ? blocks
@@ -66,6 +66,22 @@ export const normalizeApiResponseToWidget = (
             },
           ],
   };
+};
+
+const normalizeIndustry = (ind?: string): string => {
+  if (!ind) return "general";
+  const lower = ind.toLowerCase();
+  if (lower.includes("weather") || lower.includes("forecast") || lower.includes("data")) return "forecasting";
+  if (lower.includes("health") || lower.includes("med") || lower.includes("clinic")) return "health";
+  if (lower.includes("food") || lower.includes("restaurant") || lower.includes("dining")) return "food";
+  if (lower.includes("transport") || lower.includes("mobility") || lower.includes("ride")) return "transport";
+  if (lower.includes("ecom") || lower.includes("store") || lower.includes("shop")) return "ecommerce";
+  if (lower.includes("fintech") || lower.includes("finance") || lower.includes("bank")) return "fintech";
+  if (lower.includes("saas") || lower.includes("software")) return "saas";
+  if (lower.includes("ai") || lower.includes("agent") || lower.includes("auto")) return "ai";
+  if (lower.includes("logistic") || lower.includes("ship") || lower.includes("supply")) return "logistics";
+  if (lower.includes("travel") || lower.includes("flight") || lower.includes("hotel")) return "travel";
+  return lower;
 };
 
 const buildBlocks = (response: unknown): WidgetBlock[] => {
@@ -123,65 +139,70 @@ const buildArrayBlocks = (items: unknown[]): WidgetBlock[] => {
 };
 
 const buildObjectBlocks = (record: Record<string, unknown>): WidgetBlock[] => {
-  const entries = Object.entries(record);
-  const primitiveEntries = entries.filter(([, value]) => isPrimitive(value));
-  const arrayEntries = entries.filter(([, value]) => Array.isArray(value));
-  const objectEntries = entries.filter(
-    ([, value]) => isRecord(value) && !Array.isArray(value),
-  );
-
   const blocks: WidgetBlock[] = [];
-  const numericEntries = primitiveEntries.filter(
-    ([, value]) => typeof value === "number",
-  );
 
-  if (numericEntries.length > 0) {
+  const allMetrics: WidgetMetric[] = [];
+  const allListItems: Array<{ title: string; description?: string; meta?: string }> = [];
+  const allKeyValues: WidgetKeyValueItem[] = [];
+
+  const extractItems = (obj: Record<string, unknown>, prefix = "") => {
+    for (const [key, value] of Object.entries(obj)) {
+      // Avoid raw large nested objects or noise
+      if (key === "icon" || key === "code" || key === "tz_id") continue;
+      const label = prefix ? `${toLabel(prefix)} ${toLabel(key)}` : toLabel(key);
+
+      if (typeof value === "number") {
+        allMetrics.push({ label, value });
+      } else if (typeof value === "string" || typeof value === "boolean") {
+        allKeyValues.push({ key: label, value: String(value) });
+      } else if (isRecord(value)) {
+        if (typeof value.text === "string" || typeof value.name === "string") {
+          allListItems.push({
+            title: label,
+            description: String(value.text || value.name || ""),
+            meta: String(value.code || value.region || "")
+          });
+        }
+        extractItems(value, key);
+      }
+    }
+  };
+
+  extractItems(record);
+
+  if (allMetrics.length > 0) {
     blocks.push({
       type: "metrics",
-      title: "Metrics",
-      metrics: numericEntries.slice(0, 6).map(([key, value]) => ({
-        label: toLabel(key),
-        value: value as number,
-      })),
+      title: "Key Telemetry Metrics",
+      metrics: allMetrics.slice(0, 8),
     });
   }
 
-  if (primitiveEntries.length > 0) {
+  if (allListItems.length > 0) {
+    blocks.push({
+      type: "list",
+      title: "Observed Conditions",
+      listItems: allListItems.slice(0, 8),
+    });
+  }
+
+  if (allKeyValues.length > 0) {
     blocks.push({
       type: "keyValue",
-      title: "Details",
-      keyValueItems: primitiveEntries.slice(0, 8).map(([key, value]) => ({
-        key: toLabel(key),
-        value: stringifyPrimitive(value as PrimitiveValue),
-      })),
+      title: "System Details",
+      keyValueItems: allKeyValues.slice(0, 10),
     });
   }
 
-  for (const [key, value] of arrayEntries.slice(0, 2)) {
-    blocks.push(
-      ...buildArrayBlocks(value as unknown[]).map((block) => ({
-        ...block,
-        title: toLabel(key),
-      })),
-    );
-  }
-
-  for (const [key, value] of objectEntries.slice(0, 2)) {
-    const nested = value as Record<string, unknown>;
-    const nestedItems = Object.entries(nested)
-      .filter(([, itemValue]) => isPrimitive(itemValue))
-      .slice(0, 8)
-      .map(([itemKey, itemValue]) => ({
-        key: toLabel(itemKey),
-        value: stringifyPrimitive(itemValue as PrimitiveValue),
-      }));
-
-    if (nestedItems.length > 0) {
-      blocks.push({
-        type: "keyValue",
-        title: toLabel(key),
-        keyValueItems: nestedItems,
-      });
+  // Handle nested arrays (e.g. forecastday)
+  for (const [key, value] of Object.entries(record)) {
+    if (Array.isArray(value) && value.length > 0) {
+      blocks.push(
+        ...buildArrayBlocks(value).map((block) => ({
+          ...block,
+          title: toLabel(key),
+        }))
+      );
     }
   }
 
