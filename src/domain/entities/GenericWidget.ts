@@ -1,4 +1,4 @@
-export type WidgetBlockType = "metrics" | "list" | "keyValue" | "table";
+export type WidgetBlockType = "metrics" | "list" | "keyValue" | "table" | "form";
 export type WidgetTone = "default" | "good" | "warning" | "danger";
 
 export interface WidgetMetric {
@@ -31,6 +31,15 @@ export interface WidgetTableCell {
 
 export type WidgetTableRow = (string | number | WidgetTableCell)[];
 
+export interface WidgetFormField {
+  name: string;
+  type: "text" | "number" | "email" | "select" | "textarea";
+  label: string;
+  required?: boolean;
+  placeholder?: string;
+  options?: string[];
+}
+
 export interface WidgetBlock {
   type: WidgetBlockType;
   title?: string;
@@ -40,6 +49,9 @@ export interface WidgetBlock {
   keyValueItems?: WidgetKeyValueItem[];
   tableHeaders?: string[];
   tableRows?: WidgetTableRow[];
+  formFields?: WidgetFormField[];
+  submitLabel?: string;
+  actionUrl?: string;
 }
 
 export interface GenericWidgetContent {

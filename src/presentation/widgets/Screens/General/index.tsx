@@ -6,6 +6,7 @@ import { MetricBlock } from "../../components/MetricBlock";
 import { ListBlock } from "../../components/ListBlock";
 import { KeyValueBlock } from "../../components/KeyValueBlock";
 import { TableBlock } from "../../components/TableBlock";
+import { FormBlock } from "../../components/FormBlock";
 import { WidgetBlock } from "../../../../domain/entities/GenericWidget";
 import { TrashIcon } from "../../../../assets/icons";
 
@@ -89,6 +90,8 @@ export const GeneralScreen: React.FC<GeneralScreenProps> = ({
         );
       case "table":
         return Array.isArray(block.tableRows) && block.tableRows.length > 0;
+      case "form":
+        return Array.isArray(block.formFields) && block.formFields.length > 0;
       default:
         return false;
     }
@@ -473,6 +476,16 @@ export const GeneralScreen: React.FC<GeneralScreenProps> = ({
                     tableHeaders={block.tableHeaders}
                     tableRows={block.tableRows!}
                     title={block.title}
+                  />
+                );
+              case "form":
+                return (
+                  <FormBlock
+                    key={index}
+                    title={block.title}
+                    formFields={block.formFields!}
+                    submitLabel={block.submitLabel}
+                    actionUrl={block.actionUrl}
                   />
                 );
               default:

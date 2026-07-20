@@ -60,7 +60,12 @@ export const LogisticsScreen: React.FC<LogisticsScreenProps> = ({
             estimatedDelivery: "2026-07-28",
             currentLocation: "Hub Terminal 4",
             weight: "12 kg",
-            carrier: "Fleet Express"
+            carrier: "Fleet Express",
+            routeHistory: Array.isArray(r.routeHistory) ? r.routeHistory : [
+              { location: r.origin || "Seattle, WA", description: "Shipment departed origin facility", time: "10:00 AM" },
+              { location: "Transit Hub", description: "Package in transit to next hub", time: "02:30 PM" },
+              { location: r.destination || "Austin, TX", description: "Arrived at sorting facility", time: "08:15 PM" }
+            ]
           }));
         }
       }
@@ -231,9 +236,9 @@ export const LogisticsScreen: React.FC<LogisticsScreenProps> = ({
                   {/* Vertical Timeline */}
                   <div className={styles.timeline}>
                     <div className={styles.timelineLine}></div>
-                    {selectedShipment.routeHistory.map((step, idx) => (
+                    {(selectedShipment?.routeHistory || []).map((step, idx) => (
                       <div key={idx} className={styles.checkpointRow}>
-                        <div className={`${styles.nodeBullet} ${idx === selectedShipment.routeHistory.length - 1 ? styles.nodeActive : ""}`}></div>
+                        <div className={`${styles.nodeBullet} ${idx === (selectedShipment?.routeHistory || []).length - 1 ? styles.nodeActive : ""}`}></div>
                         <div>
                           <div className={styles.checkpointTitle}>{step.location}</div>
                           <div className={styles.checkpointDesc}>{step.description}</div>

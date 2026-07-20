@@ -29,7 +29,105 @@ const SignupStep2: FC = () => {
     isStepTwoPending,
     handleTestApi,
     handleStepTwoSubmit,
+    stepOneData,
   } = useSignupStore();
+
+  const getSuggestionTemplate = (industry: string, apiName: string, method: string) => {
+    const ind = (industry || "").toLowerCase();
+    const name = (apiName || "").toLowerCase();
+    const m = (method || "GET").toUpperCase();
+
+    if (ind.includes("travel") || ind.includes("booking")) {
+      if (m === "GET") {
+        return {
+          search: "",
+          status: "active",
+          category: "",
+          sortBy: "title",
+          limit: 10,
+          page: 1
+        };
+      } else {
+        return {
+          name: "",
+          phone: "",
+          email: "",
+          packageName: "",
+          bookingDate: "",
+          notes: ""
+        };
+      }
+    } else if (ind.includes("ecommerce") || ind.includes("e-commerce")) {
+      if (m === "GET") {
+        return {
+          search: "",
+          category: "",
+          status: "",
+          sortBy: "price_asc",
+          limit: 20,
+          page: 1
+        };
+      } else {
+        return {
+          customerName: "",
+          email: "",
+          productId: "",
+          quantity: 1,
+          totalAmount: 0.0,
+          shippingAddress: ""
+        };
+      }
+    } else if (ind.includes("food") || ind.includes("hospitality")) {
+      if (m === "GET") {
+        return {
+          search: "",
+          category: "",
+          available: true,
+          limit: 20,
+          page: 1
+        };
+      } else {
+        return {
+          customerName: "",
+          phoneNumber: "",
+          address: "",
+          items: [{ itemId: "", quantity: 1 }],
+          notes: ""
+        };
+      }
+    } else if (ind.includes("logistics")) {
+      if (m === "GET") {
+        return {
+          search: "",
+          status: "in-transit",
+          limit: 10,
+          page: 1
+        };
+      } else {
+        return {
+          sender: "",
+          recipient: "",
+          origin: "",
+          destination: "",
+          weight: ""
+        };
+      }
+    }
+
+    // Default template
+    if (m === "GET") {
+      return {
+        search: "",
+        limit: 20,
+        page: 1
+      };
+    } else {
+      return {
+        title: "",
+        description: ""
+      };
+    }
+  };
 
   const allApisTestedSuccessfully = apisList.every(
     (api) => apiTestStates[api.id]?.status === "success",
@@ -662,6 +760,49 @@ const SignupStep2: FC = () => {
                         }}
                       />
                     </div>
+                    {(() => {
+                      const suggestedTemplate = getSuggestionTemplate(
+                        stepOneData?.primaryIndustry || "",
+                        api.apiName || "",
+                        api.apiMethod || "GET"
+                      );
+                      const suggestedJson = JSON.stringify(suggestedTemplate, null, 2);
+                      return (
+                        <div
+                          className="mt-3 p-4 rounded-xl border border-dashed text-xs space-y-2 text-left"
+                          style={{
+                            backgroundColor: "rgba(255, 255, 255, 0.02)",
+                            borderColor: "rgba(255, 255, 255, 0.1)",
+                          }}
+                        >
+                          <div className="flex justify-between items-center gap-4">
+                            <span className="font-semibold text-slate-300">
+                              💡 Suggested Fields for {stepOneData?.primaryIndustry || "General Business"} ({api.apiMethod})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateApiField(api.id, "apiQueryParams", suggestedJson);
+                                showToast("Applied template suggestions!", "success");
+                              }}
+                              className="px-2.5 py-1 rounded hover:opacity-85 font-bold transition-all text-[10px] cursor-pointer whitespace-nowrap"
+                              style={{
+                                background: `linear-gradient(90deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
+                                color: colors.TextHeading
+                              }}
+                            >
+                              Apply Suggestion
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-slate-500 leading-relaxed">
+                            These fields will enable ChatGPT and the widget to support filters, searching, and form submissions automatically.
+                          </p>
+                          <pre className="text-[10px] text-slate-400 font-mono opacity-80 whitespace-pre overflow-x-auto max-w-full bg-black/20 p-2 rounded">
+                            {suggestedJson}
+                          </pre>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
