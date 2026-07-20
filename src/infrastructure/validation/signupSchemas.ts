@@ -11,7 +11,7 @@ export const stepOneSchema = z.object({
 export const stepTwoSchema = z.array(
   z.object({
     apiName: z.string().min(1, "API Name is required"),
-    apiMethod: z.enum(["GET", "POST", "PUT", "DELETE"]),
+    apiMethod: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
     apiEndpoint: z.string().refine(
       (val) => {
         try {

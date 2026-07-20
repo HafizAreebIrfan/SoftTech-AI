@@ -32,7 +32,11 @@ const SignupStep2: FC = () => {
     stepOneData,
   } = useSignupStore();
 
-  const getSuggestionTemplate = (industry: string, apiName: string, method: string) => {
+  const getSuggestionTemplate = (
+    industry: string,
+    apiName: string,
+    method: string,
+  ) => {
     const ind = (industry || "").toLowerCase();
     const name = (apiName || "").toLowerCase();
     const m = (method || "GET").toUpperCase();
@@ -45,7 +49,7 @@ const SignupStep2: FC = () => {
           category: "",
           sortBy: "title",
           limit: 10,
-          page: 1
+          page: 1,
         };
       } else {
         return {
@@ -54,7 +58,7 @@ const SignupStep2: FC = () => {
           email: "",
           packageName: "",
           bookingDate: "",
-          notes: ""
+          notes: "",
         };
       }
     } else if (ind.includes("ecommerce") || ind.includes("e-commerce")) {
@@ -65,7 +69,7 @@ const SignupStep2: FC = () => {
           status: "",
           sortBy: "price_asc",
           limit: 20,
-          page: 1
+          page: 1,
         };
       } else {
         return {
@@ -74,7 +78,7 @@ const SignupStep2: FC = () => {
           productId: "",
           quantity: 1,
           totalAmount: 0.0,
-          shippingAddress: ""
+          shippingAddress: "",
         };
       }
     } else if (ind.includes("food") || ind.includes("hospitality")) {
@@ -84,7 +88,7 @@ const SignupStep2: FC = () => {
           category: "",
           available: true,
           limit: 20,
-          page: 1
+          page: 1,
         };
       } else {
         return {
@@ -92,7 +96,7 @@ const SignupStep2: FC = () => {
           phoneNumber: "",
           address: "",
           items: [{ itemId: "", quantity: 1 }],
-          notes: ""
+          notes: "",
         };
       }
     } else if (ind.includes("logistics")) {
@@ -101,7 +105,7 @@ const SignupStep2: FC = () => {
           search: "",
           status: "in-transit",
           limit: 10,
-          page: 1
+          page: 1,
         };
       } else {
         return {
@@ -109,7 +113,7 @@ const SignupStep2: FC = () => {
           recipient: "",
           origin: "",
           destination: "",
-          weight: ""
+          weight: "",
         };
       }
     }
@@ -119,12 +123,12 @@ const SignupStep2: FC = () => {
       return {
         search: "",
         limit: 20,
-        page: 1
+        page: 1,
       };
     } else {
       return {
         title: "",
-        description: ""
+        description: "",
       };
     }
   };
@@ -296,6 +300,7 @@ const SignupStep2: FC = () => {
                             <option value="GET">GET</option>
                             <option value="POST">POST</option>
                             <option value="PUT">PUT</option>
+                            <option value="PATCH">PATCH</option>
                             <option value="DELETE">DELETE</option>
                           </select>
                         </div>
@@ -764,9 +769,13 @@ const SignupStep2: FC = () => {
                       const suggestedTemplate = getSuggestionTemplate(
                         stepOneData?.primaryIndustry || "",
                         api.apiName || "",
-                        api.apiMethod || "GET"
+                        api.apiMethod || "GET",
                       );
-                      const suggestedJson = JSON.stringify(suggestedTemplate, null, 2);
+                      const suggestedJson = JSON.stringify(
+                        suggestedTemplate,
+                        null,
+                        2,
+                      );
                       return (
                         <div
                           className="mt-3 p-4 rounded-xl border border-dashed text-xs space-y-2 text-left"
@@ -777,25 +786,37 @@ const SignupStep2: FC = () => {
                         >
                           <div className="flex justify-between items-center gap-4">
                             <span className="font-semibold text-slate-300">
-                              💡 Suggested Fields for {stepOneData?.primaryIndustry || "General Business"} ({api.apiMethod})
+                              💡 Suggested Fields for{" "}
+                              {stepOneData?.primaryIndustry ||
+                                "General Business"}{" "}
+                              ({api.apiMethod})
                             </span>
                             <button
                               type="button"
                               onClick={() => {
-                                updateApiField(api.id, "apiQueryParams", suggestedJson);
-                                showToast("Applied template suggestions!", "success");
+                                updateApiField(
+                                  api.id,
+                                  "apiQueryParams",
+                                  suggestedJson,
+                                );
+                                showToast(
+                                  "Applied template suggestions!",
+                                  "success",
+                                );
                               }}
                               className="px-2.5 py-1 rounded hover:opacity-85 font-bold transition-all text-[10px] cursor-pointer whitespace-nowrap"
                               style={{
                                 background: `linear-gradient(90deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
-                                color: colors.TextHeading
+                                color: colors.TextHeading,
                               }}
                             >
                               Apply Suggestion
                             </button>
                           </div>
                           <p className="text-[10px] text-slate-500 leading-relaxed">
-                            These fields will enable ChatGPT and the widget to support filters, searching, and form submissions automatically.
+                            These fields will enable ChatGPT and the widget to
+                            support filters, searching, and form submissions
+                            automatically.
                           </p>
                           <pre className="text-[10px] text-slate-400 font-mono opacity-80 whitespace-pre overflow-x-auto max-w-full bg-black/20 p-2 rounded">
                             {suggestedJson}

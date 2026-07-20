@@ -3,7 +3,7 @@ import { User } from "../domain/entities/CompanyLogin";
 export interface ApiConnection {
   id: string;
   apiName: string;
-  apiMethod: "GET" | "POST" | "PUT" | "DELETE";
+  apiMethod: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   apiEndpoint: string;
   apiAuthType: string;
   apiCredentials?: string;

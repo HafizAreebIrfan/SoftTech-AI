@@ -5,7 +5,12 @@ import { useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useThemeStore, useSignupStore } from "../../../../hooks";
 import { registerCompanyInfo } from "../../../../adapters/api/authApi";
-import { LeftArrowIcon, EmailIcon, LockIcon } from "../../../../assets/icons";
+import {
+  LeftArrowIcon,
+  EmailIcon,
+  LockIcon,
+  UserIcon,
+} from "../../../../assets/icons";
 import { showToast } from "../../../../utils/toasts";
 import { stepOneSchema } from "../../../../infrastructure/validation/signupSchemas";
 import styles from "../../../../styles/signup.module.css";
@@ -129,7 +134,7 @@ const SignupStep1: FC = () => {
                   children={(field) => (
                     <div className="relative">
                       <span className="absolute left-4 top-4.5 flex items-center">
-                        <EmailIcon color={colors.IconColor} size={18} />
+                        <UserIcon color={colors.IconColor} size={18} />
                       </span>
                       <input
                         type="text"
@@ -139,29 +144,136 @@ const SignupStep1: FC = () => {
                         onChange={(e) => {
                           const name = e.target.value;
                           field.handleChange(name);
-                          
-                          // Simple keyword matching for industry recommendation
                           const lowerName = name.toLowerCase();
                           let recommendedInd = "";
-                          if (lowerName.includes("travel") || lowerName.includes("booking") || lowerName.includes("flight") || lowerName.includes("trip") || lowerName.includes("tour") || lowerName.includes("hotel") || lowerName.includes("resort") || lowerName.includes("vacation") || lowerName.includes("cab") || lowerName.includes("car")) {
-                            recommendedInd = "travel & booking";
-                          } else if (lowerName.includes("shop") || lowerName.includes("ecommerce") || lowerName.includes("store") || lowerName.includes("retail") || lowerName.includes("market") || lowerName.includes("cart") || lowerName.includes("sell") || lowerName.includes("buy") || lowerName.includes("deal") || lowerName.includes("boutique") || lowerName.includes("brand")) {
+                          if (
+                            lowerName.includes("travel") ||
+                            lowerName.includes("booking") ||
+                            lowerName.includes("flight") ||
+                            lowerName.includes("trip") ||
+                            lowerName.includes("tour") ||
+                            lowerName.includes("hotel") ||
+                            lowerName.includes("resort") ||
+                            lowerName.includes("vacation") ||
+                            lowerName.includes("cab") ||
+                            lowerName.includes("car") ||
+                            lowerName.includes("detailing") ||
+                            lowerName.includes("shining car") ||
+                            lowerName.includes("ride") ||
+                            lowerName.includes("cleaning") ||
+                            lowerName.includes("car care")
+                          ) {
+                            recommendedInd = "Travel & Booking";
+                          } else if (
+                            lowerName.includes("shop") ||
+                            lowerName.includes("ecommerce") ||
+                            lowerName.includes("store") ||
+                            lowerName.includes("retail") ||
+                            lowerName.includes("market") ||
+                            lowerName.includes("cart") ||
+                            lowerName.includes("sell") ||
+                            lowerName.includes("buy") ||
+                            lowerName.includes("deal") ||
+                            lowerName.includes("boutique") ||
+                            lowerName.includes("brand")
+                          ) {
                             recommendedInd = "ecommerce";
-                          } else if (lowerName.includes("pay") || lowerName.includes("bank") || lowerName.includes("fintech") || lowerName.includes("finance") || lowerName.includes("capital") || lowerName.includes("crypto") || lowerName.includes("coin") || lowerName.includes("card") || lowerName.includes("wallet") || lowerName.includes("ledger") || lowerName.includes("bill")) {
+                          } else if (
+                            lowerName.includes("pay") ||
+                            lowerName.includes("bank") ||
+                            lowerName.includes("fintech") ||
+                            lowerName.includes("finance") ||
+                            lowerName.includes("capital") ||
+                            lowerName.includes("crypto") ||
+                            lowerName.includes("coin") ||
+                            lowerName.includes("card") ||
+                            lowerName.includes("wallet") ||
+                            lowerName.includes("ledger") ||
+                            lowerName.includes("bill")
+                          ) {
                             recommendedInd = "fintech";
-                          } else if (lowerName.includes("logistics") || lowerName.includes("delivery") || lowerName.includes("shipping") || lowerName.includes("cargo") || lowerName.includes("freight") || lowerName.includes("transport") || lowerName.includes("ride") || lowerName.includes("taxi") || lowerName.includes("fleet") || lowerName.includes("courier")) {
+                          } else if (
+                            lowerName.includes("logistics") ||
+                            lowerName.includes("delivery") ||
+                            lowerName.includes("shipping") ||
+                            lowerName.includes("cargo") ||
+                            lowerName.includes("freight") ||
+                            lowerName.includes("transport") ||
+                            lowerName.includes("ride") ||
+                            lowerName.includes("taxi") ||
+                            lowerName.includes("fleet") ||
+                            lowerName.includes("courier")
+                          ) {
                             recommendedInd = "logistics";
-                          } else if (lowerName.includes("saas") || lowerName.includes("software") || lowerName.includes("api") || lowerName.includes("cloud") || lowerName.includes("dev") || lowerName.includes("tech") || lowerName.includes("platform") || lowerName.includes("app")) {
+                          } else if (
+                            lowerName.includes("saas") ||
+                            lowerName.includes("software") ||
+                            lowerName.includes("api") ||
+                            lowerName.includes("cloud") ||
+                            lowerName.includes("dev") ||
+                            lowerName.includes("tech") ||
+                            lowerName.includes("platform") ||
+                            lowerName.includes("app")
+                          ) {
                             recommendedInd = "saas";
-                          } else if (lowerName.includes("food") || lowerName.includes("restaurant") || lowerName.includes("cafe") || lowerName.includes("dine") || lowerName.includes("kitchen") || lowerName.includes("meal") || lowerName.includes("pizza") || lowerName.includes("burger") || lowerName.includes("coffee") || lowerName.includes("bar")) {
-                            recommendedInd = "food & hospitality";
-                          } else if (lowerName.includes("forecast") || lowerName.includes("weather") || lowerName.includes("predict") || lowerName.includes("data") || lowerName.includes("analytics") || lowerName.includes("metric") || lowerName.includes("measure") || lowerName.includes("sensor")) {
-                            recommendedInd = "data & forecasting";
+                          } else if (
+                            lowerName.includes("food") ||
+                            lowerName.includes("restaurant") ||
+                            lowerName.includes("cafe") ||
+                            lowerName.includes("dine") ||
+                            lowerName.includes("kitchen") ||
+                            lowerName.includes("meal") ||
+                            lowerName.includes("pizza") ||
+                            lowerName.includes("burger") ||
+                            lowerName.includes("coffee") ||
+                            lowerName.includes("bar")
+                          ) {
+                            recommendedInd = "Food & Hospitality";
+                          } else if (
+                            lowerName.includes("forecast") ||
+                            lowerName.includes("weather") ||
+                            lowerName.includes("predict") ||
+                            lowerName.includes("data") ||
+                            lowerName.includes("analytics") ||
+                            lowerName.includes("metric") ||
+                            lowerName.includes("measure") ||
+                            lowerName.includes("sensor")
+                          ) {
+                            recommendedInd = "Data & Forecasting";
+                          } else if (
+                            lowerName.includes("productivity") ||
+                            lowerName.includes("creative") ||
+                            lowerName.includes("design") ||
+                            lowerName.includes("tool") ||
+                            lowerName.includes("app")
+                          ) {
+                            recommendedInd = "Productivity & Creative Tools";
+                          } else if (
+                            lowerName.includes("utilities") ||
+                            lowerName.includes("file") ||
+                            lowerName.includes("convert") ||
+                            lowerName.includes("pdf") ||
+                            lowerName.includes("word")
+                          ) {
+                            recommendedInd = "Utilities & File Conversion";
+                          } else if (
+                            lowerName.includes("general") ||
+                            lowerName.includes("business") ||
+                            lowerName.includes("company") ||
+                            lowerName.includes("admin")
+                          ) {
+                            recommendedInd = "General Business";
                           }
 
                           if (recommendedInd) {
-                            signupForm.setFieldValue("primaryIndustry", recommendedInd);
-                            setStepOneData({ companyName: name, primaryIndustry: recommendedInd });
+                            signupForm.setFieldValue(
+                              "primaryIndustry",
+                              recommendedInd,
+                            );
+                            setStepOneData({
+                              companyName: name,
+                              primaryIndustry: recommendedInd,
+                            });
                           } else {
                             setStepOneData({ companyName: name });
                           }

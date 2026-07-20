@@ -182,12 +182,74 @@ export const useSignupStore = create<SignupStore>()(
             headers,
           };
 
+          let paramsObj: Record<string, any> = {};
+          if (api.apiQueryParams) {
+            try {
+              const trimmed = api.apiQueryParams.trim();
+              if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                paramsObj = JSON.parse(trimmed);
+              } else {
+                const pairs = trimmed.split(/[\n&]/);
+                pairs.forEach((pair) => {
+                  const idx = pair.indexOf(":");
+                  if (idx !== -1) {
+                    const k = pair.substring(0, idx).trim();
+                    const v = pair.substring(idx + 1).trim();
+                    if (k) paramsObj[k] = v;
+                  } else {
+                    const eqIdx = pair.indexOf("=");
+                    if (eqIdx !== -1) {
+                      const k = pair.substring(0, eqIdx).trim();
+                      const v = pair.substring(eqIdx + 1).trim();
+                      if (k) paramsObj[k] = v;
+                    }
+                  }
+                });
+              }
+            } catch (e) {
+              // Ignore
+            }
+          }
+
           if (api.apiMethod !== "GET" && api.apiMethod !== "DELETE") {
-            options.body = JSON.stringify({});
+            options.body = JSON.stringify(paramsObj);
+          }
+
+          let testUrl = api.apiEndpoint;
+          
+          // Replace path parameters (e.g. :id or :packageId)
+          Object.entries(paramsObj).forEach(([k, v]) => {
+            if (testUrl.includes(`:${k}`)) {
+              testUrl = testUrl.replace(`:${k}`, String(v));
+            }
+          });
+
+          if ((api.apiMethod === "GET" || api.apiMethod === "DELETE") && api.apiQueryParams) {
+            try {
+              let rawUrl = testUrl;
+              const hasProtocol = rawUrl.startsWith("http://") || rawUrl.startsWith("https://");
+              if (!hasProtocol) {
+                rawUrl = "https://" + rawUrl;
+              }
+              const urlObj = new URL(rawUrl);
+
+              Object.entries(paramsObj).forEach(([k, v]) => {
+                if (v !== undefined && v !== null && !api.apiEndpoint.includes(`:${k}`)) {
+                  urlObj.searchParams.set(k, String(v));
+                }
+              });
+
+              testUrl = hasProtocol ? urlObj.toString() : urlObj.toString().replace("https://", "");
+            } catch (e) {
+              // Fallback
+            }
           }
 
           const start = performance.now();
-          const response = await fetch(api.apiEndpoint, options);
+          const fetchUrl = testUrl.startsWith("http://") || testUrl.startsWith("https://")
+            ? testUrl
+            : `https://${testUrl}`;
+          const response = await fetch(fetchUrl, options);
           const duration = (performance.now() - start).toFixed(0);
 
           const responseText = await response.text();

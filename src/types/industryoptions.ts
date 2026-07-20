@@ -12,7 +12,7 @@ export const IndustryOptions = [
     label: "FinTech",
   },
   {
-    value: "ai",
+    value: "AI & Automation",
     label: "AI & Automation",
   },
   {
@@ -24,27 +24,27 @@ export const IndustryOptions = [
     label: "HealthTech",
   },
   {
-    value: "food",
+    value: "Food & Hospitality",
     label: "Food & Hospitality",
   },
   {
-    value: "travel",
+    value: "Travel & Booking",
     label: "Travel & Booking",
   },
   {
-    value: "data",
+    value: "Data & Forecasting",
     label: "Data & Forecasting",
   },
   {
-    value: "business",
+    value: "General Business",
     label: "General Business",
   },
   {
-    value: "creative",
+    value: "Productivity & Creative Tools",
     label: "Productivity & Creative Tools (Figma, Canva)",
   },
   {
-    value: "utilities",
+    value: "Utilities & File Conversion",
     label: "Utilities & File Conversion (PDF to Word, converters)",
   },
 ];
