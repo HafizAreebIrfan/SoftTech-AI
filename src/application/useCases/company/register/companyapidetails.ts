@@ -29,14 +29,24 @@ export async function saveCompanyApiDetails(
 
   const apis = payload.apis.map((api: any, index: number) => {
     let keys: string[] = [];
-    if (api.apiQueryParams) {
-      try {
-        const parsed = JSON.parse(api.apiQueryParams);
-        if (typeof parsed === "object" && parsed !== null) {
-          keys = Object.keys(parsed);
+    if (Array.isArray(api.params) && api.params.length > 0) {
+      keys = api.params;
+    } else if (typeof api.apiQueryParams === "string" && api.apiQueryParams.trim()) {
+      const raw = api.apiQueryParams.trim();
+      if (raw.startsWith("{") || raw.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (typeof parsed === "object" && parsed !== null) {
+            keys = Object.keys(parsed);
+          }
+        } catch {
+          keys = ["q"];
         }
-      } catch {
-        keys = [api.apiQueryParams];
+      } else if (raw.includes("=")) {
+        const paramsObj = new URLSearchParams(raw);
+        keys = Array.from(paramsObj.keys());
+      } else {
+        keys = raw.split(/[,;\s]+/).map((s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '')).filter(Boolean);
       }
     }
 

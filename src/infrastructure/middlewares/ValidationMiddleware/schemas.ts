@@ -24,19 +24,50 @@ export const resetPasswordSchema = z.object({
 export function buildCustomMcpInputSchema(configuredParams: string[] = []): z.ZodObject<any> {
   const schemaShape: Record<string, any> = {};
 
-  if (configuredParams.length === 0) {
-    schemaShape.query = z.string().optional().describe("General search query");
+  const cleanKeys: string[] = [];
+
+  configuredParams.forEach((rawKey) => {
+    if (typeof rawKey !== "string" || !rawKey.trim()) return;
+    const str = rawKey.trim();
+
+    // If rawKey is accidentally a stringified JSON response or object
+    if (str.startsWith("{") || str.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(str);
+        if (typeof parsed === "object" && parsed !== null) {
+          Object.keys(parsed).forEach((k) => {
+            if (/^[a-zA-Z0-9_-]+$/.test(k)) cleanKeys.push(k);
+          });
+        }
+      } catch {
+        // ignore invalid json string
+      }
+    } else {
+      // Clean parameter name - only alphanumeric, dash, underscore
+      const sanitized = str.replace(/[^a-zA-Z0-9_-]/g, "");
+      if (sanitized && sanitized.length <= 40) {
+        cleanKeys.push(sanitized);
+      }
+    }
+  });
+
+  const uniqueKeys = Array.from(new Set(cleanKeys));
+
+  if (uniqueKeys.length === 0) {
+    schemaShape.query = z.string().optional().describe("General search query or keyword");
+    schemaShape.location = z.string().optional().describe("Location or city name (e.g., Karachi, London)");
   } else {
-    configuredParams.forEach((paramKey) => {
-      if (paramKey === "query") {
+    uniqueKeys.forEach((paramKey) => {
+      const lower = paramKey.toLowerCase();
+      if (lower === "query" || lower === "q" || lower === "search") {
         schemaShape.query = z
           .string()
           .optional()
           .describe("General search keyword, lookup value, or text prompt");
       } else if (
-        paramKey === "itemId" ||
-        paramKey === "id" ||
-        paramKey === "uuid"
+        lower === "itemid" ||
+        lower === "id" ||
+        lower === "uuid"
       ) {
         schemaShape.itemId = z
           .string()
@@ -45,52 +76,52 @@ export function buildCustomMcpInputSchema(configuredParams: string[] = []): z.Zo
             "Unique ID of a specific item, record, transaction, or entity to retrieve",
           );
       } else if (
-        paramKey === "limit" ||
-        paramKey === "count" ||
-        paramKey === "size"
+        lower === "limit" ||
+        lower === "count" ||
+        lower === "size"
       ) {
         schemaShape.limit = z
           .number()
           .optional()
           .describe("Maximum number of records to return for pagination");
-      } else if (paramKey === "page" || paramKey === "offset") {
+      } else if (lower === "page" || lower === "offset") {
         schemaShape.page = z
           .number()
           .optional()
           .describe("Page number or offset for pagination");
       } else if (
-        paramKey === "startDate" ||
-        paramKey === "fromDate" ||
-        paramKey === "start"
+        lower === "startdate" ||
+        lower === "fromdate" ||
+        lower === "start"
       ) {
         schemaShape.startDate = z
           .string()
           .optional()
           .describe("Start date filter in ISO 8601 or YYYY-MM-DD format");
       } else if (
-        paramKey === "endDate" ||
-        paramKey === "toDate" ||
-        paramKey === "end"
+        lower === "enddate" ||
+        lower === "todate" ||
+        lower === "end"
       ) {
         schemaShape.endDate = z
           .string()
           .optional()
           .describe("End date filter in ISO 8601 or YYYY-MM-DD format");
       } else if (
-        paramKey === "status" ||
-        paramKey === "filter" ||
-        paramKey === "state"
+        lower === "status" ||
+        lower === "filter" ||
+        lower === "state"
       ) {
         schemaShape.status = z
           .string()
           .optional()
           .describe("Filter records by state or status category");
-      } else if (paramKey === "location") {
+      } else if (lower === "location") {
         schemaShape.location = z
           .string()
           .optional()
           .describe("Geographic location string");
-      } else if (paramKey === "city" || paramKey === "q") {
+      } else if (lower === "city") {
         schemaShape.city = z
           .string()
           .optional()
