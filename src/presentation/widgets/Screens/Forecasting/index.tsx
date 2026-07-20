@@ -126,20 +126,56 @@ export const ForecastingScreen: React.FC<ForecastingScreenProps> = ({
           >
             {/* Forecast Metrics Cards */}
             <div className={styles.statsGrid}>
-              {displayMetrics.map((m: any) => (
-                <div key={m.id} className={styles.statCard}>
-                  <div className={styles.statLabel}>{m.metricName}</div>
-                  <div className={styles.statVal}>
-                    {typeof m.currentValue === 'number' && m.currentValue > 1000 ? `$${m.currentValue.toLocaleString()}` : m.currentValue}
-                    <span style={{ fontSize: "13px", color: "#c084fc", marginLeft: "6px" }}>
-                      &rarr; {typeof m.projectedValue === 'number' && m.projectedValue > 1000 ? `$${m.projectedValue.toLocaleString()}` : m.projectedValue}
-                    </span>
+              {displayMetrics.map((m: any) => {
+                const formatValue = (val: any, label: string) => {
+                  if (typeof val !== 'number') return String(val);
+                  const lowerLabel = label.toLowerCase();
+                  if (val > 1000000000 && Number.isInteger(val)) {
+                    try {
+                      return new Date(val * 1000).toLocaleDateString();
+                    } catch (e) {
+                      return String(val);
+                    }
+                  }
+                  if (
+                    lowerLabel.includes("price") ||
+                    lowerLabel.includes("revenue") ||
+                    lowerLabel.includes("cost") ||
+                    lowerLabel.includes("sales") ||
+                    lowerLabel.includes("amount") ||
+                    lowerLabel.includes("income")
+                  ) {
+                    return `$${val.toLocaleString()}`;
+                  }
+                  if (lowerLabel.includes("temp")) return `${val}°`;
+                  if (
+                    lowerLabel.includes("humidity") ||
+                    lowerLabel.includes("rate") ||
+                    lowerLabel.includes("ratio") ||
+                    lowerLabel.includes("percent")
+                  ) {
+                    return `${val}%`;
+                  }
+                  return val.toLocaleString();
+                };
+
+                return (
+                  <div key={m.id} className={styles.statCard}>
+                    <div className={styles.statLabel}>{m.metricName}</div>
+                    <div className={styles.statVal}>
+                      {formatValue(m.currentValue, m.metricName)}
+                      {m.projectedValue !== m.currentValue && (
+                        <span style={{ fontSize: "13px", color: "#c084fc", marginLeft: "6px" }}>
+                          &rarr; {formatValue(m.projectedValue, m.metricName)}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--app-text-secondary)", marginTop: "6px" }}>
+                      Confidence Score: <strong style={{ color: "#10b981" }}>{m.confidenceScore}%</strong>
+                    </div>
                   </div>
-                  <div style={{ fontSize: "11px", color: "var(--app-text-secondary)", marginTop: "6px" }}>
-                    Confidence Score: <strong style={{ color: "#10b981" }}>{m.confidenceScore}%</strong>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Registered Datasets List */}

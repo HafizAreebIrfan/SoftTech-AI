@@ -292,7 +292,7 @@ const Dashboard: FC = () => {
               instantly to all telemetry visualizers.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
-              {(["grid", "list", "cards", "table"] as const).map((lay) => (
+              {(["dashboard", "catalog", "table", "timeline"] as const).map((lay) => (
                 <div
                   key={lay}
                   onClick={() => {
@@ -317,19 +317,13 @@ const Dashboard: FC = () => {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-indigo-500/10">
-                      {lay === "grid" && (
+                      {lay === "dashboard" && (
                         <LayoutGridIcon
                           size={20}
                           color={colors.TextHighlightedHeading}
                         />
                       )}
-                      {lay === "list" && (
-                        <TerminalIcon
-                          size={20}
-                          color={colors.TextHighlightedHeading}
-                        />
-                      )}
-                      {lay === "cards" && (
+                      {lay === "catalog" && (
                         <SlidersIcon
                           size={20}
                           color={colors.TextHighlightedHeading}
@@ -337,6 +331,12 @@ const Dashboard: FC = () => {
                       )}
                       {lay === "table" && (
                         <DatabaseIcon
+                          size={20}
+                          color={colors.TextHighlightedHeading}
+                        />
+                      )}
+                      {lay === "timeline" && (
+                        <TerminalIcon
                           size={20}
                           color={colors.TextHighlightedHeading}
                         />
@@ -350,17 +350,17 @@ const Dashboard: FC = () => {
                   </div>
                   <div>
                     <h4 className="font-bold text-base mb-1 text-slate-200 capitalize">
-                      {lay}
+                      {lay} Layout
                     </h4>
-                    <p className="text-xs text-slate-500">
-                      {lay === "grid" &&
-                        "Bento-style layout optimized for rich information grids."}
-                      {lay === "list" &&
-                        "Console line log flow for developers."}
-                      {lay === "cards" &&
-                        "Expanded summaries highlighting key telemetry attributes."}
+                    <p className="text-xs text-slate-500 font-sans leading-relaxed">
+                      {lay === "dashboard" &&
+                        "Modular bento-style layout optimized for data telemetry, analytics, and interactive metrics dashboards."}
+                      {lay === "catalog" &&
+                        "Grid layout optimized for item cards, product listings, travel bookings, and category catalogs."}
                       {lay === "table" &&
-                        "Condensed rows for handling massive data grids."}
+                        "Condensed spreadsheet-style view for power users handling massive data sets, transaction ledger list."}
+                      {lay === "timeline" &&
+                        "Milestone progress tracker optimized for package shipping routes, logistics, and process stages."}
                     </p>
                   </div>
                 </div>

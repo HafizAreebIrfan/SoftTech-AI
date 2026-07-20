@@ -122,5 +122,5 @@ export const stepTwoSchema = z.array(
 });
 
 export const stepThreeSchema = z.object({
-  layout: z.enum(["grid", "list", "cards", "table"]),
+  layout: z.enum(["dashboard", "catalog", "table", "timeline", "grid", "list", "cards"]),
 });

@@ -41,68 +41,75 @@ export const GenericWidgetRenderer: React.FC = () => {
     );
   }
 
-  // Parse industry from toolResult or default to "ecommerce"
+  // Parse layout preference or industry from toolResult
+  const payloadLayout =
+    toolResult?.structuredContent?.layout?.toLowerCase() || "";
   const payloadIndustry =
     toolResult?.structuredContent?.industry?.toLowerCase() || "";
-  let defaultPreviewKey = "ecommerce";
-  if (payloadIndustry.includes("commerce")) defaultPreviewKey = "ecommerce";
-  else if (
-    payloadIndustry.includes("saas") ||
-    payloadIndustry.includes("developer")
-  )
-    defaultPreviewKey = "saas";
-  else if (
-    payloadIndustry.includes("fintech") ||
-    payloadIndustry.includes("finance")
-  )
-    defaultPreviewKey = "fintech";
-  else if (
-    payloadIndustry.includes("ai") ||
-    payloadIndustry.includes("automation")
-  )
-    defaultPreviewKey = "ai";
-  else if (payloadIndustry.includes("logistics"))
-    defaultPreviewKey = "logistics";
-  else if (payloadIndustry.includes("health")) defaultPreviewKey = "health";
-  else if (
-    payloadIndustry.includes("food") ||
-    payloadIndustry.includes("hospitality")
-  )
-    defaultPreviewKey = "food";
-  else if (
-    payloadIndustry.includes("transport") ||
-    payloadIndustry.includes("mobility")
-  )
-    defaultPreviewKey = "transport";
-  else if (
-    payloadIndustry.includes("travel") ||
-    payloadIndustry.includes("booking")
-  )
-    defaultPreviewKey = "travel";
-  else if (
-    payloadIndustry.includes("forecasting") ||
-    payloadIndustry.includes("data")
-  )
-    defaultPreviewKey = "forecasting";
-  else if (payloadIndustry.includes("general")) defaultPreviewKey = "general";
 
-  const [previewIndustry, setPreviewIndustry] =
-    useState<string>(defaultPreviewKey);
-
-  // If payloadIndustry changes, sync the state
-  useEffect(() => {
-    if (defaultPreviewKey) {
-      setPreviewIndustry(defaultPreviewKey);
+  let defaultPreviewLayout = "dashboard";
+  if (payloadLayout) {
+    if (payloadLayout.includes("dashboard") || payloadLayout.includes("metrics")) {
+      defaultPreviewLayout = "dashboard";
+    } else if (
+      payloadLayout.includes("catalog") ||
+      payloadLayout.includes("grid") ||
+      payloadLayout.includes("card")
+    ) {
+      defaultPreviewLayout = "catalog";
+    } else if (payloadLayout.includes("table") || payloadLayout.includes("list")) {
+      defaultPreviewLayout = "table";
+    } else if (
+      payloadLayout.includes("timeline") ||
+      payloadLayout.includes("step")
+    ) {
+      defaultPreviewLayout = "timeline";
+    } else {
+      defaultPreviewLayout = payloadLayout;
     }
-  }, [defaultPreviewKey]);
+  } else {
+    // Fallback based on industry
+    if (
+      payloadIndustry.includes("commerce") ||
+      payloadIndustry.includes("travel") ||
+      payloadIndustry.includes("booking") ||
+      payloadIndustry.includes("food")
+    ) {
+      defaultPreviewLayout = "catalog";
+    } else if (
+      payloadIndustry.includes("saas") ||
+      payloadIndustry.includes("fintech") ||
+      payloadIndustry.includes("finance")
+    ) {
+      defaultPreviewLayout = "table";
+    } else if (
+      payloadIndustry.includes("logistics") ||
+      payloadIndustry.includes("transport") ||
+      payloadIndustry.includes("delivery")
+    ) {
+      defaultPreviewLayout = "timeline";
+    } else {
+      defaultPreviewLayout = "dashboard";
+    }
+  }
+
+  const [previewLayout, setPreviewLayout] =
+    useState<string>(defaultPreviewLayout);
+
+  // If defaults change, sync the state
+  useEffect(() => {
+    if (defaultPreviewLayout) {
+      setPreviewLayout(defaultPreviewLayout);
+    }
+  }, [defaultPreviewLayout]);
 
   // Is this running in default preview fallback?
   const isPreview =
     !toolResult || (toolResult as any)._meta?.isPreview === true;
 
-  // Decide content to show: real API result or simulated interactive industry template
+  // Decide content to show
   const activeContent = isPreview
-    ? MOCK_INDUSTRY_DATA[previewIndustry] || MOCK_INDUSTRY_DATA.ecommerce
+    ? MOCK_INDUSTRY_DATA[previewLayout === "dashboard" ? "forecasting" : previewLayout === "catalog" ? "ecommerce" : previewLayout === "table" ? "saas" : "logistics"] || MOCK_INDUSTRY_DATA.ecommerce
     : toolResult?.structuredContent;
 
   if (!activeContent) {
@@ -114,12 +121,12 @@ export const GenericWidgetRenderer: React.FC = () => {
   }
 
   const { title, subtitle, blocks = [] } = activeContent;
-  const activeIndustryKey = isPreview ? previewIndustry : defaultPreviewKey;
+  const activeLayout = isPreview ? previewLayout : defaultPreviewLayout;
 
   // Render developer simulate dropdown
   const renderPreviewControls = (
-    previewInd: string,
-    setPreviewInd: (v: string) => void,
+    previewLay: string,
+    setPreviewLay: (v: string) => void,
   ) => {
     return (
       <div
@@ -149,12 +156,12 @@ export const GenericWidgetRenderer: React.FC = () => {
               letterSpacing: "0.05em",
             }}
           >
-            Simulate Industry Layout Preview
+            Simulate Layout Template Preview
           </span>
         </div>
         <select
-          value={previewInd}
-          onChange={(e) => setPreviewInd(e.target.value)}
+          value={previewLay}
+          onChange={(e) => setPreviewLay(e.target.value)}
           style={{
             background: colors.BackgroundSecondary,
             color: colors.TextBody,
@@ -166,162 +173,63 @@ export const GenericWidgetRenderer: React.FC = () => {
             outline: "none",
           }}
         >
-          <option value="ecommerce">E-Commerce (Grid catalog cards)</option>
-          <option value="saas">
-            SaaS / Developer Tools (Log lines & Metrics)
-          </option>
-          <option value="fintech">
-            FinTech (Portfolio table & Change badges)
-          </option>
-          <option value="ai">AI & Automation (Worker nodes)</option>
-          <option value="logistics">Logistics (Stepped parcel tracking)</option>
-          <option value="health">HealthTech (Telehealth consultation & EHR)</option>
-          <option value="food">Food & Hospitality (Kitchen orders list)</option>
-          <option value="transport">Mobility & Transport (Fleet dispatch & rides)</option>
-          <option value="travel">
-            Travel & Booking (Available flight options)
-          </option>
-          <option value="forecasting">
-            Data & Forecasting (Predictive telemetry matrix)
-          </option>
-          <option value="general">General Business (Corporate stats)</option>
+          <option value="dashboard">Dashboard Template (Metrics & Telemetry)</option>
+          <option value="catalog">Catalog Template (Grid Catalog Cards)</option>
+          <option value="table">Table Template (Structured Rows & Logs)</option>
+          <option value="timeline">Timeline Template (Stepped Progress Milestones)</option>
         </select>
       </div>
     );
   };
 
-  // Route rendering to specific modular components
-  switch (activeIndustryKey) {
-    case "ecommerce":
+  // Route rendering to template screens
+  switch (activeLayout) {
+    case "catalog":
       return (
         <EcommerceScreen
           title={title}
           subtitle={subtitle}
-          isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    case "fintech":
-      return (
-        <FintechScreen
-          title={title}
-          subtitle={subtitle}
           blocks={blocks}
           isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
+          previewIndustry={previewLayout}
+          setPreviewIndustry={setPreviewLayout}
           renderPreviewControls={renderPreviewControls}
         />
       );
-    case "forecasting":
-      return (
-        <ForecastingScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    case "logistics":
-      return (
-        <LogisticsScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    case "saas":
+    case "table":
       return (
         <SaasScreen
           title={title}
           subtitle={subtitle}
           blocks={blocks}
           isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
+          previewIndustry={previewLayout}
+          setPreviewIndustry={setPreviewLayout}
           renderPreviewControls={renderPreviewControls}
         />
       );
-    case "ai":
+    case "timeline":
       return (
-        <AiScreen
+        <LogisticsScreen
           title={title}
           subtitle={subtitle}
           blocks={blocks}
           isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
+          previewIndustry={previewLayout}
+          setPreviewIndustry={setPreviewLayout}
           renderPreviewControls={renderPreviewControls}
         />
       );
-    case "health":
-    case "healthtech":
-      return (
-        <HealthScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    case "food":
-      return (
-        <FoodScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    case "transport":
-      return (
-        <TransportScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    case "travel":
-      return (
-        <TravelScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    case "general":
+    case "dashboard":
     default:
       return (
-        <GeneralScreen
+        <ForecastingScreen
           title={title}
           subtitle={subtitle}
           blocks={blocks}
           isPreview={isPreview}
-          previewIndustry={previewIndustry}
-          setPreviewIndustry={setPreviewIndustry}
+          previewIndustry={previewLayout}
+          setPreviewIndustry={setPreviewLayout}
           renderPreviewControls={renderPreviewControls}
         />
       );

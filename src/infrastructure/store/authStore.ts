@@ -2,6 +2,13 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { AuthStore, ApiConnection } from "../../interfaces/auth.interface";
 
+const normalizeLayout = (layout: string): any => {
+  if (layout === "grid") return "dashboard";
+  if (layout === "list") return "catalog";
+  if (layout === "cards") return "timeline";
+  return layout || "dashboard";
+};
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
@@ -9,7 +16,7 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
       authReady: false,
       apisList: [],
-      selectedLayout: "grid",
+      selectedLayout: "dashboard",
       setAuth: (user: any) => {
         const mappedApis = user?.apis?.map((api: any, index: number) => ({
           id: api.id || `api-${index + 1}`,
@@ -33,7 +40,7 @@ export const useAuthStore = create<AuthStore>()(
           },
           isAuthenticated: true,
           apisList: mappedApis && mappedApis.length > 0 ? mappedApis : [],
-          selectedLayout: user?.uiPreference?.layout || "grid",
+          selectedLayout: normalizeLayout(user?.uiPreference?.layout),
         }));
       },
       setAuthReady: (authReady: boolean) => set({ authReady }),
@@ -41,13 +48,13 @@ export const useAuthStore = create<AuthStore>()(
         set((state) => ({
           apisList: typeof apis === "function" ? apis(state.apisList) : apis,
         })),
-      setSelectedLayout: (layout) => set({ selectedLayout: layout }),
+      setSelectedLayout: (layout) => set({ selectedLayout: normalizeLayout(layout) }),
       clearAuth: () =>
         set({
           user: null,
           isAuthenticated: false,
           apisList: [],
-          selectedLayout: "grid",
+          selectedLayout: "dashboard",
         }),
     }),
     {

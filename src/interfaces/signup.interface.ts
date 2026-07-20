@@ -25,7 +25,7 @@ export interface SignupStore {
   companyId: string | null;
   stepOneData: StepOneData;
   apisList: ApiConnection[];
-  selectedLayout: "grid" | "list" | "cards" | "table";
+  selectedLayout: "dashboard" | "catalog" | "table" | "timeline" | "grid" | "list" | "cards";
   apiTestStates: Record<string, { status: "idle" | "loading" | "success" | "error"; logs: string }>;
   saveStatus: "idle" | "saving" | "saved" | "error";
   isStepTwoPending: boolean;
@@ -36,7 +36,7 @@ export interface SignupStore {
   updateApiField: (id: string, field: keyof ApiConnection, value: string) => void;
   handleAddApi: () => void;
   handleDeleteApi: (id: string) => void;
-  setSelectedLayout: (layout: "grid" | "list" | "cards" | "table") => void;
+  setSelectedLayout: (layout: "dashboard" | "catalog" | "table" | "timeline" | "grid" | "list" | "cards") => void;
   clearSignupProgress: () => void;
   handleTestApi: (api: ApiConnection) => Promise<void>;
   triggerAutoSave: () => void;

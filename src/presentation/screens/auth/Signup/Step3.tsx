@@ -82,24 +82,24 @@ const SignupStep3: FC = () => {
     });
   };
   useEffect(() => {
-    const industryLayoutMapping: Record<string, "grid" | "list" | "cards" | "table"> = {
-      "e-commerce": "grid",
-      ecommerce: "grid",
+    const industryLayoutMapping: Record<string, "dashboard" | "catalog" | "table" | "timeline"> = {
+      "e-commerce": "catalog",
+      ecommerce: "catalog",
       fintech: "table",
-      "data & forecasting": "grid",
-      "data-forecasting": "grid",
-      saas: "list",
-      "saas / developer tools": "list",
-      logistics: "list",
-      healthtech: "grid",
-      "food & hospitality": "grid",
-      "travel & booking": "list",
-      "ai & automation": "list",
-      "general business": "grid",
+      "data & forecasting": "dashboard",
+      "data-forecasting": "dashboard",
+      saas: "table",
+      "saas / developer tools": "table",
+      logistics: "timeline",
+      healthtech: "dashboard",
+      "food & hospitality": "catalog",
+      "travel & booking": "catalog",
+      "ai & automation": "dashboard",
+      "general business": "dashboard",
     };
     const industry = stepOneData?.primaryIndustry?.toLowerCase() || "";
     // Recommend and auto-select the best layout
-    const recommended = industryLayoutMapping[industry] || "grid";
+    const recommended = industryLayoutMapping[industry] || "dashboard";
     setSelectedLayout(recommended);
   }, [stepOneData?.primaryIndustry, setSelectedLayout]);
 
@@ -141,12 +141,12 @@ const SignupStep3: FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Bento Grid layout */}
+              {/* Dashboard Layout */}
               <div
-                onClick={() => setSelectedLayout("grid")}
+                onClick={() => setSelectedLayout("dashboard")}
                 className={`${styles.uiselectioncard} rounded-2xl cursor-pointer border-2 transition-all text-left flex flex-col justify-between`}
                 style={
-                  selectedLayout === "grid"
+                  selectedLayout === "dashboard"
                     ? {
                         background: colors.UISelectionCardBackground,
                         border: `1px solid ${colors.CardActiveBorder}`,
@@ -161,14 +161,14 @@ const SignupStep3: FC = () => {
                   <div
                     className={`w-10 h-10 rounded-lg flex items-center justify-center`}
                     style={
-                      selectedLayout === "grid"
+                      selectedLayout === "dashboard"
                         ? { background: colors.UISelectionCardBackground }
                         : { background: colors.BackgroundSecondary }
                     }
                   >
                     <LayoutGridIcon size={20} color={colors.IconColor} />
                   </div>
-                  {selectedLayout === "grid" && (
+                  {selectedLayout === "dashboard" && (
                     <div
                       className="w-5 h-5 rounded-full flex items-center justify-center"
                       style={{
@@ -185,24 +185,23 @@ const SignupStep3: FC = () => {
                     className="font-headline font-bold text-sm mb-1"
                     style={{ color: colors.TextHeading }}
                   >
-                    Grid
+                    Dashboard Layout
                   </h3>
                   <p
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
                   >
-                    Modular bento-style layout optimized for data-rich
-                    dashboards and visual assets.
+                    Modular bento-style layout optimized for data telemetry, analytics, and interactive metrics dashboards.
                   </p>
                 </div>
               </div>
 
-              {/* Traditional List layout */}
+              {/* Catalog Layout */}
               <div
-                onClick={() => setSelectedLayout("list")}
+                onClick={() => setSelectedLayout("catalog")}
                 className={`${styles.uiselectioncard} rounded-2xl cursor-pointer border-2 transition-all text-left flex flex-col justify-between`}
                 style={
-                  selectedLayout === "list"
+                  selectedLayout === "catalog"
                     ? {
                         background: colors.UISelectionCardBackground,
                         border: `1px solid ${colors.CardActiveBorder}`,
@@ -217,73 +216,20 @@ const SignupStep3: FC = () => {
                   <div
                     className={`w-10 h-10 rounded-lg flex items-center justify-center`}
                     style={
-                      selectedLayout === "list"
-                        ? { background: colors.UISelectionCardBackground }
-                        : { background: colors.BackgroundSecondary }
-                    }
-                  >
-                    <TerminalIcon size={20} color={colors.IconColor} />
-                  </div>
-                  {selectedLayout === "list" && (
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{
-                        background: colors.BackgroundGradientTwo,
-                        color: colors.TextHeading,
-                      }}
-                    >
-                      <CheckIcon size={12} color={colors.IconColor} />
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <h3
-                    className="font-headline font-bold text-sm mb-1"
-                    style={{ color: colors.TextHeading }}
-                  >
-                    List
-                  </h3>
-                  <p
-                    className="text-xs leading-relaxed"
-                    style={{ color: colors.TextBody }}
-                  >
-                    Traditional linear flow for rapid scanning of documentation
-                    and sequential logs.
-                  </p>
-                </div>
-              </div>
-
-              {/* Expandable Cards layout */}
-              <div
-                onClick={() => setSelectedLayout("cards")}
-                className={`${styles.uiselectioncard} rounded-2xl cursor-pointer border-2 transition-all text-left flex flex-col justify-between`}
-                style={
-                  selectedLayout === "cards"
-                    ? {
-                        background: colors.UISelectionCardBackground,
-                        border: `1px solid ${colors.CardActiveBorder}`,
-                      }
-                    : {
-                        background: colors.Background,
-                        border: `1px solid ${colors.CardBorder}`,
-                      }
-                }
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center`}
-                    style={
-                      selectedLayout === "cards"
+                      selectedLayout === "catalog"
                         ? { background: colors.UISelectionCardBackground }
                         : { background: colors.BackgroundSecondary }
                     }
                   >
                     <SlidersIcon size={20} color={colors.IconColor} />
                   </div>
-                  {selectedLayout === "cards" && (
+                  {selectedLayout === "catalog" && (
                     <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center text-white"
-                      style={{ background: colors.BackgroundGradientTwo }}
+                      className="w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{
+                        background: colors.BackgroundGradientTwo,
+                        color: colors.TextHeading,
+                      }}
                     >
                       <CheckIcon size={12} color={colors.IconColor} />
                     </div>
@@ -294,19 +240,18 @@ const SignupStep3: FC = () => {
                     className="font-headline font-bold text-sm mb-1"
                     style={{ color: colors.TextHeading }}
                   >
-                    Cards
+                    Catalog Layout
                   </h3>
                   <p
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
                   >
-                    Expanded view highlighting metadata and high-level summaries
-                    for each entry.
+                    Grid layout optimized for item cards, product listings, travel bookings, and category catalogs.
                   </p>
                 </div>
               </div>
 
-              {/* Condensed Spreadsheet Table layout */}
+              {/* Table Layout */}
               <div
                 onClick={() => setSelectedLayout("table")}
                 className={`${styles.uiselectioncard} rounded-2xl cursor-pointer border-2 transition-all text-left flex flex-col justify-between`}
@@ -347,14 +292,65 @@ const SignupStep3: FC = () => {
                     className="font-headline font-bold text-sm mb-1"
                     style={{ color: colors.TextHeading }}
                   >
-                    Table
+                    Table Layout
                   </h3>
                   <p
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
                   >
-                    Condensed spreadsheet-style view for power users handling
-                    massive data sets.
+                    Condensed spreadsheet-style view for power users handling massive data sets, transaction ledger list.
+                  </p>
+                </div>
+              </div>
+
+              {/* Timeline Layout */}
+              <div
+                onClick={() => setSelectedLayout("timeline")}
+                className={`${styles.uiselectioncard} rounded-2xl cursor-pointer border-2 transition-all text-left flex flex-col justify-between`}
+                style={
+                  selectedLayout === "timeline"
+                    ? {
+                        background: colors.UISelectionCardBackground,
+                        border: `1px solid ${colors.CardActiveBorder}`,
+                      }
+                    : {
+                        background: colors.Background,
+                        border: `1px solid ${colors.CardBorder}`,
+                      }
+                }
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center`}
+                    style={
+                      selectedLayout === "timeline"
+                        ? { background: colors.UISelectionCardBackground }
+                        : { background: colors.BackgroundSecondary }
+                    }
+                  >
+                    <TerminalIcon size={20} color={colors.IconColor} />
+                  </div>
+                  {selectedLayout === "timeline" && (
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-white"
+                      style={{ background: colors.BackgroundGradientTwo }}
+                    >
+                      <CheckIcon size={12} color={colors.IconColor} />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h3
+                    className="font-headline font-bold text-sm mb-1"
+                    style={{ color: colors.TextHeading }}
+                  >
+                    Timeline Layout
+                  </h3>
+                  <p
+                    className="text-xs leading-relaxed"
+                    style={{ color: colors.TextBody }}
+                  >
+                    Milestone progress tracker optimized for package shipping routes, logistics, and process stages.
                   </p>
                 </div>
               </div>
@@ -386,9 +382,9 @@ const SignupStep3: FC = () => {
 
               <AnimatePresence mode="wait">
                 <div className="mt-4 space-y-6">
-                  {selectedLayout === "grid" && (
+                  {selectedLayout === "dashboard" && (
                     <motion.div
-                      key="pref-grid"
+                      key="pref-dashboard"
                       initial={{ opacity: 0, scale: 0.95, y: 15 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -15 }}
@@ -467,64 +463,9 @@ const SignupStep3: FC = () => {
                     </motion.div>
                   )}
 
-                  {selectedLayout === "list" && (
+                  {selectedLayout === "catalog" && (
                     <motion.div
-                      key="pref-list"
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -15 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 120,
-                        damping: 14,
-                      }}
-                      className="space-y-3"
-                    >
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <motion.div
-                          key={i}
-                          initial={{ opacity: 0, x: -15 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.05, type: "spring" }}
-                          whileHover={{
-                            x: 6,
-                            backgroundColor: "rgba(99, 102, 241, 0.06)",
-                          }}
-                          className="mb-3 p-3 rounded-xl flex justify-between items-center"
-                          style={{ background: colors.BackgroundSecondary }}
-                        >
-                          <div className="flex items-center gap-3">
-                            <motion.span
-                              animate={{ scale: [1, 1.4, 1] }}
-                              transition={{
-                                repeat: Infinity,
-                                duration: 2,
-                                delay: i * 0.25,
-                              }}
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{
-                                background: colors.BackgroundGradientOne,
-                              }}
-                            />
-                            <div
-                              className="h-2 w-28 rounded"
-                              style={{
-                                background: colors.UISelectionCardBackground,
-                              }}
-                            ></div>
-                          </div>
-                          <div
-                            className="h-2 w-10 rounded"
-                            style={{ background: colors.OverlayShadow }}
-                          ></div>
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  )}
-
-                  {selectedLayout === "cards" && (
-                    <motion.div
-                      key="pref-cards"
+                      key="pref-catalog"
                       initial={{ opacity: 0, scale: 0.98, y: 15 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.98, y: -15 }}
@@ -624,25 +565,80 @@ const SignupStep3: FC = () => {
                       </div>
                       {[1, 2, 3, 4].map((i) => (
                         <motion.div
+                           key={i}
+                           initial={{ opacity: 0, y: 6 }}
+                           animate={{ opacity: 1, y: 0 }}
+                           transition={{ delay: i * 0.04 }}
+                           className="flex justify-between items-center text-xs pb-1 border-b border-white/5"
+                         >
+                           <div
+                             className="h-1.5 w-16 rounded my-2"
+                             style={{ background: colors.OverlayShadow }}
+                           ></div>
+                           <div
+                             className="h-1.5 w-16 rounded"
+                             style={{ background: colors.OverlayShadow }}
+                           ></div>
+                           <div
+                             className="h-1.5 w-26 rounded"
+                             style={{
+                               background: colors.UISelectionCardBackground,
+                             }}
+                           ></div>
+                         </motion.div>
+                      ))}
+                    </motion.div>
+                  )}
+
+                  {selectedLayout === "timeline" && (
+                    <motion.div
+                      key="pref-timeline"
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -15 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 120,
+                        damping: 14,
+                      }}
+                      className="space-y-3"
+                    >
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <motion.div
                           key={i}
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.04 }}
-                          className="flex justify-between items-center text-xs pb-1 border-b border-white/5"
+                          initial={{ opacity: 0, x: -15 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.05, type: "spring" }}
+                          whileHover={{
+                            x: 6,
+                            backgroundColor: "rgba(99, 102, 241, 0.06)",
+                          }}
+                          className="mb-3 p-3 rounded-xl flex justify-between items-center"
+                          style={{ background: colors.BackgroundSecondary }}
                         >
+                          <div className="flex items-center gap-3">
+                            <motion.span
+                              animate={{ scale: [1, 1.4, 1] }}
+                              transition={{
+                                repeat: Infinity,
+                                duration: 2,
+                                delay: i * 0.25,
+                              }}
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{
+                                background: colors.BackgroundGradientOne,
+                              }}
+                            />
+                            <div
+                              className="h-2 w-28 rounded"
+                              style={{
+                                background: colors.UISelectionCardBackground,
+                              }}
+                            ></div>
+                          </div>
                           <div
-                            className="h-1.5 w-16 rounded my-2"
+                            className="h-2 w-10 rounded"
                             style={{ background: colors.OverlayShadow }}
-                          ></div>
-                          <div
-                            className="h-1.5 w-16 rounded"
-                            style={{ background: colors.OverlayShadow }}
-                          ></div>
-                          <div
-                            className="h-1.5 w-26 rounded"
-                            style={{
-                              background: colors.UISelectionCardBackground,
-                            }}
                           ></div>
                         </motion.div>
                       ))}

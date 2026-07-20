@@ -20,12 +20,12 @@ export interface AuthStore {
   isAuthenticated: boolean;
   authReady: boolean;
   apisList: ApiConnection[];
-  selectedLayout: "grid" | "list" | "cards" | "table";
+  selectedLayout: "dashboard" | "catalog" | "table" | "timeline" | "grid" | "list" | "cards";
   setAuth: (user: any) => void;
   setAuthReady: (ready: boolean) => void;
   setApisList: (
     apis: ApiConnection[] | ((prev: ApiConnection[]) => ApiConnection[]),
   ) => void;
-  setSelectedLayout: (layout: "grid" | "list" | "cards" | "table") => void;
+  setSelectedLayout: (layout: "dashboard" | "catalog" | "table" | "timeline" | "grid" | "list" | "cards") => void;
   clearAuth: () => void;
 }
