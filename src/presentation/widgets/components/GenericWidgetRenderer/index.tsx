@@ -184,7 +184,36 @@ export const GenericWidgetRenderer: React.FC = () => {
 
   // Route rendering to template screens
   switch (activeLayout) {
-    case "catalog":
+    case "catalog": {
+      const isTravel = payloadIndustry.includes("travel") || payloadIndustry.includes("booking");
+      const isFood = payloadIndustry.includes("food") || payloadIndustry.includes("restaurant") || payloadIndustry.includes("dine");
+
+      if (isTravel) {
+        return (
+          <TravelScreen
+            title={title}
+            subtitle={subtitle}
+            blocks={blocks}
+            isPreview={isPreview}
+            previewIndustry={previewLayout}
+            setPreviewIndustry={setPreviewLayout}
+            renderPreviewControls={renderPreviewControls}
+          />
+        );
+      }
+      if (isFood) {
+        return (
+          <FoodScreen
+            title={title}
+            subtitle={subtitle}
+            blocks={blocks}
+            isPreview={isPreview}
+            previewIndustry={previewLayout}
+            setPreviewIndustry={setPreviewLayout}
+            renderPreviewControls={renderPreviewControls}
+          />
+        );
+      }
       return (
         <EcommerceScreen
           title={title}
@@ -196,7 +225,22 @@ export const GenericWidgetRenderer: React.FC = () => {
           renderPreviewControls={renderPreviewControls}
         />
       );
-    case "table":
+    }
+    case "table": {
+      const isFintech = payloadIndustry.includes("fintech") || payloadIndustry.includes("finance") || payloadIndustry.includes("bank");
+      if (isFintech) {
+        return (
+          <FintechScreen
+            title={title}
+            subtitle={subtitle}
+            blocks={blocks}
+            isPreview={isPreview}
+            previewIndustry={previewLayout}
+            setPreviewIndustry={setPreviewLayout}
+            renderPreviewControls={renderPreviewControls}
+          />
+        );
+      }
       return (
         <SaasScreen
           title={title}
@@ -208,7 +252,22 @@ export const GenericWidgetRenderer: React.FC = () => {
           renderPreviewControls={renderPreviewControls}
         />
       );
-    case "timeline":
+    }
+    case "timeline": {
+      const isTransport = payloadIndustry.includes("transport") || payloadIndustry.includes("mobility") || payloadIndustry.includes("ride");
+      if (isTransport) {
+        return (
+          <TransportScreen
+            title={title}
+            subtitle={subtitle}
+            blocks={blocks}
+            isPreview={isPreview}
+            previewIndustry={previewLayout}
+            setPreviewIndustry={setPreviewLayout}
+            renderPreviewControls={renderPreviewControls}
+          />
+        );
+      }
       return (
         <LogisticsScreen
           title={title}
@@ -220,8 +279,38 @@ export const GenericWidgetRenderer: React.FC = () => {
           renderPreviewControls={renderPreviewControls}
         />
       );
+    }
     case "dashboard":
-    default:
+    default: {
+      const isHealth = payloadIndustry.includes("health") || payloadIndustry.includes("med") || payloadIndustry.includes("clinic");
+      const isAi = payloadIndustry.includes("ai") || payloadIndustry.includes("agent") || payloadIndustry.includes("auto");
+      
+      if (isHealth) {
+        return (
+          <HealthScreen
+            title={title}
+            subtitle={subtitle}
+            blocks={blocks}
+            isPreview={isPreview}
+            previewIndustry={previewLayout}
+            setPreviewIndustry={setPreviewLayout}
+            renderPreviewControls={renderPreviewControls}
+          />
+        );
+      }
+      if (isAi) {
+        return (
+          <AiScreen
+            title={title}
+            subtitle={subtitle}
+            blocks={blocks}
+            isPreview={isPreview}
+            previewIndustry={previewLayout}
+            setPreviewIndustry={setPreviewLayout}
+            renderPreviewControls={renderPreviewControls}
+          />
+        );
+      }
       return (
         <ForecastingScreen
           title={title}
@@ -233,6 +322,7 @@ export const GenericWidgetRenderer: React.FC = () => {
           renderPreviewControls={renderPreviewControls}
         />
       );
+    }
   }
 };
 
