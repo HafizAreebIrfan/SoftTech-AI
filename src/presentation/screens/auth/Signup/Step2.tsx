@@ -700,47 +700,90 @@ const SignupStep2: FC = () => {
                         Query Parameters (JSON string){" "}
                         <span style={{ color: colors.WarningText }}>*</span>
                       </label>
-                      <label
-                        className="px-3 py-1.5 rounded-xl text-[10px] font-headline font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1.5 border hover:opacity-80"
-                        style={{
-                          background: colors.Background,
-                          borderColor: colors.CardBorder,
-                          color: colors.TextHeading,
-                        }}
-                      >
-                        <span>Upload JSON</span>
-                        <input
-                          type="file"
-                          accept=".json"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const raw = api.apiQueryParams || "";
+                            if (!raw.trim()) {
+                              showToast("Query parameters field is empty.", "error");
+                              return;
+                            }
+                            try {
+                              const parsed = JSON.parse(raw);
+                              updateApiField(api.id, "apiQueryParams", JSON.stringify(parsed, null, 2));
+                              showToast("Optimized JSON successfully!", "success");
+                            } catch (e) {
                               try {
-                                const text = event.target?.result as string;
-                                const parsed = JSON.parse(text);
-                                updateApiField(
-                                  api.id,
-                                  "apiQueryParams",
-                                  JSON.stringify(parsed, null, 2),
-                                );
-                                showToast(
-                                  "JSON uploaded and validated successfully!",
-                                  "success",
-                                );
+                                let fixed = raw.replace(/'/g, '"');
+                                fixed = fixed.replace(/([{,]\s*)([a-zA-Z0-9_$]+)\s*:/g, '$1"$2":');
+                                fixed = fixed.replace(/,\s*([}\]])/g, '$1');
+
+                                const parsed = JSON.parse(fixed);
+                                updateApiField(api.id, "apiQueryParams", JSON.stringify(parsed, null, 2));
+                                showToast("JSON optimized and formatted successfully!", "success");
                               } catch (err) {
-                                showToast(
-                                  "Invalid JSON file content. Please check the format.",
-                                  "error",
-                                );
+                                try {
+                                  const parsed = new Function(`return (${raw});`)();
+                                  updateApiField(api.id, "apiQueryParams", JSON.stringify(parsed, null, 2));
+                                  showToast("Fixed and formatted Object/JSON successfully!", "success");
+                                } catch (err2) {
+                                  showToast("Could not auto-repair JSON. Please check syntax manually.", "error");
+                                }
                               }
-                            };
-                            reader.readAsText(file);
+                            }
                           }}
-                        />
-                      </label>
+                          className="px-3 py-1.5 rounded-xl text-[10px] font-headline font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1.5 border hover:opacity-85"
+                          style={{
+                            background: colors.Background,
+                            borderColor: colors.CardBorder,
+                            color: colors.TextHeading,
+                          }}
+                        >
+                          Optimize JSON
+                        </button>
+                        <label
+                          className="px-3 py-1.5 rounded-xl text-[10px] font-headline font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer flex items-center gap-1.5 border hover:opacity-80"
+                          style={{
+                            background: colors.Background,
+                            borderColor: colors.CardBorder,
+                            color: colors.TextHeading,
+                          }}
+                        >
+                          <span>Upload JSON</span>
+                          <input
+                            type="file"
+                            accept=".json"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                try {
+                                  const text = event.target?.result as string;
+                                  const parsed = JSON.parse(text);
+                                  updateApiField(
+                                    api.id,
+                                    "apiQueryParams",
+                                    JSON.stringify(parsed, null, 2),
+                                  );
+                                  showToast(
+                                    "JSON uploaded and validated successfully!",
+                                    "success",
+                                  );
+                                } catch (err) {
+                                  showToast(
+                                    "Invalid JSON file content. Please check the format.",
+                                    "error",
+                                  );
+                                }
+                              };
+                              reader.readAsText(file);
+                            }}
+                          />
+                        </label>
+                      </div>
                     </div>
                     <div className="relative">
                       <span className="absolute left-4 top-4.5">

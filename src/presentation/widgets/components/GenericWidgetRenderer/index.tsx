@@ -53,20 +53,55 @@ export const GenericWidgetRenderer: React.FC = () => {
   const payloadTitle =
     toolResult?.structuredContent?.title?.toLowerCase() || "";
 
-  // Heuristic: If it is a data-oriented view like customers/orders/invoices/history/packages,
+  // Check if it is an admin or management related view/action (sales, total, list, logs, all, etc.)
+  const isAdminView =
+    payloadTitle.includes("admin") ||
+    payloadTitle.includes("manage") ||
+    payloadTitle.includes("dashboard") ||
+    payloadTitle.includes("analytics") ||
+    payloadTitle.includes("metric") ||
+    payloadTitle.includes("statistic") ||
+    payloadTitle.includes("report") ||
+    payloadTitle.includes("sales") ||
+    payloadTitle.includes("total") ||
+    payloadTitle.includes("all orders") ||
+    payloadTitle.includes("all customers") ||
+    payloadTitle.includes("ledger") ||
+    payloadTitle.includes("transaction") ||
+    payloadTitle.includes("history") ||
+    payloadTitle.includes("log") ||
+    payloadTitle.includes("invoice");
+
+  // Check if it is a user-centric action
+  const isUserAction =
+    payloadTitle.includes("book") ||
+    payloadTitle.includes("order placement") ||
+    payloadTitle.includes("checkout") ||
+    payloadTitle.includes("reserve") ||
+    payloadTitle.includes("buy") ||
+    payloadTitle.includes("purchase") ||
+    payloadTitle.includes("create") ||
+    payloadTitle.includes("submit");
+
+  // Heuristic: If it is a generic data-oriented view like lists, logs, or histories,
   // we override layout to 'general' to prevent rendering catalog cards with 'Book Now' buttons.
   const isDataView =
-    payloadTitle.includes("customer") ||
+    (payloadTitle.includes("customer") ||
     payloadTitle.includes("order") ||
     payloadTitle.includes("invoice") ||
     payloadTitle.includes("user") ||
     payloadTitle.includes("history") ||
     payloadTitle.includes("transaction") ||
     payloadTitle.includes("ledger") ||
-    payloadTitle.includes("log");
+    payloadTitle.includes("log")) && !isUserAction;
 
   let defaultPreviewLayout = "dashboard";
-  if (!isPreview && isDataView) {
+  if (!isPreview && isAdminView) {
+    // Admin views prioritize dashboard or general table
+    defaultPreviewLayout = payloadTitle.includes("list") || payloadTitle.includes("all") ? "table" : "dashboard";
+  } else if (!isPreview && isUserAction) {
+    defaultPreviewLayout = "catalog";
+  } else if (!isPreview && isDataView) {
     defaultPreviewLayout = "general";
   } else if (payloadLayout) {
     if (payloadLayout.includes("dashboard") || payloadLayout.includes("metrics")) {
