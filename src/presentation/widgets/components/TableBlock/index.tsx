@@ -8,6 +8,9 @@ interface TableBlockProps {
   tableHeaders?: string[];
   tableRows: WidgetTableRow[];
   title?: string;
+  totalItems?: number;
+  totalPages?: number;
+  currentPage?: number;
 }
 
 const toneClasses: Record<WidgetTone, string> = {
@@ -21,7 +24,14 @@ const isTableCell = (val: unknown): val is WidgetTableCell => {
   return val !== null && typeof val === "object" && "value" in val;
 };
 
-export const TableBlock: React.FC<TableBlockProps> = ({ tableHeaders, tableRows, title }) => {
+export const TableBlock: React.FC<TableBlockProps> = ({
+  tableHeaders,
+  tableRows,
+  title,
+  totalItems: propTotalItems,
+  totalPages: propTotalPages,
+  currentPage: propCurrentPage,
+}) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortCol, setSortCol] = useState<number | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -89,12 +99,27 @@ export const TableBlock: React.FC<TableBlockProps> = ({ tableHeaders, tableRows,
       numericColumns.forEach((stats) => {
         const lowerName = stats.name.toLowerCase();
         const isPrice =
-          lowerName.includes("price") ||
-          lowerName.includes("amount") ||
-          lowerName.includes("total") ||
-          lowerName.includes("cost") ||
-          lowerName.includes("fee") ||
-          lowerName.includes("sales");
+          (lowerName.includes("price") ||
+            lowerName.includes("amount") ||
+            lowerName.includes("cost") ||
+            lowerName.includes("fee") ||
+            lowerName.includes("sales") ||
+            lowerName.includes("revenue") ||
+            lowerName.includes("income") ||
+            lowerName.includes("spend") ||
+            lowerName.includes("spent") ||
+            lowerName.includes("total")) &&
+          !lowerName.includes("count") &&
+          !lowerName.includes("orders") &&
+          !lowerName.includes("pages") &&
+          !lowerName.includes("customers") &&
+          !lowerName.includes("qty") &&
+          !lowerName.includes("quantity") &&
+          !lowerName.includes("items") &&
+          !lowerName.includes("users") &&
+          !lowerName.includes("page") &&
+          !lowerName.includes("number") &&
+          !lowerName.includes("no");
         
         metrics.push({
           label: stats.name.toLowerCase().startsWith("total") ? stats.name : `Total ${stats.name}`,
@@ -149,8 +174,10 @@ export const TableBlock: React.FC<TableBlockProps> = ({ tableHeaders, tableRows,
   }, [searchQuery, sortCol, sortDir]);
 
   // 3. Pagination
-  const totalItems = sortedRows.length;
-  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const totalItems = propTotalItems !== undefined ? propTotalItems : sortedRows.length;
+  const localTotalPages = Math.ceil(sortedRows.length / pageSize) || 1;
+  const totalPages = propTotalPages !== undefined ? propTotalPages : localTotalPages;
+
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return sortedRows.slice(start, start + pageSize);
@@ -258,7 +285,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({ tableHeaders, tableRows,
       </div>
 
       {/* Pagination controls footer */}
-      {totalPages > 1 || tableRows.length > 5 ? (
+      {totalPages > 1 || tableRows.length > 5 || (propTotalItems !== undefined && propTotalItems > tableRows.length) ? (
         <div className={styles.pagination}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <span>Show</span>
@@ -280,8 +307,8 @@ export const TableBlock: React.FC<TableBlockProps> = ({ tableHeaders, tableRows,
 
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <span>
-              Showing {Math.min(totalItems, (currentPage - 1) * pageSize + 1)}-
-              {Math.min(totalItems, currentPage * pageSize)} of {totalItems}
+              Showing {((propCurrentPage !== undefined ? (propCurrentPage - 1) * tableRows.length : 0) + Math.min(sortedRows.length, (currentPage - 1) * pageSize + 1))}-
+              {((propCurrentPage !== undefined ? (propCurrentPage - 1) * tableRows.length : 0) + Math.min(sortedRows.length, currentPage * pageSize))} of {totalItems}
             </span>
             <div className={styles.paginationButtons}>
               <button
@@ -293,8 +320,8 @@ export const TableBlock: React.FC<TableBlockProps> = ({ tableHeaders, tableRows,
               </button>
               <button
                 className={styles.pageBtn}
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(Math.min(propTotalPages !== undefined ? localTotalPages : totalPages, currentPage + 1))}
+                disabled={currentPage === (propTotalPages !== undefined ? localTotalPages : totalPages)}
               >
                 Next
               </button>

@@ -144,6 +144,9 @@ export const GeneralScreen: React.FC<GeneralScreenProps> = ({
                       tableHeaders={block.tableHeaders}
                       tableRows={block.tableRows!}
                       title={block.title}
+                      totalItems={(block as any).totalItems}
+                      totalPages={(block as any).totalPages}
+                      currentPage={(block as any).currentPage}
                     />
                   );
                 case "form":
@@ -549,6 +552,9 @@ export const GeneralScreen: React.FC<GeneralScreenProps> = ({
                     tableHeaders={block.tableHeaders}
                     tableRows={block.tableRows!}
                     title={block.title}
+                    totalItems={(block as any).totalItems}
+                    totalPages={(block as any).totalPages}
+                    currentPage={(block as any).currentPage}
                   />
                 );
               case "form":
