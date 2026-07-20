@@ -131,23 +131,39 @@ const buildApiUrl = (api: IApi, input: any) => {
 
   // 2. Overwrite existing search parameters if passed dynamically
   if (queryOrLocation) {
-    if (url.searchParams.has("q")) url.searchParams.set("q", String(queryOrLocation));
-    if (url.searchParams.has("city")) url.searchParams.set("city", String(queryOrLocation));
-    if (url.searchParams.has("location")) url.searchParams.set("location", String(queryOrLocation));
-    if (url.searchParams.has("query")) url.searchParams.set("query", String(queryOrLocation));
+    if (url.searchParams.has("q"))
+      url.searchParams.set("q", String(queryOrLocation));
+    if (url.searchParams.has("city"))
+      url.searchParams.set("city", String(queryOrLocation));
+    if (url.searchParams.has("location"))
+      url.searchParams.set("location", String(queryOrLocation));
+    if (url.searchParams.has("query"))
+      url.searchParams.set("query", String(queryOrLocation));
   }
 
   // 3. Attach any configured parameters if GET method
   if ((api.method || "GET").toUpperCase() === "GET") {
-    const configuredParams = api.params ?? [];
-
-    configuredParams.forEach((key) => {
+    const cleanKeys: string[] = [];
+    (api.params ?? []).forEach((rawKey) => {
+      if (typeof rawKey !== "string" || !rawKey.trim()) return;
+      const str = rawKey.trim();
+      if (str.startsWith("{") || str.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(str);
+          if (parsed && typeof parsed === "object") {
+            Object.keys(parsed).forEach((k) => cleanKeys.push(k));
+          }
+        } catch {}
+      } else {
+        cleanKeys.push(str);
+      }
+    });
+    cleanKeys.forEach((key) => {
       const value = allParams[key];
       if (value !== undefined && value !== null) {
         url.searchParams.set(key, String(value));
       }
     });
-
     // Fallback search param if no location query key was set on url
     if (
       queryOrLocation &&
