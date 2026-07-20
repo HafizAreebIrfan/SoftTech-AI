@@ -126,13 +126,21 @@ export const TravelScreen: React.FC<TravelScreenProps> = ({
                 )}
               </div>
 
-              <button
-                disabled={isBooked}
-                onClick={() => handleBook(flight.title)}
-                className={isBooked ? styles.actionBtnBooked : styles.actionBtn}
-              >
-                {isBooked ? "Booked!" : formBlock ? "Select" : "Book Now"}
-              </button>
+              {(!title?.toLowerCase().includes("customer") &&
+                !title?.toLowerCase().includes("order") &&
+                !title?.toLowerCase().includes("invoice") &&
+                !title?.toLowerCase().includes("user") &&
+                !title?.toLowerCase().includes("history") &&
+                !title?.toLowerCase().includes("ledger") &&
+                !title?.toLowerCase().includes("log")) && (
+                <button
+                  disabled={isBooked}
+                  onClick={() => handleBook(flight.title)}
+                  className={isBooked ? styles.actionBtnBooked : styles.actionBtn}
+                >
+                  {isBooked ? "Booked!" : formBlock ? "Select" : "Book Now"}
+                </button>
+              )}
             </div>
           );
         })}

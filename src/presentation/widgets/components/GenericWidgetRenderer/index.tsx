@@ -41,14 +41,34 @@ export const GenericWidgetRenderer: React.FC = () => {
     );
   }
 
+  // Is this running in default preview fallback?
+  const isPreview =
+    !toolResult || (toolResult as any)._meta?.isPreview === true;
+
   // Parse layout preference or industry from toolResult
   const payloadLayout =
     toolResult?.structuredContent?.layout?.toLowerCase() || "";
   const payloadIndustry =
     toolResult?.structuredContent?.industry?.toLowerCase() || "";
+  const payloadTitle =
+    toolResult?.structuredContent?.title?.toLowerCase() || "";
+
+  // Heuristic: If it is a data-oriented view like customers/orders/invoices/history/packages,
+  // we override layout to 'general' to prevent rendering catalog cards with 'Book Now' buttons.
+  const isDataView =
+    payloadTitle.includes("customer") ||
+    payloadTitle.includes("order") ||
+    payloadTitle.includes("invoice") ||
+    payloadTitle.includes("user") ||
+    payloadTitle.includes("history") ||
+    payloadTitle.includes("transaction") ||
+    payloadTitle.includes("ledger") ||
+    payloadTitle.includes("log");
 
   let defaultPreviewLayout = "dashboard";
-  if (payloadLayout) {
+  if (!isPreview && isDataView) {
+    defaultPreviewLayout = "general";
+  } else if (payloadLayout) {
     if (payloadLayout.includes("dashboard") || payloadLayout.includes("metrics")) {
       defaultPreviewLayout = "dashboard";
     } else if (
@@ -102,10 +122,6 @@ export const GenericWidgetRenderer: React.FC = () => {
       setPreviewLayout(defaultPreviewLayout);
     }
   }, [defaultPreviewLayout]);
-
-  // Is this running in default preview fallback?
-  const isPreview =
-    !toolResult || (toolResult as any)._meta?.isPreview === true;
 
   // Decide content to show
   const activeContent = isPreview
@@ -270,6 +286,19 @@ export const GenericWidgetRenderer: React.FC = () => {
       }
       return (
         <LogisticsScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewLayout}
+          setPreviewIndustry={setPreviewLayout}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    }
+    case "general": {
+      return (
+        <GeneralScreen
           title={title}
           subtitle={subtitle}
           blocks={blocks}

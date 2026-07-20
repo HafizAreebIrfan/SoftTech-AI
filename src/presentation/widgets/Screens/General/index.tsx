@@ -97,6 +97,79 @@ export const GeneralScreen: React.FC<GeneralScreenProps> = ({
     }
   });
 
+  if (!isPreview) {
+    return (
+      <div className={styles.container}>
+        {/* Main Header */}
+        <header className={styles.header}>
+          <div className={styles.titleSec}>
+            <h2 className={styles.title}>{title}</h2>
+            <p className={styles.subtitle}>{subtitle || "Live API response"}</p>
+          </div>
+        </header>
+
+        {/* Render generic blocks */}
+        {validBlocks.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+            {validBlocks.map((block, index) => {
+              switch (block.type) {
+                case "metrics":
+                  return (
+                    <MetricBlock
+                      key={index}
+                      metrics={block.metrics!}
+                      title={block.title}
+                    />
+                  );
+                case "list":
+                  return (
+                    <ListBlock
+                      key={index}
+                      listItems={block.listItems!}
+                      title={block.title}
+                    />
+                  );
+                case "keyValue":
+                  return (
+                    <KeyValueBlock
+                      key={index}
+                      keyValueItems={block.keyValueItems!}
+                      title={block.title}
+                    />
+                  );
+                case "table":
+                  return (
+                    <TableBlock
+                      key={index}
+                      tableHeaders={block.tableHeaders}
+                      tableRows={block.tableRows!}
+                      title={block.title}
+                    />
+                  );
+                case "form":
+                  return (
+                    <FormBlock
+                      key={index}
+                      title={block.title}
+                      formFields={block.formFields!}
+                      submitLabel={block.submitLabel}
+                      actionUrl={block.actionUrl}
+                    />
+                  );
+                default:
+                  return null;
+              }
+            })}
+          </div>
+        ) : (
+          <div className={styles.panel} style={{ textAlign: "center", padding: "3rem" }}>
+            <p style={{ color: "var(--app-text-body)" }}>No data blocks returned from the API.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       {/* Control panel header in preview mode */}
