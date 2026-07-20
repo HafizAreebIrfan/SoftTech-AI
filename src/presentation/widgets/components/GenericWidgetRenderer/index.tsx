@@ -1,16 +1,26 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useMcpToolResult } from "../../../../infrastructure/store/mcpWidgetStore";
-import { MetricBlock } from "../MetricBlock";
-import { ListBlock } from "../ListBlock";
-import { KeyValueBlock } from "../KeyValueBlock";
-import { TableBlock } from "../TableBlock";
 import { WidgetBlock } from "../../../../domain/entities/GenericWidget";
 import styles from "../../../../styles/genericwidgetrenderer.module.css";
+import { MOCK_INDUSTRY_DATA } from "../../../../hooks/mockData/index";
 import { useThemeStore } from "../../../../hooks";
 
+// Import Modular Industry Screens
+import { EcommerceScreen } from "../../Screens/Ecommerce";
+import { FintechScreen } from "../../Screens/Fintech";
+import { ForecastingScreen } from "../../Screens/Forecasting";
+import { LogisticsScreen } from "../../Screens/Logistics";
+import { SaasScreen } from "../../Screens/Saas";
+import { AiScreen } from "../../Screens/Ai";
+import { HealthScreen } from "../../Screens/Health";
+import { FoodScreen } from "../../Screens/Food";
+import { TransportScreen } from "../../Screens/Transport";
+import { TravelScreen } from "../../Screens/Travel";
+import { GeneralScreen } from "../../Screens/General";
+
 export const GenericWidgetRenderer: React.FC = () => {
+  const { colors } = useThemeStore();
   let toolResult;
-  const { colors, isDark } = useThemeStore();
 
   try {
     toolResult = useMcpToolResult();
@@ -20,188 +30,301 @@ export const GenericWidgetRenderer: React.FC = () => {
     return (
       <div
         style={{
-          color: "white",
-          background: "#222",
+          color: colors.TextHeading,
+          background: colors.Background,
           padding: "20px",
-          fontSize: "20px",
+          fontSize: "24px",
         }}
       >
         Hook crashed
       </div>
     );
   }
-  const debugText =
-    toolResult?.content?.find((entry) => entry.type === "text")?.text ?? null;
 
-  // Validate presence of structured content, title, and blocks array
-  if (
-    !toolResult ||
-    !toolResult.structuredContent ||
-    typeof toolResult.structuredContent !== "object" ||
-    typeof toolResult.structuredContent.title !== "string" ||
-    !Array.isArray(toolResult.structuredContent.blocks)
-  ) {
-    return (
-      <div
-        className={styles.emptyState}
-        style={{
-          background: colors.Background,
-          border: `1px solid ${colors.CardBorder}`,
-        }}
-      >
-        <h3 className={styles.emptyTitle} style={{ color: colors.TextHeading }}>
-          No custom interface loaded
-        </h3>
-        <p className={styles.emptyDesc} style={{ color: colors.TextBody }}>
-          The widget is ready, but no structured MCP interface data is active
-          right now.
-        </p>
-        {debugText && (
-          <pre
-            className={styles.debugText}
-            style={{
-              color: colors.TextBody,
-              background: colors.Background,
-              border: `1px solid ${colors.CardBorder}`,
-            }}
-          >
-            {debugText}
-          </pre>
-        )}
-      </div>
-    );
-  }
+  // Parse industry from toolResult or default to "ecommerce"
+  const payloadIndustry =
+    toolResult?.structuredContent?.industry?.toLowerCase() || "";
+  let defaultPreviewKey = "ecommerce";
+  if (payloadIndustry.includes("commerce")) defaultPreviewKey = "ecommerce";
+  else if (
+    payloadIndustry.includes("saas") ||
+    payloadIndustry.includes("developer")
+  )
+    defaultPreviewKey = "saas";
+  else if (
+    payloadIndustry.includes("fintech") ||
+    payloadIndustry.includes("finance")
+  )
+    defaultPreviewKey = "fintech";
+  else if (
+    payloadIndustry.includes("ai") ||
+    payloadIndustry.includes("automation")
+  )
+    defaultPreviewKey = "ai";
+  else if (payloadIndustry.includes("logistics"))
+    defaultPreviewKey = "logistics";
+  else if (payloadIndustry.includes("health")) defaultPreviewKey = "health";
+  else if (
+    payloadIndustry.includes("food") ||
+    payloadIndustry.includes("hospitality")
+  )
+    defaultPreviewKey = "food";
+  else if (
+    payloadIndustry.includes("transport") ||
+    payloadIndustry.includes("mobility")
+  )
+    defaultPreviewKey = "transport";
+  else if (
+    payloadIndustry.includes("travel") ||
+    payloadIndustry.includes("booking")
+  )
+    defaultPreviewKey = "travel";
+  else if (
+    payloadIndustry.includes("forecasting") ||
+    payloadIndustry.includes("data")
+  )
+    defaultPreviewKey = "forecasting";
+  else if (payloadIndustry.includes("general")) defaultPreviewKey = "general";
 
-  const {
-    title,
-    subtitle,
-    blocks,
-    layout = "dashboard",
-    meta,
-  } = toolResult.structuredContent;
+  const [previewIndustry, setPreviewIndustry] =
+    useState<string>(defaultPreviewKey);
 
-  // Filter out invalid blocks or blocks with no items
-  const validBlocks = blocks.filter((block: WidgetBlock) => {
-    if (!block || typeof block !== "object") return false;
-    switch (block.type) {
-      case "metrics":
-        return Array.isArray(block.metrics) && block.metrics.length > 0;
-      case "list":
-        return Array.isArray(block.listItems) && block.listItems.length > 0;
-      case "keyValue":
-        return (
-          Array.isArray(block.keyValueItems) && block.keyValueItems.length > 0
-        );
-      case "table":
-        return Array.isArray(block.tableRows) && block.tableRows.length > 0;
-      default:
-        return false;
+  // If payloadIndustry changes, sync the state
+  useEffect(() => {
+    if (defaultPreviewKey) {
+      setPreviewIndustry(defaultPreviewKey);
     }
-  });
+  }, [defaultPreviewKey]);
 
-  if (validBlocks.length === 0) {
+  // Is this running in default preview fallback?
+  const isPreview =
+    !toolResult || (toolResult as any)._meta?.isPreview === true;
+
+  // Decide content to show: real API result or simulated interactive industry template
+  const activeContent = isPreview
+    ? MOCK_INDUSTRY_DATA[previewIndustry] || MOCK_INDUSTRY_DATA.ecommerce
+    : toolResult?.structuredContent;
+
+  if (!activeContent) {
     return (
       <div className={styles.emptyState}>
-        <h3 className={styles.emptyTitle}>{title}</h3>
-        {subtitle && <p className={styles.emptyDesc}>{subtitle}</p>}
-        <p className={styles.emptyDesc} style={{ marginTop: "1rem" }}>
-          No valid visualization blocks are configured to render.
-        </p>
+        <h3 className={styles.emptyTitle}>No interface loaded</h3>
       </div>
     );
   }
 
-  // Sort blocks dynamically based on the requested layout:
-  // - "dashboard": metrics blocks first
-  // - "detail": keyValue or list blocks first
-  // - "table": table blocks first
-  const sortedBlocks = [...validBlocks].sort((a, b) => {
-    if (layout === "dashboard") {
-      if (a.type === "metrics" && b.type !== "metrics") return -1;
-      if (b.type === "metrics" && a.type !== "metrics") return 1;
-    } else if (layout === "detail") {
-      const isAFirst = a.type === "keyValue" || a.type === "list";
-      const isBFirst = b.type === "keyValue" || b.type === "list";
-      if (isAFirst && !isBFirst) return -1;
-      if (isBFirst && !isAFirst) return 1;
-    } else if (layout === "table") {
-      if (a.type === "table" && b.type !== "table") return -1;
-      if (b.type === "table" && a.type !== "table") return 1;
-    }
-    return 0;
-  });
+  const { title, subtitle, blocks = [] } = activeContent;
+  const activeIndustryKey = isPreview ? previewIndustry : defaultPreviewKey;
 
-  // Check if this is the default dev/fallback preview result
-  const isPreview = (toolResult as any)._meta?.isPreview === true;
-
-  const formatFetchedTime = (isoString?: string) => {
-    if (!isoString) return "";
-    const date = new Date(isoString);
-    if (isNaN(date.getTime())) return isoString;
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  // Render developer simulate dropdown
+  const renderPreviewControls = (
+    previewInd: string,
+    setPreviewInd: (v: string) => void,
+  ) => {
+    return (
+      <div
+        style={{
+          margin: "0 0 0 0",
+          background: colors.BackgroundSecondary,
+          padding: "1rem",
+          borderRadius: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.5rem",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "14px",
+              fontWeight: "700",
+              color: colors.TextHeading,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+            }}
+          >
+            Simulate Industry Layout Preview
+          </span>
+        </div>
+        <select
+          value={previewInd}
+          onChange={(e) => setPreviewInd(e.target.value)}
+          style={{
+            background: colors.BackgroundSecondary,
+            color: colors.TextBody,
+            border: `1px solid ${colors.CardBorderSecondary}`,
+            borderRadius: "18px",
+            padding: "18px 12px",
+            fontSize: "13px",
+            cursor: "pointer",
+            outline: "none",
+          }}
+        >
+          <option value="ecommerce">E-Commerce (Grid catalog cards)</option>
+          <option value="saas">
+            SaaS / Developer Tools (Log lines & Metrics)
+          </option>
+          <option value="fintech">
+            FinTech (Portfolio table & Change badges)
+          </option>
+          <option value="ai">AI & Automation (Worker nodes)</option>
+          <option value="logistics">Logistics (Stepped parcel tracking)</option>
+          <option value="health">HealthTech (Telehealth consultation & EHR)</option>
+          <option value="food">Food & Hospitality (Kitchen orders list)</option>
+          <option value="transport">Mobility & Transport (Fleet dispatch & rides)</option>
+          <option value="travel">
+            Travel & Booking (Available flight options)
+          </option>
+          <option value="forecasting">
+            Data & Forecasting (Predictive telemetry matrix)
+          </option>
+          <option value="general">General Business (Corporate stats)</option>
+        </select>
+      </div>
+    );
   };
 
-  return (
-    <section className={styles.widgetShell}>
-      {isPreview && (
-        <div className={styles.badgeContainer}>
-          <span className={styles.previewBadge}>Preview Fallback</span>
-        </div>
-      )}
-
-      <header className={styles.header}>
-        <h2 className={styles.title}>{title}</h2>
-        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
-      </header>
-
-      {sortedBlocks.map((block, index) => {
-        switch (block.type) {
-          case "metrics":
-            return (
-              <MetricBlock
-                key={index}
-                metrics={block.metrics!}
-                title={block.title}
-              />
-            );
-          case "list":
-            return (
-              <ListBlock
-                key={index}
-                listItems={block.listItems!}
-                title={block.title}
-              />
-            );
-          case "keyValue":
-            return (
-              <KeyValueBlock
-                key={index}
-                keyValueItems={block.keyValueItems!}
-                title={block.title}
-              />
-            );
-          case "table":
-            return (
-              <TableBlock
-                key={index}
-                tableHeaders={block.tableHeaders}
-                tableRows={block.tableRows!}
-                title={block.title}
-              />
-            );
-          default:
-            return null;
-        }
-      })}
-
-      {meta && (meta.source || meta.lastFetched) && (
-        <footer className={styles.footer}>
-          {meta.source && <span>Source: {meta.source}</span>}
-          {meta.lastFetched && (
-            <span>Last fetched: {formatFetchedTime(meta.lastFetched)}</span>
-          )}
-        </footer>
-      )}
-    </section>
-  );
+  // Route rendering to specific modular components
+  switch (activeIndustryKey) {
+    case "ecommerce":
+      return (
+        <EcommerceScreen
+          title={title}
+          subtitle={subtitle}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "fintech":
+      return (
+        <FintechScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "forecasting":
+      return (
+        <ForecastingScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "logistics":
+      return (
+        <LogisticsScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "saas":
+      return (
+        <SaasScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "ai":
+      return (
+        <AiScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "health":
+    case "healthtech":
+      return (
+        <HealthScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "food":
+      return (
+        <FoodScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "transport":
+      return (
+        <TransportScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "travel":
+      return (
+        <TravelScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+    case "general":
+    default:
+      return (
+        <GeneralScreen
+          title={title}
+          subtitle={subtitle}
+          blocks={blocks}
+          isPreview={isPreview}
+          previewIndustry={previewIndustry}
+          setPreviewIndustry={setPreviewIndustry}
+          renderPreviewControls={renderPreviewControls}
+        />
+      );
+  }
 };
+

@@ -196,6 +196,13 @@ export const useApplyGlobalThemeVars = () => {
       colors.BrandFuchsiaHover,
     );
     root.style.setProperty("--app-border-error", colors.Bordererror);
+    root.style.setProperty(
+      "--app-logout-button-background",
+      colors.LogoutButtonBackground,
+    );
+    root.style.setProperty("--app-glass-bg", colors.GlassBg);
+    root.style.setProperty("--app-glass-border", colors.GlassBorder);
+    root.style.setProperty("--app-glass-border-secondary", colors.GlassBorderSecondary);
 
     root.setAttribute("data-theme", isDark ? "dark" : "light");
   }, [colors, isDark]);

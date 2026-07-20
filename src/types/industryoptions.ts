@@ -5,7 +5,7 @@ export const IndustryOptions = [
   },
   {
     value: "saas",
-    label: "SaaS / Developer Tools",
+    label: "SaaS",
   },
   {
     value: "fintech",
@@ -38,5 +38,13 @@ export const IndustryOptions = [
   {
     value: "business",
     label: "General Business",
+  },
+  {
+    value: "creative",
+    label: "Productivity & Creative Tools (Figma, Canva)",
+  },
+  {
+    value: "utilities",
+    label: "Utilities & File Conversion (PDF to Word, converters)",
   },
 ];

@@ -12,6 +12,7 @@ export interface WidgetMetric {
 export interface WidgetListItem {
   title: string;
   description?: string;
+  image?: any;
   icon?: string;
   tone?: WidgetTone;
   meta?: string;
@@ -33,6 +34,7 @@ export type WidgetTableRow = (string | number | WidgetTableCell)[];
 export interface WidgetBlock {
   type: WidgetBlockType;
   title?: string;
+  image?: any;
   metrics?: WidgetMetric[];
   listItems?: WidgetListItem[];
   keyValueItems?: WidgetKeyValueItem[];

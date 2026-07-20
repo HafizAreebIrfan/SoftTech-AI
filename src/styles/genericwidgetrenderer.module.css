@@ -1,11 +1,6 @@
 .widgetShell {
-  width: 100%;
-  max-width: 100%;
   border-radius: 12px;
-  background-color: var(--app-card, #0a0a0c);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
-  padding: 1rem;
-  box-shadow: var(--app-overlay-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.3));
+  padding: 2rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -15,21 +10,21 @@
 .header {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
-  border-bottom: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--app-card-border);
   padding-bottom: 0.75rem;
 }
 
 .title {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   margin: 0;
 }
 
 .subtitle {
   font-size: 0.75rem;
-  color: var(--app-text-secondary, #8a8d98);
+  color: var(--app-text-secondary);
   margin: 0;
 }
 
@@ -82,7 +77,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background-color: rgba(245, 158, 11, 0.1);
-  color: var(--app-warning-text, #f59e0b);
+  color: var(--app-warning-text);
   border: 1px solid rgba(245, 158, 11, 0.2);
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
@@ -93,9 +88,8 @@
   justify-content: space-between;
   align-items: center;
   font-size: 0.6875rem;
-  color: var(--app-text-secondary, #8a8d98);
-  border-top: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  color: var(--app-text-secondary);
+  border-top: 1px solid var(--app-card-border);
   padding-top: 0.5rem;
   margin-top: 0.5rem;
 }
-

@@ -2,7 +2,7 @@
   min-height: 100vh;
   display: flex;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: 'Outfit', sans-serif;
+  font-family: "Outfit", sans-serif;
   overflow: hidden;
 }
 
@@ -116,14 +116,14 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  background: rgba(239, 68, 68, 0.05);
-  color: #ef4444;
+  border: 1px solid var(--app-border-error);
+  background: var(--app-logout-button-background);
+  color: var(--app-border-error);
 }
 
 .logoutBtn:hover {
-  background: rgba(239, 68, 68, 0.12);
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+  background: var(--app-border-error);
+  color: var(--app-text-overlay);
 }
 
 .dashboardHeader {
@@ -224,11 +224,9 @@
 .workspaceCard {
   padding: 2rem;
   border-radius: 24px;
-  /* border: 1px solid rgba(255, 255, 255, 0.05); */
-  /* background: rgba(255, 255, 255, 0.01); */
   display: flex;
   flex-direction: column;
-  width: 450px;
+  width: 700px;
   gap: 1.5rem;
 }
 

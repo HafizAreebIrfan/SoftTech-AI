@@ -1,221 +1,224 @@
 .navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100;
-    backdrop-filter: blur(20px);
-    transition: all 0.3s ease;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  z-index: 100;
+  background-color: var(--app-header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--app-header-bottom-border);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
-.container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 2rem;
-    max-width: 1280px;
-    margin: 0 auto;
+.navbarContainer {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .logoText {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 800;
-    letter-spacing: -0.05em;
-    cursor: pointer;
-    transition: transform 0.2s ease;
-}
-
-.logoText:hover {
-    transform: scale(1.02);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--app-text-primary);
+  font-family: "Plus Jakarta Sans", sans-serif;
 }
 
 .navLinks {
+  display: none;
+  align-items: center;
+  gap: 2rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+@media (min-width: 991px) {
+  .navLinks {
+    display: flex;
+  }
+}
+
+.navLink {
+  color: var(--app-text-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.navLink:hover {
+  color: var(--app-text-primary);
+}
+
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.actionBtn {
+  padding: 0.625rem;
+  border-radius: 9999px;
+  border: 1px solid var(--app-card-border);
+  background: transparent;
+  color: var(--app-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.actionBtn:hover {
+  color: var(--app-text-primary);
+  border-color: var(--app-card-active-border);
+}
+
+.loginLink {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--app-text-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  display: none;
+}
+
+@media (min-width: 991px) {
+  .loginLink {
+    display: block;
+  }
+}
+
+.loginLink:hover {
+  color: var(--app-text-primary);
+}
+
+.primaryBtn {
+  background-color: var(--app-text-primary);
+  color: var(--app-bg);
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 20px -5px rgba(255, 255, 255, 0.3);
+  display: none;
+  text-decoration: none;
+}
+
+@media (min-width: 991px) {
+  .primaryBtn {
+    display: block;
+  }
+}
+
+.primaryBtn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.menuBtn {
+  composes: actionBtn;
+  display: block;
+}
+
+@media (min-width: 991px) {
+  .menuBtn {
     display: none;
+  }
 }
 
-@media (min-width: 1024px) {
-    .navLinks {
-        display: flex;
-        align-items: center;
-        gap: 2rem;
-    }
-}
-
-.link {
-    font-size: 0.875rem;
-    font-weight: 500;
-    letter-spacing: 0.025em;
-    text-decoration: none;
-    transition: color 0.3s ease;
-    cursor: pointer;
-    position: relative;
-}
-
-.link:hover {
-    color: #8b5cf6 !important;
-}
-
-.activeLink {
-    composes: link;
-    font-weight: 700;
-    position: relative;
-}
-
-.activeLink::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
-    border-radius: 9999px;
-}
-
-.actionGroup {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.themeButton,
-.themeButtonLight {
-    background: none;
-    border: none !important;
-    outline: none !important;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 9999px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-}
-
-.themeButton:hover {
-    background-color: rgba(255, 255, 255, 0.05) !important;
-    color: #ffffff;
-}
-
-.themeButtonLight:hover {
-    background-color: rgba(0, 0, 0, 0.05) !important;
-    color: #0f172a;
-}
-
-.loginBtn {
-    background: none;
-    border: none;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: color 0.2s ease;
-    margin-right: 20px;
-}
-
-
-.getStartedBtn {
-    border: none;
-    font-size: 0.875rem;
-    font-weight: 600;
-    padding: 0.65rem 1.5rem;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.25);
-    transition: all 0.3s ease;
-}
-
-.getStartedBtn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
-}
-
-.getStartedBtn:active {
-    transform: translateY(0);
-}
-
-.hamburger {
-    background: none;
-    border: none;
-    color: #acaab5;
-    cursor: pointer;
-    padding: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-@media (min-width: 1024px) {
-    .hamburger {
-        display: none;
-    }
-}
-
+/* MOBILE NAV DRAWER */
 .mobileMenu {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    background-color: rgba(19, 18, 28, 0.98);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    display: flex;
-    flex-direction: column;
-    padding: 1.5rem 2rem;
-    gap: 1.25rem;
-    z-index: 99;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  position: fixed;
+  top: 76px;
+  left: 0;
+  width: 100%;
+  background-color: var(--app-bg-secondary);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--app-card-border);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  z-index: 99;
+  box-shadow: var(--app-overlay-shadow);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(-1rem);
+  opacity: 0;
+  pointer-events: none;
 }
 
-.mobileMenuLight {
-    composes: mobileMenu;
-    background-color: rgba(248, 250, 252, 0.98);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+.mobileMenuOpen {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.mobileLink {
-    font-size: 1.125rem;
-    font-weight: 500;
-    color: #acaab5;
-    text-decoration: none;
-    padding: 0.5rem 0;
-    cursor: pointer;
+.mobileNavLink {
+  color: var(--app-text-secondary);
+  text-decoration: none;
+  padding: 0.5rem 0;
+  transition: color 0.2s ease;
 }
 
-.mobileLink:hover {
-    color: #8a95ff;
-}
-
-.mobileLinkActive {
-    composes: mobileLink;
-    color: #ffffff;
-    font-weight: 700;
-}
-
-.mobileLinkActiveLight {
-    composes: mobileLink;
-    color: #0f172a;
-    font-weight: 700;
-}
-
-.mobileLinkLight {
-    composes: mobileLink;
-    color: #64748b;
-}
-
-.mobileLinkLight:hover {
-    color: #4f46e5;
+.mobileNavLink:hover {
+  color: var(--app-text-primary);
 }
 
 .divider {
-    border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    margin: 0.5rem 0;
+  height: 1px;
+  background-color: var(--app-card-border);
+  margin: 0.5rem 0;
 }
 
-.dividerLight {
-    border: none;
-    border-top: 1px solid rgba(0, 0, 0, 0.08);
-    margin: 0.5rem 0;
+.mobileActions {
+  display: flex;
+  gap: 1rem;
+}
+
+.mobileLoginBtn {
+  flex: 1;
+  text-align: center;
+  padding: 0.75rem 0;
+  border-radius: 9999px;
+  border: 1px solid var(--app-card-border);
+  color: var(--app-text-secondary);
+  text-decoration: none;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.mobilePrimaryBtn {
+  flex: 1;
+  padding: 0.75rem 0;
+  border-radius: 9999px;
+  background-color: var(--app-text-primary);
+  color: var(--app-bg);
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  text-align: center;
 }

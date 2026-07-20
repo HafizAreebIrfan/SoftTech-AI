@@ -1,4 +1,4 @@
-import React, { FC } from "react";
+import React, { FC, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
@@ -19,8 +19,13 @@ import styles from "../../../../styles/signup.module.css";
 const SignupStep3: FC = () => {
   const navigate = useNavigate();
   const { colors } = useThemeStore();
-  const { companyId, selectedLayout, setSelectedLayout, clearSignupProgress } =
-    useSignupStore();
+  const {
+    companyId,
+    selectedLayout,
+    stepOneData,
+    setSelectedLayout,
+    clearSignupProgress,
+  } = useSignupStore();
   const { setAuth } = useAuthStore();
 
   const { mutate: stepThreeMutate, isPending: isStepThreePending } =
@@ -76,6 +81,27 @@ const SignupStep3: FC = () => {
       },
     });
   };
+  useEffect(() => {
+    const industryLayoutMapping: Record<string, "grid" | "list" | "cards" | "table"> = {
+      "e-commerce": "grid",
+      ecommerce: "grid",
+      fintech: "table",
+      "data & forecasting": "grid",
+      "data-forecasting": "grid",
+      saas: "list",
+      "saas / developer tools": "list",
+      logistics: "list",
+      healthtech: "grid",
+      "food & hospitality": "grid",
+      "travel & booking": "list",
+      "ai & automation": "list",
+      "general business": "grid",
+    };
+    const industry = stepOneData?.primaryIndustry?.toLowerCase() || "";
+    // Recommend and auto-select the best layout
+    const recommended = industryLayoutMapping[industry] || "grid";
+    setSelectedLayout(recommended);
+  }, [stepOneData?.primaryIndustry, setSelectedLayout]);
 
   return (
     <motion.div

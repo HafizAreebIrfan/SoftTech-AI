@@ -66,6 +66,10 @@ export type ThemeColors = {
   BrandFuchsia: string;
   BrandFuchsiaHover: string;
   Bordererror: string;
+  LogoutButtonBackground: string;
+  GlassBg: string;
+  GlassBorder: string;
+  GlassBorderSecondary: string;
 };
 
 export const darkColors: ThemeColors = {
@@ -136,6 +140,10 @@ export const darkColors: ThemeColors = {
   BrandFuchsia: "#c026d3",
   BrandFuchsiaHover: "#a21caf",
   Bordererror: "#ef4444",
+  LogoutButtonBackground: "rgba(239, 68, 68, 0.05)",
+  GlassBg: "rgba(19, 18, 28, 0.45)",
+  GlassBorder: "rgba(255, 255, 255, 0.08)",
+  GlassBorderSecondary: "rgba(255, 255, 255, 0.04)",
 };
 
 export const lightColors: ThemeColors = {
@@ -206,4 +214,8 @@ export const lightColors: ThemeColors = {
   BrandFuchsia: "#c026d3",
   BrandFuchsiaHover: "#a21caf",
   Bordererror: "#ef4444",
+  LogoutButtonBackground: "rgba(239, 68, 68, 0.05)",
+  GlassBg: "rgba(255, 255, 255, 0.45)",
+  GlassBorder: "rgba(0, 0, 0, 0.08)",
+  GlassBorderSecondary: "rgba(0, 0, 0, 0.04)",
 };

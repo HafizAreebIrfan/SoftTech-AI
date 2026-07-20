@@ -3,11 +3,12 @@ import styles from "../../../../styles/home.module.css";
 import { useHomeState, useHomeAnimation } from "../../../../hooks";
 import { useThemeStore } from "../../../../infrastructure/store/themeStore";
 import { Link } from "@tanstack/react-router";
-import { pricingPlans, faqItems, industryTemplates } from "../../../../hooks/mockData";
 import {
-  SunIcon,
-  MoonIcon,
-  MenuIcon,
+  pricingPlans,
+  faqItems,
+  industryTemplates,
+} from "../../../../hooks/mockData";
+import {
   CloseIcon,
   SparklesIcon,
   LockIcon,
@@ -16,21 +17,18 @@ import {
   CheckIcon,
   ChevronDownIcon,
   ChevronUpIcon,
-  ServerIcon
+  ServerIcon,
 } from "../../../../assets/icons";
 
 const Homescreen: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { isDark, colors, toggleTheme } = useThemeStore();
-  
+  const { colors } = useThemeStore();
+
   const {
     isYearly,
-    isMobileMenuOpen,
     activeFaqIndex,
     showScrollToTop,
     toggleBillingCycle,
-    toggleMobileMenu,
-    closeMobileMenu,
     toggleFaq,
     scrollToTop,
   } = useHomeState();
@@ -38,92 +36,11 @@ const Homescreen: React.FC = () => {
   // Run the GSAP animations hook
   useHomeAnimation({ containerRef, isYearly });
 
-  // Hide the global layout navbar on mount, show it on unmount
-  useEffect(() => {
-    const globalNavbar = document.getElementById("top-navbar");
-
-    if (globalNavbar) {
-      globalNavbar.style.display = "none";
-    }
-
-    return () => {
-      if (globalNavbar) {
-        globalNavbar.style.display = "";
-      }
-    };
-  }, []);
-
   return (
     <div ref={containerRef} className={styles.homeWrapper}>
-      {/* 1. CUSTOM NAVIGATION BAR */}
-      <nav className={styles.navbar}>
-        <div className={styles.navbarContainer}>
-          <div className={styles.logoContainer}>
-            <span className={styles.logoText}>SoftTech AI</span>
-          </div>
-
-          <div className={styles.navLinks}>
-            <Link to="/" hash="scroll-track" className={styles.navLink}>How it works</Link>
-            <Link to="/" hash="features-section" className={styles.navLink}>Features</Link>
-            <Link to="/" hash="industry-stack-section" className={styles.navLink}>Industries</Link>
-            <Link to="/" hash="pricing-section" className={styles.navLink}>Pricing</Link>
-            <Link to="/" hash="faq-section" className={styles.navLink}>FAQ</Link>
-          </div>
-
-          <div className={styles.navActions}>
-            <button
-              id="theme-toggle"
-              className={styles.actionBtn}
-              onClick={toggleTheme}
-              aria-label="Toggle Theme"
-            >
-              {isDark ? (
-                <SunIcon size={16} color={colors.RatingIconColor} />
-              ) : (
-                <MoonIcon size={16} color={colors.HeaderIconColor} />
-              )}
-            </button>
-
-            <Link to="/login" className={styles.loginLink}>Log in</Link>
-
-            <Link to="/signup" className={styles.primaryBtn}>Start Building</Link>
-
-            <button
-              id="menu-toggle"
-              className={styles.menuBtn}
-              onClick={toggleMobileMenu}
-              aria-label="Toggle Menu"
-            >
-              {isMobileMenuOpen ? (
-                <CloseIcon size={16} color={colors.IconColor} />
-              ) : (
-                <MenuIcon size={16} color={colors.IconColor} />
-              )}
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* 2. MOBILE NAVIGATION DRAWER */}
-      <div className={`${styles.mobileMenu} ${isMobileMenuOpen ? styles.mobileMenuOpen : ""}`} id="mobile-menu">
-        <Link to="/" hash="scroll-track" className={styles.mobileNavLink} onClick={closeMobileMenu}>How it works</Link>
-        <Link to="/" hash="features-section" className={styles.mobileNavLink} onClick={closeMobileMenu}>Features</Link>
-        <Link to="/" hash="industry-stack-section" className={styles.mobileNavLink} onClick={closeMobileMenu}>Industries</Link>
-        <Link to="/" hash="pricing-section" className={styles.mobileNavLink} onClick={closeMobileMenu}>Pricing</Link>
-        <Link to="/" hash="faq-section" className={styles.mobileNavLink} onClick={closeMobileMenu}>FAQ</Link>
-        
-        <div className={styles.divider}></div>
-        
-        <div className={styles.mobileActions}>
-          <Link to="/login" className={styles.mobileLoginBtn} onClick={closeMobileMenu}>Log in</Link>
-          <Link to="/signup" className={styles.mobilePrimaryBtn} onClick={closeMobileMenu}>Start Building</Link>
-        </div>
-      </div>
-
       {/* 3. PINNED SCROLL STORY SECTION */}
       <div id="scroll-track" className={styles.scrollTrack}>
         <div id="pinned-section" className={styles.pinnedSection}>
-          
           {/* Hero text */}
           <div id="hero-text" className={styles.heroText}>
             <div className={styles.badgePill}>
@@ -133,13 +50,21 @@ const Homescreen: React.FC = () => {
 
             <h1 className={styles.heroHeading}>
               Publish your app to <br />
-              <span className={`${styles.heroHeadingGradient} ${styles.wavyUnderline} ${styles.wavyWhite}`}>ChatGPT</span> in minutes.
+              <span
+                className={`${styles.heroHeadingGradient} ${styles.wavyUnderline} ${styles.wavyWhite}`}
+              >
+                ChatGPT
+              </span>{" "}
+              in minutes.
             </h1>
 
             <p className={styles.heroSubheading}>
-              Register your REST APIs and let SoftTech AI handle the logic. 
+              Register your REST APIs and let SoftTech AI handle the logic.
               <br className="hidden md:block" />
-              <span className={styles.heroSubheadingUnderline}> Zero code written by you.</span>
+              <span className={styles.heroSubheadingUnderline}>
+                {" "}
+                Zero code written by you.
+              </span>
             </p>
           </div>
 
@@ -149,10 +74,17 @@ const Homescreen: React.FC = () => {
             <div className="stepText">
               <div className={styles.stepBadge}>Step 01</div>
               <h2 className={styles.stepHeading}>
-                <span className={`${styles.wavyUnderline} ${styles.wavyIndigo}`}>Register</span><br />Endpoints.
+                <span
+                  className={`${styles.wavyUnderline} ${styles.wavyIndigo}`}
+                >
+                  Register
+                </span>
+                <br />
+                Endpoints.
               </h2>
               <p className={styles.stepDesc}>
-                Input your API base URL and documentation path. We support Swagger, OpenAPI, and Postman collections automatically.
+                Input your API base URL and documentation path. We support
+                Swagger, OpenAPI, and Postman collections automatically.
               </p>
             </div>
 
@@ -160,10 +92,17 @@ const Homescreen: React.FC = () => {
             <div className="stepText">
               <div className={styles.stepBadge}>Step 02</div>
               <h2 className={styles.stepHeading}>
-                <span className={`${styles.wavyUnderline} ${styles.wavyPurple}`}>Auth</span><br />Mapping.
+                <span
+                  className={`${styles.wavyUnderline} ${styles.wavyPurple}`}
+                >
+                  Auth
+                </span>
+                <br />
+                Mapping.
               </h2>
               <p className={styles.stepDesc}>
-                Configure OAuth 2.0, API Keys, or JWT. Our secure vault handles identity propagation and token refreshing automatically.
+                Configure OAuth 2.0, API Keys, or JWT. Our secure vault handles
+                identity propagation and token refreshing automatically.
               </p>
             </div>
 
@@ -171,10 +110,15 @@ const Homescreen: React.FC = () => {
             <div className="stepText">
               <div className={styles.stepBadge}>Step 03</div>
               <h2 className={styles.stepHeading}>
-                <span className={`${styles.wavyUnderline} ${styles.wavyBlue}`}>Schema</span><br />Mapping.
+                <span className={`${styles.wavyUnderline} ${styles.wavyBlue}`}>
+                  Schema
+                </span>
+                <br />
+                Mapping.
               </h2>
               <p className={styles.stepDesc}>
-                Confirm your JSON response formatting. We map it to Model Context Protocol standards ready for GPT interpretation.
+                Confirm your JSON response formatting. We map it to Model
+                Context Protocol standards ready for GPT interpretation.
               </p>
             </div>
 
@@ -182,10 +126,17 @@ const Homescreen: React.FC = () => {
             <div className="stepText">
               <div className={styles.stepBadge}>Step 04</div>
               <h2 className={styles.stepHeading}>
-                Native UI<br /><span className={`${styles.wavyUnderline} ${styles.wavyEmerald}`}>Widgets.</span>
+                Native UI
+                <br />
+                <span
+                  className={`${styles.wavyUnderline} ${styles.wavyEmerald}`}
+                >
+                  Widgets.
+                </span>
               </h2>
               <p className={styles.stepDesc}>
-                Render rich interactive cards, forms, and galleries directly within the conversation flow. Deep-link securely.
+                Render rich interactive cards, forms, and galleries directly
+                within the conversation flow. Deep-link securely.
               </p>
             </div>
 
@@ -193,12 +144,21 @@ const Homescreen: React.FC = () => {
             <div className="stepText">
               <div className={styles.stepBadge}>Launch</div>
               <h2 className={styles.stepHeading}>
-                One-Click<br /><span className={`${styles.wavyUnderline} ${styles.wavyFuchsia}`}>Deploy.</span>
+                One-Click
+                <br />
+                <span
+                  className={`${styles.wavyUnderline} ${styles.wavyFuchsia}`}
+                >
+                  Deploy.
+                </span>
               </h2>
               <p className={styles.stepDesc}>
-                Instant publication to the OpenAI ecosystem. We handle the technical boilerplate, hosting, and scaling for you.
+                Instant publication to the OpenAI ecosystem. We handle the
+                technical boilerplate, hosting, and scaling for you.
               </p>
-              <Link to="/signup" className={styles.stepBtn}>Deploy Server Now</Link>
+              <Link to="/signup" className={styles.stepBtn}>
+                Deploy Server Now
+              </Link>
             </div>
           </div>
 
@@ -223,7 +183,6 @@ const Homescreen: React.FC = () => {
 
           {/* Interactive Cards Container */}
           <div id="card-container" className={styles.cardContainer}>
-            
             {/* Card 1: Register API Endpoint UI Style */}
             <div className={`cardItem ${styles.cardRegisterForm}`}>
               <div className={styles.cardHeader}>
@@ -254,7 +213,9 @@ const Homescreen: React.FC = () => {
                   />
                 </div>
                 <div className={styles.formField}>
-                  <label className={styles.formLabel}>Swagger / OpenAPI Spec</label>
+                  <label className={styles.formLabel}>
+                    Swagger / OpenAPI Spec
+                  </label>
                   <input
                     type="text"
                     className={styles.formInput}
@@ -262,7 +223,9 @@ const Homescreen: React.FC = () => {
                     disabled
                   />
                 </div>
-                <button className={styles.formBtn} disabled>Register Endpoint</button>
+                <button className={styles.formBtn} disabled>
+                  Register Endpoint
+                </button>
               </div>
             </div>
 
@@ -272,8 +235,14 @@ const Homescreen: React.FC = () => {
               <div className={styles.vaultIconCircle}>
                 <LockIcon size={40} color={colors.ButtonGradientTwo} />
               </div>
-              <h4 className={styles.vaultHeading}>Zero-Trust<br />Vault</h4>
-              <p className={styles.vaultDesc}>Automated token refresh and isolated credential storage.</p>
+              <h4 className={styles.vaultHeading}>
+                Zero-Trust
+                <br />
+                Vault
+              </h4>
+              <p className={styles.vaultDesc}>
+                Automated token refresh and isolated credential storage.
+              </p>
             </div>
 
             {/* Card 3: Core Translation Engine */}
@@ -282,15 +251,23 @@ const Homescreen: React.FC = () => {
               <div className={styles.engineIconSquare}>
                 <BoltIcon size={40} color="#ffffff" />
               </div>
-              <h3 className={styles.engineHeading}>Translation<br />Engine</h3>
-              <p className={styles.engineDesc}>Standard REST mapped dynamically into MCP context automatically.</p>
+              <h3 className={styles.engineHeading}>
+                Translation
+                <br />
+                Engine
+              </h3>
+              <p className={styles.engineDesc}>
+                Standard REST mapped dynamically into MCP context automatically.
+              </p>
             </div>
 
             {/* Card 4: Interactive Widgets */}
             <div className={`cardItem ${styles.cardWidgets}`}>
               <div className={styles.widgetHeader}>
                 <LayoutGridIcon size={20} color={colors.RatingIconColor} />
-                <span className={styles.widgetHeaderTitle}>Native UI Rendering</span>
+                <span className={styles.widgetHeaderTitle}>
+                  Native UI Rendering
+                </span>
               </div>
               <div className={styles.widgetCanvas}>
                 <div className={styles.msgRow}>
@@ -323,7 +300,9 @@ const Homescreen: React.FC = () => {
                   </span>
                   <span className={styles.liveHeaderText}>Live in ChatGPT</span>
                 </div>
-                <span className={styles.liveHeaderVersion}>MCP Server v1.0</span>
+                <span className={styles.liveHeaderVersion}>
+                  MCP Server v1.0
+                </span>
               </div>
               <div className={styles.liveCanvas}>
                 <div className={styles.liveGrid}>
@@ -338,14 +317,17 @@ const Homescreen: React.FC = () => {
                     </div>
                     <div className={styles.liveGridBox}>
                       <span className={styles.liveBoxLabel}>Active Tools</span>
-                      <span className={styles.liveBoxValWhite}>12 Published</span>
+                      <span className={styles.liveBoxValWhite}>
+                        12 Published
+                      </span>
                     </div>
                   </div>
-                  <Link to="/signup" className={styles.liveDeployBtn}>Deploy Server Now</Link>
+                  <Link to="/signup" className={styles.liveDeployBtn}>
+                    Deploy Server Now
+                  </Link>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -353,9 +335,11 @@ const Homescreen: React.FC = () => {
       {/* 4. COMPANY LOGO TICKER SECTION */}
       <section className={styles.logoTickerSection}>
         <div className={styles.tickerHeader}>
-          <p className={styles.tickerTitle}>Trusted by fast-growing engineering teams</p>
+          <p className={styles.tickerTitle}>
+            Trusted by fast-growing engineering teams
+          </p>
         </div>
-        
+
         <div className={styles.tickerWrapper}>
           <div className={styles.logoOverlayLeft}></div>
           <div className={styles.logoOverlayRight}></div>
@@ -363,25 +347,121 @@ const Homescreen: React.FC = () => {
           <div className={styles.logoTickerTrack}>
             {/* Set 1 */}
             <div className={styles.logoTickerGroup}>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.TextHighlightedHeading }}></span>OpenAI</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.ButtonGradientOne }}></span>Stripe</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.HeaderItemActiveColor }}></span>Slack</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.RatingIconColor }}></span>Github</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.TextGradientThree }}></span>Twilio</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.TextGradientTwo }}></span>HubSpot</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.TextGradientOne }}></span>Shopify</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.AuthIconColor }}></span>Salesforce</span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.TextHighlightedHeading }}
+                ></span>
+                OpenAI
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.ButtonGradientOne }}
+                ></span>
+                Stripe
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.HeaderItemActiveColor }}
+                ></span>
+                Slack
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.RatingIconColor }}
+                ></span>
+                Github
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.TextGradientThree }}
+                ></span>
+                Twilio
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.TextGradientTwo }}
+                ></span>
+                HubSpot
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.TextGradientOne }}
+                ></span>
+                Shopify
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.AuthIconColor }}
+                ></span>
+                Salesforce
+              </span>
             </div>
             {/* Set 2 */}
             <div className={styles.logoTickerGroup}>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.TextHighlightedHeading }}></span>OpenAI</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.ButtonGradientOne }}></span>Stripe</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.HeaderItemActiveColor }}></span>Slack</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.RatingIconColor }}></span>Github</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.TextGradientThree }}></span>Twilio</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.TextGradientTwo }}></span>HubSpot</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.TextGradientOne }}></span>Shopify</span>
-              <span className={styles.tickerItem}><span className={styles.tickerBullet} style={{ backgroundColor: colors.AuthIconColor }}></span>Salesforce</span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.TextHighlightedHeading }}
+                ></span>
+                OpenAI
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.ButtonGradientOne }}
+                ></span>
+                Stripe
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.HeaderItemActiveColor }}
+                ></span>
+                Slack
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.RatingIconColor }}
+                ></span>
+                Github
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.TextGradientThree }}
+                ></span>
+                Twilio
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.TextGradientTwo }}
+                ></span>
+                HubSpot
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.TextGradientOne }}
+                ></span>
+                Shopify
+              </span>
+              <span className={styles.tickerItem}>
+                <span
+                  className={styles.tickerBullet}
+                  style={{ backgroundColor: colors.AuthIconColor }}
+                ></span>
+                Salesforce
+              </span>
             </div>
           </div>
         </div>
@@ -390,10 +470,16 @@ const Homescreen: React.FC = () => {
       {/* 5. PLATFORM FEATURES GRID SECTION */}
       <section id="features-section" className={styles.featuresSection}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionLabel}>Powerful Platform Features</span>
-          <h2 className={styles.sectionHeading}>Everything you need to build production-grade ChatGPT integrations</h2>
+          <span className={styles.sectionLabel}>
+            Powerful Platform Features
+          </span>
+          <h2 className={styles.sectionHeading}>
+            Everything you need to build production-grade ChatGPT integrations
+          </h2>
           <p className={styles.sectionDesc}>
-            Convert existing REST documentation into fully-functional Model Context Protocol schemas automatically, without managing infrastructure.
+            Convert existing REST documentation into fully-functional Model
+            Context Protocol schemas automatically, without managing
+            infrastructure.
           </p>
         </div>
 
@@ -405,7 +491,8 @@ const Homescreen: React.FC = () => {
             </div>
             <h3 className={styles.featureTitle}>Automatic MCP</h3>
             <p className={styles.featureDesc}>
-              Convert existing REST documentation into fully-functional Model Context Protocol schemas automatically.
+              Convert existing REST documentation into fully-functional Model
+              Context Protocol schemas automatically.
             </p>
           </div>
 
@@ -416,18 +503,22 @@ const Homescreen: React.FC = () => {
             </div>
             <h3 className={styles.featureTitle}>Enterprise Security</h3>
             <p className={styles.featureDesc}>
-              Full support for OAuth2, Vaulted API keys, and strict request validation to ensure data privacy.
+              Full support for OAuth2, Vaulted API keys, and strict request
+              validation to ensure data privacy.
             </p>
           </div>
 
           {/* Card 3 */}
           <div className="featureCard">
-            <div className={`${styles.featureIconCircle} ${styles.iconEmerald}`}>
+            <div
+              className={`${styles.featureIconCircle} ${styles.iconEmerald}`}
+            >
               <BoltIcon size={24} color={colors.RatingIconColor} />
             </div>
             <h3 className={styles.featureTitle}>Edge Deployed</h3>
             <p className={styles.featureDesc}>
-              Your servers are deployed to our global edge network ensuring sub-50ms latency globally.
+              Your servers are deployed to our global edge network ensuring
+              sub-50ms latency globally.
             </p>
           </div>
         </div>
@@ -439,7 +530,8 @@ const Homescreen: React.FC = () => {
           <span className={styles.sectionLabel}>Ready-to-run Templates</span>
           <h2 className={styles.sectionHeading}>Built for every industry</h2>
           <p className={styles.sectionDesc}>
-            Kickstart your deployment with templates tailormade for standard business operations.
+            Kickstart your deployment with templates tailormade for standard
+            business operations.
           </p>
         </div>
 
@@ -449,7 +541,7 @@ const Homescreen: React.FC = () => {
             const isFintech = template.id === "fintech";
             const isHealthcare = template.id === "healthcare";
             const isTravel = template.id === "travel";
-            
+
             let themeClass = styles.indigoTheme;
             if (isFintech) themeClass = styles.emeraldTheme;
             if (isHealthcare) themeClass = styles.blueTheme;
@@ -465,16 +557,20 @@ const Homescreen: React.FC = () => {
                   style={{ backgroundImage: `url(${template.bgImage})` }}
                 ></div>
                 <div className={styles.cardBgGradient}></div>
-                
+
                 <div className={styles.cardContent}>
                   <div className={styles.cardTextContent}>
-                    <span className={styles.cardCategory}>{template.category}</span>
+                    <span className={styles.cardCategory}>
+                      {template.category}
+                    </span>
                     <h3 className={styles.cardTitleStack}>{template.title}</h3>
                     <p className={styles.cardDesc}>{template.description}</p>
-                    
+
                     <div className={styles.cardTags}>
                       {template.tags.map((tag) => (
-                        <span key={tag} className={styles.cardTag}>{tag}</span>
+                        <span key={tag} className={styles.cardTag}>
+                          {tag}
+                        </span>
                       ))}
                     </div>
                   </div>
@@ -483,19 +579,30 @@ const Homescreen: React.FC = () => {
                   <div className={styles.templateMockup}>
                     <div>
                       <div className={styles.mockupHeader}>
-                        <span className={styles.mockupTitle}>{template.widgetName}</span>
-                        <span className={styles.mockupStatus}>{template.widgetStatus}</span>
+                        <span className={styles.mockupTitle}>
+                          {template.widgetName}
+                        </span>
+                        <span className={styles.mockupStatus}>
+                          {template.widgetStatus}
+                        </span>
                       </div>
-                      
+
                       {/* E-Commerce Widget Mockup */}
                       {isEcommerce && (
                         <div style={{ marginTop: "1rem" }}>
                           <div className={styles.mockupRow}>
-                            <span className={styles.mockupText}>Cyber Jacket v2</span>
+                            <span className={styles.mockupText}>
+                              Cyber Jacket v2
+                            </span>
                             <span className={styles.mockupVal}>$129.00</span>
                           </div>
-                          <div className={styles.mockupRow} style={{ opacity: 0.6 }}>
-                            <span className={styles.mockupText}>Tax & Shipping</span>
+                          <div
+                            className={styles.mockupRow}
+                            style={{ opacity: 0.6 }}
+                          >
+                            <span className={styles.mockupText}>
+                              Tax & Shipping
+                            </span>
                             <span className={styles.mockupVal}>$12.50</span>
                           </div>
                         </div>
@@ -504,20 +611,83 @@ const Homescreen: React.FC = () => {
                       {/* Fintech Widget Mockup */}
                       {isFintech && (
                         <div style={{ marginTop: "1rem" }}>
-                          <div className={styles.mockupRow} style={{ alignItems: "baseline" }}>
-                            <span className={styles.mockupVal} style={{ fontSize: "1.75rem", fontWeight: 900 }}>$14,250</span>
-                            <span style={{ color: "#34d399", fontSize: "0.625rem", fontWeight: 700 }}>+18.5%</span>
+                          <div
+                            className={styles.mockupRow}
+                            style={{ alignItems: "baseline" }}
+                          >
+                            <span
+                              className={styles.mockupVal}
+                              style={{ fontSize: "1.75rem", fontWeight: 900 }}
+                            >
+                              $14,250
+                            </span>
+                            <span
+                              style={{
+                                color: "#34d399",
+                                fontSize: "0.625rem",
+                                fontWeight: 700,
+                              }}
+                            >
+                              +18.5%
+                            </span>
                           </div>
-                          <span className={styles.mockupText} style={{ fontSize: "0.625rem", display: "block" }}>
+                          <span
+                            className={styles.mockupText}
+                            style={{ fontSize: "0.625rem", display: "block" }}
+                          >
                             Monthly Billing Revenue
                           </span>
                           {/* Mini Bar graph */}
-                          <div style={{ display: "flex", gap: "0.25rem", alignItems: "end", height: "3.5rem", marginTop: "0.5rem" }}>
-                            <div style={{ height: "30%", width: "100%", backgroundColor: "#334155", borderRadius: "2px" }}></div>
-                            <div style={{ height: "45%", width: "100%", backgroundColor: "#334155", borderRadius: "2px" }}></div>
-                            <div style={{ height: "60%", width: "100%", backgroundColor: "#334155", borderRadius: "2px" }}></div>
-                            <div style={{ height: "80%", width: "100%", backgroundColor: "rgba(52, 211, 153, 0.4)", borderRadius: "2px" }}></div>
-                            <div style={{ height: "100%", width: "100%", backgroundColor: "#10b981", borderRadius: "2px", boxShadow: "0 0 10px rgba(52,211,153,0.5)" }}></div>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.25rem",
+                              alignItems: "end",
+                              height: "3.5rem",
+                              marginTop: "0.5rem",
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: "30%",
+                                width: "100%",
+                                backgroundColor: "#334155",
+                                borderRadius: "2px",
+                              }}
+                            ></div>
+                            <div
+                              style={{
+                                height: "45%",
+                                width: "100%",
+                                backgroundColor: "#334155",
+                                borderRadius: "2px",
+                              }}
+                            ></div>
+                            <div
+                              style={{
+                                height: "60%",
+                                width: "100%",
+                                backgroundColor: "#334155",
+                                borderRadius: "2px",
+                              }}
+                            ></div>
+                            <div
+                              style={{
+                                height: "80%",
+                                width: "100%",
+                                backgroundColor: "rgba(52, 211, 153, 0.4)",
+                                borderRadius: "2px",
+                              }}
+                            ></div>
+                            <div
+                              style={{
+                                height: "100%",
+                                width: "100%",
+                                backgroundColor: "#10b981",
+                                borderRadius: "2px",
+                                boxShadow: "0 0 10px rgba(52,211,153,0.5)",
+                              }}
+                            ></div>
                           </div>
                         </div>
                       )}
@@ -525,15 +695,36 @@ const Homescreen: React.FC = () => {
                       {/* Healthcare Scheduler Mockup */}
                       {isHealthcare && (
                         <div style={{ marginTop: "1rem" }}>
-                          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "0.75rem",
+                              alignItems: "center",
+                            }}
+                          >
                             <div className={styles.ehrIconCircle}>DR</div>
                             <div>
-                              <h4 style={{ fontSize: "0.75rem", fontWeight: 700, color: "#ffffff" }}>Dr. Evelyn Reed</h4>
-                              <span className={styles.mockupText} style={{ fontSize: "0.625rem" }}>Neurology Clinic</span>
+                              <h4
+                                style={{
+                                  fontSize: "0.75rem",
+                                  fontWeight: 700,
+                                  color: "#ffffff",
+                                }}
+                              >
+                                Dr. Evelyn Reed
+                              </h4>
+                              <span
+                                className={styles.mockupText}
+                                style={{ fontSize: "0.625rem" }}
+                              >
+                                Neurology Clinic
+                              </span>
                             </div>
                           </div>
                           <div className={styles.calendarGrid}>
-                            <div className={styles.calendarCellActive}>09:00 AM</div>
+                            <div className={styles.calendarCellActive}>
+                              09:00 AM
+                            </div>
                             <div className={styles.calendarCell}>10:30 AM</div>
                             <div className={styles.calendarCell}>01:00 PM</div>
                             <div className={styles.calendarCell}>03:30 PM</div>
@@ -544,38 +735,112 @@ const Homescreen: React.FC = () => {
                       {/* Travel Booking Mockup */}
                       {isTravel && (
                         <div style={{ marginTop: "1rem" }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
                             <div>
-                              <span style={{ fontSize: "1.125rem", fontWeight: 900, color: "#ffffff" }}>JFK</span>
-                              <span className={styles.mockupText} style={{ fontSize: "0.5625rem", display: "block" }}>New York</span>
+                              <span
+                                style={{
+                                  fontSize: "1.125rem",
+                                  fontWeight: 900,
+                                  color: "#ffffff",
+                                }}
+                              >
+                                JFK
+                              </span>
+                              <span
+                                className={styles.mockupText}
+                                style={{
+                                  fontSize: "0.5625rem",
+                                  display: "block",
+                                }}
+                              >
+                                New York
+                              </span>
                             </div>
                             <div className={styles.flightLineWrapper}>
-                              <span style={{ color: "#e879f9", fontSize: "0.5625rem", fontWeight: 700 }}>5h 45m</span>
+                              <span
+                                style={{
+                                  color: "#e879f9",
+                                  fontSize: "0.5625rem",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                5h 45m
+                              </span>
                               <div className={styles.flightLine}>
                                 <div className={styles.flightPlaneDot}></div>
                               </div>
-                              <span className={styles.mockupText} style={{ fontSize: "0.5rem" }}>Direct Flight</span>
+                              <span
+                                className={styles.mockupText}
+                                style={{ fontSize: "0.5rem" }}
+                              >
+                                Direct Flight
+                              </span>
                             </div>
                             <div style={{ textAlign: "right" }}>
-                              <span style={{ fontSize: "1.125rem", fontWeight: 900, color: "#ffffff" }}>LHR</span>
-                              <span className={styles.mockupText} style={{ fontSize: "0.5625rem", display: "block" }}>London</span>
+                              <span
+                                style={{
+                                  fontSize: "1.125rem",
+                                  fontWeight: 900,
+                                  color: "#ffffff",
+                                }}
+                              >
+                                LHR
+                              </span>
+                              <span
+                                className={styles.mockupText}
+                                style={{
+                                  fontSize: "0.5625rem",
+                                  display: "block",
+                                }}
+                              >
+                                London
+                              </span>
                             </div>
                           </div>
                           <div className={styles.flightLogo}>
-                            <span style={{ color: "#94a3b8" }}>Virgin Atlantic - VS4</span>
-                            <span style={{ color: "#ffffff", fontWeight: 700 }}>$410</span>
+                            <span style={{ color: "#94a3b8" }}>
+                              Virgin Atlantic - VS4
+                            </span>
+                            <span style={{ color: "#ffffff", fontWeight: 700 }}>
+                              $410
+                            </span>
                           </div>
                         </div>
                       )}
-
                     </div>
 
                     <div className={styles.mockupFooter}>
                       <div className={styles.mockupLine}></div>
                       {isFintech ? (
                         <div style={{ display: "flex", gap: "0.5rem" }}>
-                          <button className={styles.mockupBtn} style={{ width: "50%", backgroundColor: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#ffffff" }}>Export CSV</button>
-                          <button className={styles.mockupBtn} style={{ width: "50%", backgroundColor: "rgba(16,185,129,0.2)", border: "1px solid rgba(16,185,129,0.3)", color: "#34d399" }}>Manage billing</button>
+                          <button
+                            className={styles.mockupBtn}
+                            style={{
+                              width: "50%",
+                              backgroundColor: "rgba(255,255,255,0.05)",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              color: "#ffffff",
+                            }}
+                          >
+                            Export CSV
+                          </button>
+                          <button
+                            className={styles.mockupBtn}
+                            style={{
+                              width: "50%",
+                              backgroundColor: "rgba(16,185,129,0.2)",
+                              border: "1px solid rgba(16,185,129,0.3)",
+                              color: "#34d399",
+                            }}
+                          >
+                            Manage billing
+                          </button>
                         </div>
                       ) : (
                         <button className={styles.mockupBtn}>
@@ -586,7 +851,6 @@ const Homescreen: React.FC = () => {
                       )}
                     </div>
                   </div>
-
                 </div>
               </div>
             );
@@ -599,7 +863,9 @@ const Homescreen: React.FC = () => {
         <div className={styles.sectionHeader}>
           <span className={styles.sectionLabel}>Fair & Transparent</span>
           <h2 className={styles.sectionHeading}>Simple, Scalable Pricing</h2>
-          <p className={styles.sectionDesc}>Choose the perfect plan to get your REST APIs running in ChatGPT.</p>
+          <p className={styles.sectionDesc}>
+            Choose the perfect plan to get your REST APIs running in ChatGPT.
+          </p>
         </div>
 
         {/* Pricing billing toggle */}
@@ -621,7 +887,10 @@ const Homescreen: React.FC = () => {
               <span className={styles.saveBadge}>Save 20%</span>
             </button>
             {/* Slide animated overlay background pill */}
-            <div id="pricing-toggle-slider" className={styles.pricingToggleSlider}></div>
+            <div
+              id="pricing-toggle-slider"
+              className={styles.pricingToggleSlider}
+            ></div>
           </div>
         </div>
 
@@ -630,21 +899,33 @@ const Homescreen: React.FC = () => {
           {pricingPlans.map((plan) => {
             const isPro = plan.name === "Pro";
             const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
-            
+
             return (
               <div
                 key={plan.name}
                 className={`${isPro ? styles.pricingCardPro : ""} pricingCard`}
               >
-                {isPro && <div className={styles.popularBadge}>Most Popular</div>}
-                
+                {isPro && (
+                  <div className={styles.popularBadge}>Most Popular</div>
+                )}
+
                 <div>
-                  <h3 className={styles.planName} style={{ marginTop: isPro ? "0.5rem" : "0" }}>{plan.name}</h3>
+                  <h3
+                    className={styles.planName}
+                    style={{ marginTop: isPro ? "0.5rem" : "0" }}
+                  >
+                    {plan.name}
+                  </h3>
                   <p className={styles.planDesc}>{plan.description}</p>
-                  
+
                   <div className={styles.planPriceWrapper}>
                     {plan.isCustomPrice ? (
-                      <span className={styles.planPrice} style={{ fontSize: "2.25rem" }}>Custom</span>
+                      <span
+                        className={styles.planPrice}
+                        style={{ fontSize: "2.25rem" }}
+                      >
+                        Custom
+                      </span>
                     ) : (
                       <>
                         <span className={styles.planPrice}>${price}</span>
@@ -652,9 +933,9 @@ const Homescreen: React.FC = () => {
                       </>
                     )}
                   </div>
-                  
+
                   <div className={styles.pricingDivider}></div>
-                  
+
                   <ul className={styles.planFeatures}>
                     {plan.features.map((feature) => (
                       <li key={feature} className={styles.featureItem}>
@@ -665,7 +946,10 @@ const Homescreen: React.FC = () => {
                       </li>
                     ))}
                     {plan.unsupportedFeatures?.map((feature) => (
-                      <li key={feature} className={`${styles.featureItem} ${styles.featureDisabled}`}>
+                      <li
+                        key={feature}
+                        className={`${styles.featureItem} ${styles.featureDisabled}`}
+                      >
                         <span className={styles.featureCross}>
                           <CloseIcon size={16} color={colors.HeaderIconColor} />
                         </span>
@@ -675,7 +959,15 @@ const Homescreen: React.FC = () => {
                   </ul>
                 </div>
 
-                <Link to="/signup" className={isPro ? styles.pricingBtnPro : styles.pricingBtn} style={{ display: 'block', textDecoration: 'none', textAlign: 'center' }}>
+                <Link
+                  to="/signup"
+                  className={isPro ? styles.pricingBtnPro : styles.pricingBtn}
+                  style={{
+                    display: "block",
+                    textDecoration: "none",
+                    textAlign: "center",
+                  }}
+                >
                   {plan.ctaText}
                 </Link>
               </div>
@@ -687,15 +979,23 @@ const Homescreen: React.FC = () => {
       {/* 8. FREQUENTLY ASKED QUESTIONS SECTION */}
       <section id="faq-section" className={styles.faqSection}>
         <div className={styles.sectionHeader}>
-          <span className={styles.sectionLabel} style={{ color: colors.RatingIconColor }}>Have Questions?</span>
+          <span
+            className={styles.sectionLabel}
+            style={{ color: colors.RatingIconColor }}
+          >
+            Have Questions?
+          </span>
           <h2 className={styles.sectionHeading}>Frequently Asked Questions</h2>
-          <p className={styles.sectionDesc}>Everything you need to know about setting up and running SoftTech AI.</p>
+          <p className={styles.sectionDesc}>
+            Everything you need to know about setting up and running SoftTech
+            AI.
+          </p>
         </div>
 
         <div className={styles.faqContainer}>
           {faqItems.map((item, index) => {
             const isActive = activeFaqIndex === index;
-            
+
             return (
               <div
                 key={index}
@@ -707,7 +1007,9 @@ const Homescreen: React.FC = () => {
                   aria-expanded={isActive}
                 >
                   <span className={styles.faqQuestion}>{item.question}</span>
-                  <span className={`${styles.faqChevron} ${isActive ? styles.faqChevronActive : ""}`}>
+                  <span
+                    className={`${styles.faqChevron} ${isActive ? styles.faqChevronActive : ""}`}
+                  >
                     <ChevronDownIcon size={20} color={colors.HeaderIconColor} />
                   </span>
                 </button>
@@ -731,23 +1033,29 @@ const Homescreen: React.FC = () => {
         <div className={styles.ctaContainer}>
           <div id="cta-block" className={styles.ctaBlock}>
             <div className={styles.ctaReflection}></div>
-            
+
             <div className={styles.ctaIconCircle}>
               <BoltIcon size={40} color={colors.TextHighlightedHeading} />
             </div>
 
             <h2 className={styles.ctaHeading}>
-              Your app, inside ChatGPT.<br className="hidden md:block" />
+              Your app, inside ChatGPT.
+              <br className="hidden md:block" />
               In <span className={styles.ctaHeadingGradient}>5 minutes.</span>
             </h2>
 
             <p className={styles.ctaDesc}>
-              Deploy your secure OpenAI App SDK ready server at edge latency today. Zero maintenance, zero configuration.
+              Deploy your secure OpenAI App SDK ready server at edge latency
+              today. Zero maintenance, zero configuration.
             </p>
 
             <div className={styles.ctaActions}>
-              <Link to="/signup" className={styles.ctaPrimaryBtn}>Deploy Server Now</Link>
-              <a href="#" className={styles.ctaSecondaryBtn}>Read Documentation</a>
+              <Link to="/signup" className={styles.ctaPrimaryBtn}>
+                Deploy Server Now
+              </Link>
+              <a href="#" className={styles.ctaSecondaryBtn}>
+                Read Documentation
+              </a>
             </div>
           </div>
         </div>
