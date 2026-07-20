@@ -203,6 +203,25 @@ export const useSignupStore = create<SignupStore>()(
               ? JSON.stringify(parsedJson, null, 2)
               : parsedJson;
 
+          let recommendationLogs = "";
+          try {
+            const urlObj = new URL(api.apiEndpoint);
+            const urlParams = Array.from(urlObj.searchParams.keys());
+            if (urlParams.length > 0) {
+              recommendationLogs += `\n💡 RECOMMENDATION: We detected these query parameters in your URL: [${urlParams.join(", ")}].\nYou can specify them in the 'Query Parameters' field so our AI can dynamically control them.\n`;
+            }
+          } catch {
+            // Ignore if endpoint is not a fully valid URL string
+          }
+
+          if (response.status === 401 || response.status === 403) {
+            recommendationLogs += `\n⚠️ WARNING: Status ${response.status} (Unauthorized/Forbidden).\nIt appears this API requires authentication (e.g. Bearer Token, API Key, Client Credentials or Custom Headers).\nPlease select an 'Auth Type' or add the required headers to authenticate successfully.\n`;
+          } else if (response.status === 405) {
+            recommendationLogs += `\n⚠️ WARNING: Status 405 (Method Not Allowed).\nVerify if you should use another HTTP method (e.g. GET vs POST).\n`;
+          } else if (response.ok && Array.isArray(parsedJson) && parsedJson.length === 0) {
+            recommendationLogs += `\n💡 TIP: The API returned an empty list. If this API requires filter parameters (like status or search query) to return data, make sure they are set.\n`;
+          }
+
           set((state) => ({
             apiTestStates: {
               ...state.apiTestStates,
@@ -212,11 +231,22 @@ export const useSignupStore = create<SignupStore>()(
                   (state.apiTestStates[apiId]?.logs || "") +
                   `[${new Date().toLocaleTimeString()}] Response Status: ${response.status} ${response.statusText}\n` +
                   `[${new Date().toLocaleTimeString()}] Latency: ${duration}ms\n` +
+                  recommendationLogs +
                   `[${new Date().toLocaleTimeString()}] Response Body:\n${formattedJson}`,
               },
             },
           }));
         } catch (err: any) {
+          let suggestion = "";
+          if (err.name === "TypeError" && err.message?.toLowerCase().includes("failed to fetch")) {
+            suggestion = `\n⚠️ SUGGESTION: Connection failed or was blocked by CORS.\n` +
+              `1. Make sure your local/remote server is running and the URL is correct.\n` +
+              `2. Ensure your server permits Cross-Origin Requests (CORS) from 'softtechai.com' or localhost.\n` +
+              `3. Verify if your API requires specific query parameters, headers, or a Bearer token.`;
+          } else {
+            suggestion = `\n⚠️ SUGGESTION: This might be due to CORS restrictions or wrong network configurations. If the API doesn't support CORS from local browser origins, the test request will fail locally, but the configuration is still valid for the server-side MCP bridge.`;
+          }
+
           set((state) => ({
             apiTestStates: {
               ...state.apiTestStates,
@@ -225,7 +255,7 @@ export const useSignupStore = create<SignupStore>()(
                 logs:
                   (state.apiTestStates[apiId]?.logs || "") +
                   `[${new Date().toLocaleTimeString()}] Error: ${err.message || err}\n` +
-                  `[${new Date().toLocaleTimeString()}] Suggestion: This might be due to CORS restrictions on the target API. If the API doesn't support CORS from local browser origins, the test request will fail locally, but the configuration is still valid for the server-side MCP bridge.`,
+                  `[${new Date().toLocaleTimeString()}] ${suggestion}`,
               },
             },
           }));

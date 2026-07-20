@@ -137,8 +137,34 @@ const SignupStep1: FC = () => {
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => {
-                          field.handleChange(e.target.value);
-                          setStepOneData({ companyName: e.target.value });
+                          const name = e.target.value;
+                          field.handleChange(name);
+                          
+                          // Simple keyword matching for industry recommendation
+                          const lowerName = name.toLowerCase();
+                          let recommendedInd = "";
+                          if (lowerName.includes("travel") || lowerName.includes("booking") || lowerName.includes("flight") || lowerName.includes("trip") || lowerName.includes("tour") || lowerName.includes("hotel") || lowerName.includes("resort") || lowerName.includes("vacation") || lowerName.includes("cab") || lowerName.includes("car")) {
+                            recommendedInd = "travel & booking";
+                          } else if (lowerName.includes("shop") || lowerName.includes("ecommerce") || lowerName.includes("store") || lowerName.includes("retail") || lowerName.includes("market") || lowerName.includes("cart") || lowerName.includes("sell") || lowerName.includes("buy") || lowerName.includes("deal") || lowerName.includes("boutique") || lowerName.includes("brand")) {
+                            recommendedInd = "ecommerce";
+                          } else if (lowerName.includes("pay") || lowerName.includes("bank") || lowerName.includes("fintech") || lowerName.includes("finance") || lowerName.includes("capital") || lowerName.includes("crypto") || lowerName.includes("coin") || lowerName.includes("card") || lowerName.includes("wallet") || lowerName.includes("ledger") || lowerName.includes("bill")) {
+                            recommendedInd = "fintech";
+                          } else if (lowerName.includes("logistics") || lowerName.includes("delivery") || lowerName.includes("shipping") || lowerName.includes("cargo") || lowerName.includes("freight") || lowerName.includes("transport") || lowerName.includes("ride") || lowerName.includes("taxi") || lowerName.includes("fleet") || lowerName.includes("courier")) {
+                            recommendedInd = "logistics";
+                          } else if (lowerName.includes("saas") || lowerName.includes("software") || lowerName.includes("api") || lowerName.includes("cloud") || lowerName.includes("dev") || lowerName.includes("tech") || lowerName.includes("platform") || lowerName.includes("app")) {
+                            recommendedInd = "saas";
+                          } else if (lowerName.includes("food") || lowerName.includes("restaurant") || lowerName.includes("cafe") || lowerName.includes("dine") || lowerName.includes("kitchen") || lowerName.includes("meal") || lowerName.includes("pizza") || lowerName.includes("burger") || lowerName.includes("coffee") || lowerName.includes("bar")) {
+                            recommendedInd = "food & hospitality";
+                          } else if (lowerName.includes("forecast") || lowerName.includes("weather") || lowerName.includes("predict") || lowerName.includes("data") || lowerName.includes("analytics") || lowerName.includes("metric") || lowerName.includes("measure") || lowerName.includes("sensor")) {
+                            recommendedInd = "data & forecasting";
+                          }
+
+                          if (recommendedInd) {
+                            signupForm.setFieldValue("primaryIndustry", recommendedInd);
+                            setStepOneData({ companyName: name, primaryIndustry: recommendedInd });
+                          } else {
+                            setStepOneData({ companyName: name });
+                          }
                         }}
                         className={`block w-full pl-12 pr-4 py-3 rounded-xl outline-none transition-all text-sm font-label`}
                         style={{

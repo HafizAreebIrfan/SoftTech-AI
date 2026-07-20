@@ -103,6 +103,24 @@ const SignupStep3: FC = () => {
     setSelectedLayout(recommended);
   }, [stepOneData?.primaryIndustry, setSelectedLayout]);
 
+  const industryInput = stepOneData?.primaryIndustry?.toLowerCase() || "";
+  const industryLayoutMapping: Record<string, string> = {
+    "e-commerce": "catalog",
+    ecommerce: "catalog",
+    fintech: "table",
+    "data & forecasting": "dashboard",
+    "data-forecasting": "dashboard",
+    saas: "table",
+    "saas / developer tools": "table",
+    logistics: "timeline",
+    healthtech: "dashboard",
+    "food & hospitality": "catalog",
+    "travel & booking": "catalog",
+    "ai & automation": "dashboard",
+    "general business": "dashboard",
+  };
+  const recommendedLayout = industryLayoutMapping[industryInput] || "dashboard";
+
   return (
     <motion.div
       key="signup-step-3"
@@ -181,12 +199,26 @@ const SignupStep3: FC = () => {
                   )}
                 </div>
                 <div>
-                  <h3
-                    className="font-headline font-bold text-sm mb-1"
-                    style={{ color: colors.TextHeading }}
-                  >
-                    Dashboard Layout
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3
+                      className="font-headline font-bold text-sm"
+                      style={{ color: colors.TextHeading }}
+                    >
+                      Dashboard Layout
+                    </h3>
+                    {recommendedLayout === "dashboard" && (
+                      <span
+                        className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-bold"
+                        style={{
+                          background: "rgba(59, 130, 246, 0.15)",
+                          color: "#60a5fa",
+                          border: "1px solid rgba(59, 130, 246, 0.3)"
+                        }}
+                      >
+                        Recommended
+                      </span>
+                    )}
+                  </div>
                   <p
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
@@ -236,12 +268,26 @@ const SignupStep3: FC = () => {
                   )}
                 </div>
                 <div>
-                  <h3
-                    className="font-headline font-bold text-sm mb-1"
-                    style={{ color: colors.TextHeading }}
-                  >
-                    Catalog Layout
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3
+                      className="font-headline font-bold text-sm"
+                      style={{ color: colors.TextHeading }}
+                    >
+                      Catalog Layout
+                    </h3>
+                    {recommendedLayout === "catalog" && (
+                      <span
+                        className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-bold"
+                        style={{
+                          background: "rgba(59, 130, 246, 0.15)",
+                          color: "#60a5fa",
+                          border: "1px solid rgba(59, 130, 246, 0.3)"
+                        }}
+                      >
+                        Recommended
+                      </span>
+                    )}
+                  </div>
                   <p
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
@@ -288,12 +334,26 @@ const SignupStep3: FC = () => {
                   )}
                 </div>
                 <div>
-                  <h3
-                    className="font-headline font-bold text-sm mb-1"
-                    style={{ color: colors.TextHeading }}
-                  >
-                    Table Layout
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3
+                      className="font-headline font-bold text-sm"
+                      style={{ color: colors.TextHeading }}
+                    >
+                      Table Layout
+                    </h3>
+                    {recommendedLayout === "table" && (
+                      <span
+                        className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-bold"
+                        style={{
+                          background: "rgba(59, 130, 246, 0.15)",
+                          color: "#60a5fa",
+                          border: "1px solid rgba(59, 130, 246, 0.3)"
+                        }}
+                      >
+                        Recommended
+                      </span>
+                    )}
+                  </div>
                   <p
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
@@ -340,12 +400,26 @@ const SignupStep3: FC = () => {
                   )}
                 </div>
                 <div>
-                  <h3
-                    className="font-headline font-bold text-sm mb-1"
-                    style={{ color: colors.TextHeading }}
-                  >
-                    Timeline Layout
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3
+                      className="font-headline font-bold text-sm"
+                      style={{ color: colors.TextHeading }}
+                    >
+                      Timeline Layout
+                    </h3>
+                    {recommendedLayout === "timeline" && (
+                      <span
+                        className="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-bold"
+                        style={{
+                          background: "rgba(59, 130, 246, 0.15)",
+                          color: "#60a5fa",
+                          border: "1px solid rgba(59, 130, 246, 0.3)"
+                        }}
+                      >
+                        Recommended
+                      </span>
+                    )}
+                  </div>
                   <p
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
