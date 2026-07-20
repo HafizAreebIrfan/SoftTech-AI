@@ -48,3 +48,115 @@
 .default {
   color: var(--app-text-primary, #ffffff) !important;
 }
+
+/* Search bar */
+.searchContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.searchInput {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.45rem 0.75rem 0.45rem 2rem;
+  font-size: 0.8125rem;
+  border-radius: 6px;
+  background-color: var(--app-bg-secondary, #0c0c0e);
+  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  color: var(--app-text-primary, #ffffff);
+  outline: none;
+  transition: all 0.2s ease-in-out;
+}
+
+.searchInput:focus {
+  border-color: var(--app-card-active-border, #3b82f6);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.625rem;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sortable Headers */
+.thSortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.thSortable:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.sortIcon {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  display: inline-flex;
+}
+
+.thSortable:hover .sortIcon {
+  opacity: 0.9;
+}
+
+/* Pagination Controls */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  padding: 0.25rem 0;
+  font-size: 0.8125rem;
+  color: var(--app-text-secondary, #8a8d98);
+}
+
+.paginationButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pageBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.6rem;
+  background-color: var(--app-bg-secondary, #0c0c0e);
+  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border-radius: 6px;
+  color: var(--app-text-primary, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: var(--app-card-active-border, #3b82f6);
+}
+
+.pageBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pageSizeSelect {
+  padding: 0.25rem 0.5rem;
+  background-color: var(--app-bg-secondary, #0c0c0e);
+  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border-radius: 6px;
+  color: var(--app-text-primary, #ffffff);
+  font-size: 0.75rem;
+  outline: none;
+  cursor: pointer;
+}
