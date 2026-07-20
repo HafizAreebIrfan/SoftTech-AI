@@ -67,10 +67,30 @@ export const registerCompanyApiTools = (
 
 const callRegisteredApi = async (api: IApi, input: any) => {
   const url = buildApiUrl(api, input);
-  const response = await fetch(url, {
-    method: (api.method || "GET").toUpperCase(),
-    headers: buildHeaders(api),
-  });
+  const method = (api.method || "GET").toUpperCase();
+
+  const headers = buildHeaders(api);
+  const options: RequestInit = {
+    method,
+    headers,
+  };
+
+  const rawInput = typeof input === "object" && input !== null ? input : {};
+  const allParams: Record<string, any> = {
+    ...(rawInput.params ?? {}),
+    ...rawInput,
+  };
+
+  if (["POST", "PUT", "PATCH"].includes(method)) {
+    headers["Content-Type"] = "application/json";
+
+    const bodyPayload = { ...allParams };
+    delete bodyPayload.params; // Clean utility params
+
+    options.body = JSON.stringify(bodyPayload);
+  }
+
+  const response = await fetch(url, options);
 
   if (!response.ok) {
     throw new Error(
@@ -158,6 +178,19 @@ const buildApiUrl = (api: IApi, input: any) => {
         cleanKeys.push(str);
       }
     });
+
+    // Also automatically append standard filter/pagination query parameters if present
+    const standardKeys = [
+      "limit", "count", "size", "page", "offset",
+      "status", "state", "filter", "query", "q", "search",
+      "sort", "orderBy", "sortDir", "order"
+    ];
+    standardKeys.forEach((key) => {
+      if (!cleanKeys.includes(key)) {
+        cleanKeys.push(key);
+      }
+    });
+
     cleanKeys.forEach((key) => {
       const value = allParams[key];
       if (value !== undefined && value !== null) {

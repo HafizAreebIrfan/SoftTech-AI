@@ -48,7 +48,7 @@ export const normalizeApiResponseToWidget = (
   layout: string,
   industry?: string,
 ): GenericWidgetContent => {
-  const blocks = buildBlocks(response);
+  const blocks = buildBlocks(response, apiName);
 
   return {
     title: apiName,
@@ -84,9 +84,9 @@ const normalizeIndustry = (ind?: string): string => {
   return lower;
 };
 
-const buildBlocks = (response: unknown): WidgetBlock[] => {
+const buildBlocks = (response: unknown, apiName?: string): WidgetBlock[] => {
   if (Array.isArray(response)) {
-    return buildArrayBlocks(response);
+    return buildArrayBlocks(response, apiName);
   }
 
   if (isRecord(response)) {
@@ -106,24 +106,102 @@ const buildBlocks = (response: unknown): WidgetBlock[] => {
   return [];
 };
 
-const buildArrayBlocks = (items: unknown[]): WidgetBlock[] => {
+const buildArrayBlocks = (items: unknown[], apiName?: string): WidgetBlock[] => {
   const records = items.filter(isRecord);
 
   if (records.length > 0) {
-    const headers = Object.keys(records[0]).slice(0, 6);
+    const blocks: WidgetBlock[] = [];
+    const metrics: WidgetMetric[] = [];
 
-    return [
-      {
-        type: "table",
-        title: "Items",
-        tableHeaders: headers,
-        tableRows: records
-          .slice(0, 10)
-          .map((record) =>
-            headers.map((header) => stringifyCell(record[header])),
-          ),
-      },
-    ];
+    // Formulate a beautiful label name from the API collection name
+    const collectionLabel = apiName ? toLabel(apiName) : "Items";
+    metrics.push({
+      label: collectionLabel.toLowerCase().endsWith("s")
+        ? `Total ${collectionLabel}`
+        : `Total ${collectionLabel}s`,
+      value: records.length,
+      tone: "default",
+    });
+
+    // Detect numeric fields to sum or average for extra summary metrics
+    const numericFields = new Map<string, { sum: number; count: number }>();
+    records.forEach((record) => {
+      Object.entries(record).forEach(([key, val]) => {
+        const lowerKey = key.toLowerCase();
+        if (
+          typeof val === "number" &&
+          (lowerKey.includes("amount") ||
+            lowerKey.includes("total") ||
+            lowerKey.includes("price") ||
+            lowerKey.includes("qty") ||
+            lowerKey.includes("quantity") ||
+            lowerKey.includes("sales") ||
+            lowerKey.includes("cost") ||
+            lowerKey.includes("fee"))
+        ) {
+          const stats = numericFields.get(key) || { sum: 0, count: 0 };
+          stats.sum += val;
+          stats.count += 1;
+          numericFields.set(key, stats);
+        } else if (typeof val === "string") {
+          const parsed = parseFloat(val.replace(/[^0-9.]/g, ""));
+          if (
+            !isNaN(parsed) &&
+            (lowerKey.includes("amount") ||
+              lowerKey.includes("total") ||
+              lowerKey.includes("price") ||
+              lowerKey.includes("cost") ||
+              lowerKey.includes("fee") ||
+              lowerKey.includes("sales"))
+          ) {
+            const stats = numericFields.get(key) || { sum: 0, count: 0 };
+            stats.sum += parsed;
+            stats.count += 1;
+            numericFields.set(key, stats);
+          }
+        }
+      });
+    });
+
+    // Add up to top 3 numeric metrics
+    Array.from(numericFields.entries())
+      .slice(0, 3)
+      .forEach(([key, stats]) => {
+        const label = toLabel(key);
+        const isPrice =
+          key.toLowerCase().includes("price") ||
+          key.toLowerCase().includes("amount") ||
+          key.toLowerCase().includes("total") ||
+          key.toLowerCase().includes("cost") ||
+          key.toLowerCase().includes("fee") ||
+          key.toLowerCase().includes("sales");
+
+        metrics.push({
+          label: label.startsWith("Total") ? label : `Total ${label}`,
+          value: isPrice ? `$${stats.sum.toFixed(2)}` : stats.sum,
+          tone: "good",
+        });
+      });
+
+    blocks.push({
+      type: "metrics",
+      title: "Summary Overview",
+      metrics,
+    });
+
+    const headers = Object.keys(records[0]).slice(0, 6);
+    blocks.push({
+      type: "table",
+      title: `${collectionLabel} List`,
+      tableHeaders: headers,
+      tableRows: records
+        .slice(0, 10)
+        .map((record) =>
+          headers.map((header) => stringifyCell(record[header])),
+        ),
+    });
+
+    return blocks;
   }
 
   return [
@@ -198,7 +276,7 @@ const buildObjectBlocks = (record: Record<string, unknown>): WidgetBlock[] => {
   for (const [key, value] of Object.entries(record)) {
     if (Array.isArray(value) && value.length > 0) {
       blocks.push(
-        ...buildArrayBlocks(value).map((block) => ({
+        ...buildArrayBlocks(value, key).map((block) => ({
           ...block,
           title: toLabel(key),
         }))
