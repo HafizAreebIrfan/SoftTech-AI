@@ -19,6 +19,7 @@ export interface IApi {
   sampleResponse?: Record<string, unknown>;
   fallbackWidget?: Record<string, unknown>;
   mcpResourceUri?: string;
+  testedonregister?: boolean;
 }
 
 export interface IUiPreference {
