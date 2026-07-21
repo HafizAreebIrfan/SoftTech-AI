@@ -37,29 +37,48 @@ export const registerCompanyApiTools = (
         },
       },
       async (input: any) => {
-        const rawResponse = await callRegisteredApi(api, input);
-        const widgetContent = normalizeApiResponseToWidget(
-          api.name || company.companyName,
-          rawResponse,
-          company.uiPreference?.layout,
-          company.industry,
-        );
-        return {
-          structuredContent: widgetContent,
-          content: [
-            {
-              type: "text",
-              text: `${widgetContent.title}: ${widgetContent.blocks.length} widget block(s) returned.`,
+        console.log(`\n==================================================`);
+        console.log(`[MCP Tool Call] Executing: "${toolName}"`);
+        console.log(`Company: "${company.companyName}"`);
+        console.log(`Arguments sent by GPT:`, JSON.stringify(input, null, 2));
+
+        try {
+          const rawResponse = await callRegisteredApi(api, input);
+          console.log(`Raw API Response:`, typeof rawResponse === "object" ? JSON.stringify(rawResponse, null, 2).slice(0, 1500) : String(rawResponse).slice(0, 500));
+
+          const widgetContent = normalizeApiResponseToWidget(
+            api.name || company.companyName,
+            rawResponse,
+            company.uiPreference?.layout,
+            company.industry,
+          );
+
+          const result = {
+            structuredContent: widgetContent,
+            content: [
+              {
+                type: "text" as const,
+                text: `${widgetContent.title}: ${widgetContent.blocks.length} widget block(s) returned.`,
+              },
+            ],
+            _meta: {
+              ui: {
+                resourceUri: "ui://generic/widgets.html",
+              },
+              company: company.companyName,
+              lastFetched: new Date().toISOString(),
             },
-          ],
-          _meta: {
-            ui: {
-              resourceUri: "ui://generic/widgets.html",
-            },
-            company: company.companyName,
-            lastFetched: new Date().toISOString(),
-          },
-        };
+          };
+
+          console.log(`Normalized Widget Title: "${widgetContent.title}"`);
+          console.log(`Normalized Blocks Count: ${widgetContent.blocks.length}`);
+          console.log(`==================================================\n`);
+          return result;
+        } catch (error: any) {
+          console.error(`❌ [MCP Tool Error] Failed calling "${toolName}":`, error.message || error);
+          console.log(`==================================================\n`);
+          throw error;
+        }
       },
     );
   });
