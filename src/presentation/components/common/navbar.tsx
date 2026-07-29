@@ -78,6 +78,10 @@ const Navbar: React.FC = () => {
               Preview Dashboard
             </Link>
 
+            <Link to="/admin-preview" className={styles.primaryBtn}>
+              Admin Preview
+            </Link>
+
             <button
               id="menu-toggle"
               className={styles.menuBtn}
@@ -142,21 +146,41 @@ const Navbar: React.FC = () => {
 
         <div className={styles.divider}></div>
 
-        <div className={styles.mobileActions}>
-          <Link
-            to="/login"
-            className={styles.mobileLoginBtn}
-            onClick={closeMobileMenu}
-          >
-            Log in
-          </Link>
-          <Link
-            to="/signup"
-            className={styles.mobilePrimaryBtn}
-            onClick={closeMobileMenu}
-          >
-            Start Building
-          </Link>
+        <div className={styles.mobileActions} style={{ flexDirection: "column", gap: "0.75rem" }}>
+          <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
+            <Link
+              to="/login"
+              className={styles.mobileLoginBtn}
+              onClick={closeMobileMenu}
+            >
+              Log in
+            </Link>
+            <Link
+              to="/signup"
+              className={styles.mobilePrimaryBtn}
+              onClick={closeMobileMenu}
+            >
+              Start Building
+            </Link>
+          </div>
+          <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
+            <Link
+              to="/dashboard-preview"
+              className={styles.mobileLoginBtn}
+              style={{ flex: 1, textAlign: "center" }}
+              onClick={closeMobileMenu}
+            >
+              Preview Dashboard
+            </Link>
+            <Link
+              to="/admin-preview"
+              className={styles.mobilePrimaryBtn}
+              style={{ flex: 1, textAlign: "center" }}
+              onClick={closeMobileMenu}
+            >
+              Admin Preview
+            </Link>
+          </div>
         </div>
       </div>
     </>

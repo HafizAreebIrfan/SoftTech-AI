@@ -1,0 +1,730 @@
+/* Admin Preview Page Styling with Glassmorphism and Themes */
+
+.previewContainer {
+  position: relative;
+  width: 100%;
+  min-height: calc(100vh - 76px);
+  padding: 3rem 1.5rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background: var(--app-bg);
+  transition: background 0.4s ease;
+  margin-top: 76px; /* Space for fixed navbar */
+}
+
+/* Ambient Ambient Blobs */
+.glassBlob1,
+.glassBlob2,
+.glassBlob3 {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.35;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: plus-lighter;
+}
+
+[data-theme="light"] .glassBlob1,
+[data-theme="light"] .glassBlob2,
+[data-theme="light"] .glassBlob3 {
+  opacity: 0.15;
+  filter: blur(70px);
+  mix-blend-mode: multiply;
+}
+
+.glassBlob1 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(
+    circle,
+    var(--app-btn-grad-1) 0%,
+    rgba(99, 102, 241, 0) 70%
+  );
+  top: 10%;
+  left: 5%;
+  animation: floatSlowly 20s infinite ease-in-out alternate;
+}
+
+.glassBlob2 {
+  width: 420px;
+  height: 420px;
+  background: radial-gradient(
+    circle,
+    var(--app-text-grad-2) 0%,
+    rgba(236, 72, 153, 0) 70%
+  );
+  bottom: 5%;
+  right: 8%;
+  animation: floatSlowly 26s infinite ease-in-out alternate-reverse;
+}
+
+.glassBlob3 {
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(
+    circle,
+    var(--app-brand-emerald) 0%,
+    rgba(16, 185, 129, 0) 70%
+  );
+  top: 35%;
+  right: 30%;
+  animation: floatSlowly 17s infinite ease-in-out alternate;
+}
+
+@keyframes floatSlowly {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(40px, -20px) scale(1.05);
+  }
+  100% {
+    transform: translate(-20px, 30px) scale(0.95);
+  }
+}
+
+/* Main Dashboard Wrapper */
+.workspaceCard {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1280px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.workspaceHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: var(--app-text-heading);
+  margin-bottom: 0.5rem;
+}
+
+.workspaceTitle {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--app-text-primary) 0%, var(--app-text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.workspaceSubtitle {
+  font-size: 0.95rem;
+  color: var(--app-text-secondary);
+}
+
+/* Layout: Sidebar + Content Area */
+.dashboardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+@media (min-width: 991px) {
+  .dashboardBody {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+/* Sidebar Navigation */
+.sidebar {
+  flex: 0 0 260px;
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  gap: 0.5rem;
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-card-border);
+  padding: 0.75rem;
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 10;
+}
+
+@media (min-width: 991px) {
+  .sidebar {
+    flex-direction: column;
+    overflow-x: visible;
+    gap: 0.5rem;
+  }
+}
+
+.sidebarBtn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: auto;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--app-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+@media (min-width: 991px) {
+  .sidebarBtn {
+    width: 100%;
+  }
+}
+
+.sidebarBtn:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--app-text-primary);
+}
+
+.activeSidebarBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--app-card-border);
+  color: var(--app-text-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Main Display Area */
+.contentArea {
+  flex: 1;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--app-card-border);
+  padding: 1.75rem;
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Cards & Sections */
+.sectionCard {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--app-card-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--app-card-border);
+  padding-bottom: 0.75rem;
+}
+
+.cardTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--app-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btnPrimary {
+  background-color: var(--app-text-primary);
+  color: var(--app-bg);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnPrimary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btnSecondary {
+  background: transparent;
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-card-border);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btnSecondary:hover {
+  border-color: var(--app-text-primary);
+  color: var(--app-text-primary);
+}
+
+/* Form Styles */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formLabel {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--app-text-secondary);
+}
+
+.formInput {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--app-card-border);
+  color: var(--app-text-primary);
+  padding: 0.625rem 0.875rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.formInput:focus {
+  border-color: var(--app-text-primary);
+}
+
+.formSelect {
+  composes: formInput;
+}
+
+.formSelect option {
+  background-color: var(--app-bg-secondary);
+  color: var(--app-text-primary);
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .formRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Custom Table Styles */
+.tableContainer {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.customTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.customTable th {
+  padding: 0.75rem 1rem;
+  color: var(--app-text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--app-card-border);
+}
+
+.customTable td {
+  padding: 0.875rem 1rem;
+  color: var(--app-text-primary);
+  border-bottom: 1px solid var(--app-card-border);
+}
+
+.customTable tr:hover {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+/* Badges & Status Indicators */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.badgeGet {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badgePost {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badgePut {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badgeDelete {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badgeActive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badgeTesting {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.5rem;
+}
+
+.statusDotActive {
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.statusDotTesting {
+  background-color: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+/* Toggle Switch */
+.toggleContainer {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.toggleInput {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggleSlider {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--app-card-border);
+  border-radius: 34px;
+  transition: all 0.3s ease;
+}
+
+.toggleSlider::before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--app-text-secondary);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.toggleInput:checked + .toggleSlider {
+  background-color: var(--app-brand-emerald);
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.toggleInput:checked + .toggleSlider::before {
+  transform: translateX(22px);
+  background-color: #fff;
+}
+
+/* Terminal & Logs */
+.terminalContainer {
+  background: #0d0e15;
+  border: 1px solid #1e2030;
+  border-radius: 10px;
+  padding: 1.25rem;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 0.85rem;
+  color: #c5c9db;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 250px;
+  overflow-y: auto;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.terminalLog {
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.terminalTime {
+  color: #565f89;
+  margin-right: 0.5rem;
+}
+
+.terminalInfo {
+  color: #7aa2f7;
+}
+
+.terminalSuccess {
+  color: #9ece6a;
+}
+
+.terminalWarning {
+  color: #e0af68;
+}
+
+.terminalCommand {
+  color: #bb9af7;
+  font-weight: 700;
+}
+
+/* Splitscreen Layout for Playground */
+.splitscreen {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 991px) {
+  .splitscreen {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Metric Display card (Onboarding / General) */
+.metricRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+}
+
+.metricCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--app-card-border);
+  padding: 1.25rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metricValue {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--app-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.metricLabel {
+  font-size: 0.825rem;
+  color: var(--app-text-secondary);
+  font-weight: 500;
+}
+
+/* Checklist / Steps */
+.stepItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--app-card-border);
+  transition: all 0.2s ease;
+}
+
+.stepItem:hover {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--app-card-active-border);
+}
+
+.stepCheckbox {
+  margin-top: 0.25rem;
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--app-brand-emerald);
+}
+
+.stepContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stepTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--app-text-primary);
+}
+
+.stepTitleCompleted {
+  text-decoration: line-through;
+  color: var(--app-text-secondary);
+  opacity: 0.7;
+}
+
+.stepDesc {
+  font-size: 0.825rem;
+  color: var(--app-text-secondary);
+}
+
+/* Subscription Grid */
+.planGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .planGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.planCard {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--app-card-border);
+  border-radius: 16px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.planCardActive {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: var(--app-text-primary);
+  box-shadow: 0 10px 30px -10px rgba(255, 255, 255, 0.15);
+}
+
+.planRibbon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--app-brand-emerald);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.planName {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--app-text-primary);
+}
+
+.planPrice {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.planPriceAmount {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--app-text-primary);
+}
+
+.planPricePeriod {
+  font-size: 0.85rem;
+  color: var(--app-text-secondary);
+}
+
+.planFeatures {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--app-text-secondary);
+}
+
+.planFeatureItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Modal Overlay Styling */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+}
+
+.modalContent {
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-card-border);
+  border-radius: 16px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  animation: modalEnter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

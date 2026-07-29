@@ -19,6 +19,7 @@ import PublicLayout from "../../presentation/layouts/PublicLayout";
 import AuthLayout from "../../presentation/layouts/AuthLayout";
 import { useAuthStore } from "../store/authStore";
 import DashboardPreview from "../../presentation/screens/public/PreviewDashboard";
+import AdminPreview from "../../presentation/screens/public/AdminPreview";
 
 // 1. Establish the absolute root route (renders an Outlet container)
 const rootRoute = createRootRoute({
@@ -55,6 +56,12 @@ const dashboardPreviewRoute = createRoute({
   getParentRoute: () => publicLayout,
   path: "/dashboard-preview",
   component: DashboardPreview,
+});
+
+const adminPreviewRoute = createRoute({
+  getParentRoute: () => publicLayout,
+  path: "/admin-preview",
+  component: AdminPreview,
 });
 
 const loginRoute = createRoute({
@@ -121,7 +128,7 @@ const serviceUnavailableRoute = createRoute({
 
 // 4. Assemble the unified route tree
 const routeTree = rootRoute.addChildren([
-  publicLayout.addChildren([indexRoute, dashboardPreviewRoute]),
+  publicLayout.addChildren([indexRoute, dashboardPreviewRoute, adminPreviewRoute]),
   authLayout.addChildren([
     loginRoute,
     signupRoute.addChildren([
