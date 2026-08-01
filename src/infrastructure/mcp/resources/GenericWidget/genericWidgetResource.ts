@@ -16,31 +16,33 @@ const GENERIC_WIDGET_RESOURCES = [
   },
 ];
 
-const addTodoInputSchema = {
-  title: z.string().min(1),
-};
+//todo app example
 
-const completeTodoInputSchema = {
-  id: z.string().min(1),
-};
+// const addTodoInputSchema = {
+//   title: z.string().min(1),
+// };
 
-const todoOutputSchema = {
-  tasks: z.array(
-    z.object({
-      id: z.string(),
-      title: z.string(),
-      completed: z.boolean(),
-    }),
-  ),
-};
+// const completeTodoInputSchema = {
+//   id: z.string().min(1),
+// };
 
-let todos: { id: string; title: string; completed: boolean }[] = [];
-let nextId = 1;
+// const todoOutputSchema = {
+//   tasks: z.array(
+//     z.object({
+//       id: z.string(),
+//       title: z.string(),
+//       completed: z.boolean(),
+//     }),
+//   ),
+// };
 
-const replyWithTodos = (message?: string) => ({
-  content: message ? [{ type: "text" as const, text: message }] : [],
-  structuredContent: { tasks: todos },
-});
+// let todos: { id: string; title: string; completed: boolean }[] = [];
+// let nextId = 1;
+
+// const replyWithTodos = (message?: string) => ({
+//   content: message ? [{ type: "text" as const, text: message }] : [],
+//   structuredContent: { tasks: todos },
+// });
 export const registerGenericWidgetResources = (server: any) => {
   //   registerAppResource(
   //     server,

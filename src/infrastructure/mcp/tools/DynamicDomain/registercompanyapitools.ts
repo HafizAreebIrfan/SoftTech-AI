@@ -1,6 +1,5 @@
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 import { IApi, ICompany } from "../../../../domain/types/company.types";
 import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwidgetoutputschema";
 import { buildCustomMcpInputSchema } from "../../../middlewares/ValidationMiddleware/schemas";
@@ -37,19 +36,13 @@ export const registerCompanyApiTools = (
         },
       },
       async (input: any) => {
-        console.log(`\n==================================================`);
-        console.log(`[MCP Tool Call] Executing: "${toolName}"`);
-        console.log(`Company: "${company.companyName}"`);
-        console.log(`Arguments sent by GPT:`, JSON.stringify(input, null, 2));
-
         try {
           const rawResponse = await callRegisteredApi(api, input);
-          console.log(`Raw API Response:`, typeof rawResponse === "object" ? JSON.stringify(rawResponse, null, 2).slice(0, 1500) : String(rawResponse).slice(0, 500));
-
           const widgetContent = normalizeApiResponseToWidget(
-            api.name || company.companyName,
+            company.companyName,
+            api.name || `API ${index + 1}`,
             rawResponse,
-            company.uiPreference?.layout,
+            company.uiPreference?.layout ?? "dashboard",
             company.industry,
           );
 
@@ -69,14 +62,8 @@ export const registerCompanyApiTools = (
               lastFetched: new Date().toISOString(),
             },
           };
-
-          console.log(`Normalized Widget Title: "${widgetContent.title}"`);
-          console.log(`Normalized Blocks Count: ${widgetContent.blocks.length}`);
-          console.log(`==================================================\n`);
           return result;
         } catch (error: any) {
-          console.error(`❌ [MCP Tool Error] Failed calling "${toolName}":`, error.message || error);
-          console.log(`==================================================\n`);
           throw error;
         }
       },
@@ -200,9 +187,21 @@ const buildApiUrl = (api: IApi, input: any) => {
 
     // Also automatically append standard filter/pagination query parameters if present
     const standardKeys = [
-      "limit", "count", "size", "page", "offset",
-      "status", "state", "filter", "query", "q", "search",
-      "sort", "orderBy", "sortDir", "order"
+      "limit",
+      "count",
+      "size",
+      "page",
+      "offset",
+      "status",
+      "state",
+      "filter",
+      "query",
+      "q",
+      "search",
+      "sort",
+      "orderBy",
+      "sortDir",
+      "order",
     ];
     standardKeys.forEach((key) => {
       if (!cleanKeys.includes(key)) {

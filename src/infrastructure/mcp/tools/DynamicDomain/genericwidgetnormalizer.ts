@@ -11,31 +11,212 @@ type WidgetKeyValueItem = {
   value: string | number;
 };
 
+type Pagination = {
+  page: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize?: number;
+};
+
+type Action = {
+  id: string;
+  label: string;
+  action: string;
+  variant?: "primary" | "secondary" | "danger";
+};
+
+type Filter = {
+  id: string;
+  label: string;
+  type: "text" | "select" | "date" | "number";
+
+  value?: string;
+
+  options?: string[];
+};
+
+type TableColumn = {
+  key: string;
+
+  label: string;
+
+  type?: "text" | "number" | "currency" | "date" | "status" | "image";
+
+  sortable?: boolean;
+};
+
+type Field = {
+  id: string;
+  name: string;
+  label: string;
+  type:
+    | "text"
+    | "email"
+    | "password"
+    | "number"
+    | "textarea"
+    | "select"
+    | "multiselect";
+  placeholder?: string;
+  value?: string | number | string[];
+  options?: string[];
+  required?: boolean;
+  description?: string;
+};
+
 type WidgetBlock =
   | {
       type: "metrics";
       title?: string;
+
       metrics: WidgetMetric[];
     }
   | {
       type: "keyValue";
       title?: string;
+
       keyValueItems: WidgetKeyValueItem[];
     }
   | {
       type: "list";
       title?: string;
-      listItems: Array<{ title: string; description?: string; meta?: string }>;
+
+      listItems: {
+        title: string;
+        description?: string;
+        meta?: string;
+      }[];
     }
   | {
       type: "table";
       title?: string;
-      tableHeaders: string[];
-      tableRows: Array<Array<string | number>>;
-      totalItems?: number;
-      totalPages?: number;
-      currentPage?: number;
+
+      columns: TableColumn[];
+
+      rows: (string | number)[][];
+
+      pagination?: Pagination;
+
+      filters?: Filter[];
+
+      actions?: Action[];
+    }
+  | {
+      type: "cards";
+      title?: string;
+
+      cards: {
+        id?: string;
+
+        title: string;
+
+        subtitle?: string;
+
+        image?: string;
+
+        icon?: string;
+
+        badge?: string;
+
+        attributes?: {
+          label: string;
+          value: string | number;
+        }[];
+
+        actions?: Action[];
+      }[];
+
+      pagination?: Pagination;
+
+      filters?: Filter[];
+
+      actions?: Action[];
+    }
+  | {
+      type: "timeline";
+      title?: string;
+
+      events: {
+        id?: string;
+
+        title: string;
+
+        subtitle?: string;
+
+        date: string;
+
+        status?: string;
+
+        icon?: string;
+      }[];
+
+      pagination?: Pagination;
+
+      filters?: Filter[];
+    }
+  | {
+      type: "map";
+      title?: string;
+
+      markers: {
+        id?: string;
+
+        lat: number;
+
+        lng: number;
+
+        title: string;
+
+        description?: string;
+
+        icon?: string;
+
+        badge?: string;
+      }[];
+    }
+  | {
+      type: "gallery";
+      title?: string;
+
+      subtitle?: string;
+
+      images: {
+        url: string;
+
+        title?: string;
+      }[];
+
+      pagination?: Pagination;
+    }
+  | {
+      type: "actions";
+      title?: string;
+
+      actions: Action[];
+    }
+  | {
+      type: "form";
+      title?: string;
+
+      fields: Field[];
+
+      submitAction: string;
+    }
+  | {
+      type: "alert";
+      title?: string;
+
+      severity: "info" | "warning" | "error" | "success";
+
+      message: string;
     };
+
+type WidgetMetadata = {
+  companyName: string;
+  apiName: string;
+  generatedAt: string;
+  version: string;
+};
 
 export type GenericWidgetContent = {
   title: string;
@@ -43,12 +224,14 @@ export type GenericWidgetContent = {
   layout: string;
   industry?: string;
   blocks: WidgetBlock[];
+  metadata?: WidgetMetadata;
 };
 
 export const normalizeApiResponseToWidget = (
+  companyName: string,
   apiName: string,
   response: unknown,
-  layout: string,
+  layout?: string,
   industry?: string,
 ): GenericWidgetContent => {
   const blocks = buildBlocks(response, apiName);
@@ -57,7 +240,7 @@ export const normalizeApiResponseToWidget = (
     title: apiName,
     subtitle: "Live API response",
     layout: layout || "dashboard",
-    industry: normalizeIndustry(industry),
+    industry: industry || "general",
     blocks:
       blocks.length > 0
         ? blocks
@@ -68,32 +251,85 @@ export const normalizeApiResponseToWidget = (
               keyValueItems: [{ key: "Status", value: "No renderable data" }],
             },
           ],
+    metadata: {
+      companyName,
+      apiName,
+      generatedAt: new Date().toISOString(),
+      version: "1",
+    },
   };
 };
 
-const normalizeIndustry = (ind?: string): string => {
-  if (!ind) return "general";
-  const lower = ind.toLowerCase();
-  if (lower.includes("weather") || lower.includes("forecast") || lower.includes("data")) return "forecasting";
-  if (lower.includes("health") || lower.includes("med") || lower.includes("clinic")) return "health";
-  if (lower.includes("food") || lower.includes("restaurant") || lower.includes("dining")) return "food";
-  if (lower.includes("transport") || lower.includes("mobility") || lower.includes("ride")) return "transport";
-  if (lower.includes("ecom") || lower.includes("store") || lower.includes("shop")) return "ecommerce";
-  if (lower.includes("fintech") || lower.includes("finance") || lower.includes("bank")) return "fintech";
-  if (lower.includes("saas") || lower.includes("software")) return "saas";
-  if (lower.includes("ai") || lower.includes("agent") || lower.includes("auto")) return "ai";
-  if (lower.includes("logistic") || lower.includes("ship") || lower.includes("supply")) return "logistics";
-  if (lower.includes("travel") || lower.includes("flight") || lower.includes("hotel")) return "travel";
-  return lower;
-};
+// const normalizeIndustry = (ind?: string): string => {
+//   if (!ind) return "general";
+//   const lower = ind.toLowerCase();
+//   if (
+//     lower.includes("weather") ||
+//     lower.includes("forecast") ||
+//     lower.includes("data")
+//   )
+//     return "forecasting";
+//   if (
+//     lower.includes("health") ||
+//     lower.includes("med") ||
+//     lower.includes("clinic")
+//   )
+//     return "health";
+//   if (
+//     lower.includes("food") ||
+//     lower.includes("restaurant") ||
+//     lower.includes("dining")
+//   )
+//     return "food";
+//   if (
+//     lower.includes("transport") ||
+//     lower.includes("mobility") ||
+//     lower.includes("ride")
+//   )
+//     return "transport";
+//   if (
+//     lower.includes("ecom") ||
+//     lower.includes("store") ||
+//     lower.includes("shop")
+//   )
+//     return "ecommerce";
+//   if (
+//     lower.includes("fintech") ||
+//     lower.includes("finance") ||
+//     lower.includes("bank")
+//   )
+//     return "fintech";
+//   if (lower.includes("saas") || lower.includes("software")) return "saas";
+//   if (lower.includes("ai") || lower.includes("agent") || lower.includes("auto"))
+//     return "ai";
+//   if (
+//     lower.includes("logistic") ||
+//     lower.includes("ship") ||
+//     lower.includes("supply")
+//   )
+//     return "logistics";
+//   if (
+//     lower.includes("travel") ||
+//     lower.includes("flight") ||
+//     lower.includes("hotel")
+//   )
+//     return "travel";
+//   return lower;
+// };
 
-const buildBlocks = (response: unknown, apiName?: string): WidgetBlock[] => {
+const buildBlocks = (
+  response: unknown,
+  apiName?: string,
+  companyName?: string,
+  industry?: string,
+  layout?: string,
+): WidgetBlock[] => {
   if (Array.isArray(response)) {
     return buildArrayBlocks(response, apiName);
   }
 
   if (isRecord(response)) {
-    return buildObjectBlocks(response);
+    return buildObjectBlocks(response, apiName, companyName, industry, layout);
   }
 
   if (isPrimitive(response)) {
@@ -109,7 +345,10 @@ const buildBlocks = (response: unknown, apiName?: string): WidgetBlock[] => {
   return [];
 };
 
-const buildArrayBlocks = (items: unknown[], apiName?: string): WidgetBlock[] => {
+const buildArrayBlocks = (
+  items: unknown[],
+  apiName?: string,
+): WidgetBlock[] => {
   const records = items.filter(isRecord);
 
   if (records.length > 0) {
@@ -211,8 +450,15 @@ const buildArrayBlocks = (items: unknown[], apiName?: string): WidgetBlock[] => 
     blocks.push({
       type: "table",
       title: `${collectionLabel} List`,
-      tableHeaders: headers,
-      tableRows: records
+      columns: headers.map((header) => {
+        return {
+          key: header,
+          label: toLabel(header),
+          type: "text",
+          sortable: true,
+        };
+      }),
+      rows: records
         .slice(0, 10)
         .map((record) =>
           headers.map((header) => stringifyCell(record[header])),
@@ -242,8 +488,19 @@ const extractPaginationMeta = (parentObj: Record<string, unknown>) => {
   Object.entries(parentObj).forEach(([k, v]) => {
     const lower = k.toLowerCase();
     if (typeof v === "number") {
-      if (lower === "total" || lower === "totalcount" || lower === "count" || lower === "totalitems" || lower === "records" || lower.includes("total")) {
-        if (!lower.includes("page") && !lower.includes("limit") && !lower.includes("size")) {
+      if (
+        lower === "total" ||
+        lower === "totalcount" ||
+        lower === "count" ||
+        lower === "totalitems" ||
+        lower === "records" ||
+        lower.includes("total")
+      ) {
+        if (
+          !lower.includes("page") &&
+          !lower.includes("limit") &&
+          !lower.includes("size")
+        ) {
           totalItems = v;
         }
       } else if (lower === "totalpages" || lower === "pages") {
@@ -257,18 +514,30 @@ const extractPaginationMeta = (parentObj: Record<string, unknown>) => {
   return { totalItems, totalPages, currentPage };
 };
 
-const buildObjectBlocks = (record: Record<string, unknown>): WidgetBlock[] => {
+const buildObjectBlocks = (
+  record: Record<string, unknown>,
+  apiName?: string,
+  companyName?: string,
+  industry?: string,
+  layout?: string,
+): WidgetBlock[] => {
   const blocks: WidgetBlock[] = [];
 
   const allMetrics: WidgetMetric[] = [];
-  const allListItems: Array<{ title: string; description?: string; meta?: string }> = [];
+  const allListItems: Array<{
+    title: string;
+    description?: string;
+    meta?: string;
+  }> = [];
   const allKeyValues: WidgetKeyValueItem[] = [];
 
   const extractItems = (obj: Record<string, unknown>, prefix = "") => {
     for (const [key, value] of Object.entries(obj)) {
       // Avoid raw large nested objects or noise
       if (key === "icon" || key === "code" || key === "tz_id") continue;
-      const label = prefix ? `${toLabel(prefix)} ${toLabel(key)}` : toLabel(key);
+      const label = prefix
+        ? `${toLabel(prefix)} ${toLabel(key)}`
+        : toLabel(key);
 
       if (typeof value === "number") {
         allMetrics.push({ label, value });
@@ -279,7 +548,7 @@ const buildObjectBlocks = (record: Record<string, unknown>): WidgetBlock[] => {
           allListItems.push({
             title: label,
             description: String(value.text || value.name || ""),
-            meta: String(value.code || value.region || "")
+            meta: String(value.code || value.region || ""),
           });
         }
         extractItems(value, key);
@@ -324,13 +593,16 @@ const buildObjectBlocks = (record: Record<string, unknown>): WidgetBlock[] => {
             ...block,
             title: toLabel(key),
           };
-          if (updatedBlock.type === "table" && pagMeta.totalItems !== undefined) {
-            updatedBlock.totalItems = pagMeta.totalItems;
-            updatedBlock.totalPages = pagMeta.totalPages;
-            updatedBlock.currentPage = pagMeta.currentPage;
+          if (
+            updatedBlock.type === "table" &&
+            pagMeta.totalItems !== undefined
+          ) {
+            updatedBlock.pagination!.totalItems = pagMeta.totalItems;
+            updatedBlock.pagination!.totalPages = pagMeta.totalPages;
+            updatedBlock.pagination!.page = pagMeta.currentPage;
           }
           return updatedBlock;
-        })
+        }),
       );
     }
   }
