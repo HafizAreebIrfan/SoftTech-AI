@@ -13,6 +13,9 @@ export interface ICompanyDocument extends Document, ICompanyForgotPassword {
   phone?: string;
   apis?: any[];
   uiPreference?: any;
+  totalSpent?: number;
+  currentPlan?: string | null;
+  onBoarding?: boolean;
   onboardingStep: number;
   status: string;
   createdAt: Date;
@@ -40,8 +43,15 @@ const CompanySchema = new mongoose.Schema<ICompanyDocument, ICompanyModel>(
     phone: { type: String },
     apis: [ApiSchema],
     uiPreference: UiPreferenceSchema,
+    totalSpent: { type: Number, default: 0 },
+    currentPlan: { type: String, default: null, nullable: true },
+    onBoarding: { type: Boolean, default: true },
     onboardingStep: { type: Number, default: 1 },
-    status: { type: String, default: "draft" },
+    status: {
+      type: String,
+      enum: ["draft", "ready-for-testing", "active", "pending", "published", "not_applied"],
+      default: "draft",
+    },
     ...CompanyForgotPasswordFields,
   },
   { timestamps: true },

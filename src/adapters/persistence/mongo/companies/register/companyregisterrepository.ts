@@ -28,5 +28,9 @@ export function createCompanyRepository(): ICompanyRepository {
         .limit(limit)
         .lean();
     },
+
+    async findAllCompanies(): Promise<any> {
+      return await CompanyModel.find({}).sort({ createdAt: -1 }).lean();
+    },
   };
 }

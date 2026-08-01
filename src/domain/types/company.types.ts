@@ -25,6 +25,8 @@ export interface IUiPreference {
   layout?: string;
 }
 
+export type CompanyStatus = "draft" | "ready-for-testing" | "active" | "pending" | "published" | "not_applied";
+
 export interface ICompany {
   _id?: string;
   companyName: string;
@@ -35,8 +37,9 @@ export interface ICompany {
   phone?: string;
   apis?: IApi[];
   uiPreference?: IUiPreference | null;
+  onBoarding?: boolean;
   onboardingStep?: number;
-  status?: string;
+  status?: CompanyStatus | string;
   plan?: string;
   passwordResetOTP?: string;
   passwordResetOTPExpires?: Date;
