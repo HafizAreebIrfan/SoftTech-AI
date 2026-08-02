@@ -12,6 +12,10 @@ import Signup from "../../presentation/screens/auth/Signup";
 import SignupStep1 from "../../presentation/screens/auth/Signup/Step1";
 import SignupStep2 from "../../presentation/screens/auth/Signup/Step2";
 import SignupStep3 from "../../presentation/screens/auth/Signup/Step3";
+import ForgotPassword from "../../presentation/screens/auth/ForgotPassword";
+import ForgotPasswordStep1 from "../../presentation/screens/auth/ForgotPassword/Step1";
+import ForgotPasswordStep2 from "../../presentation/screens/auth/ForgotPassword/Step2";
+import ForgotPasswordStep3 from "../../presentation/screens/auth/ForgotPassword/Step3";
 import Dashboard from "../../presentation/screens/private/Dashboard";
 import NotFound from "../../presentation/screens/public/NotFound";
 import ServiceUnavailable from "../../presentation/screens/public/ServiceUnavailable";
@@ -70,6 +74,7 @@ const loginRoute = createRoute({
   component: Login,
 });
 
+
 const signupRoute = createRoute({
   getParentRoute: () => authLayout,
   path: "/signup",
@@ -100,6 +105,38 @@ const signupStep3Route = createRoute({
   getParentRoute: () => signupRoute,
   path: "/step3",
   component: SignupStep3,
+});
+
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => authLayout,
+  path: "/forgot-password",
+  component: ForgotPassword,
+});
+
+const forgotPasswordIndexRoute = createRoute({
+  getParentRoute: () => forgotPasswordRoute,
+  path: "/",
+  loader: () => {
+    throw redirect({ to: "/forgot-password/step1" });
+  },
+});
+
+const forgotPasswordStep1Route = createRoute({
+  getParentRoute: () => forgotPasswordRoute,
+  path: "/step1",
+  component: ForgotPasswordStep1,
+});
+
+const forgotPasswordStep2Route = createRoute({
+  getParentRoute: () => forgotPasswordRoute,
+  path: "/step2",
+  component: ForgotPasswordStep2,
+});
+
+const forgotPasswordStep3Route = createRoute({
+  getParentRoute: () => forgotPasswordRoute,
+  path: "/step3",
+  component: ForgotPasswordStep3,
 });
 
 const dashboardRoute = createRoute({
@@ -136,6 +173,12 @@ const routeTree = rootRoute.addChildren([
       signupStep1Route,
       signupStep2Route,
       signupStep3Route,
+    ]),
+    forgotPasswordRoute.addChildren([
+      forgotPasswordIndexRoute,
+      forgotPasswordStep1Route,
+      forgotPasswordStep2Route,
+      forgotPasswordStep3Route,
     ]),
   ]),
   dashboardRoute,

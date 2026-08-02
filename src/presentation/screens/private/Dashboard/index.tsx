@@ -60,9 +60,7 @@ const Dashboard: FC = () => {
             <span
               className={styles.logoText}
               style={{
-                background: `linear-gradient(135deg, ${colors.TextGradientOne}, ${colors.TextGradientTwo}, ${colors.TextGradientThree})`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
+                backgroundImage: `linear-gradient(135deg, ${colors.TextGradientOne}, ${colors.TextGradientTwo}, ${colors.TextGradientThree})`,
               }}
             >
               SoftTech AI

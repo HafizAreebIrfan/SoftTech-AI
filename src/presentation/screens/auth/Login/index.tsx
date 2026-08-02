@@ -112,10 +112,7 @@ const Login: FC = () => {
             onClick={() => navigate({ to: "/" })}
             className={styles.logoText}
             style={{
-              background: `linear-gradient(120deg, ${colors.TextGradientOne}, ${colors.TextGradientTwo}, ${colors.TextGradientThree})`,
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
+              backgroundImage: `linear-gradient(120deg, ${colors.TextGradientOne}, ${colors.TextGradientTwo}, ${colors.TextGradientThree})`,
             }}
           >
             SoftTech AI
@@ -247,7 +244,10 @@ const Login: FC = () => {
                       href="#"
                       className="text-xs font-semibold"
                       style={{ color: colors.TextHighlightedHeading }}
-                      onClick={() => navigate({ to: "/" })}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate({ to: "/forgot-password" });
+                      }}
                     >
                       Forgot password?
                     </a>
