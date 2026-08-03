@@ -1,5 +1,6 @@
 import { ICompanyRepository } from "../../../ports/companies/register/companyregisterrepository";
 import { ICompany } from "../../../../domain/types/company.types";
+import { analyzeApiResponse } from "../../../../infrastructure/mcp/schema_analyzer/analyzer";
 
 const toToolName = (name: string, index: number) => {
   const normalized = name
@@ -27,54 +28,69 @@ export async function saveCompanyApiDetails(
     throw new Error("apis must be a non-empty array");
   }
 
-  const apis = payload.apis.map((api: any, index: number) => {
-    let keys: string[] = [];
-    if (Array.isArray(api.params) && api.params.length > 0) {
-      keys = api.params;
-    } else if (typeof api.apiQueryParams === "string" && api.apiQueryParams.trim()) {
-      const raw = api.apiQueryParams.trim();
-      if (raw.startsWith("{") || raw.startsWith("[")) {
+  const apis = await Promise.all(
+    payload.apis.map(async (api: any, index: number) => {
+      let keys: string[] = [];
+      if (Array.isArray(api.params) && api.params.length > 0) {
+        keys = api.params;
+      } else if (typeof api.apiQueryParams === "string" && api.apiQueryParams.trim()) {
+        const raw = api.apiQueryParams.trim();
+        if (raw.startsWith("{") || raw.startsWith("[")) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed === "object" && parsed !== null) {
+              keys = Object.keys(parsed);
+            }
+          } catch {
+            keys = ["q"];
+          }
+        } else if (raw.includes("=")) {
+          const paramsObj = new URLSearchParams(raw);
+          keys = Array.from(paramsObj.keys());
+        } else {
+          keys = raw.split(/[,;\s]+/).map((s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '')).filter(Boolean);
+        }
+      }
+
+      let headersList: string[] = [];
+      if (api.apiHeaders) {
         try {
-          const parsed = JSON.parse(raw);
+          const parsed = JSON.parse(api.apiHeaders);
           if (typeof parsed === "object" && parsed !== null) {
-            keys = Object.keys(parsed);
+            headersList = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`);
           }
         } catch {
-          keys = ["q"];
+          headersList = [api.apiHeaders];
         }
-      } else if (raw.includes("=")) {
-        const paramsObj = new URLSearchParams(raw);
-        keys = Array.from(paramsObj.keys());
-      } else {
-        keys = raw.split(/[,;\s]+/).map((s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '')).filter(Boolean);
       }
-    }
 
-    let headersList: string[] = [];
-    if (api.apiHeaders) {
-      try {
-        const parsed = JSON.parse(api.apiHeaders);
-        if (typeof parsed === "object" && parsed !== null) {
-          headersList = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`);
+      let apiSchema = api.apiSchema;
+      if (!apiSchema && api.sampleResponse) {
+        try {
+          apiSchema = await analyzeApiResponse(api.sampleResponse, {
+            apiName: api.name,
+            endpoint: api.endpoint,
+          });
+        } catch (err) {
+          console.error("[saveCompanyApiDetails] Schema analysis error:", err);
         }
-      } catch {
-        headersList = [api.apiHeaders];
       }
-    }
 
-    return {
-      ...api,
-      mcpToolName: api.mcpToolName || toToolName(api.name || "", index),
-      mcpDescription:
-        api.mcpDescription ||
-        `Calls ${api.name || "a registered company API"} and returns a generic widget response.`,
-      mcpResourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
-      inputFieldMap: api.inputFieldMap || {},
-      outputFieldMap: api.outputFieldMap || {},
-      params: keys,
-      headers: headersList,
-    };
-  });
+      return {
+        ...api,
+        apiSchema,
+        mcpToolName: api.mcpToolName || toToolName(api.name || "", index),
+        mcpDescription:
+          api.mcpDescription ||
+          `Calls ${api.name || "a registered company API"} and returns a generic widget response.`,
+        mcpResourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
+        inputFieldMap: api.inputFieldMap || {},
+        outputFieldMap: api.outputFieldMap || {},
+        params: keys,
+        headers: headersList,
+      };
+    })
+  );
 
   return await companyRepository.update(companyId, {
     apis,

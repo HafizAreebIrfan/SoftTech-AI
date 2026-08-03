@@ -9,6 +9,21 @@ export const analyzeApiResponse = async (
   rawResponse: unknown,
   options?: AnalyzerOptions,
 ): Promise<ApiSchema> => {
+  // 1. Try Gemini AI Schema Generation First
+  const aiSchema = await analyzeWithGemini(rawResponse, options);
+
+  if (aiSchema && aiSchema.fields && aiSchema.fields.length > 0) {
+    console.log(
+      `[SchemaAnalyzer] 🤖 Returning AI-generated schema from Gemini for ${options?.apiName || "API"}.`,
+    );
+    return aiSchema;
+  }
+
+  // 2. Deterministic Rule-Based Fallback Engine
+  console.log(
+    `[SchemaAnalyzer] ⚡ Running rule-based schema analyzer for ${options?.apiName || "API"}...`,
+  );
+
   let sampleRecord: Record<string, unknown> | null = null;
   let isList = false;
 
@@ -21,7 +36,6 @@ export const analyzeApiResponse = async (
       sampleRecord = firstRecord as Record<string, unknown>;
     }
   } else if (typeof rawResponse === "object" && rawResponse !== null) {
-    // Inspect if response contains a nested list (e.g. { data: [...], orders: [...] })
     const records = rawResponse as Record<string, unknown>;
     const listKey = Object.keys(records).find(
       (k) => Array.isArray(records[k]) && (records[k] as unknown[]).length > 0,
@@ -42,19 +56,11 @@ export const analyzeApiResponse = async (
 
   const recordToAnalyze = sampleRecord || {};
 
-  // 1. Entity Detection
   const entity = detectEntity(options?.apiName, options?.endpoint, recordToAnalyze);
-
-  // 2. Field Analysis
   const fields = analyzeFields(recordToAnalyze);
-
-  // 3. Layout Detection
   const defaultLayout = detectLayout(entity, fields, isList, options?.industry);
-
-  // 4. UI Hints Generation
   const uiHints = generateUIHints(defaultLayout, fields);
 
-  // 5. Entity Metadata Extraction
   const entityMeta: EntityMetadata = {
     entity,
     primaryKey: fields.find((f) => f.primary)?.key,
@@ -66,15 +72,12 @@ export const analyzeApiResponse = async (
     amountKey: fields.find((f) => f.type === "currency")?.key,
   };
 
-  // 6. Optional AI Fallback Enhancement via Gemini API
-  const aiSchema = await analyzeWithGemini(rawResponse, options);
-
   return {
-    entity: aiSchema?.entity || entity,
-    defaultLayout: aiSchema?.defaultLayout || defaultLayout,
-    fields: aiSchema?.fields || fields,
-    entityMeta: aiSchema?.entityMeta || entityMeta,
-    uiHints: aiSchema?.uiHints || uiHints,
+    entity,
+    defaultLayout,
+    fields,
+    entityMeta,
+    uiHints,
     analyzedAt: new Date().toISOString(),
     rawSample: recordToAnalyze,
   };
