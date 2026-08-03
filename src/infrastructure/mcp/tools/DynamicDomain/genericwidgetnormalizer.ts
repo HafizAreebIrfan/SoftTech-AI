@@ -558,6 +558,23 @@ const extractPaginationMeta = (
   let totalItems: number | undefined;
   let pageSize: number | undefined;
 
+  const explicitTotalKeys = [
+    "totalcount",
+    "total_count",
+    "totalitems",
+    "total_items",
+    "totalrecords",
+    "total_records",
+    "total",
+  ];
+  const genericTotalKeys = [
+    "recordcount",
+    "record_count",
+    "count",
+    "results",
+    "items",
+  ];
+
   for (const [k, v] of Object.entries(record)) {
     if (typeof v !== "number") continue;
     const lower = k.toLowerCase();
@@ -568,25 +585,16 @@ const extractPaginationMeta = (
       lower === "current_page" ||
       lower === "offset"
     ) {
-      page = v;
+      if (page === undefined || page === 1) page = v;
     } else if (
       lower === "totalpages" ||
       lower === "total_pages" ||
       lower === "pages"
     ) {
       totalPages = v;
-    } else if (
-      lower === "totalitems" ||
-      lower === "total_items" ||
-      lower === "totalrecords" ||
-      lower === "total_records" ||
-      lower === "recordcount" ||
-      lower === "record_count" ||
-      lower === "total" ||
-      lower === "count" ||
-      lower === "results" ||
-      lower === "items"
-    ) {
+    } else if (explicitTotalKeys.includes(lower)) {
+      totalItems = v;
+    } else if (genericTotalKeys.includes(lower) && totalItems === undefined) {
       totalItems = v;
     } else if (
       lower === "limit" ||
