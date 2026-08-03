@@ -132,6 +132,17 @@ const buildApiUrl = (api: IApi, input: any) => {
     allParams.query = queryOrLocation;
   }
 
+  // Aliases for common variations (days vs day, key vs apiKey)
+  if (allParams.days !== undefined && allParams.day === undefined) {
+    allParams.day = allParams.days;
+  } else if (allParams.day !== undefined && allParams.days === undefined) {
+    allParams.days = allParams.day;
+  }
+  if (api.apiKey && !allParams.key) {
+    allParams.key = api.apiKey;
+    allParams.apiKey = api.apiKey;
+  }
+
   // 1. Replace template placeholders in path/query (e.g., {city}, {location}, {q}, :city)
   Object.entries(allParams).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
