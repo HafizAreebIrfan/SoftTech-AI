@@ -23,6 +23,7 @@ export const ApiSchema = new mongoose.Schema(
     fallbackWidget: { type: mongoose.Schema.Types.Mixed },
     mcpResourceUri: { type: String },
     testedonregister: { type: Boolean, default: false },
+    apiSchema: { type: mongoose.Schema.Types.Mixed },
   },
   { _id: false },
 );

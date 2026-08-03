@@ -44,6 +44,7 @@ export const registerCompanyApiTools = (
             rawResponse,
             company.uiPreference?.layout ?? "dashboard",
             company.industry,
+            api.apiSchema as any,
           );
 
           const result = {

@@ -1,233 +1,27 @@
+import {
+  WidgetMetric,
+  WidgetKeyValueItem,
+  WidgetPagination as Pagination,
+  WidgetAction as Action,
+  WidgetFilter as Filter,
+  TableColumn,
+  FormField as Field,
+  WidgetBlock,
+  WidgetMetadata,
+  GenericWidgetContent,
+} from "../../../../domain/types";
+
 type PrimitiveValue = string | number | boolean | null;
+type ArrayEntity = "table" | "cards" | "timeline" | "map" | "gallery" | "chart";
 
-type WidgetMetric = {
-  label: string;
-  value: string | number;
-  tone?: "default" | "good" | "warning" | "danger";
-};
-
-type WidgetKeyValueItem = {
-  key: string;
-  value: string | number;
-};
-
-type Pagination = {
-  page: number;
-  totalPages: number;
-  totalItems: number;
-  pageSize?: number;
-};
-
-type Action = {
-  id: string;
-  label: string;
-  action: string;
-  variant?: "primary" | "secondary" | "danger";
-};
-
-type Filter = {
-  id: string;
-  label: string;
-  type: "text" | "select" | "date" | "number";
-
-  value?: string;
-
-  options?: string[];
-};
-
-type TableColumn = {
-  key: string;
-
-  label: string;
-
-  type?: "text" | "number" | "currency" | "date" | "status" | "image";
-
-  sortable?: boolean;
-};
-
-type Field = {
-  id: string;
-  name: string;
-  label: string;
-  type:
-    | "text"
-    | "email"
-    | "password"
-    | "number"
-    | "textarea"
-    | "select"
-    | "multiselect";
-  placeholder?: string;
-  value?: string | number | string[];
-  options?: string[];
-  required?: boolean;
-  description?: string;
-};
-
-type ArrayEntity = "table" | "cards" | "timeline" | "map" | "gallery";
-
-type WidgetBlock =
-  | {
-      type: "metrics";
-      title?: string;
-
-      metrics: WidgetMetric[];
-    }
-  | {
-      type: "keyValue";
-      title?: string;
-
-      keyValueItems: WidgetKeyValueItem[];
-    }
-  | {
-      type: "list";
-      title?: string;
-
-      listItems: {
-        title: string;
-        description?: string;
-        meta?: string;
-      }[];
-    }
-  | {
-      type: "table";
-      title?: string;
-
-      columns: TableColumn[];
-
-      rows: (string | number)[][];
-
-      pagination?: Pagination;
-
-      filters?: Filter[];
-
-      actions?: Action[];
-    }
-  | {
-      type: "cards";
-      title?: string;
-
-      cards: {
-        id?: string;
-
-        title: string;
-
-        subtitle?: string;
-
-        image?: string;
-
-        icon?: string;
-
-        badge?: string;
-
-        attributes?: {
-          label: string;
-          value: string | number;
-        }[];
-
-        actions?: Action[];
-      }[];
-
-      pagination?: Pagination;
-
-      filters?: Filter[];
-
-      actions?: Action[];
-    }
-  | {
-      type: "timeline";
-      title?: string;
-
-      events: {
-        id?: string;
-
-        title: string;
-
-        subtitle?: string;
-
-        date: string;
-
-        status?: string;
-
-        icon?: string;
-      }[];
-
-      pagination?: Pagination;
-
-      filters?: Filter[];
-    }
-  | {
-      type: "map";
-      title?: string;
-
-      markers: {
-        id?: string;
-
-        lat: number;
-
-        lng: number;
-
-        title: string;
-
-        description?: string;
-
-        icon?: string;
-
-        badge?: string;
-      }[];
-    }
-  | {
-      type: "gallery";
-      title?: string;
-
-      subtitle?: string;
-
-      images: {
-        url: string;
-
-        title?: string;
-      }[];
-
-      pagination?: Pagination;
-    }
-  | {
-      type: "actions";
-      title?: string;
-
-      actions: Action[];
-    }
-  | {
-      type: "form";
-      title?: string;
-
-      fields: Field[];
-
-      submitAction: string;
-    }
-  | {
-      type: "alert";
-      title?: string;
-
-      severity: "info" | "warning" | "error" | "success";
-
-      message: string;
-    };
-
-type WidgetMetadata = {
-  companyName: string;
-  apiName: string;
-  generatedAt: string;
-  version: string;
-};
-
-export type GenericWidgetContent = {
-  title: string;
-  subtitle?: string;
-  layout: string;
-  industry?: string;
-  blocks: WidgetBlock[];
-  metadata?: WidgetMetadata;
-};
+import { ApiSchema, FieldType } from "../../schema_analyzer/interfaces";
+import {
+  SYSTEM_FIELDS,
+  isVisibleField,
+  getVisibleFields,
+} from "../../schema_analyzer/constants";
+import { toLabel } from "../../schema_analyzer/formatter";
+import { detectFieldType } from "../../schema_analyzer/typeDetector";
 
 export const normalizeApiResponseToWidget = (
   companyName: string,
@@ -235,13 +29,22 @@ export const normalizeApiResponseToWidget = (
   response: unknown,
   layout?: string,
   industry?: string,
+  apiSchema?: ApiSchema,
 ): GenericWidgetContent => {
-  const blocks = buildBlocks(response, apiName);
+  const effectiveLayout = apiSchema?.defaultLayout || layout || "dashboard";
+  const blocks = buildBlocks(response, apiName, apiSchema);
+
+  const metadata: WidgetMetadata = {
+    companyName,
+    apiName,
+    generatedAt: new Date().toISOString(),
+    version: "1.0",
+  };
 
   return {
     title: apiName,
     subtitle: "Live API response",
-    layout: layout || "dashboard",
+    layout: effectiveLayout,
     industry: industry || "general",
     blocks:
       blocks.length > 0
@@ -253,12 +56,7 @@ export const normalizeApiResponseToWidget = (
               keyValueItems: [{ key: "Status", value: "No renderable data" }],
             },
           ],
-    metadata: {
-      companyName,
-      apiName,
-      generatedAt: new Date().toISOString(),
-      version: "1",
-    },
+    metadata,
   };
 };
 
@@ -290,6 +88,14 @@ const detectArrayEntity = (records: Record<string, unknown>[]): ArrayEntity => {
     return "map";
   }
 
+  // Charts & Analytics
+  if (
+    has("month", "year", "quarter", "day", "category") &&
+    has("amount", "price", "count", "total", "revenue", "sales", "qty")
+  ) {
+    return "chart";
+  }
+
   // Images
   if (
     has("url", "image", "imageurl", "photo") &&
@@ -301,58 +107,32 @@ const detectArrayEntity = (records: Record<string, unknown>[]): ArrayEntity => {
 
   return "table";
 };
-const ignoredFields = new Set([
-  "_id",
-  "__v",
-  "createdAt",
-  "updatedAt",
-  "deletedAt",
-  "password",
-  "token",
-  "secret",
-  "icon",
-  "code",
-  "tz_id",
-]);
 
-const getColumnType = (key: string): TableColumn["type"] => {
-  const lower = key.toLowerCase();
-
+const getColumnType = (key: string, sampleValue?: unknown): TableColumn["type"] => {
+  const type = detectFieldType(key, sampleValue);
   if (
-    lower.includes("price") ||
-    lower.includes("amount") ||
-    lower.includes("cost") ||
-    lower.includes("revenue")
+    type === "currency" ||
+    type === "date" ||
+    type === "status" ||
+    type === "image" ||
+    type === "number"
   ) {
-    return "currency";
+    return type;
   }
-
-  if (
-    lower.includes("date") ||
-    lower.includes("created") ||
-    lower.includes("updated")
-  ) {
-    return "date";
-  }
-
-  if (lower.includes("status")) {
-    return "status";
-  }
-
-  if (lower.includes("image") || lower.includes("photo")) {
-    return "image";
-  }
-
   return "text";
 };
 
-const buildBlocks = (response: unknown, apiName?: string): WidgetBlock[] => {
+const buildBlocks = (
+  response: unknown,
+  apiName?: string,
+  apiSchema?: ApiSchema,
+): WidgetBlock[] => {
   if (Array.isArray(response)) {
-    return buildArrayBlocks(response, apiName);
+    return buildArrayBlocks(response, apiName, undefined, apiSchema);
   }
 
   if (isRecord(response)) {
-    return buildObjectBlocks(response, apiName);
+    return buildObjectBlocks(response, apiName, apiSchema);
   }
 
   if (isPrimitive(response)) {
@@ -384,6 +164,7 @@ const buildArrayBlocks = (
   items: unknown[],
   apiName?: string,
   pagination?: Pagination,
+  apiSchema?: ApiSchema,
 ): WidgetBlock[] => {
   const records = items.filter(isRecord);
 
@@ -406,7 +187,7 @@ const buildArrayBlocks = (
     case "table": {
       const blocks: WidgetBlock[] = [];
       const collectionLabel = apiName ? toLabel(apiName) : "Items";
-      const metrics = buildSummaryMetrics(records, apiName);
+      const metrics = buildSummaryMetrics(records, apiName, apiSchema);
 
       if (metrics.length > 0) {
         blocks.push({
@@ -416,22 +197,75 @@ const buildArrayBlocks = (
         });
       }
 
-      const headers = Object.keys(records[0]).slice(0, 6);
-      blocks.push({
-        type: "table",
-        title: `${collectionLabel} List`,
-        columns: headers.map((header) => ({
+      let columns: TableColumn[];
+      if (apiSchema?.fields && apiSchema.fields.length > 0) {
+        columns = apiSchema.fields
+          .filter((f) => !f.hidden)
+          .map((f) => ({
+            key: f.key,
+            label: f.label,
+            type:
+              f.type === "currency" ||
+              f.type === "date" ||
+              f.type === "status" ||
+              f.type === "image" ||
+              f.type === "number"
+                ? f.type
+                : "text",
+            sortable: f.sortable ?? true,
+          }));
+      } else {
+        const sampleRecord = records[0];
+        const headers = getVisibleFields(sampleRecord).filter((key) => {
+          const val = sampleRecord[key];
+          if (Array.isArray(val) || (typeof val === "object" && val !== null))
+            return false;
+          return true;
+        });
+        columns = headers.map((header) => ({
           key: header,
           label: toLabel(header),
           type: getColumnType(header),
           sortable: true,
-        })),
+        }));
+      }
+
+      const filters: Filter[] | undefined = apiSchema?.fields
+        ?.filter((f) => f.filterable)
+        ?.map((f) => ({
+          id: f.key,
+          label: f.label,
+          type:
+            f.type === "date" || f.type === "datetime"
+              ? "date"
+              : f.type === "number" || f.type === "currency"
+              ? "number"
+              : "text",
+        }));
+
+      const actions: Action[] | undefined = apiName
+        ? [
+            {
+              id: "refresh",
+              label: "Refresh",
+              action: apiName,
+              variant: "primary",
+            },
+          ]
+        : undefined;
+
+      blocks.push({
+        type: "table",
+        title: `${collectionLabel} List`,
+        columns,
         rows: records
           .slice(0, 10)
           .map((record) =>
-            headers.map((header) => stringifyCell(record[header])),
+            columns.map((col) => stringifyCell(record[col.key])),
           ),
         pagination,
+        filters: filters && filters.length > 0 ? filters : undefined,
+        actions,
       });
       return blocks;
     }
@@ -536,6 +370,27 @@ const buildArrayBlocks = (
         },
       ];
     }
+    case "chart": {
+      const sample = records[0];
+      const xAxisKey =
+        apiSchema?.fields?.find((f) => f.type === "date" || f.type === "text")?.key ||
+        Object.keys(sample).find((k) => isVisibleField(k)) ||
+        "id";
+      const numericKeys =
+        apiSchema?.fields?.filter((f) => f.type === "currency" || f.type === "number").map((f) => f.key) ||
+        Object.keys(sample).filter((k) => isVisibleField(k) && typeof sample[k] === "number");
+
+      return [
+        {
+          type: "chart",
+          title: apiName ? toLabel(apiName) : "Analytics Chart",
+          chartType: "bar",
+          xAxisKey,
+          dataKeys: numericKeys.length > 0 ? numericKeys : [Object.keys(sample)[0]],
+          series: records.slice(0, 12),
+        },
+      ];
+    }
   }
 
   return [
@@ -552,6 +407,7 @@ const buildArrayBlocks = (
 
 const extractPaginationMeta = (
   record: Record<string, unknown>,
+  apiName?: string,
 ): Pagination | undefined => {
   let page: number | undefined;
   let totalPages: number | undefined;
@@ -621,62 +477,79 @@ const extractPaginationMeta = (
     totalPages: totalPages ?? 1,
     totalItems: totalItems ?? 0,
     pageSize,
+    tool: apiName,
   };
 };
 
 const buildObjectBlocks = (
   record: Record<string, unknown>,
   apiName?: string,
+  apiSchema?: ApiSchema,
 ): WidgetBlock[] => {
   const blocks: WidgetBlock[] = [];
-  const allMetrics: WidgetMetric[] = [];
   const allKeyValues: WidgetKeyValueItem[] = [];
-  const pagination = extractPaginationMeta(record);
-  const ignoredFields = new Set([
-    "_id",
-    "__v",
-    "password",
-    "token",
-    "refreshToken",
-    "createdAt",
-    "updatedAt",
-  ]);
-  const metricKeys = [
-    "total",
-    "count",
-    "amount",
-    "price",
-    "sales",
-    "revenue",
-    "income",
-    "orders",
-    "customers",
-    "users",
-    "qty",
-    "quantity",
-    "cost",
-    "profit",
-  ];
+  const pagination = extractPaginationMeta(record, apiName);
+
+  if (
+    apiSchema?.fields &&
+    (apiSchema.defaultLayout === "form" || apiSchema.uiHints?.editable)
+  ) {
+    const formFields: Field[] = apiSchema.fields
+      .filter((f) => !f.hidden)
+      .map((f) => ({
+        id: f.key,
+        name: f.key,
+        label: f.label,
+        type:
+          f.type === "number" || f.type === "currency"
+            ? "number"
+            : f.type === "email"
+            ? "email"
+            : "text",
+        required: false,
+      }));
+
+    if (formFields.length > 0) {
+      blocks.push({
+        type: "form",
+        title: apiName ? `Submit ${toLabel(apiName)}` : "Form Input",
+        fields: formFields,
+        submitAction: apiName || "submit",
+      });
+    }
+  }
 
   for (const [key, value] of Object.entries(record)) {
+    if (!isVisibleField(key)) {
+      continue;
+    }
+
     const lower = key.toLowerCase();
 
-    if (ignoredFields.has(key)) {
-      continue;
-    }
+    // Explicit metrics block inside response
     if (
-      typeof value === "number" &&
-      metricKeys.some((metric) => lower.includes(metric))
+      (lower === "metrics" || lower === "statistics" || lower === "totals") &&
+      isRecord(value)
     ) {
-      allMetrics.push({
-        label: toLabel(key),
-        value,
-      });
-
+      const items = buildKeyValueItems(value).map((kv) => ({
+        label: kv.key,
+        value: kv.value,
+      }));
+      if (items.length > 0) {
+        blocks.push({
+          type: "metrics",
+          title: toLabel(key),
+          metrics: items,
+        });
+      }
       continue;
     }
 
-    if (typeof value === "string" || typeof value === "boolean") {
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
       allKeyValues.push({
         key: toLabel(key),
         value: String(value),
@@ -701,19 +574,12 @@ const buildObjectBlocks = (
       continue;
     }
   }
-  if (allMetrics.length > 0) {
-    blocks.push({
-      type: "metrics",
-      title: "Key Telemetry Metrics",
-      metrics: allMetrics.slice(0, 8),
-    });
-  }
 
   if (allKeyValues.length > 0) {
     blocks.push({
       type: "keyValue",
-      title: "System Details",
-      keyValueItems: allKeyValues.slice(0, 10),
+      title: "Details",
+      keyValueItems: allKeyValues.slice(0, 15),
     });
   }
 
@@ -745,21 +611,16 @@ const stringifyCell = (value: unknown) => {
   return "";
 };
 
-const toLabel = (value: string) =>
-  value
-    .replace(/[_-]+/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-
 const buildKeyValueItems = (
   record: Record<string, unknown>,
 ): WidgetKeyValueItem[] =>
   Object.entries(record)
     .filter(
-      ([, v]) =>
-        typeof v === "string" ||
-        typeof v === "number" ||
-        typeof v === "boolean",
+      ([k, v]) =>
+        isVisibleField(k) &&
+        (typeof v === "string" ||
+          typeof v === "number" ||
+          typeof v === "boolean"),
     )
     .map(([k, v]) => ({
       key: toLabel(k),
@@ -769,6 +630,7 @@ const buildKeyValueItems = (
 const buildSummaryMetrics = (
   records: Record<string, unknown>[],
   apiName?: string,
+  apiSchema?: ApiSchema,
 ): WidgetMetric[] => {
   const metrics: WidgetMetric[] = [];
   const collectionLabel = apiName ? toLabel(apiName) : "Items";
@@ -780,38 +642,59 @@ const buildSummaryMetrics = (
     tone: "default",
   });
 
-  const numericFields = new Map<string, { sum: number; count: number }>();
+  if (apiSchema?.fields && apiSchema.fields.length > 0) {
+    const schemaNumericFields = apiSchema.fields.filter(
+      (f) => !f.hidden && (f.type === "currency" || f.type === "number"),
+    );
+
+    schemaNumericFields.slice(0, 3).forEach((field) => {
+      let sum = 0;
+      let count = 0;
+      records.forEach((rec) => {
+        const val = rec[field.key];
+        if (typeof val === "number") {
+          sum += val;
+          count++;
+        } else if (typeof val === "string") {
+          const parsed = parseFloat(val.replace(/[^0-9.]/g, ""));
+          if (!isNaN(parsed)) {
+            sum += parsed;
+            count++;
+          }
+        }
+      });
+
+      if (count > 0) {
+        metrics.push({
+          label: field.label.startsWith("Total")
+            ? field.label
+            : `Total ${field.label}`,
+          value: field.type === "currency" ? `$${sum.toFixed(2)}` : sum,
+          tone: "good",
+        });
+      }
+    });
+
+    return metrics;
+  }
+
+  const numericFields = new Map<string, { sum: number; count: number; type: FieldType }>();
   records.forEach((record) => {
     Object.entries(record).forEach(([key, val]) => {
-      const lowerKey = key.toLowerCase();
-      if (
-        typeof val === "number" &&
-        (lowerKey.includes("amount") ||
-          lowerKey.includes("total") ||
-          lowerKey.includes("price") ||
-          lowerKey.includes("qty") ||
-          lowerKey.includes("quantity") ||
-          lowerKey.includes("sales") ||
-          lowerKey.includes("cost") ||
-          lowerKey.includes("fee"))
-      ) {
-        const stats = numericFields.get(key) || { sum: 0, count: 0 };
-        stats.sum += val;
-        stats.count += 1;
-        numericFields.set(key, stats);
-      } else if (typeof val === "string") {
-        const parsed = parseFloat(val.replace(/[^0-9.]/g, ""));
-        if (
-          !isNaN(parsed) &&
-          (lowerKey.includes("amount") ||
-            lowerKey.includes("total") ||
-            lowerKey.includes("price") ||
-            lowerKey.includes("cost") ||
-            lowerKey.includes("fee") ||
-            lowerKey.includes("sales"))
-        ) {
-          const stats = numericFields.get(key) || { sum: 0, count: 0 };
-          stats.sum += parsed;
+      if (!isVisibleField(key)) return;
+      const type = detectFieldType(key, val);
+
+      if (type === "currency" || type === "number") {
+        let num = 0;
+        if (typeof val === "number") {
+          num = val;
+        } else if (typeof val === "string") {
+          num = parseFloat(val.replace(/[^0-9.]/g, ""));
+        }
+
+        if (!isNaN(num)) {
+          const stats = numericFields.get(key) || { sum: 0, count: 0, type };
+          stats.sum += num;
           stats.count += 1;
           numericFields.set(key, stats);
         }
@@ -823,32 +706,9 @@ const buildSummaryMetrics = (
     .slice(0, 3)
     .forEach(([key, stats]) => {
       const label = toLabel(key);
-      const isPrice =
-        (key.toLowerCase().includes("price") ||
-          key.toLowerCase().includes("amount") ||
-          key.toLowerCase().includes("cost") ||
-          key.toLowerCase().includes("fee") ||
-          key.toLowerCase().includes("sales") ||
-          key.toLowerCase().includes("revenue") ||
-          key.toLowerCase().includes("income") ||
-          key.toLowerCase().includes("spend") ||
-          key.toLowerCase().includes("spent") ||
-          key.toLowerCase().includes("total")) &&
-        !key.toLowerCase().includes("count") &&
-        !key.toLowerCase().includes("orders") &&
-        !key.toLowerCase().includes("pages") &&
-        !key.toLowerCase().includes("customers") &&
-        !key.toLowerCase().includes("qty") &&
-        !key.toLowerCase().includes("quantity") &&
-        !key.toLowerCase().includes("items") &&
-        !key.toLowerCase().includes("users") &&
-        !key.toLowerCase().includes("page") &&
-        !key.toLowerCase().includes("number") &&
-        !key.toLowerCase().includes("no");
-
       metrics.push({
         label: label.startsWith("Total") ? label : `Total ${label}`,
-        value: isPrice ? `$${stats.sum.toFixed(2)}` : stats.sum,
+        value: stats.type === "currency" ? `$${stats.sum.toFixed(2)}` : stats.sum,
         tone: "good",
       });
     });

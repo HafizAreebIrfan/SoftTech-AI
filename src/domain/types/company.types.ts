@@ -20,6 +20,7 @@ export interface IApi {
   fallbackWidget?: Record<string, unknown>;
   mcpResourceUri?: string;
   testedonregister?: boolean;
+  apiSchema?: Record<string, unknown>;
 }
 
 export interface IUiPreference {
