@@ -1,0 +1,58 @@
+.container {
+  margin-bottom: 1.5rem;
+}
+
+.title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--app-text-heading, #ffffff);
+  margin-bottom: 1rem;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-left: 2px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
+  padding-left: 1.25rem;
+  margin-left: 0.5rem;
+}
+
+.eventItem {
+  position: relative;
+}
+
+.eventDot {
+  position: absolute;
+  left: -1.75rem;
+  top: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--app-brand-indigo, #6366f1);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+}
+
+.eventHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.eventTitle {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--app-text-heading, #ffffff);
+}
+
+.eventDate {
+  font-size: 0.75rem;
+  color: var(--app-text-body, #8a8d98);
+}
+
+.eventSubtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.8rem;
+  color: var(--app-text-body, #8a8d98);
+}

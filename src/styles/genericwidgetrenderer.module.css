@@ -1,3 +1,11 @@
+.container {
+  padding: 1.25rem;
+  background: var(--app-bg-primary, #0f1015);
+  color: var(--app-text-primary, #ffffff);
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
 .widgetShell {
   border-radius: 12px;
   padding: 2rem;
@@ -50,46 +58,4 @@
   margin: 0;
   max-width: 18rem;
   line-height: 1.4;
-}
-
-.debugText {
-  font-family: monospace;
-  font-size: 0.6875rem;
-  padding: 0.5rem;
-  border-radius: 6px;
-  max-width: 100%;
-  overflow-x: auto;
-  text-align: left;
-  margin: 0.5rem 0 0 0;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.badgeContainer {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: -0.5rem;
-}
-
-.previewBadge {
-  font-size: 0.625rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background-color: rgba(245, 158, 11, 0.1);
-  color: var(--app-warning-text);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  padding: 0.125rem 0.375rem;
-  border-radius: 4px;
-}
-
-.footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.6875rem;
-  color: var(--app-text-secondary);
-  border-top: 1px solid var(--app-card-border);
-  padding-top: 0.5rem;
-  margin-top: 0.5rem;
 }

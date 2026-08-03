@@ -1,4 +1,15 @@
-export type WidgetBlockType = "metrics" | "list" | "keyValue" | "table" | "form";
+export type WidgetBlockType =
+  | "metrics"
+  | "table"
+  | "cards"
+  | "timeline"
+  | "gallery"
+  | "map"
+  | "alert"
+  | "form"
+  | "list"
+  | "keyValue";
+
 export type WidgetTone = "default" | "good" | "warning" | "danger";
 
 export interface WidgetMetric {
@@ -31,37 +42,110 @@ export interface WidgetTableCell {
 
 export type WidgetTableRow = (string | number | WidgetTableCell)[];
 
+export interface TableColumn {
+  key: string;
+  label: string;
+  type?: "text" | "number" | "currency" | "date" | "status" | "image";
+  sortable?: boolean;
+}
+
+export interface Pagination {
+  page: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize?: number;
+}
+
+export interface WidgetCardItem {
+  id?: string;
+  title: string;
+  subtitle?: string;
+  image?: string;
+  icon?: string;
+  badge?: string;
+  attributes?: { label: string; value: string | number }[];
+}
+
+export interface WidgetTimelineEvent {
+  id?: string;
+  title: string;
+  subtitle?: string;
+  date: string;
+  status?: string;
+  icon?: string;
+}
+
+export interface WidgetMapMarker {
+  id?: string;
+  lat: number;
+  lng: number;
+  title: string;
+  description?: string;
+  icon?: string;
+  badge?: string;
+}
+
+export interface WidgetGalleryImage {
+  url: string;
+  title?: string;
+}
+
 export interface WidgetFormField {
   name: string;
-  type: "text" | "number" | "email" | "select" | "textarea";
+  type:
+    | "text"
+    | "number"
+    | "email"
+    | "password"
+    | "textarea"
+    | "select"
+    | "multiselect"
+    | "checkbox"
+    | "radio"
+    | "switch"
+    | "slider"
+    | "date";
   label: string;
   required?: boolean;
   placeholder?: string;
   options?: string[];
+  value?: string | number | string[];
 }
 
 export interface WidgetBlock {
   type: WidgetBlockType;
   title?: string;
+  subtitle?: string;
   image?: any;
+  severity?: "info" | "warning" | "error" | "success";
+  message?: string;
   metrics?: WidgetMetric[];
   listItems?: WidgetListItem[];
   keyValueItems?: WidgetKeyValueItem[];
+  columns?: TableColumn[];
+  rows?: (string | number)[][];
   tableHeaders?: string[];
   tableRows?: WidgetTableRow[];
+  cards?: WidgetCardItem[];
+  events?: WidgetTimelineEvent[];
+  markers?: WidgetMapMarker[];
+  images?: WidgetGalleryImage[];
+  fields?: WidgetFormField[];
   formFields?: WidgetFormField[];
-  submitLabel?: string;
-  actionUrl?: string;
+  submitAction?: string;
+  pagination?: Pagination;
 }
 
 export interface GenericWidgetContent {
   title: string;
   subtitle?: string;
-  layout?: "dashboard" | "detail" | "table" | "report";
+  layout?: "dashboard" | "catalog" | "table" | "timeline" | "details" | "general" | string;
+  industry?: string;
   blocks: WidgetBlock[];
   meta?: {
     source?: string;
     lastFetched?: string;
+    company?: string;
   };
 }
 
