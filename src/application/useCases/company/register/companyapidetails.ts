@@ -64,21 +64,26 @@ export async function saveCompanyApiDetails(
         }
       }
 
-      let apiSchema = api.apiSchema;
-      if (!apiSchema && api.sampleResponse) {
+      let apiSchema = api.apiSchema || api.schema;
+      const rawSample = api.sampleResponse || api.sampleresponse;
+
+      if (!apiSchema && rawSample) {
         try {
-          apiSchema = await analyzeApiResponse(api.sampleResponse, {
+          const parsedSample = typeof rawSample === "string" ? JSON.parse(rawSample) : rawSample;
+          apiSchema = await analyzeApiResponse(parsedSample, {
             apiName: api.name,
             endpoint: api.endpoint,
+            industry: api.industry,
           });
         } catch (err) {
-          console.error("[saveCompanyApiDetails] Schema analysis error:", err);
+          console.error("[saveCompanyApiDetails] Gemini Schema Analysis Error:", err);
         }
       }
 
       return {
         ...api,
-        apiSchema,
+        apiSchema: apiSchema || null,
+        schema: apiSchema || null,
         mcpToolName: api.mcpToolName || toToolName(api.name || "", index),
         mcpDescription:
           api.mcpDescription ||
@@ -86,8 +91,10 @@ export async function saveCompanyApiDetails(
         mcpResourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
         inputFieldMap: api.inputFieldMap || {},
         outputFieldMap: api.outputFieldMap || {},
-        params: keys,
-        headers: headersList,
+        params: Array.isArray(api.params) && api.params.length > 0 ? api.params : keys,
+        headers: Array.isArray(api.headers) && api.headers.length > 0 ? api.headers : headersList,
+        sampleResponse: undefined,
+        sampleresponse: undefined,
       };
     })
   );
