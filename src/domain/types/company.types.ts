@@ -1,3 +1,9 @@
+export interface IOAuth {
+  tokenUrl?: string;
+  clientId?: string;
+  clientSecret?: string;
+}
+
 export interface IApi {
   name: string;
   mcpToolName?: string;
@@ -6,18 +12,20 @@ export interface IApi {
   endpoint: string;
   method?: string;
   authType?: string;
-  headers?: string[];
-  params?: string[];
+  headers?: any[];
+  params?: any[];
+  body?: any[];
   authHeader?: string;
   apiKey?: string;
-  oauthTokenUrl?: string;
-  oauthClientId?: string;
-  oauthClientSecret?: string;
   bearerToken?: string;
-  inputFieldMap?: Record<string, string>;
-  outputFieldMap?: Record<string, string>;
+  oauth?: IOAuth;
+  platformType?: "web" | "mobile" | "both";
+  webCheckoutUrl?: string;
+  mobileDeepLink?: string;
+  inputFieldMap?: any[];
+  outputFieldMap?: any[];
   sampleResponse?: Record<string, unknown>;
-  fallbackWidget?: Record<string, unknown>;
+  fallbackWidget?: string;
   mcpResourceUri?: string;
   testedonregister?: boolean;
   apiSchema?: Record<string, unknown>;

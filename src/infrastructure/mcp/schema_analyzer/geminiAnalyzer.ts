@@ -1,34 +1,33 @@
 import { GoogleGenAI } from "@google/genai";
 import { ApiSchema, AnalyzerOptions } from "./interfaces";
 
+const MAX_PROMPT_CHARS = 8000;
+
+const formatSampleJson = (rawResponse: unknown): string => {
+  const sampleJson = JSON.stringify(rawResponse, null, 2) || "";
+  return sampleJson.length > MAX_PROMPT_CHARS
+    ? sampleJson.slice(0, MAX_PROMPT_CHARS) + "\n...[truncated]"
+    : sampleJson;
+};
+
 export const analyzeWithGemini = async (
   rawResponse: unknown,
   options?: AnalyzerOptions,
-): Promise<ApiSchema | null> => {
+): Promise<ApiSchema> => {
   const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey || apiKey.trim() === "") {
-    console.log(
-      "GEMINI_API_KEY not found in environment, skipping AI analysis.",
-    );
-    return null;
+  if (!apiKey || !apiKey.trim()) {
+    throw new Error("GEMINI_API_KEY is not configured on the server.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
-
-  const sampleJson = JSON.stringify(rawResponse, null, 2);
-  const truncatedSample =
-    sampleJson.length > 8000
-      ? sampleJson.slice(0, 8000) + "\n...[truncated]"
-      : sampleJson;
+  const sampleJson = formatSampleJson(rawResponse);
 
   const prompt = `You are a Senior Staff API Schema & UI Architect.
 Analyze the following raw API response sample from an API named "${options?.apiName || "Unknown API"}" (Endpoint: "${options?.endpoint || "N/A"}", Industry: "${options?.industry || "General"}").
 
-Your task is to analyze the fields, infer their semantic data types, select the best UI layout, and output a valid JSON object matching this EXACT schema structure:
-
+Output a valid JSON object matching this EXACT schema structure:
 {
-  "entity": "entity_name (e.g. orders, products, weather, customers, bookings, packages, transactions)",
+  "entity": "entity_name (e.g. orders, products, weather, customers, bookings, packages)",
   "defaultLayout": "table | cards | dashboard | timeline | gallery | map | chart | form",
   "fields": [
     {
@@ -72,46 +71,31 @@ Rules:
 5. All actual business keys (including orderamount, total, status, username, userdate, etc.) MUST be included in the "fields" array.
 
 Raw API Response Sample:
-${truncatedSample}`;
+${sampleJson}`;
 
-  try {
-    console.log(
-      `Analyzing API response with Google GenAI SDK (gemini-3.5-flash) for "${options?.apiName || "API"}"...`,
-    );
+  console.log(
+    `[GeminiAnalyzer] 🤖 Requesting AI schema from Gemini 3.5 Flash for "${options?.apiName || "API"}"...`,
+  );
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        temperature: 0.1,
-        responseMimeType: "application/json",
-      },
-    });
+  const response = await ai.models.generateContent({
+    model: "gemini-3.5-flash",
+    contents: prompt,
+    config: {
+      temperature: 0.1,
+      responseMimeType: "application/json",
+    },
+  });
 
-    const responseText = response.text;
-
-    if (!responseText) {
-      console.warn("Empty response text received from Gemini.");
-      return null;
-    }
-
-    const cleanedJson = responseText
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/```\s*$/i, "")
-      .trim();
-
-    const parsedSchema = JSON.parse(cleanedJson) as ApiSchema;
-    parsedSchema.analyzedAt = new Date().toISOString();
-    parsedSchema.rawSample = rawResponse;
-
-    console.log(
-      `Successfully generated AI schema for entity "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields and layout "${parsedSchema.defaultLayout}".`,
-    );
-
-    return parsedSchema;
-  } catch (error) {
-    console.error("Gemini AI analysis failed:", error);
-    return null;
+  if (!response.text) {
+    throw new Error("Gemini AI returned an empty response text.");
   }
+
+  const parsedSchema = JSON.parse(response.text) as ApiSchema;
+  parsedSchema.analyzedAt = new Date().toISOString();
+
+  console.log(
+    `[GeminiAnalyzer] ✅ Successfully generated AI schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields.`,
+  );
+
+  return parsedSchema;
 };
