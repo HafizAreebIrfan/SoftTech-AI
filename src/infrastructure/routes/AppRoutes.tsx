@@ -63,7 +63,7 @@ const dashboardPreviewRoute = createRoute({
 });
 
 const adminPreviewRoute = createRoute({
-  getParentRoute: () => publicLayout,
+  getParentRoute: () => rootRoute,
   path: "/admin-preview",
   component: AdminPreview,
 });
@@ -165,7 +165,8 @@ const serviceUnavailableRoute = createRoute({
 
 // 4. Assemble the unified route tree
 const routeTree = rootRoute.addChildren([
-  publicLayout.addChildren([indexRoute, dashboardPreviewRoute, adminPreviewRoute]),
+  publicLayout.addChildren([indexRoute, dashboardPreviewRoute]),
+  adminPreviewRoute,
   authLayout.addChildren([
     loginRoute,
     signupRoute.addChildren([
