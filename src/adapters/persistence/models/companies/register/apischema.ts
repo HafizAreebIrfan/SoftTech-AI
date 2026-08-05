@@ -20,6 +20,7 @@ export const ApiSchema = new mongoose.Schema(
     body: { type: [mongoose.Schema.Types.Mixed], default: [] },
     
     apiKey: { type: String },
+    authHeader: { type: String },
     bearerToken: { type: String },
 
     oauth: {

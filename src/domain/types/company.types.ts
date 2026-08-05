@@ -15,20 +15,19 @@ export interface IApi {
   headers?: any[];
   params?: any[];
   body?: any[];
-  authHeader?: string;
   apiKey?: string;
+  authHeader?: string;
   bearerToken?: string;
   oauth?: IOAuth;
   platformType?: "web" | "mobile" | "both";
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
+  apiSchema?: Record<string, unknown>;
   inputFieldMap?: any[];
   outputFieldMap?: any[];
-  sampleResponse?: Record<string, unknown>;
   fallbackWidget?: string;
   mcpResourceUri?: string;
   testedonregister?: boolean;
-  apiSchema?: Record<string, unknown>;
 }
 
 export interface IUiPreference {
