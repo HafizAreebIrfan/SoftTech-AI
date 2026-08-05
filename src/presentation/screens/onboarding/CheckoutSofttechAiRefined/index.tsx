@@ -17,11 +17,13 @@ const Checkout: FC = () => {
           <h1 className={styles.brand}>SoftTech AI</h1>
         </div>
         <nav className={styles.wizard}>
-          <div className={styles.wizardItem}><span className={`${styles.wizardDot} ${styles.wizardDotDone}`}><CheckIcon size={16} color={colors.TextGradientOne} /></span><span className={styles.wizardCopy}><span className={styles.wizardKicker}>Step 1</span><span className={styles.wizardLabel}>Plans</span></span></div>
+          <div className={styles.wizardItem}><span className={`${styles.wizardDot} ${styles.wizardDotDone}`}><CheckIcon size={16} color={colors.TextGradientOne} /></span><span className={styles.wizardCopy}><span className={styles.wizardKicker}>Step 1</span><span className={styles.wizardLabel}>MCP Test</span></span></div>
           <span className={styles.wizardLine} />
-          <div className={styles.wizardItem}><span className={`${styles.wizardDot} ${styles.wizardDotActive}`}>2</span><span className={styles.wizardCopy}><span className={`${styles.wizardKicker} ${styles.wizardKickerActive}`}>Current</span><span className={`${styles.wizardLabel} ${styles.wizardLabelActive}`}>Checkout</span></span></div>
+          <div className={styles.wizardItem}><span className={`${styles.wizardDot} ${styles.wizardDotDone}`}><CheckIcon size={16} color={colors.TextGradientOne} /></span><span className={styles.wizardCopy}><span className={styles.wizardKicker}>Step 2</span><span className={styles.wizardLabel}>Plan</span></span></div>
           <span className={styles.wizardLine} />
-          <div className={styles.wizardItem}><span className={styles.wizardDot}>3</span><span className={styles.wizardCopy}><span className={styles.wizardKicker}>Step 3</span><span className={styles.wizardLabel}>Deployment</span></span></div>
+          <div className={styles.wizardItem}><span className={`${styles.wizardDot} ${styles.wizardDotActive}`}>3</span><span className={styles.wizardCopy}><span className={`${styles.wizardKicker} ${styles.wizardKickerActive}`}>Current</span><span className={`${styles.wizardLabel} ${styles.wizardLabelActive}`}>Checkout</span></span></div>
+          <span className={styles.wizardLine} />
+          <div className={styles.wizardItem}><span className={styles.wizardDot}>4</span><span className={styles.wizardCopy}><span className={styles.wizardKicker}>Step 4</span><span className={styles.wizardLabel}>Deployment</span></span></div>
         </nav>
       </header>
       <main className={styles.main}>

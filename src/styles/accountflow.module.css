@@ -171,6 +171,13 @@
   background: var(--flow-surface-highest);
 }
 
+.wizardActions {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  color: var(--flow-muted);
+}
+
 .main,
 .onboardingMain {
   width: 100%;
@@ -524,6 +531,222 @@
   background: var(--flow-surface-soft);
 }
 
+.mcpMain {
+  width: 100%;
+  max-width: 84rem;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 5rem;
+}
+
+.mcpHero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 3.5rem;
+}
+
+.mcpStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 10.5rem;
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.55rem;
+  background: var(--flow-surface-high);
+  color: var(--flow-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.readyDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--flow-ready);
+}
+
+.mcpTopGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.mcpPanel,
+.executionLog,
+.widgetPreview {
+  border: 1px solid var(--flow-border);
+  border-radius: 1rem;
+  background: var(--flow-glass);
+  box-shadow: 0 20px 40px var(--flow-shadow);
+}
+
+.mcpPanel {
+  padding: 1.6rem;
+}
+
+.promptBox {
+  position: relative;
+  min-height: 11rem;
+  margin: 1.75rem 0 1.5rem;
+  border-radius: 0.85rem;
+  background: var(--flow-surface-highest);
+  padding: 1.5rem;
+  color: var(--flow-field-muted);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.contextLabel {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1.1rem;
+  color: var(--flow-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.executionLog {
+  height: 22rem;
+  overflow: hidden;
+  padding: 1.75rem;
+  background: var(--flow-log-bg);
+  font-family: "JetBrains Mono", "Consolas", monospace;
+}
+
+.logHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  color: var(--flow-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.logLines {
+  display: grid;
+  gap: 0.75rem;
+  color: var(--flow-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.logSuccess {
+  color: var(--flow-ready);
+}
+
+.logInfo {
+  color: var(--flow-primary);
+}
+
+.logWarn {
+  color: var(--flow-warning);
+}
+
+.logError {
+  color: var(--flow-error);
+}
+
+.widgetPreview {
+  overflow: hidden;
+  border-radius: 1.5rem;
+  background: var(--flow-surface-high);
+}
+
+.widgetChrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4.5rem;
+  padding: 0 2.25rem;
+  border-bottom: 1px solid var(--flow-border);
+}
+
+.trafficLights {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.trafficLights span {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+}
+
+.previewBody {
+  padding: 5rem 3.5rem 3.5rem;
+}
+
+.hotelGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.6rem;
+  margin-top: 3.5rem;
+}
+
+.hotelCard {
+  overflow: hidden;
+  border-radius: 0.85rem;
+  background: var(--flow-surface-highest);
+}
+
+.hotelImage {
+  position: relative;
+  height: 12rem;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent),
+    var(--hotel-bg);
+  background-size: cover;
+  background-position: center;
+}
+
+.rating {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--flow-heading);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.hotelContent {
+  padding: 1.5rem;
+}
+
+.hotelName {
+  min-height: 3rem;
+  margin: 0 0 0.75rem;
+  color: var(--flow-heading);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.hotelPrice {
+  color: var(--flow-primary);
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.hotelNight {
+  color: var(--flow-muted);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .paymentCanvas {
   display: flex;
   min-height: 100vh;
@@ -697,8 +920,15 @@
 
   .grid,
   .checkoutGrid,
-  .paymentGrid {
+  .paymentGrid,
+  .mcpTopGrid,
+  .hotelGrid {
     grid-template-columns: 1fr;
+  }
+
+  .mcpHero {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .checkoutPrimary,

@@ -34,7 +34,11 @@ const OnboardingDashboard: FC = () => {
           <div className={styles.sectionRule} />
         </div>
         <section className={styles.grid}>
-          <button className={`${styles.card} ${styles.optionCard}`} type="button">
+          <button
+            className={`${styles.card} ${styles.optionCard}`}
+            onClick={() => navigate({ to: "/mcp_simulation" })}
+            type="button"
+          >
             <div className={styles.iconBox}>
               <SlidersIcon size={28} color={colors.TextGradientOne} />
             </div>

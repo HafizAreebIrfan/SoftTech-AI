@@ -26,11 +26,16 @@ import AdminPreview from "../../presentation/screens/admin/AdminPreview";
 import ProcessingIntegration from "../../presentation/screens/onboarding/ProcessingIntegration";
 import IntegrationSuccess from "../../presentation/screens/onboarding/IntegrationSuccess";
 import OnboardingDashboard from "../../presentation/screens/onboarding/OnboardingDashboard";
-import Plans from "../../presentation/screens/onboarding/Plans";
-import Checkout from "../../presentation/screens/onboarding/Checkout";
-import PaymentResult from "../../presentation/screens/onboarding/PaymentResult";
-import Deployment from "../../presentation/screens/onboarding/Deployment";
-import DeploymentInProgress from "../../presentation/screens/onboarding/DeploymentInProgress";
+import McpSimulation from "../../presentation/screens/onboarding/McpSimulation";
+import Plans from "../../presentation/screens/onboarding/PlansSofttechAiUpdated";
+import Checkout from "../../presentation/screens/onboarding/CheckoutSofttechAiRefined";
+import PaymentResult from "../../presentation/screens/onboarding/PaymentResultSofttechAiUpdated";
+import Deployment from "../../presentation/screens/onboarding/DeploymentSofttechAiRefined";
+import DeploymentInProgress from "../../presentation/screens/onboarding/DeploymentInProgressSofttechAi";
+import CompanyDashboard from "../../presentation/screens/company/CompanyDashboard";
+import ApiManagement from "../../presentation/screens/company/ApiManagement";
+import CompanyAnalytics from "../../presentation/screens/company/CompanyAnalytics";
+import Profile from "../../presentation/screens/company/Profile";
 
 // 1. Establish the absolute root route (renders an Outlet container)
 const rootRoute = createRootRoute({
@@ -188,6 +193,18 @@ const onboardingDashboardRoute = createRoute({
   },
 });
 
+const mcpSimulationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mcp_simulation",
+  component: McpSimulation,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
 const plansSofttechRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/plans_softtech_ai_updated",
@@ -248,6 +265,54 @@ const deploymentInProgressSofttechRoute = createRoute({
   },
 });
 
+const companyDashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/company_dashboard",
+  component: CompanyDashboard,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
+const apiManagementRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/api_management",
+  component: ApiManagement,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
+const companyAnalyticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/company_analytics",
+  component: CompanyAnalytics,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
+const companyProfileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/company_profile",
+  component: Profile,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/404",
@@ -282,11 +347,16 @@ const routeTree = rootRoute.addChildren([
   processingIntegrationRoute,
   integrationSuccessRoute,
   onboardingDashboardRoute,
+  mcpSimulationRoute,
   plansSofttechRoute,
   checkoutSofttechRoute,
   paymentResultSofttechRoute,
   deploymentSofttechRoute,
   deploymentInProgressSofttechRoute,
+  companyDashboardRoute,
+  apiManagementRoute,
+  companyAnalyticsRoute,
+  companyProfileRoute,
   dashboardRoute,
   notFoundRoute,
   serviceUnavailableRoute,
