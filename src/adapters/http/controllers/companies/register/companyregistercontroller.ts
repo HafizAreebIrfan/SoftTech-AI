@@ -3,6 +3,7 @@ import { createCompanyRepository } from "../../../../persistence/mongo/companies
 import { registerCompanyInfo } from "../../../../../application/useCases/company/register/registercompanyinfo";
 import { saveCompanyApiDetails } from "../../../../../application/useCases/company/register/companyapidetails";
 import { saveCompanyUiSelection } from "../../../../../application/useCases/company/register/companyuiselection";
+import { analyzeSingleApi } from "../../../../../application/useCases/company/register/analyzecompanyapi";
 import {
   authCookieOptions,
   createToken,
@@ -95,3 +96,26 @@ export async function getGeminiLogsController(
     next(error);
   }
 }
+
+export async function analyzeSingleApiController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const companyId = req.params.companyId as string;
+    const apiIndex = parseInt(req.params.apiIndex as string, 10);
+    const { sampleResponse } = req.body || {};
+
+    const result = await analyzeSingleApi(companyRepository, companyId, apiIndex, sampleResponse);
+
+    res.status(200).json({
+      success: true,
+      message: `API #${apiIndex + 1} analyzed successfully with Gemini AI`,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+

@@ -1,6 +1,5 @@
 import { ICompanyRepository } from "../../../ports/companies/register/companyregisterrepository";
 import { ICompany } from "../../../../domain/types/company.types";
-import { analyzeApiResponse } from "../../../../infrastructure/mcp/schema_analyzer/analyzer";
 
 const toToolName = (name: string, index: number): string => {
   const normalized = (name || "")
@@ -46,31 +45,11 @@ const parseHeaders = (api: any): any[] => {
   return [];
 };
 
-const resolveApiSchema = async (api: any): Promise<any> => {
-  const existingSchema = api.apiSchema || api.schema;
-  if (existingSchema) return existingSchema;
-
-  const rawSample = api.sampleResponse || api.sampleresponse;
-  if (!rawSample) return null;
-
-  try {
-    const parsedSample = typeof rawSample === "string" ? JSON.parse(rawSample) : rawSample;
-    return await analyzeApiResponse(parsedSample, {
-      apiName: api.name || api.apiName,
-      endpoint: api.endpoint || api.apiEndpoint,
-      industry: api.industry,
-    });
-  } catch (err) {
-    console.error("[saveCompanyApiDetails] Gemini Schema Analysis Error:", err);
-    return null;
-  }
-};
-
-const transformApiEntry = async (api: any, index: number): Promise<any> => {
+const transformApiEntry = (api: any, index: number): any => {
   const params = parseParams(api);
   const headers = parseHeaders(api);
   const body = Array.isArray(api.body) ? api.body : [];
-  const apiSchema = await resolveApiSchema(api);
+  const existingSchema = api.apiSchema || api.schema || null;
 
   const oauth =
     api.oauth || (api.oauthTokenUrl || api.oauthClientId
@@ -96,7 +75,7 @@ const transformApiEntry = async (api: any, index: number): Promise<any> => {
     platformType: api.platformType || "web",
     webCheckoutUrl: api.webCheckoutUrl || api.checkoutTemplate || undefined,
     mobileDeepLink: api.mobileDeepLink || undefined,
-    apiSchema: apiSchema || null,
+    apiSchema: existingSchema,
     mcpToolName: api.mcpToolName || toToolName(api.name || api.apiName || "", index),
     mcpDescription:
       api.mcpDescription ||
@@ -119,11 +98,7 @@ export async function saveCompanyApiDetails(
     throw new Error("apis must be a non-empty array");
   }
 
-  const apis: any[] = [];
-  for (let i = 0; i < payload.apis.length; i++) {
-    const transformed = await transformApiEntry(payload.apis[i], i);
-    apis.push(transformed);
-  }
+  const apis = payload.apis.map((api: any, index: number) => transformApiEntry(api, index));
 
   return await companyRepository.update(companyId, {
     apis,
