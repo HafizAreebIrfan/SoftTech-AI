@@ -16,15 +16,26 @@ export interface ApisInformation {
   method: string;
   baseUrl: string;
   endpoint: string;
-  authtype: string;
+  authType: string;
+  authtype?: string;
   headers: any[];
   params: any[];
+  body?: any[];
+  samplequery?: any;
+  sampleresponse?: any;
+  platformType?: string;
+  webCheckoutUrl?: string;
+  mobileDeepLink?: string;
+  apiSchema?: any;
+  schema?: any;
   authHeader?: string;
   apiKey?: string;
-  oauthTokenUrl?: string;
-  oauthClientId?: string;
-  oauthClientSecret?: string;
   bearerToken?: string;
+  oauth?: {
+    tokenUrl?: string;
+    clientId?: string;
+    clientSecret?: string;
+  };
 }
 
 export interface CompanyUIInformation {

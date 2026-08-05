@@ -6,7 +6,13 @@ export interface ApiConnection {
   apiAuthType: string;
   apiCredentials?: string;
   apiQueryParams?: string;
+  platformType?: "web" | "mobile" | "both";
+  webCheckoutUrl?: string;
+  mobileDeepLink?: string;
   apiCheckoutTemplate?: string;
+  sampleresponse?: string;
+  apiSchema?: any;
+  schema?: any;
   apiAuthHeader?: string;
   oauthTokenUrl?: string;
   oauthClientId?: string;
@@ -26,7 +32,7 @@ export interface SignupStore {
   stepOneData: StepOneData;
   apisList: ApiConnection[];
   selectedLayout: "dashboard" | "catalog" | "table" | "timeline" | "grid" | "list" | "cards";
-  apiTestStates: Record<string, { status: "idle" | "loading" | "success" | "error"; logs: string }>;
+  apiTestStates: Record<string, { status: "idle" | "loading" | "success" | "error"; logs: string; sampleResponse?: string }>;
   saveStatus: "idle" | "saving" | "saved" | "error";
   isStepTwoPending: boolean;
 
@@ -41,4 +47,30 @@ export interface SignupStore {
   handleTestApi: (api: ApiConnection) => Promise<void>;
   triggerAutoSave: () => void;
   handleStepTwoSubmit: (navigate: (opts: { to: string }) => void) => Promise<void>;
+  handleEndpointUrlChange: (apiId: string, inputUrl: string) => void;
+  applyTemplateSuggestions: (
+    apiId: string,
+    field: "apiQueryParams" | "apiHeaders",
+    industry: string,
+    apiName: string,
+    method: string,
+  ) => void;
+}
+
+export interface ParamRow {
+  id: string;
+  key: string;
+  value: string;
+  isDynamic: boolean;
+}
+
+export interface PostmanTableEditorProps {
+  api: ApiConnection;
+  field: "apiQueryParams" | "apiHeaders";
+  title: string;
+  description: string;
+  showDynamicToggle?: boolean;
+  colors: Record<string, string>;
+  updateApiField: (id: string, field: keyof ApiConnection, value: string) => void;
+  stepOneData?: StepOneData;
 }

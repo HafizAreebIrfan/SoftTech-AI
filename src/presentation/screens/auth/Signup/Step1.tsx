@@ -559,6 +559,7 @@ const SignupStep1: FC = () => {
               style={{
                 background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
                 opacity: isStepOnePending ? 0.7 : 1,
+                color: colors.TextBody,
               }}
               disabled={isStepOnePending}
             >

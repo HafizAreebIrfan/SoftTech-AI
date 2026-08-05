@@ -110,6 +110,58 @@ export const useApplyGlobalThemeVars = () => {
     root.style.setProperty("--app-btn-grad-2", colors.ButtonGradientTwo);
     root.style.setProperty("--app-btn-secondary", colors.ButtonSecondary);
     root.style.setProperty("--app-button-secondary", colors.ButtonSecondary); // Fallback
+    root.style.setProperty(
+      "--app-delete-api-button-bg",
+      colors.DeleteAPIButtonBg,
+    );
+    root.style.setProperty(
+      "--app-delete-api-button-border",
+      colors.DeleteAPIButtonBorder,
+    );
+    root.style.setProperty(
+      "--app-delete-api-button-text",
+      colors.DeleteAPIButtonText,
+    );
+    root.style.setProperty(
+      "--app-delete-api-button-bg-hover",
+      colors.DeleteAPIButtonBgHover,
+    );
+    root.style.setProperty(
+      "--app-delete-api-button-border-hover",
+      colors.DeleteAPIButtonBorderHover,
+    );
+    root.style.setProperty(
+      "--app-delete-api-button-text-hover",
+      colors.DeleteAPIButtonTextHover,
+    );
+    root.style.setProperty(
+      "--app-query-params-button-icon",
+      colors.QueryParamsButtonIcon,
+    );
+    root.style.setProperty(
+      "--app-query-params-button-bg",
+      colors.QueryParamsButtonBg,
+    );
+    root.style.setProperty(
+      "--app-query-params-button-text",
+      colors.QueryParamsButtonText,
+    );
+    root.style.setProperty(
+      "--app-query-params-button-border",
+      colors.QueryParamsButtonBorder,
+    );
+    root.style.setProperty(
+      "--app-query-params-button-bg-hover",
+      colors.QueryParamsButtonBgHover,
+    );
+    root.style.setProperty(
+      "--app-toggle-table-view-bg",
+      colors.ToggleTableTextViewBg,
+    );
+    root.style.setProperty(
+      "--app-toggle-table-view-border",
+      colors.ToggleTableTextViewBorder,
+    );
 
     // Header specific Buttons
     root.style.setProperty(
@@ -202,7 +254,47 @@ export const useApplyGlobalThemeVars = () => {
     );
     root.style.setProperty("--app-glass-bg", colors.GlassBg);
     root.style.setProperty("--app-glass-border", colors.GlassBorder);
-    root.style.setProperty("--app-glass-border-secondary", colors.GlassBorderSecondary);
+    root.style.setProperty(
+      "--app-glass-border-secondary",
+      colors.GlassBorderSecondary,
+    );
+    root.style.setProperty("--app-method-get-bg", colors.MethodGetBg);
+    root.style.setProperty("--app-method-get-text", colors.MethodGetText);
+    root.style.setProperty("--app-method-get-border", colors.MethodGetBorder);
+    root.style.setProperty("--app-method-post-bg", colors.MethodPostBg);
+    root.style.setProperty("--app-method-post-text", colors.MethodPostText);
+    root.style.setProperty("--app-method-post-border", colors.MethodPostBorder);
+    root.style.setProperty("--app-method-put-bg", colors.MethodPutBg);
+    root.style.setProperty("--app-method-put-text", colors.MethodPutText);
+    root.style.setProperty("--app-method-put-border", colors.MethodPutBorder);
+    root.style.setProperty("--app-method-patch-bg", colors.MethodPatchBg);
+    root.style.setProperty("--app-method-patch-text", colors.MethodPatchText);
+    root.style.setProperty(
+      "--app-method-patch-border",
+      colors.MethodPatchBorder,
+    );
+    root.style.setProperty("--app-method-delete-bg", colors.MethodDeleteBg);
+    root.style.setProperty("--app-method-delete-text", colors.MethodDeleteText);
+    root.style.setProperty(
+      "--app-method-delete-border",
+      colors.MethodDeleteBorder,
+    );
+    root.style.setProperty("--app-dynamic-badge-bg", colors.DynamicBadgeBg);
+    root.style.setProperty(
+      "--app-dynamic-badge-border",
+      colors.DynamicBadgeBorder,
+    );
+    root.style.setProperty("--app-dynamic-badge-text", colors.DynamicBadgeText);
+    root.style.setProperty("--app-success-badge-bg", colors.SuccessBadgeBg);
+    root.style.setProperty("--app-success-badge-text", colors.SuccessBadgeText);
+    root.style.setProperty(
+      "--app-success-badge-border",
+      colors.SuccessBadgeBorder,
+    );
+    root.style.setProperty("--app-error-badge-bg", colors.ErrorBadgeBg);
+    root.style.setProperty("--app-error-badge-text", colors.ErrorBadgeText);
+    root.style.setProperty("--app-error-badge-border", colors.ErrorBadgeBorder);
+    root.style.setProperty("--app-table-divider", colors.TableDivider);
 
     root.setAttribute("data-theme", isDark ? "dark" : "light");
   }, [colors, isDark]);

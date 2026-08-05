@@ -74,10 +74,6 @@ const Navbar: React.FC = () => {
               Start Building
             </Link>
 
-            <Link to="/dashboard-preview" className={styles.primaryBtn}>
-              Preview Dashboard
-            </Link>
-
             <button
               id="menu-toggle"
               className={styles.menuBtn}
