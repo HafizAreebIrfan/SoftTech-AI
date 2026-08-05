@@ -74,14 +74,6 @@ const Navbar: React.FC = () => {
               Start Building
             </Link>
 
-            <Link to="/dashboard-preview" className={styles.primaryBtn}>
-              Preview Dashboard
-            </Link>
-
-            <Link to="/admin-preview" className={styles.primaryBtn}>
-              Admin Preview
-            </Link>
-
             <button
               id="menu-toggle"
               className={styles.menuBtn}
@@ -164,14 +156,6 @@ const Navbar: React.FC = () => {
             </Link>
           </div>
           <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
-            <Link
-              to="/dashboard-preview"
-              className={styles.mobileLoginBtn}
-              style={{ flex: 1, textAlign: "center" }}
-              onClick={closeMobileMenu}
-            >
-              Preview Dashboard
-            </Link>
             <Link
               to="/admin-preview"
               className={styles.mobilePrimaryBtn}

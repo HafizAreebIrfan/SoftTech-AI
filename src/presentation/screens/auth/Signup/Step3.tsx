@@ -82,7 +82,10 @@ const SignupStep3: FC = () => {
     });
   };
   useEffect(() => {
-    const industryLayoutMapping: Record<string, "dashboard" | "catalog" | "table" | "timeline"> = {
+    const industryLayoutMapping: Record<
+      string,
+      "dashboard" | "catalog" | "table" | "timeline"
+    > = {
       "e-commerce": "catalog",
       ecommerce: "catalog",
       fintech: "table",
@@ -212,7 +215,7 @@ const SignupStep3: FC = () => {
                         style={{
                           background: "rgba(59, 130, 246, 0.15)",
                           color: "#60a5fa",
-                          border: "1px solid rgba(59, 130, 246, 0.3)"
+                          border: "1px solid rgba(59, 130, 246, 0.3)",
                         }}
                       >
                         Recommended
@@ -223,7 +226,8 @@ const SignupStep3: FC = () => {
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
                   >
-                    Modular bento-style layout optimized for data telemetry, analytics, and interactive metrics dashboards.
+                    Modular bento-style layout optimized for data telemetry,
+                    analytics, and interactive metrics dashboards.
                   </p>
                 </div>
               </div>
@@ -281,7 +285,7 @@ const SignupStep3: FC = () => {
                         style={{
                           background: "rgba(59, 130, 246, 0.15)",
                           color: "#60a5fa",
-                          border: "1px solid rgba(59, 130, 246, 0.3)"
+                          border: "1px solid rgba(59, 130, 246, 0.3)",
                         }}
                       >
                         Recommended
@@ -292,7 +296,8 @@ const SignupStep3: FC = () => {
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
                   >
-                    Grid layout optimized for item cards, product listings, travel bookings, and category catalogs.
+                    Grid layout optimized for item cards, product listings,
+                    travel bookings, and category catalogs.
                   </p>
                 </div>
               </div>
@@ -347,7 +352,7 @@ const SignupStep3: FC = () => {
                         style={{
                           background: "rgba(59, 130, 246, 0.15)",
                           color: "#60a5fa",
-                          border: "1px solid rgba(59, 130, 246, 0.3)"
+                          border: "1px solid rgba(59, 130, 246, 0.3)",
                         }}
                       >
                         Recommended
@@ -358,7 +363,8 @@ const SignupStep3: FC = () => {
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
                   >
-                    Condensed spreadsheet-style view for power users handling massive data sets, transaction ledger list.
+                    Condensed spreadsheet-style view for power users handling
+                    massive data sets, transaction ledger list.
                   </p>
                 </div>
               </div>
@@ -413,7 +419,7 @@ const SignupStep3: FC = () => {
                         style={{
                           background: "rgba(59, 130, 246, 0.15)",
                           color: "#60a5fa",
-                          border: "1px solid rgba(59, 130, 246, 0.3)"
+                          border: "1px solid rgba(59, 130, 246, 0.3)",
                         }}
                       >
                         Recommended
@@ -424,7 +430,8 @@ const SignupStep3: FC = () => {
                     className="text-xs leading-relaxed"
                     style={{ color: colors.TextBody }}
                   >
-                    Milestone progress tracker optimized for package shipping routes, logistics, and process stages.
+                    Milestone progress tracker optimized for package shipping
+                    routes, logistics, and process stages.
                   </p>
                 </div>
               </div>
@@ -639,27 +646,27 @@ const SignupStep3: FC = () => {
                       </div>
                       {[1, 2, 3, 4].map((i) => (
                         <motion.div
-                           key={i}
-                           initial={{ opacity: 0, y: 6 }}
-                           animate={{ opacity: 1, y: 0 }}
-                           transition={{ delay: i * 0.04 }}
-                           className="flex justify-between items-center text-xs pb-1 border-b border-white/5"
-                         >
-                           <div
-                             className="h-1.5 w-16 rounded my-2"
-                             style={{ background: colors.OverlayShadow }}
-                           ></div>
-                           <div
-                             className="h-1.5 w-16 rounded"
-                             style={{ background: colors.OverlayShadow }}
-                           ></div>
-                           <div
-                             className="h-1.5 w-26 rounded"
-                             style={{
-                               background: colors.UISelectionCardBackground,
-                             }}
-                           ></div>
-                         </motion.div>
+                          key={i}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.04 }}
+                          className="flex justify-between items-center text-xs pb-1 border-b border-white/5"
+                        >
+                          <div
+                            className="h-1.5 w-16 rounded my-2"
+                            style={{ background: colors.OverlayShadow }}
+                          ></div>
+                          <div
+                            className="h-1.5 w-16 rounded"
+                            style={{ background: colors.OverlayShadow }}
+                          ></div>
+                          <div
+                            className="h-1.5 w-26 rounded"
+                            style={{
+                              background: colors.UISelectionCardBackground,
+                            }}
+                          ></div>
+                        </motion.div>
                       ))}
                     </motion.div>
                   )}
@@ -749,6 +756,7 @@ const SignupStep3: FC = () => {
               style={{
                 background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
                 opacity: isStepThreePending ? 0.7 : 1,
+                color: colors.TextBody,
               }}
               disabled={isStepThreePending}
             >

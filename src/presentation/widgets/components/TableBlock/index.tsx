@@ -1,23 +1,31 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { WidgetTableRow, WidgetTableCell, WidgetTone } from "../../../../domain/entities/GenericWidget";
+import {
+  WidgetTableRow,
+  WidgetTableCell,
+  WidgetTone,
+  TableColumn,
+  Pagination,
+} from "../../../../domain/entities/GenericWidget";
 import styles from "../../../../styles/tableblock.module.css";
 import { SearchIcon, ChevronDownIcon, ChevronUpIcon } from "../../../../assets/icons";
-import { MetricBlock } from "../MetricBlock";
 
 interface TableBlockProps {
+  columns?: TableColumn[] | string[];
+  rows?: (string | number)[][] | WidgetTableRow[];
   tableHeaders?: string[];
-  tableRows: WidgetTableRow[];
+  tableRows?: WidgetTableRow[];
   title?: string;
+  pagination?: Pagination;
   totalItems?: number;
   totalPages?: number;
   currentPage?: number;
 }
 
 const toneClasses: Record<WidgetTone, string> = {
-  default: styles.default,
-  good: styles.good,
-  warning: styles.warning,
-  danger: styles.danger,
+  default: styles.default || "",
+  good: styles.good || "",
+  warning: styles.warning || "",
+  danger: styles.danger || "",
 };
 
 const isTableCell = (val: unknown): val is WidgetTableCell => {
@@ -25,9 +33,12 @@ const isTableCell = (val: unknown): val is WidgetTableCell => {
 };
 
 export const TableBlock: React.FC<TableBlockProps> = ({
-  tableHeaders,
-  tableRows,
+  columns: propColumns,
+  rows: propRows,
+  tableHeaders: propTableHeaders,
+  tableRows: propTableRows,
   title,
+  pagination,
   totalItems: propTotalItems,
   totalPages: propTotalPages,
   currentPage: propCurrentPage,
@@ -37,6 +48,20 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+
+  // Normalize headers and rows
+  const tableHeaders: string[] = useMemo(() => {
+    if (propColumns && propColumns.length > 0) {
+      return propColumns.map((c) =>
+        typeof c === "string" ? c : c.label || c.key,
+      );
+    }
+    return propTableHeaders || [];
+  }, [propColumns, propTableHeaders]);
+
+  const tableRows: WidgetTableRow[] = useMemo(() => {
+    return (propRows || propTableRows || []) as WidgetTableRow[];
+  }, [propRows, propTableRows]);
 
   if (!tableRows || tableRows.length === 0) return null;
 
@@ -48,89 +73,6 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     return cell as string | number;
   };
 
-  // Compute local summary metrics to display above the table!
-  const localMetrics = useMemo(() => {
-    const metrics: Array<{ label: string; value: string | number; tone?: WidgetTone }> = [];
-    
-    // 1. Total Count metric
-    const rowCount = tableRows.length;
-    const tableTitle = title || "Items";
-    metrics.push({
-      label: `Total ${tableTitle}`,
-      value: rowCount,
-      tone: "default"
-    });
-
-    // 2. Sum of numeric columns (e.g. price, amount, total, quantity, sales, cost, fee)
-    if (tableHeaders && tableRows) {
-      const numericColumns = new Map<number, { sum: number; name: string }>();
-      tableHeaders.forEach((header, colIdx) => {
-        const lowerHeader = header.toLowerCase();
-        if (
-          lowerHeader.includes("amount") ||
-          lowerHeader.includes("total") ||
-          lowerHeader.includes("price") ||
-          lowerHeader.includes("qty") ||
-          lowerHeader.includes("quantity") ||
-          lowerHeader.includes("sales") ||
-          lowerHeader.includes("cost") ||
-          lowerHeader.includes("fee")
-        ) {
-          numericColumns.set(colIdx, { sum: 0, name: header });
-        }
-      });
-
-      tableRows.forEach((row) => {
-        numericColumns.forEach((stats, colIdx) => {
-          const cell = row[colIdx];
-          const cellVal = isTableCell(cell) ? cell.value : cell;
-          
-          if (typeof cellVal === "number") {
-            stats.sum += cellVal;
-          } else if (typeof cellVal === "string") {
-            const parsed = parseFloat(cellVal.replace(/[^0-9.-]/g, ""));
-            if (!isNaN(parsed)) {
-              stats.sum += parsed;
-            }
-          }
-        });
-      });
-
-      numericColumns.forEach((stats) => {
-        const lowerName = stats.name.toLowerCase();
-        const isPrice =
-          (lowerName.includes("price") ||
-            lowerName.includes("amount") ||
-            lowerName.includes("cost") ||
-            lowerName.includes("fee") ||
-            lowerName.includes("sales") ||
-            lowerName.includes("revenue") ||
-            lowerName.includes("income") ||
-            lowerName.includes("spend") ||
-            lowerName.includes("spent") ||
-            lowerName.includes("total")) &&
-          !lowerName.includes("count") &&
-          !lowerName.includes("orders") &&
-          !lowerName.includes("pages") &&
-          !lowerName.includes("customers") &&
-          !lowerName.includes("qty") &&
-          !lowerName.includes("quantity") &&
-          !lowerName.includes("items") &&
-          !lowerName.includes("users") &&
-          !lowerName.includes("page") &&
-          !lowerName.includes("number") &&
-          !lowerName.includes("no");
-        
-        metrics.push({
-          label: stats.name.toLowerCase().startsWith("total") ? stats.name : `Total ${stats.name}`,
-          value: isPrice ? `$${stats.sum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : stats.sum,
-          tone: "good"
-        });
-      });
-    }
-    return metrics;
-  }, [tableRows, tableHeaders, title]);
-
   // 1. Filtering
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return tableRows;
@@ -139,7 +81,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       row.some((cell) => {
         const val = String(getCellValue(cell)).toLowerCase();
         return val.includes(lowerQuery);
-      })
+      }),
     );
   }, [tableRows, searchQuery]);
 
@@ -174,9 +116,20 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   }, [searchQuery, sortCol, sortDir]);
 
   // 3. Pagination
-  const totalItems = propTotalItems !== undefined ? propTotalItems : sortedRows.length;
+  const totalItems =
+    pagination?.totalItems !== undefined
+      ? pagination.totalItems
+      : propTotalItems !== undefined
+        ? propTotalItems
+        : sortedRows.length;
+
   const localTotalPages = Math.ceil(sortedRows.length / pageSize) || 1;
-  const totalPages = propTotalPages !== undefined ? propTotalPages : localTotalPages;
+  const totalPages =
+    pagination?.totalPages !== undefined
+      ? pagination.totalPages
+      : propTotalPages !== undefined
+        ? propTotalPages
+        : localTotalPages;
 
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -194,20 +147,29 @@ export const TableBlock: React.FC<TableBlockProps> = ({
 
   return (
     <div style={{ marginBottom: "1.5rem" }}>
-      {/* Auto-computed Summary Metrics Block */}
-      {localMetrics.length > 0 && (
-        <MetricBlock
-          metrics={localMetrics}
-          title={`${title || "Table"} Overview`}
-        />
-      )}
-
       {/* Title & Search bar row */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.5rem", marginTop: "1rem" }}>
-        <h4 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--app-text-primary, #ffffff)", margin: 0 }}>
-          {title ? `${title} Details` : "Details"}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "0.5rem",
+          marginBottom: "0.75rem",
+          marginTop: "1rem",
+        }}
+      >
+        <h4
+          style={{
+            fontSize: "0.95rem",
+            fontWeight: 600,
+            color: "var(--app-text-primary, #ffffff)",
+            margin: 0,
+          }}
+        >
+          {title ? title : "Data Table"}
         </h4>
-        
+
         {/* Search Input bar */}
         <div className={styles.searchContainer}>
           <span className={styles.searchIcon}>
@@ -241,12 +203,21 @@ export const TableBlock: React.FC<TableBlockProps> = ({
                         <span className={styles.sortIcon}>
                           {isSorted ? (
                             sortDir === "asc" ? (
-                              <ChevronUpIcon size={10} color="var(--app-card-active-border, #3b82f6)" />
+                              <ChevronUpIcon
+                                size={10}
+                                color="var(--app-card-active-border, #3b82f6)"
+                              />
                             ) : (
-                              <ChevronDownIcon size={10} color="var(--app-card-active-border, #3b82f6)" />
+                              <ChevronDownIcon
+                                size={10}
+                                color="var(--app-card-active-border, #3b82f6)"
+                              />
                             )
                           ) : (
-                            <ChevronDownIcon size={10} color="rgba(255,255,255,0.2)" />
+                            <ChevronDownIcon
+                              size={10}
+                              color="rgba(255,255,255,0.2)"
+                            />
                           )}
                         </span>
                       </div>
@@ -285,7 +256,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       </div>
 
       {/* Pagination controls footer */}
-      {totalPages > 1 || tableRows.length > 5 || (propTotalItems !== undefined && propTotalItems > tableRows.length) ? (
+      {totalPages > 1 || tableRows.length > 5 || totalItems > tableRows.length ? (
         <div className={styles.pagination}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <span>Show</span>
@@ -307,8 +278,9 @@ export const TableBlock: React.FC<TableBlockProps> = ({
 
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <span>
-              Showing {((propCurrentPage !== undefined ? (propCurrentPage - 1) * tableRows.length : 0) + Math.min(sortedRows.length, (currentPage - 1) * pageSize + 1))}-
-              {((propCurrentPage !== undefined ? (propCurrentPage - 1) * tableRows.length : 0) + Math.min(sortedRows.length, currentPage * pageSize))} of {totalItems}
+              Showing{" "}
+              {Math.min(sortedRows.length, (currentPage - 1) * pageSize + 1)}-
+              {Math.min(sortedRows.length, currentPage * pageSize)} of {totalItems}
             </span>
             <div className={styles.paginationButtons}>
               <button
@@ -320,8 +292,10 @@ export const TableBlock: React.FC<TableBlockProps> = ({
               </button>
               <button
                 className={styles.pageBtn}
-                onClick={() => setCurrentPage(Math.min(propTotalPages !== undefined ? localTotalPages : totalPages, currentPage + 1))}
-                disabled={currentPage === (propTotalPages !== undefined ? localTotalPages : totalPages)}
+                onClick={() =>
+                  setCurrentPage(Math.min(localTotalPages, currentPage + 1))
+                }
+                disabled={currentPage >= localTotalPages}
               >
                 Next
               </button>

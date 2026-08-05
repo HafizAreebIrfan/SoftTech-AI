@@ -26,7 +26,6 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-fill-color: transparent;
-  cursor: pointer;
 }
 
 .logoText:hover {
@@ -76,7 +75,7 @@
 .signupcard {
   backdrop-filter: blur(20px);
   border-radius: 1.25rem;
-  padding: 2.5rem 2rem;
+  padding: 1.75rem 1.5rem;
   text-align: left;
 }
 
@@ -138,12 +137,11 @@
   -webkit-text-fill-color: var(--app-text-body, #ffffff) !important;
 }
 
-
 .inputicon {
   padding-right: 100px;
 }
 
-.inputunedit{
+.inputunedit {
   opacity: 0.7;
 }
 
@@ -158,21 +156,20 @@
 
 .apiBlock {
   position: relative;
-  border-radius: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 1.75rem;
-  margin-bottom: 2rem;
+  border-radius: 12px;
+  padding: 0;
+  margin-bottom: 1.5rem;
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 .apiBlockHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 0;
 }
-
 
 .apiBlockTitle {
   font-size: 0.85rem;
@@ -189,12 +186,12 @@
 }
 
 .deleteBtn {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  padding: 0.5rem 0.875rem;
+  background-color: var(--app-delete-api-button-bg);
+  border: 1px solid var(--app-delete-api-button-border);
+  padding: 0.35rem 0.65rem;
+  color: var(--app-delete-api-button-text);
   border-radius: 0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -204,16 +201,16 @@
 }
 
 .deleteBtn:hover {
-  background-color: #ef4444;
-  color: #ffffff;
+  background-color: var(--app-delete-api-button-bg-hover);
+  color: var(--app-delete-api-button-text-hover);
   transform: translateY(-1px);
 }
 
 .btn {
-  padding: 0.85rem;
+  padding: 0.625rem 1.5rem;
   border: none;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   border-radius: 0.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -221,4 +218,689 @@
 
 .btn:hover {
   transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   Step 2 Modular CSS Classes (Tailwind Replacement)
+   ========================================================================== */
+
+.step2Wrapper {
+  margin-top: 0.5rem;
+  width: 100%;
+  margin-inline: auto;
+  max-width: 72rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.headerWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 1.5rem;
+}
+
+.headerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: rgba(99, 102, 241, 0.1);
+  color: #818cf8;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  width: fit-content;
+}
+
+.headerTitle {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+@media (min-width: 768px) {
+  .headerTitle {
+    font-size: 1.875rem;
+  }
+}
+
+.headerDesc {
+  font-weight: 500;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  max-width: 42rem;
+  opacity: 0.85;
+}
+
+@media (min-width: 768px) {
+  .headerDesc {
+    font-size: 0.875rem;
+  }
+}
+
+.apiBlockBody {
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .apiBlockBody {
+    padding: 1.25rem 1.5rem;
+  }
+}
+
+.fieldLabel {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  display: block;
+}
+
+.inputRelative {
+  position: relative;
+}
+
+.inputIconLeft {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.inputWithIcon {
+  display: block;
+  width: 100%;
+  padding-left: 2.25rem;
+  padding-right: 0.75rem;
+  padding-block: 0.7rem;
+  border-radius: 0.5rem;
+  outline: none;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.endpointHeader {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+@media (min-width: 640px) {
+  .endpointHeader {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.endpointHint {
+  font-size: 0.6875rem;
+  opacity: 0.75;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.requestBar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--app-card-border);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  background: var(--app-bg-secondary);
+}
+
+@media (min-width: 640px) {
+  .requestBar {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.methodSelectWrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  border-bottom: 1px solid var(--app-card-border);
+}
+
+@media (min-width: 640px) {
+  .methodSelectWrapper {
+    border-bottom: none;
+    border-right: 1px solid var(--app-card-border);
+  }
+}
+
+.methodSelect {
+  appearance: none;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding-inline: 1.35rem 1.35rem;
+  height: 100%;
+  text-align: center;
+  outline: none;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+
+.selectArrow {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.protocolPrefix {
+  padding: 0.375rem 0.625rem;
+  display: none;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+
+@media (min-width: 640px) {
+  .protocolPrefix {
+    display: flex;
+  }
+}
+
+.urlInputWrapper {
+  position: relative;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
+.urlInput {
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+  outline: none;
+  background: transparent;
+  border: none;
+}
+
+.testBtnWrapper {
+  display: flex;
+  align-items: center;
+  padding: 0.25rem;
+  border-top: 1px solid var(--app-card-border);
+}
+
+@media (min-width: 640px) {
+  .testBtnWrapper {
+    border-top: none;
+    border-left: 1px solid var(--app-card-border);
+  }
+}
+
+.testBtn {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 0.5rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: none;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .testBtn {
+    width: auto;
+  }
+}
+
+.testBtn:hover {
+  opacity: 0.9;
+}
+
+.configGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: flex-start;
+  padding-top: 0.5rem;
+}
+
+@media (min-width: 1024px) {
+  .configGrid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+.requestCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  .requestCol {
+    grid-column: span 7 / span 7;
+  }
+}
+
+.responseCol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+@media (min-width: 1024px) {
+  .responseCol {
+    grid-column: span 5 / span 5;
+  }
+}
+
+.tabBar {
+  display: flex;
+  border-bottom: 1px solid var(--app-card-border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.tabBtn {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  opacity: 0.6;
+}
+
+.tabBtn:hover {
+  opacity: 0.9;
+}
+
+.tabActive {
+  opacity: 1 !important;
+  border-bottom-color: var(--app-card-active-border, #6366f1) !important;
+}
+
+.tabBadge {
+  padding: 0.05rem 0.375rem;
+  border-radius: 9999px;
+  font-size: 0.5625rem;
+  font-family: monospace;
+  background: var(--app-bg-secondary, #1f1f2a);
+}
+
+.authEnabledDot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: #10b981;
+  display: inline-block;
+}
+
+.jsonBodyPill {
+  padding: 0.05rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.5rem;
+  font-family: monospace;
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #60a5fa;
+}
+
+.authContainer {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--app-card-border);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: var(--app-bg, #13121c);
+}
+
+.authGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .authGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.authTypeBtn {
+  padding: 0.5rem 0.625rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: 1px solid;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+}
+
+.noAuthBanner {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px dashed var(--app-card-border);
+  font-size: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  background-color: rgba(255, 255, 255, 0.01);
+}
+
+.authInputGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .authInputGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.passwordToggleBtn {
+  position: absolute;
+  right: 0.625rem;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.6;
+  cursor: pointer;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+}
+
+.passwordToggleBtn:hover {
+  opacity: 1;
+}
+
+.securityNotice {
+  padding: 0.625rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--app-card-border);
+  font-size: 0.6875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.8;
+  background: var(--app-bg-secondary, #1f1f2a);
+}
+
+.responseHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--app-card-border);
+  padding-bottom: 0.5rem;
+}
+
+.responseTitle {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.statusBadge {
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.625rem;
+  font-family: monospace;
+  font-weight: 600;
+  border: 1px solid;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.terminalWindow {
+  border-radius: 0.5rem;
+  border: 1px solid var(--app-card-border);
+  overflow: hidden;
+  transition: all 0.2s ease;
+  background: var(--app-bg-secondary, #1f1f2a);
+}
+
+.terminalBar {
+  padding: 0.375rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--app-card-border);
+  font-size: 0.625rem;
+  font-family: monospace;
+  background: var(--app-bg, #13121c);
+}
+
+.terminalDots {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.dotRed {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: rgba(239, 68, 68, 0.8);
+  display: inline-block;
+}
+
+.dotYellow {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: rgba(234, 179, 8, 0.8);
+  display: inline-block;
+}
+
+.dotGreen {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: rgba(16, 185, 129, 0.8);
+  display: inline-block;
+}
+
+.terminalTitleText {
+  margin-left: 0.375rem;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.aiAnalyzerTag {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #818cf8;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.terminalBody {
+  padding: 0.75rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  max-height: 17.5rem;
+  overflow-y: auto;
+}
+
+.logPre {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.emptyTerminal {
+  padding: 2rem 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.75;
+}
+
+.emptyIconBg {
+  padding: 0.625rem;
+  border-radius: 9999px;
+  background-color: rgba(99, 102, 241, 0.1);
+  display: inline-block;
+}
+
+.emptyTitle {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.emptyDesc {
+  font-size: 0.6875rem;
+  max-width: 16rem;
+  margin-inline: auto;
+  line-height: 1.5;
+  opacity: 0.8;
+}
+
+.btnAddApi {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px dashed rgba(72, 71, 81, 0.4);
+  color: #76747f;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  background: transparent;
+}
+
+.btnAddApi:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #9fa7ff;
+}
+
+.addIconBg {
+  padding: 0.375rem;
+  border-radius: 9999px;
+  background-color: rgba(99, 102, 241, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.btnAddApi:hover .addIconBg {
+  transform: scale(1.1);
+}
+
+.addApiText {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: -0.01em;
+}
+
+.footerActionBar {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--app-border, #d9d9e6);
+}
+
+@media (min-width: 640px) {
+  .footerActionBar {
+    flex-direction: row;
+  }
+}
+
+.backBtn {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+@media (min-width: 640px) {
+  .backBtn {
+    width: auto;
+  }
+}
+
+.backBtn:hover {
+  color: #ffffff;
+}
+
+.stepIndicatorGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .stepIndicatorGroup {
+    width: auto;
+  }
+}
+
+.stepText {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }

@@ -1,22 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { useMcpToolResult } from "../../../../infrastructure/store/mcpWidgetStore";
-import { WidgetBlock } from "../../../../domain/entities/GenericWidget";
-import styles from "../../../../styles/genericwidgetrenderer.module.css";
-import { MOCK_INDUSTRY_DATA } from "../../../../hooks/mockData/index";
 import { useThemeStore } from "../../../../hooks";
-
-// Import Modular Industry Screens
-import { EcommerceScreen } from "../../Screens/Ecommerce";
-import { FintechScreen } from "../../Screens/Fintech";
-import { ForecastingScreen } from "../../Screens/Forecasting";
-import { LogisticsScreen } from "../../Screens/Logistics";
-import { SaasScreen } from "../../Screens/Saas";
-import { AiScreen } from "../../Screens/Ai";
-import { HealthScreen } from "../../Screens/Health";
-import { FoodScreen } from "../../Screens/Food";
-import { TransportScreen } from "../../Screens/Transport";
-import { TravelScreen } from "../../Screens/Travel";
-import { GeneralScreen } from "../../Screens/General";
+import { DashboardLayout } from "../../layouts/DashboardLayout";
+import { CatalogLayout } from "../../layouts/CatalogLayout";
+import { TableLayout } from "../../layouts/TableLayout";
+import { TimelineLayout } from "../../layouts/TimelineLayout";
+import { DetailsLayout } from "../../layouts/DetailsLayout";
+import { GeneralLayout } from "../../layouts/GeneralLayout";
+import { EmptyStateBlock } from "../EmptyStateBlock";
+import styles from "../../../../styles/genericwidgetrenderer.module.css";
 
 export const GenericWidgetRenderer: React.FC = () => {
   const { colors } = useThemeStore();
@@ -24,369 +16,52 @@ export const GenericWidgetRenderer: React.FC = () => {
 
   try {
     toolResult = useMcpToolResult();
-    console.log("toolResult", toolResult);
   } catch (e) {
-    console.error("HOOK FAILED", e);
+    console.error("MCP Tool Result Hook crashed:", e);
     return (
       <div
         style={{
-          color: colors.TextHeading,
-          background: colors.Background,
+          color: colors.TextHeading || "#ffffff",
+          background: colors.Background || "#0f1015",
           padding: "20px",
-          fontSize: "24px",
-        }}
-      >
-        Hook crashed
-      </div>
-    );
-  }
-
-  // Is this running in default preview fallback?
-  const isPreview =
-    !toolResult || (toolResult as any)._meta?.isPreview === true;
-
-  // Parse layout preference or industry from toolResult
-  const payloadLayout =
-    toolResult?.structuredContent?.layout?.toLowerCase() || "";
-  const payloadIndustry =
-    toolResult?.structuredContent?.industry?.toLowerCase() || "";
-  const payloadTitle =
-    toolResult?.structuredContent?.title?.toLowerCase() || "";
-
-  // Check if it is an admin or management related view/action (sales, total, list, logs, all, etc.)
-  const isAdminView =
-    payloadTitle.includes("admin") ||
-    payloadTitle.includes("manage") ||
-    payloadTitle.includes("dashboard") ||
-    payloadTitle.includes("analytics") ||
-    payloadTitle.includes("metric") ||
-    payloadTitle.includes("statistic") ||
-    payloadTitle.includes("report") ||
-    payloadTitle.includes("sales") ||
-    payloadTitle.includes("total") ||
-    payloadTitle.includes("all orders") ||
-    payloadTitle.includes("all customers") ||
-    payloadTitle.includes("ledger") ||
-    payloadTitle.includes("transaction") ||
-    payloadTitle.includes("history") ||
-    payloadTitle.includes("log") ||
-    payloadTitle.includes("invoice");
-
-  // Check if it is a user-centric action
-  const isUserAction =
-    payloadTitle.includes("book") ||
-    payloadTitle.includes("order placement") ||
-    payloadTitle.includes("checkout") ||
-    payloadTitle.includes("reserve") ||
-    payloadTitle.includes("buy") ||
-    payloadTitle.includes("purchase") ||
-    payloadTitle.includes("create") ||
-    payloadTitle.includes("submit");
-
-  // Heuristic: If it is a generic data-oriented view like lists, logs, or histories,
-  // we override layout to 'general' to prevent rendering catalog cards with 'Book Now' buttons.
-  const isDataView =
-    (payloadTitle.includes("customer") ||
-    payloadTitle.includes("order") ||
-    payloadTitle.includes("invoice") ||
-    payloadTitle.includes("user") ||
-    payloadTitle.includes("history") ||
-    payloadTitle.includes("transaction") ||
-    payloadTitle.includes("ledger") ||
-    payloadTitle.includes("log")) && !isUserAction;
-
-  let defaultPreviewLayout = "dashboard";
-  if (!isPreview && isAdminView) {
-    // Admin views prioritize dashboard or general table
-    defaultPreviewLayout = payloadTitle.includes("list") || payloadTitle.includes("all") ? "table" : "dashboard";
-  } else if (!isPreview && isUserAction) {
-    defaultPreviewLayout = "catalog";
-  } else if (!isPreview && isDataView) {
-    defaultPreviewLayout = "general";
-  } else if (payloadLayout) {
-    if (payloadLayout.includes("dashboard") || payloadLayout.includes("metrics")) {
-      defaultPreviewLayout = "dashboard";
-    } else if (
-      payloadLayout.includes("catalog") ||
-      payloadLayout.includes("grid") ||
-      payloadLayout.includes("card")
-    ) {
-      defaultPreviewLayout = "catalog";
-    } else if (payloadLayout.includes("table") || payloadLayout.includes("list")) {
-      defaultPreviewLayout = "table";
-    } else if (
-      payloadLayout.includes("timeline") ||
-      payloadLayout.includes("step")
-    ) {
-      defaultPreviewLayout = "timeline";
-    } else {
-      defaultPreviewLayout = payloadLayout;
-    }
-  } else {
-    // Fallback based on industry
-    if (
-      payloadIndustry.includes("commerce") ||
-      payloadIndustry.includes("travel") ||
-      payloadIndustry.includes("booking") ||
-      payloadIndustry.includes("food")
-    ) {
-      defaultPreviewLayout = "catalog";
-    } else if (
-      payloadIndustry.includes("saas") ||
-      payloadIndustry.includes("fintech") ||
-      payloadIndustry.includes("finance")
-    ) {
-      defaultPreviewLayout = "table";
-    } else if (
-      payloadIndustry.includes("logistics") ||
-      payloadIndustry.includes("transport") ||
-      payloadIndustry.includes("delivery")
-    ) {
-      defaultPreviewLayout = "timeline";
-    } else {
-      defaultPreviewLayout = "dashboard";
-    }
-  }
-
-  const [previewLayout, setPreviewLayout] =
-    useState<string>(defaultPreviewLayout);
-
-  // If defaults change, sync the state
-  useEffect(() => {
-    if (defaultPreviewLayout) {
-      setPreviewLayout(defaultPreviewLayout);
-    }
-  }, [defaultPreviewLayout]);
-
-  // Decide content to show
-  const activeContent = isPreview
-    ? MOCK_INDUSTRY_DATA[previewLayout === "dashboard" ? "forecasting" : previewLayout === "catalog" ? "ecommerce" : previewLayout === "table" ? "saas" : "logistics"] || MOCK_INDUSTRY_DATA.ecommerce
-    : toolResult?.structuredContent;
-
-  if (!activeContent) {
-    return (
-      <div className={styles.emptyState}>
-        <h3 className={styles.emptyTitle}>No interface loaded</h3>
-      </div>
-    );
-  }
-
-  const { title, subtitle, blocks = [] } = activeContent;
-  const activeLayout = isPreview ? previewLayout : defaultPreviewLayout;
-
-  // Render developer simulate dropdown
-  const renderPreviewControls = (
-    previewLay: string,
-    setPreviewLay: (v: string) => void,
-  ) => {
-    return (
-      <div
-        style={{
-          margin: "0 0 0 0",
-          background: colors.BackgroundSecondary,
-          padding: "1rem",
           borderRadius: "12px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.5rem",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "14px",
-              fontWeight: "700",
-              color: colors.TextHeading,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Simulate Layout Template Preview
-          </span>
-        </div>
-        <select
-          value={previewLay}
-          onChange={(e) => setPreviewLay(e.target.value)}
-          style={{
-            background: colors.BackgroundSecondary,
-            color: colors.TextBody,
-            border: `1px solid ${colors.CardBorderSecondary}`,
-            borderRadius: "18px",
-            padding: "18px 12px",
-            fontSize: "13px",
-            cursor: "pointer",
-            outline: "none",
-          }}
-        >
-          <option value="dashboard">Dashboard Template (Metrics & Telemetry)</option>
-          <option value="catalog">Catalog Template (Grid Catalog Cards)</option>
-          <option value="table">Table Template (Structured Rows & Logs)</option>
-          <option value="timeline">Timeline Template (Stepped Progress Milestones)</option>
-        </select>
+        Failed to load tool result bridge.
       </div>
     );
+  }
+
+  const structuredContent = toolResult?.structuredContent;
+
+  if (
+    !structuredContent ||
+    !structuredContent.blocks ||
+    structuredContent.blocks.length === 0
+  ) {
+    return <EmptyStateBlock />;
+  }
+
+  const { title, subtitle, layout = "dashboard", blocks } = structuredContent;
+  const normalizedLayout = String(layout).toLowerCase();
+
+  const renderLayout = () => {
+    switch (normalizedLayout) {
+      case "dashboard":
+        return <DashboardLayout title={title} subtitle={subtitle} blocks={blocks} />;
+      case "catalog":
+        return <CatalogLayout title={title} subtitle={subtitle} blocks={blocks} />;
+      case "table":
+        return <TableLayout title={title} subtitle={subtitle} blocks={blocks} />;
+      case "timeline":
+        return <TimelineLayout title={title} subtitle={subtitle} blocks={blocks} />;
+      case "details":
+      case "detail":
+        return <DetailsLayout title={title} subtitle={subtitle} blocks={blocks} />;
+      default:
+        return <GeneralLayout title={title} subtitle={subtitle} blocks={blocks} />;
+    }
   };
 
-  // Route rendering to template screens
-  switch (activeLayout) {
-    case "catalog": {
-      const isTravel = payloadIndustry.includes("travel") || payloadIndustry.includes("booking");
-      const isFood = payloadIndustry.includes("food") || payloadIndustry.includes("restaurant") || payloadIndustry.includes("dine");
-
-      if (isTravel) {
-        return (
-          <TravelScreen
-            title={title}
-            subtitle={subtitle}
-            blocks={blocks}
-            isPreview={isPreview}
-            previewIndustry={previewLayout}
-            setPreviewIndustry={setPreviewLayout}
-            renderPreviewControls={renderPreviewControls}
-          />
-        );
-      }
-      if (isFood) {
-        return (
-          <FoodScreen
-            title={title}
-            subtitle={subtitle}
-            blocks={blocks}
-            isPreview={isPreview}
-            previewIndustry={previewLayout}
-            setPreviewIndustry={setPreviewLayout}
-            renderPreviewControls={renderPreviewControls}
-          />
-        );
-      }
-      return (
-        <EcommerceScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewLayout}
-          setPreviewIndustry={setPreviewLayout}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    }
-    case "table": {
-      const isFintech = payloadIndustry.includes("fintech") || payloadIndustry.includes("finance") || payloadIndustry.includes("bank");
-      if (isFintech) {
-        return (
-          <FintechScreen
-            title={title}
-            subtitle={subtitle}
-            blocks={blocks}
-            isPreview={isPreview}
-            previewIndustry={previewLayout}
-            setPreviewIndustry={setPreviewLayout}
-            renderPreviewControls={renderPreviewControls}
-          />
-        );
-      }
-      return (
-        <SaasScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewLayout}
-          setPreviewIndustry={setPreviewLayout}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    }
-    case "timeline": {
-      const isTransport = payloadIndustry.includes("transport") || payloadIndustry.includes("mobility") || payloadIndustry.includes("ride");
-      if (isTransport) {
-        return (
-          <TransportScreen
-            title={title}
-            subtitle={subtitle}
-            blocks={blocks}
-            isPreview={isPreview}
-            previewIndustry={previewLayout}
-            setPreviewIndustry={setPreviewLayout}
-            renderPreviewControls={renderPreviewControls}
-          />
-        );
-      }
-      return (
-        <LogisticsScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewLayout}
-          setPreviewIndustry={setPreviewLayout}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    }
-    case "general": {
-      return (
-        <GeneralScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewLayout}
-          setPreviewIndustry={setPreviewLayout}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    }
-    case "dashboard":
-    default: {
-      const isHealth = payloadIndustry.includes("health") || payloadIndustry.includes("med") || payloadIndustry.includes("clinic");
-      const isAi = payloadIndustry.includes("ai") || payloadIndustry.includes("agent") || payloadIndustry.includes("auto");
-      
-      if (isHealth) {
-        return (
-          <HealthScreen
-            title={title}
-            subtitle={subtitle}
-            blocks={blocks}
-            isPreview={isPreview}
-            previewIndustry={previewLayout}
-            setPreviewIndustry={setPreviewLayout}
-            renderPreviewControls={renderPreviewControls}
-          />
-        );
-      }
-      if (isAi) {
-        return (
-          <AiScreen
-            title={title}
-            subtitle={subtitle}
-            blocks={blocks}
-            isPreview={isPreview}
-            previewIndustry={previewLayout}
-            setPreviewIndustry={setPreviewLayout}
-            renderPreviewControls={renderPreviewControls}
-          />
-        );
-      }
-      return (
-        <ForecastingScreen
-          title={title}
-          subtitle={subtitle}
-          blocks={blocks}
-          isPreview={isPreview}
-          previewIndustry={previewLayout}
-          setPreviewIndustry={setPreviewLayout}
-          renderPreviewControls={renderPreviewControls}
-        />
-      );
-    }
-  }
+  return <div className={styles.container}>{renderLayout()}</div>;
 };
-

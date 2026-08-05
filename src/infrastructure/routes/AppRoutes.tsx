@@ -22,7 +22,6 @@ import ServiceUnavailable from "../../presentation/screens/public/ServiceUnavail
 import PublicLayout from "../../presentation/layouts/PublicLayout";
 import AuthLayout from "../../presentation/layouts/AuthLayout";
 import { useAuthStore } from "../store/authStore";
-import DashboardPreview from "../../presentation/screens/public/PreviewDashboard";
 import AdminPreview from "../../presentation/screens/public/AdminPreview";
 import ProcessingIntegration from "../../presentation/screens/integration/ProcessingIntegration";
 import IntegrationSuccess from "../../presentation/screens/integration/IntegrationSuccess";
@@ -62,12 +61,6 @@ const indexRoute = createRoute({
   getParentRoute: () => publicLayout,
   path: "/",
   component: Homescreen,
-});
-
-const dashboardPreviewRoute = createRoute({
-  getParentRoute: () => publicLayout,
-  path: "/dashboard-preview",
-  component: DashboardPreview,
 });
 
 const adminPreviewRoute = createRoute({
@@ -269,7 +262,7 @@ const serviceUnavailableRoute = createRoute({
 
 // 4. Assemble the unified route tree
 const routeTree = rootRoute.addChildren([
-  publicLayout.addChildren([indexRoute, dashboardPreviewRoute]),
+  publicLayout.addChildren([indexRoute]),
   adminPreviewRoute,
   authLayout.addChildren([
     loginRoute,

@@ -70,6 +70,44 @@ export type ThemeColors = {
   GlassBg: string;
   GlassBorder: string;
   GlassBorderSecondary: string;
+  MethodGetBg: string;
+  MethodGetText: string;
+  MethodGetBorder: string;
+  MethodPostBg: string;
+  MethodPostText: string;
+  MethodPostBorder: string;
+  MethodPutBg: string;
+  MethodPutText: string;
+  MethodPutBorder: string;
+  MethodPatchBg: string;
+  MethodPatchText: string;
+  MethodPatchBorder: string;
+  MethodDeleteBg: string;
+  MethodDeleteText: string;
+  MethodDeleteBorder: string;
+  DynamicBadgeBg: string;
+  DynamicBadgeBorder: string;
+  DynamicBadgeText: string;
+  SuccessBadgeBg: string;
+  SuccessBadgeText: string;
+  SuccessBadgeBorder: string;
+  ErrorBadgeBg: string;
+  ErrorBadgeText: string;
+  ErrorBadgeBorder: string;
+  TableDivider: string;
+  DeleteAPIButtonBg: string;
+  DeleteAPIButtonBorder: string;
+  DeleteAPIButtonText: string;
+  DeleteAPIButtonBgHover: string;
+  DeleteAPIButtonBorderHover: string;
+  DeleteAPIButtonTextHover: string;
+  QueryParamsButtonIcon: string;
+  QueryParamsButtonBg: string;
+  QueryParamsButtonText: string;
+  QueryParamsButtonBorder: string;
+  QueryParamsButtonBgHover: string;
+  ToggleTableTextViewBg: string;
+  ToggleTableTextViewBorder: string;
 };
 
 export const darkColors: ThemeColors = {
@@ -144,6 +182,44 @@ export const darkColors: ThemeColors = {
   GlassBg: "rgba(19, 18, 28, 0.45)",
   GlassBorder: "rgba(255, 255, 255, 0.08)",
   GlassBorderSecondary: "rgba(255, 255, 255, 0.04)",
+  MethodGetBg: "rgba(16, 185, 129, 0.15)",
+  MethodGetText: "#10b981",
+  MethodGetBorder: "rgba(16, 185, 129, 0.3)",
+  MethodPostBg: "rgba(59, 130, 246, 0.15)",
+  MethodPostText: "#3b82f6",
+  MethodPostBorder: "rgba(59, 130, 246, 0.3)",
+  MethodPutBg: "rgba(245, 158, 11, 0.15)",
+  MethodPutText: "#f59e0b",
+  MethodPutBorder: "rgba(245, 158, 11, 0.3)",
+  MethodPatchBg: "rgba(139, 92, 246, 0.15)",
+  MethodPatchText: "#8b5cf6",
+  MethodPatchBorder: "rgba(139, 92, 246, 0.3)",
+  MethodDeleteBg: "rgba(239, 68, 68, 0.15)",
+  MethodDeleteText: "#ef4444",
+  MethodDeleteBorder: "rgba(239, 68, 68, 0.3)",
+  DynamicBadgeBg: "rgba(168, 85, 247, 0.15)",
+  DynamicBadgeBorder: "rgba(168, 85, 247, 0.4)",
+  DynamicBadgeText: "#d8b4fe",
+  SuccessBadgeBg: "rgba(16, 185, 129, 0.15)",
+  SuccessBadgeText: "#34d399",
+  SuccessBadgeBorder: "rgba(16, 185, 129, 0.3)",
+  ErrorBadgeBg: "rgba(239, 68, 68, 0.15)",
+  ErrorBadgeText: "#f87171",
+  ErrorBadgeBorder: "rgba(239, 68, 68, 0.3)",
+  TableDivider: "rgba(255, 255, 255, 0.1)",
+  DeleteAPIButtonBg: "rgba(239, 68, 68, 0.15)",
+  DeleteAPIButtonBorder: "rgba(239, 68, 68, 0.3)",
+  DeleteAPIButtonText: "#ef4444",
+  DeleteAPIButtonBgHover: "#ef4444",
+  DeleteAPIButtonBorderHover: "rgba(239, 68, 68, 0.5)",
+  DeleteAPIButtonTextHover: "#ffffff",
+  QueryParamsButtonIcon: "#818cf8",
+  QueryParamsButtonBg: "rgba(99, 102, 241, 0.3)",
+  QueryParamsButtonText: "#818cf8",
+  QueryParamsButtonBorder: "rgba(99, 102, 241, 0.1)",
+  QueryParamsButtonBgHover: "rgba(99, 102, 241, 0.2)",
+  ToggleTableTextViewBg: "rgba(255, 255, 255, 0.05)",
+  ToggleTableTextViewBorder: "rgba(255, 255, 255, 0.1)",
 };
 
 export const lightColors: ThemeColors = {
@@ -218,4 +294,42 @@ export const lightColors: ThemeColors = {
   GlassBg: "rgba(255, 255, 255, 0.45)",
   GlassBorder: "rgba(0, 0, 0, 0.08)",
   GlassBorderSecondary: "rgba(0, 0, 0, 0.04)",
+  MethodGetBg: "rgba(16, 185, 129, 0.12)",
+  MethodGetText: "#059669",
+  MethodGetBorder: "rgba(16, 185, 129, 0.3)",
+  MethodPostBg: "rgba(59, 130, 246, 0.12)",
+  MethodPostText: "#2563eb",
+  MethodPostBorder: "rgba(59, 130, 246, 0.3)",
+  MethodPutBg: "rgba(245, 158, 11, 0.12)",
+  MethodPutText: "#d97706",
+  MethodPutBorder: "rgba(245, 158, 11, 0.3)",
+  MethodPatchBg: "rgba(139, 92, 246, 0.12)",
+  MethodPatchText: "#7c3aed",
+  MethodPatchBorder: "rgba(139, 92, 246, 0.3)",
+  MethodDeleteBg: "rgba(239, 68, 68, 0.12)",
+  MethodDeleteText: "#dc2626",
+  MethodDeleteBorder: "rgba(239, 68, 68, 0.3)",
+  DynamicBadgeBg: "rgba(168, 85, 247, 0.12)",
+  DynamicBadgeBorder: "rgba(168, 85, 247, 0.4)",
+  DynamicBadgeText: "#9333ea",
+  SuccessBadgeBg: "rgba(16, 185, 129, 0.12)",
+  SuccessBadgeText: "#059669",
+  SuccessBadgeBorder: "rgba(16, 185, 129, 0.3)",
+  ErrorBadgeBg: "rgba(239, 68, 68, 0.12)",
+  ErrorBadgeText: "#dc2626",
+  ErrorBadgeBorder: "rgba(239, 68, 68, 0.3)",
+  TableDivider: "rgba(0, 0, 0, 0.08)",
+  DeleteAPIButtonBg: "rgba(239, 68, 68, 0.15)",
+  DeleteAPIButtonBorder: "rgba(239, 68, 68, 0.3)",
+  DeleteAPIButtonText: "#ef4444",
+  DeleteAPIButtonBgHover: "#ef4444",
+  DeleteAPIButtonBorderHover: "rgba(239, 68, 68, 0.5)",
+  DeleteAPIButtonTextHover: "#ffffff",
+  QueryParamsButtonIcon: "#818cf8",
+  QueryParamsButtonBg: "rgba(99, 102, 241, 0.3)",
+  QueryParamsButtonText: "#818cf8",
+  QueryParamsButtonBorder: "rgba(99, 102, 241, 0.1)",
+  QueryParamsButtonBgHover: "rgba(99, 102, 241, 0.2)",
+  ToggleTableTextViewBg: "rgba(255, 255, 255, 0.05)",
+  ToggleTableTextViewBorder: "rgba(255, 255, 255, 0.1)",
 };

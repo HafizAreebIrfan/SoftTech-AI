@@ -4,3 +4,8 @@ export { ListBlock } from "../ListBlock";
 export { KeyValueBlock } from "../KeyValueBlock";
 export { TableBlock } from "../TableBlock";
 export { FormBlock } from "../FormBlock";
+export { CardsBlock } from "../CardsBlock";
+export { TimelineBlock } from "../TimelineBlock";
+export { GalleryBlock } from "../GalleryBlock";
+export { AlertBlock } from "../AlertBlock";
+export { EmptyStateBlock } from "../EmptyStateBlock";

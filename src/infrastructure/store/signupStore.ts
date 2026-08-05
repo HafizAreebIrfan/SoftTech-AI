@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { SignupStore } from "../../interfaces/signup.interface";
+import { SignupStore, ParamRow } from "../../interfaces/signup.interface";
 import { saveCompanyApiDetails } from "../../adapters/api/authApi";
 import { showToast } from "../../utils/toasts";
 
@@ -20,6 +20,126 @@ const getEndpointPath = (urlStr: string): string => {
   } catch (e) {
     return "/";
   }
+};
+
+export const parseJsonToRows = (
+  jsonStr: string | undefined,
+  defaultDynamic: boolean = true,
+): ParamRow[] => {
+  if (!jsonStr || !jsonStr.trim()) {
+    return [{ id: `row-${Date.now()}-0`, key: "", value: "", isDynamic: defaultDynamic }];
+  }
+  try {
+    const parsed = JSON.parse(jsonStr);
+
+    if (Array.isArray(parsed)) {
+      if (parsed.length === 0) {
+        return [{ id: `row-${Date.now()}-0`, key: "", value: "", isDynamic: defaultDynamic }];
+      }
+      return parsed.map((item, idx) => ({
+        id: `row-${Date.now()}-${idx}`,
+        key: String(item.key ?? item.name ?? ""),
+        value: String(item.value ?? ""),
+        isDynamic: item.isDynamic !== undefined ? Boolean(item.isDynamic) : defaultDynamic,
+      }));
+    }
+
+    if (typeof parsed === "object" && parsed !== null) {
+      const entries = Object.entries(parsed);
+      if (entries.length === 0) {
+        return [{ id: `row-${Date.now()}-0`, key: "", value: "", isDynamic: defaultDynamic }];
+      }
+      return entries.map(([k, v], idx) => {
+        const valStr = typeof v === "object" ? JSON.stringify(v) : String(v ?? "");
+        return {
+          id: `row-${Date.now()}-${idx}`,
+          key: k,
+          value: valStr,
+          isDynamic: defaultDynamic,
+        };
+      });
+    }
+  } catch (e) {
+    // Ignore invalid JSON while user is typing
+  }
+  return [{ id: `row-${Date.now()}-0`, key: "", value: "", isDynamic: defaultDynamic }];
+};
+
+export const rowsToJsonStr = (rows: ParamRow[]): string => {
+  const obj: Record<string, any> = {};
+  rows.forEach((row) => {
+    const trimmedKey = row.key.trim();
+    if (trimmedKey) {
+      obj[trimmedKey] = row.value.trim();
+    }
+  });
+  return JSON.stringify(obj, null, 2);
+};
+
+export const truncateSampleResponse = (
+  jsonStr: string | undefined,
+  maxChars: number = 8000,
+): string => {
+  if (!jsonStr || !jsonStr.trim()) return "";
+  if (jsonStr.length <= maxChars) return jsonStr;
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (Array.isArray(parsed)) {
+      const sample = parsed.slice(0, 3);
+      return JSON.stringify(sample, null, 2);
+    } else if (typeof parsed === "object" && parsed !== null) {
+      const sampleObj: Record<string, any> = {};
+      Object.entries(parsed).forEach(([k, v]) => {
+        if (Array.isArray(v)) {
+          sampleObj[k] = v.slice(0, 3);
+        } else {
+          sampleObj[k] = v;
+        }
+      });
+      const str = JSON.stringify(sampleObj, null, 2);
+      return str.length > maxChars ? str.substring(0, maxChars) : str;
+    }
+  } catch {
+    // Ignore non-json
+  }
+  return jsonStr.substring(0, maxChars);
+};
+
+export const getSuggestionTemplate = (
+  industry: string,
+  apiName: string,
+  method: string,
+): Record<string, any> => {
+  const ind = (industry || "").toLowerCase();
+  const m = (method || "GET").toUpperCase();
+
+  if (ind.includes("travel") || ind.includes("booking")) {
+    if (m === "GET") {
+      return { search: "", status: "active", category: "", sortBy: "title", limit: 10, page: 1 };
+    }
+    return { name: "", phone: "", email: "", packageName: "", bookingDate: "", notes: "" };
+  } else if (ind.includes("ecommerce") || ind.includes("e-commerce")) {
+    if (m === "GET") {
+      return { search: "", category: "", status: "", sortBy: "price_asc", limit: 20, page: 1 };
+    }
+    return { customerName: "", email: "", productId: "", quantity: 1, totalAmount: 0.0, shippingAddress: "" };
+  } else if (ind.includes("food") || ind.includes("hospitality")) {
+    if (m === "GET") {
+      return { search: "", category: "", available: true, limit: 20, page: 1 };
+    }
+    return { customerName: "", phoneNumber: "", address: "", items: [{ itemId: "", quantity: 1 }], notes: "" };
+  } else if (ind.includes("logistics")) {
+    if (m === "GET") {
+      return { search: "", status: "in-transit", limit: 10, page: 1 };
+    }
+    return { sender: "", recipient: "", origin: "", destination: "", weight: "" };
+  }
+
+  if (m === "GET") {
+    return { search: "", limit: 20, page: 1 };
+  }
+  return { title: "", description: "" };
 };
 
 let autoSaveTimer: any = null;
@@ -186,8 +306,17 @@ export const useSignupStore = create<SignupStore>()(
           if (api.apiQueryParams) {
             try {
               const trimmed = api.apiQueryParams.trim();
-              if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-                paramsObj = JSON.parse(trimmed);
+              if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) {
+                  parsed.forEach((item: any) => {
+                    if (item && item.key) {
+                      paramsObj[item.key] = item.value;
+                    }
+                  });
+                } else if (typeof parsed === "object" && parsed !== null) {
+                  paramsObj = parsed;
+                }
               } else {
                 const pairs = trimmed.split(/[\n&]/);
                 pairs.forEach((pair) => {
@@ -285,10 +414,14 @@ export const useSignupStore = create<SignupStore>()(
           }
 
           set((state) => ({
+            apisList: state.apisList.map((a) =>
+              a.id === apiId ? { ...a, sampleresponse: formattedJson } : a,
+            ),
             apiTestStates: {
               ...state.apiTestStates,
               [apiId]: {
                 status: response.ok ? "success" : "error",
+                sampleResponse: formattedJson,
                 logs:
                   (state.apiTestStates[apiId]?.logs || "") +
                   `[${new Date().toLocaleTimeString()}] Response Status: ${response.status} ${response.statusText}\n` +
@@ -370,17 +503,42 @@ export const useSignupStore = create<SignupStore>()(
                       oauthClientSecret: api.apiCredentials,
                     }
                   : {};
+
+              const paramRows = parseJsonToRows(api.apiQueryParams, true).filter((r) => r.key.trim() !== "");
+              const paramsArray = paramRows.map((r) => ({
+                key: r.key.trim(),
+                value: r.value.trim(),
+                isDynamic: Boolean(r.isDynamic),
+              }));
+
+              const headerRows = parseJsonToRows(api.apiHeaders, false).filter((r) => r.key.trim() !== "");
+              const headersArray = headerRows.map((r) => ({
+                key: r.key.trim(),
+                value: r.value.trim(),
+              }));
+
+              const sampleResp = get().apiTestStates[api.id]?.sampleResponse || api.sampleresponse || "";
+
+              const isBodyMethod = api.apiMethod === "POST" || api.apiMethod === "PUT" || api.apiMethod === "PATCH";
+
               return {
                 name: api.apiName,
                 method: api.apiMethod,
                 baseUrl: getBaseUrl(api.apiEndpoint),
                 endpoint: getEndpointPath(api.apiEndpoint),
-                authtype: api.apiAuthType,
-                samplequery: api.apiQueryParams,
                 authType: api.apiAuthType,
-                headers: api.apiHeaders ? [api.apiHeaders] : [],
-                params: api.apiQueryParams ? [api.apiQueryParams] : [],
+                authtype: api.apiAuthType,
+                headers: headersArray,
+                params: isBodyMethod ? [] : paramsArray,
+                body: isBodyMethod ? paramsArray : [],
+                sampleresponse: sampleResp,
+                sampleResponse: sampleResp,
                 testedonregister: get().apiTestStates[api.id]?.status === "success",
+                platformType: api.platformType || "web",
+                webCheckoutUrl: api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
+                mobileDeepLink: api.mobileDeepLink || undefined,
+                apiSchema: api.apiSchema || api.schema || undefined,
+                schema: api.apiSchema || api.schema || undefined,
                 ...isbearertoken,
                 ...isapikey,
                 ...isoauth,
@@ -430,17 +588,42 @@ export const useSignupStore = create<SignupStore>()(
                     oauthClientSecret: api.apiCredentials,
                   }
                 : {};
+
+            const paramRows = parseJsonToRows(api.apiQueryParams, true).filter((r) => r.key.trim() !== "");
+            const paramsArray = paramRows.map((r) => ({
+              key: r.key.trim(),
+              value: r.value.trim(),
+              isDynamic: Boolean(r.isDynamic),
+            }));
+
+            const headerRows = parseJsonToRows(api.apiHeaders, false).filter((r) => r.key.trim() !== "");
+            const headersArray = headerRows.map((r) => ({
+              key: r.key.trim(),
+              value: r.value.trim(),
+            }));
+
+            const sampleResp = get().apiTestStates[api.id]?.sampleResponse || api.sampleresponse || "";
+
+            const isBodyMethod = api.apiMethod === "POST" || api.apiMethod === "PUT" || api.apiMethod === "PATCH";
+
             return {
               name: api.apiName,
               method: api.apiMethod,
               baseUrl: getBaseUrl(api.apiEndpoint),
               endpoint: getEndpointPath(api.apiEndpoint),
-              authtype: api.apiAuthType,
-              samplequery: api.apiQueryParams,
               authType: api.apiAuthType,
-              headers: api.apiHeaders ? [api.apiHeaders] : [],
-              params: api.apiQueryParams ? [api.apiQueryParams] : [],
+              authtype: api.apiAuthType,
+              headers: headersArray,
+              params: isBodyMethod ? [] : paramsArray,
+              body: isBodyMethod ? paramsArray : [],
+              sampleresponse: sampleResp,
+              sampleResponse: sampleResp,
               testedonregister: get().apiTestStates[api.id]?.status === "success",
+              platformType: api.platformType || "web",
+              webCheckoutUrl: api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
+              mobileDeepLink: api.mobileDeepLink || undefined,
+              apiSchema: api.apiSchema || api.schema || undefined,
+              schema: api.apiSchema || api.schema || undefined,
               ...isbearertoken,
               ...isapikey,
               ...isoauth,
@@ -459,6 +642,64 @@ export const useSignupStore = create<SignupStore>()(
           set({ isStepTwoPending: false });
           showToast(err.message || "An error occurred during Step 2.", "error");
         }
+      },
+      handleEndpointUrlChange: (apiId: string, inputUrl: string) => {
+        const { apisList, updateApiField } = get();
+        const api = apisList.find((a) => a.id === apiId);
+        if (!api) return;
+
+        if (inputUrl.includes("?")) {
+          const [baseUrl, queryString] = inputUrl.split("?");
+          const params = new URLSearchParams(queryString);
+          const existingRows = parseJsonToRows(api.apiQueryParams, true).filter(
+            (r) => r.key.trim() !== "",
+          );
+          let addedCount = 0;
+
+          params.forEach((val, key) => {
+            const existingIndex = existingRows.findIndex((r) => r.key === key);
+            if (existingIndex >= 0) {
+              existingRows[existingIndex].value = val;
+            } else {
+              existingRows.push({
+                id: `row-${Date.now()}-${addedCount}`,
+                key: key,
+                value: val,
+                isDynamic: true,
+              });
+            }
+            addedCount++;
+          });
+
+          const cleanedBaseUrl = baseUrl.replace(/^https?:\/\//, "");
+          updateApiField(apiId, "apiEndpoint", "https://" + cleanedBaseUrl);
+          updateApiField(apiId, "apiQueryParams", rowsToJsonStr(existingRows));
+
+          if (addedCount > 0) {
+            showToast(
+              `Auto-extracted ${addedCount} query parameter(s) from URL into Params tab!`,
+              "success",
+            );
+          }
+        } else {
+          updateApiField(
+            apiId,
+            "apiEndpoint",
+            "https://" + inputUrl.replace(/^https?:\/\//, ""),
+          );
+        }
+      },
+      applyTemplateSuggestions: (apiId, field, industry, apiName, method) => {
+        const { updateApiField } = get();
+        const template = getSuggestionTemplate(industry, apiName, method);
+        const rows: ParamRow[] = Object.entries(template).map(([k, v], idx) => ({
+          id: `row-${Date.now()}-${idx}`,
+          key: k,
+          value: String(v ?? ""),
+          isDynamic: true,
+        }));
+        updateApiField(apiId, field, rowsToJsonStr(rows));
+        showToast("Applied industry template suggestions!", "success");
       },
     }),
     {
