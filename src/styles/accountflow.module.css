@@ -1,0 +1,716 @@
+.flowShell,
+.onboardingShell {
+  min-height: 100vh;
+  background: var(--flow-bg);
+  color: var(--flow-text);
+  font-family: "Manrope", sans-serif;
+}
+
+.flowShell {
+  position: relative;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, var(--flow-primary-faint), transparent 38rem),
+    radial-gradient(circle at bottom left, var(--flow-primary-glow), transparent 34rem),
+    radial-gradient(circle at bottom right, var(--flow-secondary-glow), transparent 34rem),
+    var(--flow-bg);
+}
+
+.onboardingTopbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  height: 60px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--flow-border);
+  background: var(--flow-header);
+  backdrop-filter: blur(20px);
+}
+
+.smallBrand {
+  margin: 0;
+  background: linear-gradient(90deg, var(--flow-button-one), var(--flow-button-two));
+  color: transparent;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.profileShell {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.profilePlan {
+  color: var(--flow-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+}
+
+.avatar {
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: var(--flow-primary-soft);
+  color: var(--flow-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  width: 100%;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 3rem 2rem 2rem;
+  background: var(--flow-header);
+  backdrop-filter: blur(20px);
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--flow-primary);
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.brand {
+  margin: 0;
+  color: var(--flow-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.wizard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.wizardItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wizardDot {
+  display: flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--flow-surface-highest);
+  color: var(--flow-muted);
+  font-weight: 800;
+}
+
+.wizardDotActive {
+  background: linear-gradient(135deg, var(--flow-button-one), var(--flow-button-two));
+  color: var(--flow-button-text);
+  box-shadow: 0 12px 28px var(--flow-button-glow);
+}
+
+.wizardDotDone {
+  color: var(--flow-primary);
+}
+
+.wizardCopy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.wizardKicker {
+  color: var(--flow-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.wizardKickerActive {
+  color: var(--flow-primary);
+}
+
+.wizardLabel {
+  color: var(--flow-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.wizardLabelActive {
+  color: var(--flow-heading);
+}
+
+.wizardLine {
+  width: 2rem;
+  height: 2px;
+  background: var(--flow-surface-highest);
+}
+
+.main,
+.onboardingMain {
+  width: 100%;
+  margin: 0 auto;
+  padding-inline: 1.5rem;
+}
+
+.main {
+  max-width: 72rem;
+  padding-top: 3rem;
+  padding-bottom: 8rem;
+}
+
+.onboardingMain {
+  max-width: 72rem;
+  padding-top: 4rem;
+  padding-bottom: 6rem;
+}
+
+.hero,
+.onboardingHero {
+  text-align: center;
+}
+
+.hero {
+  margin-bottom: 3rem;
+}
+
+.onboardingHero {
+  margin-bottom: 4rem;
+}
+
+.title {
+  margin: 0 0 1rem;
+  color: var(--flow-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: clamp(2.5rem, 6vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.subtitle {
+  max-width: 38rem;
+  margin: 0 auto;
+  color: var(--flow-muted);
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.sectionHeader h3 {
+  margin: 0;
+  color: var(--flow-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.sectionRule {
+  flex: 1;
+  height: 1px;
+  background: var(--flow-border);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--flow-border);
+  border-radius: 2rem;
+  background: var(--flow-glass);
+  padding: 2rem;
+  box-shadow: 0 20px 40px var(--flow-shadow);
+  backdrop-filter: blur(20px);
+}
+
+.optionCard {
+  min-height: 19rem;
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  background: var(--flow-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.optionCard:hover {
+  transform: translateY(-3px);
+  border-color: var(--flow-primary);
+  box-shadow: 0 24px 50px var(--flow-button-glow);
+}
+
+.deployOptionCard {
+  border: 0;
+  background: linear-gradient(135deg, var(--flow-primary-container), var(--flow-secondary-container));
+}
+
+.deployOptionCard .cardText {
+  color: var(--flow-overlay-muted);
+}
+
+.iconBox {
+  display: flex;
+  width: 3rem;
+  height: 3rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2rem;
+  border-radius: 0.85rem;
+  background: var(--flow-primary-soft);
+}
+
+.cardTitle {
+  margin: 0 0 0.75rem;
+  color: var(--flow-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.cardText {
+  color: var(--flow-muted);
+  line-height: 1.65;
+}
+
+.cardAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  color: var(--flow-primary);
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.deployOptionCard .cardAction {
+  color: var(--flow-button-text);
+}
+
+.billingToggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 3rem;
+}
+
+.toggleInner {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--flow-border);
+  border-radius: 999px;
+  background: var(--flow-surface-high);
+  box-shadow: 0 12px 30px var(--flow-shadow);
+}
+
+.toggleActive,
+.toggleInactive {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.875rem;
+}
+
+.toggleActive {
+  background: var(--flow-primary);
+  color: var(--flow-bg);
+  font-weight: 800;
+}
+
+.toggleInactive {
+  background: transparent;
+  color: var(--flow-muted);
+  font-weight: 600;
+}
+
+.highlightCard {
+  z-index: 1;
+  border: 2px solid var(--flow-primary);
+  transform: scale(1.05);
+  box-shadow: 0 32px 64px var(--flow-button-glow);
+}
+
+.popularBadge {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.4rem 1.5rem;
+  border-radius: 0 0 0.75rem 0.75rem;
+  background: var(--flow-primary);
+  color: var(--flow-bg);
+  font-family: "Inter", sans-serif;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.price {
+  color: var(--flow-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 2.5rem;
+  font-weight: 800;
+}
+
+.priceSub {
+  color: var(--flow-muted);
+  font-size: 1rem;
+}
+
+.list {
+  display: grid;
+  gap: 1rem;
+  margin: 2rem 0;
+  padding: 0;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--flow-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 3.5rem;
+  border: 0;
+  border-radius: 0.85rem;
+  background: linear-gradient(135deg, var(--flow-button-one), var(--flow-button-two));
+  color: var(--flow-button-text);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 800;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px var(--flow-button-glow);
+  filter: brightness(1.06);
+}
+
+.secondaryButton {
+  background: var(--flow-surface-highest);
+  color: var(--flow-heading);
+}
+
+.borderButton {
+  border: 1px solid var(--flow-secondary);
+  background: transparent;
+  color: var(--flow-secondary);
+}
+
+.checkoutGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 2rem;
+  align-items: start;
+}
+
+.checkoutPrimary {
+  grid-column: span 3;
+}
+
+.checkoutSummary {
+  grid-column: span 2;
+}
+
+.form {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.label {
+  color: var(--flow-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.input {
+  width: 100%;
+  border: 0;
+  border-radius: 0.85rem;
+  background: var(--flow-surface-highest);
+  color: var(--flow-heading);
+  padding: 1rem 1.1rem;
+  outline: none;
+}
+
+.input:focus {
+  box-shadow: 0 0 0 2px var(--flow-primary);
+}
+
+.formSplit {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--flow-border);
+  color: var(--flow-muted);
+}
+
+.summaryStrong {
+  color: var(--flow-heading);
+  font-weight: 800;
+}
+
+.secureBox {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 0.85rem;
+  background: var(--flow-surface-soft);
+}
+
+.paymentCanvas {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 3rem 1.5rem;
+}
+
+.paymentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3rem;
+  width: 100%;
+  max-width: 72rem;
+  align-items: start;
+}
+
+.centered {
+  display: flex;
+  min-height: calc(100vh - 8rem);
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.resultCard {
+  width: 100%;
+  max-width: 36rem;
+  text-align: center;
+}
+
+.failedCard {
+  opacity: 0.9;
+}
+
+.largeIcon {
+  display: flex;
+  width: 6rem;
+  height: 6rem;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2rem;
+  border: 1px solid var(--flow-primary-soft);
+  border-radius: 999px;
+  background: var(--flow-primary-soft);
+}
+
+.errorIcon {
+  border-color: var(--flow-error-soft);
+  background: var(--flow-error-soft);
+}
+
+.deploymentCard {
+  width: 100%;
+  max-width: 37.5rem;
+  overflow: hidden;
+  border: 1px solid var(--flow-border);
+  border-radius: 24px;
+  background: var(--flow-surface-high);
+  box-shadow: 0 20px 40px var(--flow-shadow);
+}
+
+.deploymentHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2.5rem 2rem 1.5rem;
+  text-align: center;
+}
+
+.deploymentBadge {
+  display: flex;
+  width: 4rem;
+  height: 4rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--flow-button-one), var(--flow-button-two));
+  box-shadow: 0 0 30px var(--flow-button-glow);
+}
+
+.deploymentSteps {
+  padding: 0 2.5rem 3rem;
+}
+
+.deploymentFooter {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+  border-top: 1px solid var(--flow-border);
+  background: var(--flow-surface-low-alpha);
+}
+
+.timeline {
+  display: grid;
+}
+
+.timelineItem {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+}
+
+.timelineItem:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 2rem;
+  bottom: 0;
+  left: 15px;
+  width: 2px;
+  background: var(--flow-border);
+}
+
+.timelineDot {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 2px solid var(--flow-primary);
+  background: var(--flow-primary-soft);
+  color: var(--flow-primary);
+}
+
+.timelineDotActive {
+  border: 0;
+  background: linear-gradient(135deg, var(--flow-button-one), var(--flow-button-two));
+  color: var(--flow-button-text);
+  box-shadow: 0 0 15px var(--flow-button-glow);
+}
+
+.timelineDotPending {
+  border: 2px solid var(--flow-border);
+  background: var(--flow-surface-highest);
+  color: var(--flow-muted);
+}
+
+.progressTrack {
+  width: 8rem;
+  height: 0.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--flow-surface-highest);
+}
+
+.progressFill {
+  width: 65%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--flow-primary), var(--flow-secondary));
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    position: relative;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wizard {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .grid,
+  .checkoutGrid,
+  .paymentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkoutPrimary,
+  .checkoutSummary {
+    grid-column: auto;
+  }
+
+  .highlightCard {
+    transform: none;
+  }
+
+  .formSplit {
+    grid-template-columns: 1fr;
+  }
+}

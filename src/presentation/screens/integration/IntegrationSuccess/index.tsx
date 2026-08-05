@@ -11,7 +11,7 @@ const IntegrationSuccess: FC = () => {
   const themeVars = getIntegrationThemeVars(colors);
 
   const goToDashboard = useCallback(() => {
-    navigate({ to: "/dashboard", replace: true });
+    navigate({ to: "/onboarding_dashboard", replace: true });
   }, [navigate]);
 
   useEffect(() => {

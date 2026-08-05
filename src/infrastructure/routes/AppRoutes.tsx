@@ -26,6 +26,12 @@ import DashboardPreview from "../../presentation/screens/public/PreviewDashboard
 import AdminPreview from "../../presentation/screens/public/AdminPreview";
 import ProcessingIntegration from "../../presentation/screens/integration/ProcessingIntegration";
 import IntegrationSuccess from "../../presentation/screens/integration/IntegrationSuccess";
+import OnboardingDashboard from "../../presentation/screens/onboarding/OnboardingDashboard";
+import Plans from "../../presentation/screens/company/Plans";
+import Checkout from "../../presentation/screens/company/Checkout";
+import PaymentResult from "../../presentation/screens/company/PaymentResult";
+import Deployment from "../../presentation/screens/company/Deployment";
+import DeploymentInProgress from "../../presentation/screens/company/DeploymentInProgress";
 
 // 1. Establish the absolute root route (renders an Outlet container)
 const rootRoute = createRootRoute({
@@ -177,6 +183,78 @@ const integrationSuccessRoute = createRoute({
   },
 });
 
+const onboardingDashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/onboarding_dashboard",
+  component: OnboardingDashboard,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
+const plansSofttechRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/plans_softtech_ai_updated",
+  component: Plans,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
+const checkoutSofttechRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/checkout_softtech_ai_refined",
+  component: Checkout,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
+const paymentResultSofttechRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/payment_result_softtech_ai_updated",
+  component: PaymentResult,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
+const deploymentSofttechRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/deployment_softtech_ai_refined",
+  component: Deployment,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
+const deploymentInProgressSofttechRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/deployment_in_progress_softtech_ai",
+  component: DeploymentInProgress,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/404",
@@ -210,6 +288,12 @@ const routeTree = rootRoute.addChildren([
   ]),
   processingIntegrationRoute,
   integrationSuccessRoute,
+  onboardingDashboardRoute,
+  plansSofttechRoute,
+  checkoutSofttechRoute,
+  paymentResultSofttechRoute,
+  deploymentSofttechRoute,
+  deploymentInProgressSofttechRoute,
   dashboardRoute,
   notFoundRoute,
   serviceUnavailableRoute,
