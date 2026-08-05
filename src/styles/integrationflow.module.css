@@ -1,0 +1,515 @@
+.integrationShell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top right, var(--integration-primary-glow), transparent 34rem),
+    radial-gradient(circle at bottom left, var(--integration-secondary-glow), transparent 34rem),
+    var(--integration-bg);
+  color: var(--integration-text);
+  font-family: "Manrope", sans-serif;
+}
+
+.processingMain {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 42rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 8rem;
+}
+
+.processingIntro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 3rem;
+  text-align: center;
+}
+
+.spinnerShell {
+  position: relative;
+  width: 5rem;
+  height: 5rem;
+  padding: 2px;
+  margin-bottom: 2rem;
+  border-radius: 24px;
+  background: linear-gradient(135deg, var(--integration-primary), var(--integration-secondary));
+  box-shadow: 0 20px 40px var(--integration-shadow);
+}
+
+.spinnerInner {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 22px;
+  background: var(--integration-surface);
+}
+
+.spinnerFrame {
+  position: relative;
+  width: 3rem;
+  height: 3rem;
+}
+
+.spinnerRing {
+  width: 100%;
+  height: 100%;
+  border: 4px solid var(--integration-subtle-border);
+  border-top-color: var(--integration-heading);
+  border-radius: 9999px;
+  animation: spin 1s linear infinite;
+}
+
+.spinnerSpark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  margin-bottom: 1rem;
+  color: var(--integration-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: clamp(2.35rem, 5vw, 3.2rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.subtitle {
+  max-width: 28rem;
+  color: var(--integration-muted);
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+.stepsList {
+  width: 100%;
+  display: grid;
+  gap: 1rem;
+}
+
+.stepRow {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 5rem;
+  padding: 1.25rem;
+  border-radius: 10px;
+  background: var(--integration-surface-low);
+  transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease;
+}
+
+.stepRowActive {
+  min-height: 5.5rem;
+  border: 1px solid var(--integration-subtle-border);
+  background: var(--integration-surface-high);
+  box-shadow: 0 16px 32px var(--integration-row-shadow);
+  transform: scale(1.02);
+}
+
+.stepRowPending {
+  background: var(--integration-surface-low-faded);
+  opacity: 0.6;
+}
+
+.stepIcon {
+  flex: 0 0 auto;
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1.25rem;
+  border-radius: 9999px;
+}
+
+.stepIconDone {
+  background: var(--integration-primary-soft);
+}
+
+.stepIconPending {
+  background: var(--integration-outline-soft);
+}
+
+.smallSpin {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--integration-primary-ring);
+  border-top-color: var(--integration-primary);
+  border-radius: 9999px;
+  animation: spin 0.8s linear infinite;
+}
+
+.stepText {
+  flex: 1 1 auto;
+  color: var(--integration-heading);
+  font-family: "Inter", sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.pendingText {
+  color: var(--integration-muted);
+  font-weight: 500;
+}
+
+.stepStatus {
+  flex: 0 0 auto;
+  color: var(--integration-primary);
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.pendingStatus {
+  color: var(--integration-outline);
+  font-weight: 500;
+}
+
+.pulseDot {
+  display: inline-flex;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--integration-primary);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.tipCard {
+  position: relative;
+  width: 100%;
+  max-width: 28rem;
+  margin-top: 5rem;
+  overflow: hidden;
+  border: 1px solid var(--integration-subtle-border);
+  border-radius: 1rem;
+  background: var(--integration-card);
+  padding: 1.5rem;
+}
+
+.tipGlow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--integration-primary-wash), var(--integration-secondary-wash));
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.tipCard:hover .tipGlow {
+  opacity: 1;
+}
+
+.tipContent {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.tipTitle {
+  margin-bottom: 0.25rem;
+  color: var(--integration-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.tipText {
+  color: var(--integration-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+
+.tipLink {
+  color: var(--integration-secondary);
+  font-weight: 600;
+}
+
+.processingFooter {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 100%;
+  padding: 2rem;
+  pointer-events: none;
+}
+
+.footerInner {
+  display: flex;
+  max-width: 80rem;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin: 0 auto;
+}
+
+.statusPill {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 23rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--integration-subtle-border);
+  border-radius: 9999px;
+  background: var(--integration-status-bg);
+  backdrop-filter: blur(12px);
+}
+
+.statusText {
+  color: var(--integration-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.brandGhost {
+  color: var(--integration-ghost);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  user-select: none;
+}
+
+.successShell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--integration-bg);
+  color: var(--integration-text);
+  font-family: "Manrope", sans-serif;
+}
+
+.successGlow {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, var(--integration-primary-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.successMain {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.successCard {
+  width: 100%;
+  max-width: 40.875rem;
+  padding: 3rem;
+  border: 1px solid var(--integration-subtle-border);
+  border-radius: 32px;
+  background: var(--integration-glass);
+  box-shadow: 0 20px 40px var(--integration-shadow);
+  text-align: center;
+  backdrop-filter: blur(28px);
+}
+
+.successIconWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.successIcon {
+  display: flex;
+  width: 5.5rem;
+  height: 5.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--integration-primary-soft);
+  border-radius: 0.75rem;
+  background: var(--integration-primary-wash-strong);
+  box-shadow: 0 0 30px var(--integration-primary-soft);
+}
+
+.successCopy {
+  display: grid;
+  gap: 1rem;
+}
+
+.successSubtitle {
+  max-width: 26rem;
+  margin: 0 auto;
+  color: var(--integration-muted);
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.75;
+}
+
+.successAction {
+  margin-top: 2rem;
+}
+
+.dashboardButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 4rem;
+  padding: 1rem 2.5rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--integration-button-one), var(--integration-button-two));
+  color: var(--integration-button-text);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboardButton:hover {
+  transform: scale(1.02);
+  box-shadow: 0 0 40px var(--integration-button-glow);
+}
+
+.dashboardButton:active {
+  transform: scale(0.98);
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 4rem;
+  color: var(--integration-meta);
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: "Inter", sans-serif;
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.softOrbOne,
+.softOrbTwo {
+  position: fixed;
+  width: 40vw;
+  height: 40vw;
+  border-radius: 9999px;
+  filter: blur(120px);
+  pointer-events: none;
+}
+
+.softOrbOne {
+  top: -10%;
+  left: -10%;
+  background: var(--integration-secondary-wash-strong);
+}
+
+.softOrbTwo {
+  right: -10%;
+  bottom: -10%;
+  background: var(--integration-primary-wash-strong);
+}
+
+.networkBand {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 307px;
+  opacity: 0.2;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, var(--integration-bg), var(--integration-band-fade), transparent),
+    radial-gradient(circle at 12% 68%, var(--integration-network-dot) 0 1px, transparent 2px),
+    radial-gradient(circle at 24% 38%, var(--integration-network-dot) 0 1px, transparent 2px),
+    radial-gradient(circle at 38% 58%, var(--integration-network-dot) 0 1px, transparent 2px),
+    radial-gradient(circle at 53% 31%, var(--integration-network-dot) 0 1px, transparent 2px),
+    radial-gradient(circle at 71% 54%, var(--integration-network-dot) 0 1px, transparent 2px),
+    linear-gradient(28deg, transparent 12%, var(--integration-network-line) 12.2%, transparent 12.6%),
+    linear-gradient(152deg, transparent 32%, var(--integration-network-line) 32.2%, transparent 32.6%),
+    linear-gradient(12deg, transparent 55%, var(--integration-network-line) 55.2%, transparent 55.6%);
+  background-color: var(--integration-surface-low);
+  filter: grayscale(1) brightness(0.55);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+@media (max-width: 768px) {
+  .processingMain {
+    justify-content: flex-start;
+    padding-top: 3.5rem;
+  }
+
+  .stepRow {
+    padding: 1rem;
+  }
+
+  .stepText {
+    font-size: 0.9rem;
+  }
+
+  .stepStatus {
+    font-size: 0.62rem;
+  }
+
+  .tipCard {
+    margin-top: 3rem;
+  }
+
+  .processingFooter {
+    padding: 1rem;
+  }
+
+  .footerInner {
+    gap: 1rem;
+  }
+
+  .brandGhost {
+    display: none;
+  }
+
+  .successCard {
+    padding: 2.5rem 1.5rem;
+  }
+
+  .metaRow {
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 3rem;
+  }
+}

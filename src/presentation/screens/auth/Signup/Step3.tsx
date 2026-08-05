@@ -50,7 +50,7 @@ const SignupStep3: FC = () => {
             "Registration completed successfully! Welcome aboard.",
             "success",
           );
-          navigate({ to: "/dashboard" });
+          navigate({ to: "/processing-integration", replace: true });
         } else {
           showToast(res?.message || "Failed to save UI details.", "error");
         }

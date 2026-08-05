@@ -24,6 +24,8 @@ import AuthLayout from "../../presentation/layouts/AuthLayout";
 import { useAuthStore } from "../store/authStore";
 import DashboardPreview from "../../presentation/screens/public/PreviewDashboard";
 import AdminPreview from "../../presentation/screens/public/AdminPreview";
+import ProcessingIntegration from "../../presentation/screens/integration/ProcessingIntegration";
+import IntegrationSuccess from "../../presentation/screens/integration/IntegrationSuccess";
 
 // 1. Establish the absolute root route (renders an Outlet container)
 const rootRoute = createRootRoute({
@@ -151,6 +153,30 @@ const dashboardRoute = createRoute({
   },
 });
 
+const processingIntegrationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/processing-integration",
+  component: ProcessingIntegration,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
+const integrationSuccessRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/integration-success",
+  component: IntegrationSuccess,
+  beforeLoad: () => {
+    const { isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+  },
+});
+
 const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/404",
@@ -182,6 +208,8 @@ const routeTree = rootRoute.addChildren([
       forgotPasswordStep3Route,
     ]),
   ]),
+  processingIntegrationRoute,
+  integrationSuccessRoute,
   dashboardRoute,
   notFoundRoute,
   serviceUnavailableRoute,
