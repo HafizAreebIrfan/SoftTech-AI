@@ -22,15 +22,15 @@ import ServiceUnavailable from "../../presentation/screens/public/ServiceUnavail
 import PublicLayout from "../../presentation/layouts/PublicLayout";
 import AuthLayout from "../../presentation/layouts/AuthLayout";
 import { useAuthStore } from "../store/authStore";
-import AdminPreview from "../../presentation/screens/public/AdminPreview";
-import ProcessingIntegration from "../../presentation/screens/integration/ProcessingIntegration";
-import IntegrationSuccess from "../../presentation/screens/integration/IntegrationSuccess";
+import AdminPreview from "../../presentation/screens/admin/AdminPreview";
+import ProcessingIntegration from "../../presentation/screens/onboarding/ProcessingIntegration";
+import IntegrationSuccess from "../../presentation/screens/onboarding/IntegrationSuccess";
 import OnboardingDashboard from "../../presentation/screens/onboarding/OnboardingDashboard";
-import Plans from "../../presentation/screens/company/Plans";
-import Checkout from "../../presentation/screens/company/Checkout";
-import PaymentResult from "../../presentation/screens/company/PaymentResult";
-import Deployment from "../../presentation/screens/company/Deployment";
-import DeploymentInProgress from "../../presentation/screens/company/DeploymentInProgress";
+import Plans from "../../presentation/screens/onboarding/Plans";
+import Checkout from "../../presentation/screens/onboarding/Checkout";
+import PaymentResult from "../../presentation/screens/onboarding/PaymentResult";
+import Deployment from "../../presentation/screens/onboarding/Deployment";
+import DeploymentInProgress from "../../presentation/screens/onboarding/DeploymentInProgress";
 
 // 1. Establish the absolute root route (renders an Outlet container)
 const rootRoute = createRootRoute({

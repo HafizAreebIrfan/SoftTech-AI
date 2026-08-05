@@ -14,7 +14,7 @@ interface ApiEntry {
 }
 
 interface CompanyDetailScreenProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 /* ──────────────────────────────────────

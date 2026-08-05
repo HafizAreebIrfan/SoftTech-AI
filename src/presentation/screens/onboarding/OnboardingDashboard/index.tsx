@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { BoltIcon, HelpIcon, MoonIcon, RocketIcon, SlidersIcon } from "../../../../assets/icons";
 import { useThemeStore } from "../../../../hooks";
 import styles from "../../../../styles/accountflow.module.css";
-import { getAccountFlowThemeVars } from "../../company/flowTheme";
+import { getAccountFlowThemeVars } from "../flowTheme";
 
 const OnboardingDashboard: FC = () => {
   const navigate = useNavigate();

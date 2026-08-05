@@ -21,7 +21,7 @@ interface Company {
 }
 
 interface CompaniesTabProps {
-  onAddCompany: () => void;
+  onAddCompany?: () => void;
   onViewCompany?: (id: string) => void;
 }
 
