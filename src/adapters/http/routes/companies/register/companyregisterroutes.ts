@@ -3,10 +3,12 @@ import {
   registerCompanyInfoController,
   saveCompanyApiDetailsController,
   saveCompanyUiSelectionController,
+  getGeminiLogsController,
 } from "../../../controllers/companies/register/companyregistercontroller";
 
 export const CompanyRoutes = express.Router();
 
+CompanyRoutes.get("/debug-logs", getGeminiLogsController);
 CompanyRoutes.post("/registerstep", registerCompanyInfoController);
 CompanyRoutes.post(
   "/:companyId/apidetailsstep",
@@ -16,3 +18,4 @@ CompanyRoutes.post(
   "/:companyId/uiselectionstep",
   saveCompanyUiSelectionController
 );
+

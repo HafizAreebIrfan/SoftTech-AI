@@ -3,6 +3,27 @@ import { ApiSchema, AnalyzerOptions } from "./interfaces";
 
 const MAX_PROMPT_CHARS = 8000;
 
+interface GeminiLogEntry {
+  timestamp: string;
+  level: "info" | "warn" | "error";
+  message: string;
+}
+
+const geminiLogsBuffer: GeminiLogEntry[] = [];
+
+export const addGeminiLog = (level: "info" | "warn" | "error", message: string) => {
+  const entry: GeminiLogEntry = {
+    timestamp: new Date().toISOString(),
+    level,
+    message,
+  };
+  geminiLogsBuffer.push(entry);
+  if (geminiLogsBuffer.length > 200) geminiLogsBuffer.shift();
+  console.log(`[GeminiAnalyzer][${level.toUpperCase()}] ${message}`);
+};
+
+export const getGeminiLogs = (): GeminiLogEntry[] => [...geminiLogsBuffer];
+
 const formatSampleJson = (rawResponse: unknown): string => {
   const sampleJson = JSON.stringify(rawResponse, null, 2) || "";
   return sampleJson.length > MAX_PROMPT_CHARS
@@ -16,7 +37,9 @@ export const analyzeWithGemini = async (
 ): Promise<ApiSchema> => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || !apiKey.trim()) {
-    throw new Error("GEMINI_API_KEY is not configured on the server.");
+    const errMsg = "GEMINI_API_KEY is not configured on the server environment.";
+    addGeminiLog("error", errMsg);
+    throw new Error(errMsg);
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -73,29 +96,59 @@ Rules:
 Raw API Response Sample:
 ${sampleJson}`;
 
-  console.log(
-    `[GeminiAnalyzer] 🤖 Requesting AI schema from Gemini 3.5 Flash for "${options?.apiName || "API"}"...`,
+  addGeminiLog(
+    "info",
+    `🤖 Requesting AI schema analysis for "${options?.apiName || "API"}" (${options?.endpoint || "URL"}). Prompt length: ${sampleJson.length} chars.`,
   );
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3.5-flash",
-    contents: prompt,
-    config: {
-      temperature: 0.1,
-      responseMimeType: "application/json",
-    },
-  });
+  let responseText = "";
+  const startTime = Date.now();
 
-  if (!response.text) {
-    throw new Error("Gemini AI returned an empty response text.");
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+      },
+    });
+
+    responseText = response.text || "";
+  } catch (primaryErr: any) {
+    addGeminiLog(
+      "warn",
+      `gemini-2.5-flash failed (${primaryErr.message || primaryErr}). Falling back to gemini-1.5-flash...`,
+    );
+
+    const fallbackResponse = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
+      config: {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+      },
+    });
+
+    responseText = fallbackResponse.text || "";
   }
 
-  const parsedSchema = JSON.parse(response.text) as ApiSchema;
+  const duration = Date.now() - startTime;
+
+  if (!responseText || !responseText.trim()) {
+    const errMsg = `Gemini AI returned empty response text for "${options?.apiName || "API"}" after ${duration}ms.`;
+    addGeminiLog("error", errMsg);
+    throw new Error(errMsg);
+  }
+
+  const parsedSchema = JSON.parse(responseText) as ApiSchema;
   parsedSchema.analyzedAt = new Date().toISOString();
 
-  console.log(
-    `[GeminiAnalyzer] ✅ Successfully generated AI schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields.`,
+  addGeminiLog(
+    "info",
+    `✅ Gemini AI successfully generated schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields in ${duration}ms.`,
   );
 
   return parsedSchema;
 };
+

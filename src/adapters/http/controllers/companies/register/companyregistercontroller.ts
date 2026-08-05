@@ -3,11 +3,19 @@ import { createCompanyRepository } from "../../../../persistence/mongo/companies
 import { registerCompanyInfo } from "../../../../../application/useCases/company/register/registercompanyinfo";
 import { saveCompanyApiDetails } from "../../../../../application/useCases/company/register/companyapidetails";
 import { saveCompanyUiSelection } from "../../../../../application/useCases/company/register/companyuiselection";
-import { authCookieOptions, createToken } from "../../../../../infrastructure/middlewares/AuthMiddleware/authmiddleware";
+import {
+  authCookieOptions,
+  createToken,
+} from "../../../../../infrastructure/middlewares/AuthMiddleware/authmiddleware";
+import { getGeminiLogs } from "../../../../../infrastructure/mcp/schema_analyzer/geminiAnalyzer";
 
 const companyRepository = createCompanyRepository();
 
-export async function registerCompanyInfoController(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function registerCompanyInfoController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const result = await registerCompanyInfo(companyRepository, req.body);
 
@@ -21,7 +29,11 @@ export async function registerCompanyInfoController(req: Request, res: Response,
   }
 }
 
-export async function saveCompanyApiDetailsController(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function saveCompanyApiDetailsController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const result = await saveCompanyApiDetails(
       companyRepository,
@@ -39,7 +51,11 @@ export async function saveCompanyApiDetailsController(req: Request, res: Respons
   }
 }
 
-export async function saveCompanyUiSelectionController(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function saveCompanyUiSelectionController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const result = await saveCompanyUiSelection(
       companyRepository,
@@ -57,6 +73,23 @@ export async function saveCompanyUiSelectionController(req: Request, res: Respon
       message: "UI selection saved successfully",
       data: result,
       token: logintoken,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getGeminiLogsController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const logs = getGeminiLogs();
+    res.status(200).json({
+      success: true,
+      count: logs.length,
+      logs,
     });
   } catch (error) {
     next(error);
