@@ -120,21 +120,8 @@ ${sampleJson}`;
 
     responseText = response.text || "";
   } catch (primaryErr: any) {
-    addGeminiLog(
-      "warn",
-      `AI failed (${primaryErr.message || primaryErr}). Falling back to gemini-3.5-flash-lite...`,
-    );
-
-    const fallbackResponse = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: prompt,
-      config: {
-        temperature: 0.1,
-        responseMimeType: "application/json",
-      },
-    });
-
-    responseText = fallbackResponse.text || "";
+    addGeminiLog("warn", `AI failed (${primaryErr.message || primaryErr}).`);
+    throw new Error(primaryErr.message || primaryErr);
   }
 
   const duration = Date.now() - startTime;
