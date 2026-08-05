@@ -119,9 +119,11 @@ export async function saveCompanyApiDetails(
     throw new Error("apis must be a non-empty array");
   }
 
-  const apis = await Promise.all(
-    payload.apis.map((api: any, index: number) => transformApiEntry(api, index))
-  );
+  const apis: any[] = [];
+  for (let i = 0; i < payload.apis.length; i++) {
+    const transformed = await transformApiEntry(payload.apis[i], i);
+    apis.push(transformed);
+  }
 
   return await companyRepository.update(companyId, {
     apis,

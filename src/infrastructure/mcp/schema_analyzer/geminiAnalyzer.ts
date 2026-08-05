@@ -11,7 +11,10 @@ interface GeminiLogEntry {
 
 const geminiLogsBuffer: GeminiLogEntry[] = [];
 
-export const addGeminiLog = (level: "info" | "warn" | "error", message: string) => {
+export const addGeminiLog = (
+  level: "info" | "warn" | "error",
+  message: string,
+) => {
   const entry: GeminiLogEntry = {
     timestamp: new Date().toISOString(),
     level,
@@ -37,7 +40,8 @@ export const analyzeWithGemini = async (
 ): Promise<ApiSchema> => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || !apiKey.trim()) {
-    const errMsg = "GEMINI_API_KEY is not configured on the server environment.";
+    const errMsg =
+      "GEMINI_API_KEY is not configured on the server environment.";
     addGeminiLog("error", errMsg);
     throw new Error(errMsg);
   }
@@ -98,7 +102,7 @@ ${sampleJson}`;
 
   addGeminiLog(
     "info",
-    `🤖 Requesting AI schema analysis for "${options?.apiName || "API"}" (${options?.endpoint || "URL"}). Prompt length: ${sampleJson.length} chars.`,
+    `Requesting AI schema analysis for "${options?.apiName || "API"}" (${options?.endpoint || "URL"}). Prompt length: ${sampleJson.length} chars.`,
   );
 
   let responseText = "";
@@ -106,7 +110,7 @@ ${sampleJson}`;
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.6-flash",
       contents: prompt,
       config: {
         temperature: 0.1,
@@ -118,11 +122,11 @@ ${sampleJson}`;
   } catch (primaryErr: any) {
     addGeminiLog(
       "warn",
-      `gemini-2.5-flash failed (${primaryErr.message || primaryErr}). Falling back to gemini-1.5-flash...`,
+      `AI failed (${primaryErr.message || primaryErr}). Falling back to gemini-3.5-flash-lite...`,
     );
 
     const fallbackResponse = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3.5-flash-lite",
       contents: prompt,
       config: {
         temperature: 0.1,
@@ -146,9 +150,8 @@ ${sampleJson}`;
 
   addGeminiLog(
     "info",
-    `✅ Gemini AI successfully generated schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields in ${duration}ms.`,
+    `Gemini AI successfully generated schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields in ${duration}ms.`,
   );
 
   return parsedSchema;
 };
-
