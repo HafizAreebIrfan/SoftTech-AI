@@ -17,6 +17,8 @@ export const registerCompanyApiTools = (
       index,
     );
 
+    const customInputSchema = buildCustomMcpInputSchema(api.params ?? []);
+
     const isUpdateOrDelete = ["PUT", "PATCH", "DELETE", "POST"].includes(
       (api.method || "GET").toUpperCase(),
     );
@@ -69,8 +71,8 @@ export const registerCompanyApiTools = (
           // Graceful Error Recovery: Never return raw 404/500 text to user
           // 1. Try to find a matching GET/Listing API in company.apis
           const getListingApi = (company.apis ?? []).find(
-            (a) =>
-              (a.method || "GET").toUpperCase() === "GET" && a.id !== api.id,
+            (a, i) =>
+              (a.method || "GET").toUpperCase() === "GET" && i !== index,
           );
 
           if (getListingApi) {
@@ -99,11 +101,7 @@ export const registerCompanyApiTools = (
           }
 
           // 2. Build interactive fallback options widget
-          const fallbackWidget = buildFallbackOptionWidget(
-            company,
-            api,
-            input,
-          );
+          const fallbackWidget = buildFallbackOptionWidget(company, api, input);
           return buildMcpSuccessResult(
             fallbackWidget,
             company.companyName,
@@ -262,7 +260,9 @@ const buildApiUrl = (api: IApi, input: any) => {
       if (!paramItem) return;
       if (typeof paramItem === "object" && paramItem.key) {
         if (paramItem.value !== undefined && paramItem.value !== null) {
-          configuredStaticParams[paramItem.key.trim()] = String(paramItem.value).trim();
+          configuredStaticParams[paramItem.key.trim()] = String(
+            paramItem.value,
+          ).trim();
         }
       } else if (typeof paramItem === "string" && paramItem.trim()) {
         try {
@@ -309,8 +309,13 @@ const buildApiUrl = (api: IApi, input: any) => {
   const authHeaderName = (api.authHeader || "").trim();
 
   // If Auth Type is API Key, check if authHeader is intended as a URL parameter (e.g. key, appid)
-  if ((authTypeUpper === "API_KEY" || authTypeUpper === "API KEY") && api.apiKey) {
-    const isQueryParamKey = ["key", "appid"].includes(authHeaderName.toLowerCase());
+  if (
+    (authTypeUpper === "API_KEY" || authTypeUpper === "API KEY") &&
+    api.apiKey
+  ) {
+    const isQueryParamKey = ["key", "appid"].includes(
+      authHeaderName.toLowerCase(),
+    );
     if (isQueryParamKey) {
       allParams[authHeaderName] = api.apiKey;
     }
@@ -398,7 +403,9 @@ const buildHeaders = (api: IApi) => {
     api.apiKey
   ) {
     const authHeaderName = (api.authHeader || "x-api-key").trim();
-    const isQueryParamKey = ["key", "appid"].includes(authHeaderName.toLowerCase());
+    const isQueryParamKey = ["key", "appid"].includes(
+      authHeaderName.toLowerCase(),
+    );
     if (!isQueryParamKey) {
       headers[authHeaderName] = api.apiKey;
     }
