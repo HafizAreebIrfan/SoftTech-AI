@@ -4,6 +4,7 @@ import { IApi, ICompany } from "../../../../domain/types/company.types";
 import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwidgetoutputschema";
 import { buildCustomMcpInputSchema } from "../../../middlewares/ValidationMiddleware/schemas";
 import { normalizeApiResponseToWidget } from "./genericwidgetnormalizer";
+import { translateApiError } from "../../errors/errorTranslator";
 
 export const registerCompanyApiTools = (
   server: McpServer,
@@ -144,10 +145,14 @@ const buildFallbackOptionWidget = (
   company: ICompany,
   api: IApi,
   input: any,
+  rawError?: any,
 ) => {
+  const status = rawError?.status || (rawError?.message?.includes("404") ? 404 : undefined);
+  const translation = translateApiError(status, rawError?.message, api.name || "service");
+
   return {
     title: api.name || "Manage Item",
-    subtitle: "Select an item or specify details to proceed with update.",
+    subtitle: translation.userMessage,
     layout: company.uiPreference?.layout ?? "dashboard",
     industry: company.industry ?? "general",
     blocks: [
@@ -181,13 +186,10 @@ const buildFallbackOptionWidget = (
       },
       {
         type: "keyValue",
-        title: "Instructions",
+        title: "Status & Next Step",
         keyValueItems: [
           { key: "Status", value: "Awaiting selection" },
-          {
-            key: "Action Required",
-            value: `Please provide the ID or field values you want to modify for ${api.name}.`,
-          },
+          { key: "Action Required", value: translation.actionSuggestion },
         ],
       },
     ],

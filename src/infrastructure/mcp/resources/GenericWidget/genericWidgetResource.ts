@@ -36,10 +36,23 @@ export const registerGenericWidgetResources = (server: any) => {
         <head>
           <meta charset="utf-8" />
           <title>Generic Widget</title>
-          <style>${CSS}</style>
+          <style>
+            ${CSS}
+            @keyframes pulseSkeleton { 0%, 100% { opacity: 0.8; } 50% { opacity: 0.25; } }
+            .skeleton-box { background: rgba(255, 255, 255, 0.08); animation: pulseSkeleton 1.5s ease-in-out infinite; border-radius: 12px; }
+          </style>
         </head>
-        <body>
-          <div id="root"></div>
+        <body style="background: transparent; margin: 0; padding: 0;">
+          <div id="root">
+            <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+              <div class="skeleton-box" style="height: 24px; width: 40%;"></div>
+              <div class="skeleton-box" style="height: 14px; width: 70%;"></div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px;">
+                <div class="skeleton-box" style="height: 80px;"></div>
+                <div class="skeleton-box" style="height: 80px;"></div>
+              </div>
+            </div>
+          </div>
           <script type="module">${HTML}</script>
         </body>
       </html>
