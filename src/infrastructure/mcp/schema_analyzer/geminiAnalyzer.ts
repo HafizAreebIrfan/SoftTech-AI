@@ -11,7 +11,7 @@ interface GeminiLogEntry {
 
 const geminiLogsBuffer: GeminiLogEntry[] = [];
 
-export const addGeminiLog = (
+export const addAILogs = (
   level: "info" | "warn" | "error",
   message: string,
 ) => {
@@ -42,7 +42,7 @@ export const analyzeWithGemini = async (
   if (!apiKey || !apiKey.trim()) {
     const errMsg =
       "GEMINI_API_KEY is not configured on the server environment.";
-    addGeminiLog("error", errMsg);
+    addAILogs("error", errMsg);
     throw new Error(errMsg);
   }
 
@@ -100,7 +100,7 @@ Rules:
 Raw API Response Sample:
 ${sampleJson}`;
 
-  addGeminiLog(
+  addAILogs(
     "info",
     `Requesting AI schema analysis for "${options?.apiName || "API"}" (${options?.endpoint || "URL"}). Prompt length: ${sampleJson.length} chars.`,
   );
@@ -120,7 +120,7 @@ ${sampleJson}`;
 
     responseText = response.text || "";
   } catch (primaryErr: any) {
-    addGeminiLog(
+    addAILogs(
       "warn",
       `gemini-3.5-flash-lite failed (${primaryErr.message || primaryErr}).`,
     );
@@ -130,14 +130,14 @@ ${sampleJson}`;
 
   if (!responseText || !responseText.trim()) {
     const errMsg = `Gemini AI returned empty response text for "${options?.apiName || "API"}" after ${duration}ms.`;
-    addGeminiLog("error", errMsg);
+    addAILogs("error", errMsg);
     throw new Error(errMsg);
   }
 
   const parsedSchema = JSON.parse(responseText) as ApiSchema;
   parsedSchema.analyzedAt = new Date().toISOString();
 
-  addGeminiLog(
+  addAILogs(
     "info",
     `Gemini AI successfully generated schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields in ${duration}ms.`,
   );
