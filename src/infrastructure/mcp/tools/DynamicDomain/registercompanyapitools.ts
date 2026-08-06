@@ -17,22 +17,35 @@ export const registerCompanyApiTools = (
       index,
     );
 
-    const customInputSchema = buildCustomMcpInputSchema(api.params ?? []);
+    const isUpdateOrDelete = ["PUT", "PATCH", "DELETE", "POST"].includes(
+      (api.method || "GET").toUpperCase(),
+    );
+    const hasPathParams =
+      api.endpoint.includes(":") || api.endpoint.includes("{");
+
+    let toolDescription =
+      api.mcpDescription ||
+      `Calls ${company.companyName} -> ${api.name} and returns a generic widget response.`;
+    if (isUpdateOrDelete || hasPathParams) {
+      toolDescription += ` Note: To update or edit an item, prefer calling the GET listing tool first to obtain available item IDs.`;
+    }
 
     registerAppTool(
       server,
       toolName,
       {
         title: api.name || `API ${index + 1}`,
-        description:
-          api.mcpDescription ||
-          `Calls ${company.companyName} -> ${api.name} and returns a generic widget response.`,
+        description: toolDescription,
         inputSchema: customInputSchema,
         outputSchema: genericWidgetOutputSchema,
         _meta: {
           ui: {
             resourceUri: "ui://generic/widgets.html",
           },
+          "openai/outputTemplate": "ui://generic/widgets.html",
+          "openai/widgetAccessible": true,
+          "openai/toolInvocation/invoking": `Preparing ${api.name || "widget"}...`,
+          "openai/toolInvocation/invoked": "Loaded",
         },
       },
       async (input: any) => {
@@ -47,33 +60,155 @@ export const registerCompanyApiTools = (
             api.apiSchema as any,
           );
 
-          const result = {
-            structuredContent: widgetContent,
-            content: [
-              {
-                type: "text" as const,
-                text: `${widgetContent.title}: ${widgetContent.blocks.length} widget block(s) returned.`,
-              },
-            ],
-            _meta: {
-              ui: {
-                resourceUri: "ui://generic/widgets.html",
-              },
-              company: company.companyName,
-              lastFetched: new Date().toISOString(),
-            },
-          };
-          return result;
+          return buildMcpSuccessResult(
+            widgetContent,
+            company.companyName,
+            api.name || `API ${index + 1}`,
+          );
         } catch (error: any) {
-          throw error;
+          // Graceful Error Recovery: Never return raw 404/500 text to user
+          // 1. Try to find a matching GET/Listing API in company.apis
+          const getListingApi = (company.apis ?? []).find(
+            (a) =>
+              (a.method || "GET").toUpperCase() === "GET" && a.id !== api.id,
+          );
+
+          if (getListingApi) {
+            try {
+              const listResponse = await callRegisteredApi(
+                getListingApi,
+                input,
+              );
+              const listWidget = normalizeApiResponseToWidget(
+                company.companyName,
+                getListingApi.name || "Available Items",
+                listResponse,
+                company.uiPreference?.layout ?? "dashboard",
+                company.industry,
+                getListingApi.apiSchema as any,
+              );
+              listWidget.subtitle = `Select an item below to ${api.name || "update"}`;
+              return buildMcpSuccessResult(
+                listWidget,
+                company.companyName,
+                api.name || `API ${index + 1}`,
+              );
+            } catch {
+              // Fallback to option widget if GET listing also fails
+            }
+          }
+
+          // 2. Build interactive fallback options widget
+          const fallbackWidget = buildFallbackOptionWidget(
+            company,
+            api,
+            input,
+          );
+          return buildMcpSuccessResult(
+            fallbackWidget,
+            company.companyName,
+            api.name || `API ${index + 1}`,
+          );
         }
       },
     );
   });
 };
 
+const buildMcpSuccessResult = (
+  widgetContent: any,
+  companyName: string,
+  apiName: string,
+) => {
+  return {
+    structuredContent: widgetContent,
+    content: [
+      {
+        type: "text" as const,
+        text: `${widgetContent.title}: ${widgetContent.blocks?.length ?? 1} widget block(s) rendered.`,
+      },
+    ],
+    _meta: {
+      ui: {
+        resourceUri: "ui://generic/widgets.html",
+      },
+      "openai/outputTemplate": "ui://generic/widgets.html",
+      "openai/widgetAccessible": true,
+      "openai/toolInvocation/invoking": `Loading ${apiName}...`,
+      "openai/toolInvocation/invoked": "Loaded",
+      company: companyName,
+      lastFetched: new Date().toISOString(),
+    },
+  };
+};
+
+const buildFallbackOptionWidget = (
+  company: ICompany,
+  api: IApi,
+  input: any,
+) => {
+  return {
+    title: api.name || "Manage Item",
+    subtitle: "Select an item or specify details to proceed with update.",
+    layout: company.uiPreference?.layout ?? "dashboard",
+    industry: company.industry ?? "general",
+    blocks: [
+      {
+        type: "form",
+        title: `Configure ${api.name || "Update"}`,
+        fields: [
+          {
+            id: "itemId",
+            name: "itemId",
+            label: "Item / Package ID",
+            type: "text",
+            required: true,
+          },
+          {
+            id: "fieldToUpdate",
+            name: "fieldToUpdate",
+            label: "Field to Update (e.g. Price, Status, Name)",
+            type: "text",
+            required: false,
+          },
+          {
+            id: "newValue",
+            name: "newValue",
+            label: "New Value",
+            type: "text",
+            required: false,
+          },
+        ],
+        submitAction: api.name || "submit",
+      },
+      {
+        type: "keyValue",
+        title: "Instructions",
+        keyValueItems: [
+          { key: "Status", value: "Awaiting selection" },
+          {
+            key: "Action Required",
+            value: `Please provide the ID or field values you want to modify for ${api.name}.`,
+          },
+        ],
+      },
+    ],
+    metadata: {
+      companyName: company.companyName,
+      apiName: api.name,
+      generatedAt: new Date().toISOString(),
+      version: "1.0",
+    },
+  };
+};
+
 const callRegisteredApi = async (api: IApi, input: any) => {
   const url = buildApiUrl(api, input);
+
+  if (url.pathname.includes(":id") || url.pathname.includes("{id}")) {
+    throw new Error(`Missing required ID parameter for ${api.name}`);
+  }
+
   const method = (api.method || "GET").toUpperCase();
 
   const headers = buildHeaders(api);
