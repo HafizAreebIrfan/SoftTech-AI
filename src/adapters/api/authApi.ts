@@ -28,6 +28,15 @@ export const saveCompanyApiDetails = async (
   return post(url, { apis });
 };
 
+export const analyzeSingleCompanyApi = async (
+  companyId: string,
+  apiIndex: number,
+  sampleResponse?: string,
+): Promise<{ success: boolean; message: string; data: { apiIndex: number; apiSchema: any; api: any } }> => {
+  const url = `${env.apiBaseUrl}/api/companies/${companyId}/apis/${apiIndex}/analyze`;
+  return post(url, { sampleResponse });
+};
+
 export const saveCompanyUiSelection = async (
   companyId: string,
   uiPreference: CompanyUIInformation,

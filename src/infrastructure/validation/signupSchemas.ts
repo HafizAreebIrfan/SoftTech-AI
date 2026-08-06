@@ -101,13 +101,7 @@ export const stepTwoSchema = z.array(
         });
       }
     }
-    if (!api.apiQueryParams || !api.apiQueryParams.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Query Parameters are required for "${api.apiName}".`,
-        path: [idx, "apiQueryParams"],
-      });
-    } else {
+    if (api.apiQueryParams && api.apiQueryParams.trim()) {
       try {
         JSON.parse(api.apiQueryParams);
       } catch {

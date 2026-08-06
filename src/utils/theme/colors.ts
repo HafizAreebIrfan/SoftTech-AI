@@ -108,6 +108,14 @@ export type ThemeColors = {
   QueryParamsButtonBgHover: string;
   ToggleTableTextViewBg: string;
   ToggleTableTextViewBorder: string;
+  TestApiBtnBg: string;
+  TestApiBtnText: string;
+  UploadSampleBtnBg: string;
+  UploadSampleBtnBorder: string;
+  UploadSampleBtnText: string;
+  SuccessBtnBg: string;
+  ModalBackdrop: string;
+  DividerColor: string;
 };
 
 export const darkColors: ThemeColors = {
@@ -220,6 +228,14 @@ export const darkColors: ThemeColors = {
   QueryParamsButtonBgHover: "rgba(99, 102, 241, 0.2)",
   ToggleTableTextViewBg: "rgba(255, 255, 255, 0.05)",
   ToggleTableTextViewBorder: "rgba(255, 255, 255, 0.1)",
+  TestApiBtnBg: "linear-gradient(90deg, #4f46e5, #7c3aed)",
+  TestApiBtnText: "#ffffff",
+  UploadSampleBtnBg: "rgba(99, 102, 241, 0.15)",
+  UploadSampleBtnBorder: "rgba(99, 102, 241, 0.3)",
+  UploadSampleBtnText: "#818cf8",
+  SuccessBtnBg: "linear-gradient(90deg, #10b981, #059669)",
+  ModalBackdrop: "rgba(0, 0, 0, 0.75)",
+  DividerColor: "#acaab5",
 };
 
 export const lightColors: ThemeColors = {
@@ -325,11 +341,19 @@ export const lightColors: ThemeColors = {
   DeleteAPIButtonBgHover: "#ef4444",
   DeleteAPIButtonBorderHover: "rgba(239, 68, 68, 0.5)",
   DeleteAPIButtonTextHover: "#ffffff",
-  QueryParamsButtonIcon: "#818cf8",
-  QueryParamsButtonBg: "rgba(99, 102, 241, 0.3)",
-  QueryParamsButtonText: "#818cf8",
-  QueryParamsButtonBorder: "rgba(99, 102, 241, 0.1)",
-  QueryParamsButtonBgHover: "rgba(99, 102, 241, 0.2)",
-  ToggleTableTextViewBg: "rgba(255, 255, 255, 0.05)",
-  ToggleTableTextViewBorder: "rgba(255, 255, 255, 0.1)",
+  QueryParamsButtonIcon: "#6366f1",
+  QueryParamsButtonBg: "rgba(99, 102, 241, 0.15)",
+  QueryParamsButtonText: "#6366f1",
+  QueryParamsButtonBorder: "rgba(99, 102, 241, 0.2)",
+  QueryParamsButtonBgHover: "rgba(99, 102, 241, 0.25)",
+  ToggleTableTextViewBg: "rgba(0, 0, 0, 0.05)",
+  ToggleTableTextViewBorder: "rgba(0, 0, 0, 0.1)",
+  TestApiBtnBg: "linear-gradient(90deg, #4f46e5, #7c3aed)",
+  TestApiBtnText: "#ffffff",
+  UploadSampleBtnBg: "rgba(99, 102, 241, 0.12)",
+  UploadSampleBtnBorder: "rgba(99, 102, 241, 0.3)",
+  UploadSampleBtnText: "#6366f1",
+  SuccessBtnBg: "linear-gradient(90deg, #10b981, #059669)",
+  ModalBackdrop: "rgba(0, 0, 0, 0.75)",
+  DividerColor: "#484751",
 };

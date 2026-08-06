@@ -201,9 +201,17 @@
 }
 
 .deleteBtn:hover {
-  background-color: var(--app-delete-api-button-bg-hover);
-  color: var(--app-delete-api-button-text-hover);
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border-color: #ef4444 !important;
   transform: translateY(-1px);
+}
+
+.deleteBtn:hover svg,
+.deleteBtn:hover svg path {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  fill: #ffffff !important;
 }
 
 .btn {

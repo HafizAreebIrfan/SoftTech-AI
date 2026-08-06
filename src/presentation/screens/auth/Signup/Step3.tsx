@@ -26,7 +26,14 @@ const SignupStep3: FC = () => {
     setSelectedLayout,
     clearSignupProgress,
   } = useSignupStore();
-  const { setAuth } = useAuthStore();
+  const { setAuth, isAuthenticated } = useAuthStore();
+
+  useEffect(() => {
+    if (!companyId && !isAuthenticated) {
+      showToast("Please complete Step 1 first.", "warning");
+      navigate({ to: "/signup/step1" });
+    }
+  }, [companyId, isAuthenticated, navigate]);
 
   const { mutate: stepThreeMutate, isPending: isStepThreePending } =
     useMutation({
