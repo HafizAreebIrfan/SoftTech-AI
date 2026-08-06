@@ -52,6 +52,46 @@ export const registerCompanyApiTools = (
         },
       },
       async (input: any) => {
+        const isUpdateOrDeleteMethod = ["PUT", "PATCH", "DELETE"].includes(
+          (api.method || "GET").toUpperCase(),
+        );
+        const rawInput = typeof input === "object" && input !== null ? input : {};
+        const hasProvidedId = Boolean(
+          rawInput.id ||
+            rawInput.itemId ||
+            rawInput.packageId ||
+            rawInput.params?.id,
+        );
+
+        // If an update/delete tool is called without an explicit ID, pre-fetch GET listing
+        if (isUpdateOrDeleteMethod && !hasProvidedId) {
+          const getListingApi = (company.apis ?? []).find(
+            (a, i) => (a.method || "GET").toUpperCase() === "GET" && i !== index,
+          );
+
+          if (getListingApi) {
+            try {
+              const listResponse = await callRegisteredApi(getListingApi, input);
+              const listWidget = normalizeApiResponseToWidget(
+                company.companyName,
+                getListingApi.name || "Available Items",
+                listResponse,
+                company.uiPreference?.layout ?? "dashboard",
+                company.industry,
+                getListingApi.apiSchema as any,
+              );
+              listWidget.subtitle = `Select an item below to ${api.name || "update"}`;
+              return buildMcpSuccessResult(
+                listWidget,
+                company.companyName,
+                api.name || `API ${index + 1}`,
+              );
+            } catch {
+              // Fallback to option widget
+            }
+          }
+        }
+
         try {
           const rawResponse = await callRegisteredApi(api, input);
           const widgetContent = normalizeApiResponseToWidget(
@@ -70,7 +110,6 @@ export const registerCompanyApiTools = (
           );
         } catch (error: any) {
           // Graceful Error Recovery: Never return raw 404/500 text to user
-          // 1. Try to find a matching GET/Listing API in company.apis
           const getListingApi = (company.apis ?? []).find(
             (a, i) =>
               (a.method || "GET").toUpperCase() === "GET" && i !== index,
@@ -97,12 +136,16 @@ export const registerCompanyApiTools = (
                 api.name || `API ${index + 1}`,
               );
             } catch {
-              // Fallback to option widget if GET listing also fails
+              // Fallback to option widget
             }
           }
 
-          // 2. Build interactive fallback options widget
-          const fallbackWidget = buildFallbackOptionWidget(company, api, input);
+          const fallbackWidget = buildFallbackOptionWidget(
+            company,
+            api,
+            input,
+            error,
+          );
           return buildMcpSuccessResult(
             fallbackWidget,
             company.companyName,

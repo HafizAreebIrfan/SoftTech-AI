@@ -274,43 +274,56 @@ const buildArrayBlocks = (
         {
           type: "cards",
           title: apiName ? toLabel(apiName) : "Items",
-          cards: records.map((record) => ({
-            id: String(record.id ?? record._id ?? ""),
+          cards: records.map((record) => {
+            const itemId = String(record.id ?? record._id ?? "");
+            const rawEntityLabel = apiName ? toLabel(apiName).replace(/^(get|call|list|update|edit|delete|fetch)\s+/i, "") : "Item";
+            const entityLabel = rawEntityLabel.trim() || "Item";
 
-            title: String(
-              record.title ?? record.name ?? record.label ?? "Untitled",
-            ),
-
-            subtitle: String(record.description ?? record.subtitle ?? ""),
-
-            image: typeof record.image === "string" ? record.image : undefined,
-
-            icon: typeof record.icon === "string" ? record.icon : undefined,
-
-            badge:
-              typeof record.status === "string" ? record.status : undefined,
-
-            attributes: Object.entries(record)
-              .filter(
-                ([key]) =>
-                  ![
-                    "id",
-                    "_id",
-                    "title",
-                    "name",
-                    "description",
-                    "subtitle",
-                    "image",
-                    "icon",
-                    "status",
-                  ].includes(key),
-              )
-              .slice(0, 6)
-              .map(([label, value]) => ({
-                label: toLabel(label),
-                value: stringifyCell(value),
-              })),
-          })),
+            return {
+              id: itemId,
+              title: String(
+                record.title ?? record.name ?? record.label ?? record.packagename ?? record.productName ?? "Untitled",
+              ),
+              subtitle: String(record.description ?? record.subtitle ?? ""),
+              image: typeof record.image === "string" ? record.image : undefined,
+              icon: typeof record.icon === "string" ? record.icon : undefined,
+              badge: typeof record.status === "string" ? record.status : undefined,
+              attributes: Object.entries(record)
+                .filter(
+                  ([key]) =>
+                    ![
+                      "id",
+                      "_id",
+                      "title",
+                      "name",
+                      "description",
+                      "subtitle",
+                      "image",
+                      "icon",
+                      "status",
+                    ].includes(key),
+                )
+                .slice(0, 6)
+                .map(([label, value]) => ({
+                  label: toLabel(label),
+                  value: stringifyCell(value),
+                })),
+              actions: [
+                {
+                  id: `edit-${itemId}`,
+                  label: `Edit ${entityLabel}`,
+                  action: "open_edit_mode",
+                  variant: "secondary",
+                },
+                {
+                  id: `select-${itemId}`,
+                  label: `Select ${entityLabel}`,
+                  action: "open_checkout_drawer",
+                  variant: "primary",
+                },
+              ],
+            };
+          }),
         },
       ];
     }
