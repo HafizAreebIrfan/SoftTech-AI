@@ -109,6 +109,10 @@ export const registerCompanyApiTools = (
             api.name || `API ${index + 1}`,
           );
         } catch (error: any) {
+          console.error(
+            `[MCP Tool Error] ${api.name} (${api.baseUrl}${api.endpoint}):`,
+            error?.message || error,
+          );
           const isListingApi =
             (api.method || "GET").toUpperCase() === "GET" &&
             !api.endpoint.includes(":") &&
@@ -425,6 +429,8 @@ const buildApiUrl = (api: IApi, input: any) => {
 const buildHeaders = (api: IApi) => {
   const headers: Record<string, string> = {
     Accept: "application/json",
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   };
 
   (api.headers ?? []).forEach((header: any) => {
