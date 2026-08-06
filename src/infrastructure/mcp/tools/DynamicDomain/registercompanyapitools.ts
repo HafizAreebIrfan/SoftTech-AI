@@ -163,25 +163,21 @@ const buildApiUrl = (api: IApi, input: any) => {
     allParams.query = queryOrLocation;
   }
 
-  // Aliases for common variations (days vs day, key vs apiKey)
+  // Aliases for common variations (days vs day)
   if (allParams.days !== undefined && allParams.day === undefined) {
     allParams.day = allParams.days;
   } else if (allParams.day !== undefined && allParams.days === undefined) {
     allParams.days = allParams.day;
   }
 
-  const authHeaderKey = (api.authHeader || "").trim();
-  const apiKeyVal =
-    api.apiKey ||
-    configuredStaticParams["key"] ||
-    configuredStaticParams["appid"] ||
-    configuredStaticParams["api_key"];
+  const authTypeUpper = (api.authType || "").toUpperCase();
+  const authHeaderName = (api.authHeader || "").trim();
 
-  if (apiKeyVal) {
-    if (!allParams.key) allParams.key = apiKeyVal;
-    if (!allParams.apiKey) allParams.apiKey = apiKeyVal;
-    if (authHeaderKey && !allParams[authHeaderKey]) {
-      allParams[authHeaderKey] = apiKeyVal;
+  // If Auth Type is API Key, check if authHeader is intended as a URL parameter (e.g. key, appid)
+  if ((authTypeUpper === "API_KEY" || authTypeUpper === "API KEY") && api.apiKey) {
+    const isQueryParamKey = ["key", "appid"].includes(authHeaderName.toLowerCase());
+    if (isQueryParamKey) {
+      allParams[authHeaderName] = api.apiKey;
     }
   }
 
@@ -211,22 +207,10 @@ const buildApiUrl = (api: IApi, input: any) => {
 
   // 3. Attach query parameters (both configured static params and dynamic params)
   if ((api.method || "GET").toUpperCase() === "GET") {
-    // Attach configured static params
+    // Attach configured static params from api.params
     Object.entries(configuredStaticParams).forEach(([k, v]) => {
       if (v) url.searchParams.set(k, v);
     });
-
-    // Attach API key to search params if authHeader is key/appid/api_key or if apiKeyVal exists
-    if (apiKeyVal) {
-      const isQueryKeyAuth =
-        !authHeaderKey ||
-        ["key", "appid", "api_key", "apikey", "token", "access_token"].includes(
-          authHeaderKey.toLowerCase(),
-        );
-      if (isQueryKeyAuth) {
-        url.searchParams.set(authHeaderKey || "key", apiKeyVal);
-      }
-    }
 
     // Attach dynamic input params
     Object.entries(allParams).forEach(([key, value]) => {
@@ -279,10 +263,8 @@ const buildHeaders = (api: IApi) => {
     api.apiKey
   ) {
     const authHeaderName = (api.authHeader || "x-api-key").trim();
-    const isQueryKeyParam = ["key", "appid", "api_key", "apikey"].includes(
-      authHeaderName.toLowerCase(),
-    );
-    if (!isQueryKeyParam) {
+    const isQueryParamKey = ["key", "appid"].includes(authHeaderName.toLowerCase());
+    if (!isQueryParamKey) {
       headers[authHeaderName] = api.apiKey;
     }
   }
