@@ -120,7 +120,38 @@ const buildApiUrl = (api: IApi, input: any) => {
     rawInput.q ||
     rawInput.search;
 
+  // 1. Extract static configured parameters from api.params
+  const configuredStaticParams: Record<string, string> = {};
+  if (Array.isArray(api.params)) {
+    api.params.forEach((paramItem: any) => {
+      if (!paramItem) return;
+      if (typeof paramItem === "object" && paramItem.key) {
+        if (paramItem.value !== undefined && paramItem.value !== null) {
+          configuredStaticParams[paramItem.key.trim()] = String(paramItem.value).trim();
+        }
+      } else if (typeof paramItem === "string" && paramItem.trim()) {
+        try {
+          const parsed = JSON.parse(paramItem.trim());
+          if (Array.isArray(parsed)) {
+            parsed.forEach((p: any) => {
+              if (p?.key && p?.value !== undefined)
+                configuredStaticParams[p.key.trim()] = String(p.value).trim();
+            });
+          } else if (typeof parsed === "object" && parsed !== null) {
+            Object.entries(parsed).forEach(([k, v]) => {
+              if (v !== undefined)
+                configuredStaticParams[k.trim()] = String(v).trim();
+            });
+          }
+        } catch {
+          // ignore invalid json string
+        }
+      }
+    });
+  }
+
   const allParams: Record<string, any> = {
+    ...configuredStaticParams,
     ...(rawInput.params ?? {}),
     ...rawInput,
   };
@@ -138,12 +169,23 @@ const buildApiUrl = (api: IApi, input: any) => {
   } else if (allParams.day !== undefined && allParams.days === undefined) {
     allParams.days = allParams.day;
   }
-  if (api.apiKey && !allParams.key) {
-    allParams.key = api.apiKey;
-    allParams.apiKey = api.apiKey;
+
+  const authHeaderKey = (api.authHeader || "").trim();
+  const apiKeyVal =
+    api.apiKey ||
+    configuredStaticParams["key"] ||
+    configuredStaticParams["appid"] ||
+    configuredStaticParams["api_key"];
+
+  if (apiKeyVal) {
+    if (!allParams.key) allParams.key = apiKeyVal;
+    if (!allParams.apiKey) allParams.apiKey = apiKeyVal;
+    if (authHeaderKey && !allParams[authHeaderKey]) {
+      allParams[authHeaderKey] = apiKeyVal;
+    }
   }
 
-  // 1. Replace template placeholders in path/query (e.g., {city}, {location}, {q}, :city)
+  // 2. Replace template placeholders in path/query (e.g., {city}, {location}, {q}, :city)
   Object.entries(allParams).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
     const valStr = encodeURIComponent(String(value));
@@ -167,67 +209,32 @@ const buildApiUrl = (api: IApi, input: any) => {
 
   const url = new URL(endpoint, baseUrl);
 
-  // 2. Overwrite existing search parameters if passed dynamically
-  if (queryOrLocation) {
-    if (url.searchParams.has("q"))
-      url.searchParams.set("q", String(queryOrLocation));
-    if (url.searchParams.has("city"))
-      url.searchParams.set("city", String(queryOrLocation));
-    if (url.searchParams.has("location"))
-      url.searchParams.set("location", String(queryOrLocation));
-    if (url.searchParams.has("query"))
-      url.searchParams.set("query", String(queryOrLocation));
-  }
-
-  // 3. Attach any configured parameters if GET method
+  // 3. Attach query parameters (both configured static params and dynamic params)
   if ((api.method || "GET").toUpperCase() === "GET") {
-    const cleanKeys: string[] = [];
-    (api.params ?? []).forEach((rawKey) => {
-      if (typeof rawKey !== "string" || !rawKey.trim()) return;
-      const str = rawKey.trim();
-      if (str.startsWith("{") || str.startsWith("[")) {
-        try {
-          const parsed = JSON.parse(str);
-          if (parsed && typeof parsed === "object") {
-            Object.keys(parsed).forEach((k) => cleanKeys.push(k));
-          }
-        } catch {}
-      } else {
-        cleanKeys.push(str);
-      }
+    // Attach configured static params
+    Object.entries(configuredStaticParams).forEach(([k, v]) => {
+      if (v) url.searchParams.set(k, v);
     });
 
-    // Also automatically append standard filter/pagination query parameters if present
-    const standardKeys = [
-      "limit",
-      "count",
-      "size",
-      "page",
-      "offset",
-      "status",
-      "state",
-      "filter",
-      "query",
-      "q",
-      "search",
-      "sort",
-      "orderBy",
-      "sortDir",
-      "order",
-    ];
-    standardKeys.forEach((key) => {
-      if (!cleanKeys.includes(key)) {
-        cleanKeys.push(key);
+    // Attach API key to search params if authHeader is key/appid/api_key or if apiKeyVal exists
+    if (apiKeyVal) {
+      const isQueryKeyAuth =
+        !authHeaderKey ||
+        ["key", "appid", "api_key", "apikey", "token", "access_token"].includes(
+          authHeaderKey.toLowerCase(),
+        );
+      if (isQueryKeyAuth) {
+        url.searchParams.set(authHeaderKey || "key", apiKeyVal);
       }
-    });
+    }
 
-    cleanKeys.forEach((key) => {
-      const value = allParams[key];
-      if (value !== undefined && value !== null) {
+    // Attach dynamic input params
+    Object.entries(allParams).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && key !== "params") {
         url.searchParams.set(key, String(value));
       }
     });
-    // Fallback search param if no location query key was set on url
+
     if (
       queryOrLocation &&
       !url.searchParams.has("q") &&
@@ -246,12 +253,15 @@ const buildHeaders = (api: IApi) => {
     Accept: "application/json",
   };
 
-  (api.headers ?? []).forEach((header) => {
-    const [key, ...rest] = header.split(":");
-    const value = rest.join(":").trim();
-
-    if (key && value) {
-      headers[key.trim()] = value;
+  (api.headers ?? []).forEach((header: any) => {
+    if (typeof header === "string") {
+      const [key, ...rest] = header.split(":");
+      const value = rest.join(":").trim();
+      if (key && value) {
+        headers[key.trim()] = value;
+      }
+    } else if (typeof header === "object" && header !== null && header.key) {
+      headers[header.key.trim()] = String(header.value ?? "").trim();
     }
   });
 
@@ -268,7 +278,13 @@ const buildHeaders = (api: IApi) => {
     (authTypeUpper === "API_KEY" || authTypeUpper === "API KEY") &&
     api.apiKey
   ) {
-    headers[api.authHeader || "x-api-key"] = api.apiKey;
+    const authHeaderName = (api.authHeader || "x-api-key").trim();
+    const isQueryKeyParam = ["key", "appid", "api_key", "apikey"].includes(
+      authHeaderName.toLowerCase(),
+    );
+    if (!isQueryKeyParam) {
+      headers[authHeaderName] = api.apiKey;
+    }
   }
 
   return headers;

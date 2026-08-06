@@ -595,37 +595,62 @@ const isPrimitive = (value: unknown): value is PrimitiveValue =>
 const stringifyPrimitive = (value: PrimitiveValue) =>
   value === null ? "N/A" : String(value);
 
+const formatNestedValue = (value: unknown): string => {
+  if (isPrimitive(value)) {
+    return stringifyPrimitive(value);
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "N/A";
+    if (value.every(isPrimitive)) {
+      return value.map(stringifyPrimitive).join(", ");
+    }
+    return value
+      .slice(0, 5)
+      .map((item) => formatNestedValue(item))
+      .join(" | ");
+  }
+  if (isRecord(value)) {
+    const entries = Object.entries(value)
+      .filter(([k, v]) => isVisibleField(k) && (isPrimitive(v) || typeof v === "object"))
+      .slice(0, 6);
+    if (entries.length === 0) return "N/A";
+    return entries
+      .map(([k, v]) => `${toLabel(k)}: ${isPrimitive(v) ? stringifyPrimitive(v) : formatNestedValue(v)}`)
+      .join(", ");
+  }
+  return "";
+};
+
 const stringifyCell = (value: unknown) => {
   if (isPrimitive(value)) {
     return stringifyPrimitive(value);
   }
-
-  if (Array.isArray(value)) {
-    return `${value.length} items`;
-  }
-
-  if (isRecord(value)) {
-    return "Object";
-  }
-
-  return "";
+  return formatNestedValue(value);
 };
 
 const buildKeyValueItems = (
   record: Record<string, unknown>,
-): WidgetKeyValueItem[] =>
-  Object.entries(record)
-    .filter(
-      ([k, v]) =>
-        isVisibleField(k) &&
-        (typeof v === "string" ||
-          typeof v === "number" ||
-          typeof v === "boolean"),
-    )
-    .map(([k, v]) => ({
-      key: toLabel(k),
-      value: String(v),
-    }));
+  prefix = "",
+): WidgetKeyValueItem[] => {
+  const items: WidgetKeyValueItem[] = [];
+  for (const [k, v] of Object.entries(record)) {
+    if (!isVisibleField(k)) continue;
+    const label = prefix ? `${prefix} ${toLabel(k)}` : toLabel(k);
+    if (isPrimitive(v)) {
+      items.push({ key: label, value: stringifyPrimitive(v) });
+    } else if (isRecord(v)) {
+      const nested = buildKeyValueItems(v, label);
+      if (nested.length > 0) {
+        items.push(...nested);
+      } else {
+        items.push({ key: label, value: formatNestedValue(v) });
+      }
+    } else if (Array.isArray(v)) {
+      items.push({ key: label, value: formatNestedValue(v) });
+    }
+  }
+  return items;
+};
 
 const buildSummaryMetrics = (
   records: Record<string, unknown>[],
