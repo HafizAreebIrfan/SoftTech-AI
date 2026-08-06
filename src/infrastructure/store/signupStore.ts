@@ -492,12 +492,30 @@ export const useSignupStore = create<SignupStore>()(
 
           let testUrl = api.apiEndpoint;
 
-          // Replace path parameters (e.g. :id or :packageId)
+          // Replace explicit path parameters from paramsObj if provided
           Object.entries(paramsObj).forEach(([k, v]) => {
-            if (testUrl.includes(`:${k}`)) {
-              testUrl = testUrl.replace(`:${k}`, String(v));
+            if (v !== undefined && v !== null && String(v).trim()) {
+              const valStr = String(v).trim();
+              testUrl = testUrl
+                .replace(new RegExp(`:${k}\\b`, "gi"), valStr)
+                .replace(new RegExp(`\\{${k}\\}`, "gi"), valStr);
             }
           });
+
+          // Fallback sample ID for live testing if path parameter placeholders (:id, {id}, :cartId, {cartId}, etc.) remain unreplaced
+          const sampleTestId =
+            paramsObj.id ||
+            paramsObj.cartId ||
+            paramsObj.productId ||
+            paramsObj.itemId ||
+            "1";
+          testUrl = testUrl
+            .replace(/:id\b/gi, String(sampleTestId))
+            .replace(/\{id\}/gi, String(sampleTestId))
+            .replace(/:cartid\b/gi, String(sampleTestId))
+            .replace(/\{cartid\}/gi, String(sampleTestId))
+            .replace(/:productid\b/gi, String(sampleTestId))
+            .replace(/\{productid\}/gi, String(sampleTestId));
 
           if (
             (api.apiMethod === "GET" || api.apiMethod === "DELETE") &&
