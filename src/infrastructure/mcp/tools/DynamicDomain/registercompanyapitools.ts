@@ -248,7 +248,12 @@ const buildFallbackOptionWidget = (
 const callRegisteredApi = async (api: IApi, input: any) => {
   const url = buildApiUrl(api, input);
 
-  if (url.pathname.includes(":id") || url.pathname.includes("{id}")) {
+  const decodedPath = decodeURIComponent(url.pathname);
+  if (
+    decodedPath.includes(":id") ||
+    decodedPath.includes("{id}") ||
+    decodedPath.includes("%7bid%7d")
+  ) {
     throw new Error(`Missing required ID parameter for ${api.name}`);
   }
 
@@ -288,7 +293,7 @@ const callRegisteredApi = async (api: IApi, input: any) => {
 
 const buildApiUrl = (api: IApi, input: any) => {
   const baseUrl = api.baseUrl.endsWith("/") ? api.baseUrl : `${api.baseUrl}/`;
-  let endpoint = api.endpoint.replace(/^\//, "");
+  let endpoint = decodeURIComponent((api.endpoint || "").replace(/^\//, ""));
 
   const rawInput = typeof input === "object" && input !== null ? input : {};
   const queryOrLocation =
