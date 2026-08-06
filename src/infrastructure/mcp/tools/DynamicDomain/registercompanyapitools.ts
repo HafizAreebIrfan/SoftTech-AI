@@ -109,6 +109,45 @@ export const registerCompanyApiTools = (
             api.name || `API ${index + 1}`,
           );
         } catch (error: any) {
+          const isListingApi =
+            (api.method || "GET").toUpperCase() === "GET" &&
+            !api.endpoint.includes(":") &&
+            !api.endpoint.includes("{");
+
+          if (isListingApi) {
+            const translation = translateApiError(
+              error?.status,
+              error?.message,
+              api.name || "service",
+            );
+            const errorWidget = {
+              title: api.name || "Service Notice",
+              subtitle: translation.userMessage,
+              layout: company.uiPreference?.layout ?? "dashboard",
+              industry: company.industry ?? "general",
+              blocks: [
+                {
+                  type: "keyValue",
+                  title: "Service Status",
+                  keyValueItems: [
+                    { key: "Status", value: "Unable to retrieve records" },
+                    { key: "Action", value: translation.actionSuggestion },
+                  ],
+                },
+              ],
+              metadata: {
+                companyName: company.companyName,
+                apiName: api.name,
+                generatedAt: new Date().toISOString(),
+              },
+            };
+            return buildMcpSuccessResult(
+              errorWidget,
+              company.companyName,
+              api.name || `API ${index + 1}`,
+            );
+          }
+
           // Graceful Error Recovery: Never return raw 404/500 text to user
           const getListingApi = (company.apis ?? []).find(
             (a, i) =>
@@ -341,36 +380,6 @@ const buildApiUrl = (api: IApi, input: any) => {
     ...rawInput,
   };
 
-  if (queryOrLocation) {
-    allParams.q = queryOrLocation;
-    allParams.city = queryOrLocation;
-    allParams.location = queryOrLocation;
-    allParams.query = queryOrLocation;
-  }
-
-  // Aliases for common variations (days vs day)
-  if (allParams.days !== undefined && allParams.day === undefined) {
-    allParams.day = allParams.days;
-  } else if (allParams.day !== undefined && allParams.days === undefined) {
-    allParams.days = allParams.day;
-  }
-
-  const authTypeUpper = (api.authType || "").toUpperCase();
-  const authHeaderName = (api.authHeader || "").trim();
-
-  // If Auth Type is API Key, check if authHeader is intended as a URL parameter (e.g. key, appid)
-  if (
-    (authTypeUpper === "API_KEY" || authTypeUpper === "API KEY") &&
-    api.apiKey
-  ) {
-    const isQueryParamKey = ["key", "appid"].includes(
-      authHeaderName.toLowerCase(),
-    );
-    if (isQueryParamKey) {
-      allParams[authHeaderName] = api.apiKey;
-    }
-  }
-
   // 2. Replace template placeholders in path/query (e.g., {city}, {location}, {q}, :city)
   Object.entries(allParams).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
@@ -380,43 +389,34 @@ const buildApiUrl = (api: IApi, input: any) => {
       .replace(new RegExp(`\\{${escapeRegExp(key)}\\}`, "gi"), valStr);
   });
 
-  // Global placeholder fallback if input didn't match exact key name
-  if (queryOrLocation) {
-    const valStr = encodeURIComponent(String(queryOrLocation));
-    endpoint = endpoint
-      .replace(/\{city\}/gi, valStr)
-      .replace(/\{location\}/gi, valStr)
-      .replace(/\{q\}/gi, valStr)
-      .replace(/\{query\}/gi, valStr)
-      .replace(/:city\b/gi, valStr)
-      .replace(/:location\b/gi, valStr)
-      .replace(/:q\b/gi, valStr);
-  }
-
   const url = new URL(endpoint, baseUrl);
 
-  // 3. Attach query parameters (both configured static params and dynamic params)
+  // 3. Attach query parameters ONLY if configured or explicitly supplied
   if ((api.method || "GET").toUpperCase() === "GET") {
     // Attach configured static params from api.params
     Object.entries(configuredStaticParams).forEach(([k, v]) => {
-      if (v) url.searchParams.set(k, v);
-    });
-
-    // Attach dynamic input params
-    Object.entries(allParams).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && key !== "params") {
-        url.searchParams.set(key, String(value));
+      if (v !== undefined && v !== null && String(v).trim() !== "") {
+        url.searchParams.set(k, String(v).trim());
       }
     });
 
-    if (
-      queryOrLocation &&
-      !url.searchParams.has("q") &&
-      !url.searchParams.has("city") &&
-      !url.searchParams.has("location")
-    ) {
-      url.searchParams.set("q", String(queryOrLocation));
-    }
+    // Attach dynamic input params if they are part of configured params or rawInput.params
+    const validConfiguredKeys = new Set([
+      ...Object.keys(configuredStaticParams),
+      ...Object.keys(rawInput.params ?? {}),
+    ]);
+
+    Object.entries(rawInput).forEach(([key, value]) => {
+      if (
+        validConfiguredKeys.has(key) &&
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== "" &&
+        key !== "params"
+      ) {
+        url.searchParams.set(key, String(value).trim());
+      }
+    });
   }
 
   return url;

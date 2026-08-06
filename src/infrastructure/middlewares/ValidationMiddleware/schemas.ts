@@ -68,11 +68,7 @@ export function buildCustomMcpInputSchema(configuredParams: any[] = []): z.ZodOb
 
   const uniqueKeys = Array.from(new Set(cleanKeys));
 
-  if (uniqueKeys.length === 0) {
-    schemaShape.query = z.string().optional().describe("General search query or keyword");
-    schemaShape.location = z.string().optional().describe("Location or city name (e.g., Karachi, London)");
-    schemaShape.id = z.string().optional().describe("Unique identifier of the resource/package to target");
-  } else {
+  if (uniqueKeys.length > 0) {
     uniqueKeys.forEach((paramKey) => {
       const lower = paramKey.toLowerCase();
       if (lower === "query" || lower === "q" || lower === "search") {
