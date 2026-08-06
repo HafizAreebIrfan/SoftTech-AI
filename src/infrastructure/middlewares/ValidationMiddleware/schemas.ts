@@ -21,32 +21,47 @@ export const resetPasswordSchema = z.object({
   }),
 });
 
-export function buildCustomMcpInputSchema(configuredParams: string[] = []): z.ZodObject<any> {
+export function buildCustomMcpInputSchema(configuredParams: any[] = []): z.ZodObject<any> {
   const schemaShape: Record<string, any> = {};
 
   const cleanKeys: string[] = [];
 
-  configuredParams.forEach((rawKey) => {
-    if (typeof rawKey !== "string" || !rawKey.trim()) return;
-    const str = rawKey.trim();
-
-    // If rawKey is accidentally a stringified JSON response or object
-    if (str.startsWith("{") || str.startsWith("[")) {
-      try {
-        const parsed = JSON.parse(str);
-        if (typeof parsed === "object" && parsed !== null) {
-          Object.keys(parsed).forEach((k) => {
-            if (/^[a-zA-Z0-9_-]+$/.test(k)) cleanKeys.push(k);
-          });
-        }
-      } catch {
-        // ignore invalid json string
-      }
-    } else {
-      // Clean parameter name - only alphanumeric, dash, underscore
-      const sanitized = str.replace(/[^a-zA-Z0-9_-]/g, "");
+  (configuredParams ?? []).forEach((paramItem) => {
+    if (!paramItem) return;
+    if (typeof paramItem === "object" && paramItem !== null && paramItem.key) {
+      const sanitized = String(paramItem.key).trim().replace(/[^a-zA-Z0-9_-]/g, "");
       if (sanitized && sanitized.length <= 40) {
         cleanKeys.push(sanitized);
+      }
+    } else if (typeof paramItem === "string" && paramItem.trim()) {
+      const str = paramItem.trim();
+
+      // If rawKey is accidentally a stringified JSON response or object
+      if (str.startsWith("{") || str.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(str);
+          if (Array.isArray(parsed)) {
+            parsed.forEach((p: any) => {
+              if (p?.key) {
+                const s = String(p.key).trim().replace(/[^a-zA-Z0-9_-]/g, "");
+                if (s) cleanKeys.push(s);
+              }
+            });
+          } else if (typeof parsed === "object" && parsed !== null) {
+            Object.keys(parsed).forEach((k) => {
+              const s = k.trim().replace(/[^a-zA-Z0-9_-]/g, "");
+              if (s) cleanKeys.push(s);
+            });
+          }
+        } catch {
+          // ignore invalid json string
+        }
+      } else {
+        // Clean parameter name - only alphanumeric, dash, underscore
+        const sanitized = str.replace(/[^a-zA-Z0-9_-]/g, "");
+        if (sanitized && sanitized.length <= 40) {
+          cleanKeys.push(sanitized);
+        }
       }
     }
   });
@@ -56,6 +71,7 @@ export function buildCustomMcpInputSchema(configuredParams: string[] = []): z.Zo
   if (uniqueKeys.length === 0) {
     schemaShape.query = z.string().optional().describe("General search query or keyword");
     schemaShape.location = z.string().optional().describe("Location or city name (e.g., Karachi, London)");
+    schemaShape.id = z.string().optional().describe("Unique identifier of the resource/package to target");
   } else {
     uniqueKeys.forEach((paramKey) => {
       const lower = paramKey.toLowerCase();
@@ -67,13 +83,14 @@ export function buildCustomMcpInputSchema(configuredParams: string[] = []): z.Zo
       } else if (
         lower === "itemid" ||
         lower === "id" ||
-        lower === "uuid"
+        lower === "uuid" ||
+        lower === "packageid"
       ) {
-        schemaShape.itemId = z
+        schemaShape[paramKey] = z
           .string()
           .optional()
           .describe(
-            "Unique ID of a specific item, record, transaction, or entity to retrieve",
+            "Unique ID of a specific item, package, record, or entity to target",
           );
       } else if (
         lower === "limit" ||
@@ -110,12 +127,13 @@ export function buildCustomMcpInputSchema(configuredParams: string[] = []): z.Zo
       } else if (
         lower === "status" ||
         lower === "filter" ||
-        lower === "state"
+        lower === "state" ||
+        lower === "packagestatus"
       ) {
-        schemaShape.status = z
+        schemaShape[paramKey] = z
           .string()
           .optional()
-          .describe("Filter records by state or status category");
+          .describe("Filter records by state, status category, or package availability");
       } else if (lower === "location") {
         schemaShape.location = z
           .string()
