@@ -1,31 +1,6 @@
-import { GoogleGenAI } from "@google/genai";
 import { ApiSchema, AnalyzerOptions } from "./interfaces";
 
 const MAX_PROMPT_CHARS = 8000;
-
-interface GeminiLogEntry {
-  timestamp: string;
-  level: "info" | "warn" | "error";
-  message: string;
-}
-
-const geminiLogsBuffer: GeminiLogEntry[] = [];
-
-export const addGeminiLog = (
-  level: "info" | "warn" | "error",
-  message: string,
-) => {
-  const entry: GeminiLogEntry = {
-    timestamp: new Date().toISOString(),
-    level,
-    message,
-  };
-  geminiLogsBuffer.push(entry);
-  if (geminiLogsBuffer.length > 200) geminiLogsBuffer.shift();
-  console.log(`[GeminiAnalyzer][${level.toUpperCase()}] ${message}`);
-};
-
-export const getGeminiLogs = (): GeminiLogEntry[] => [...geminiLogsBuffer];
 
 const formatSampleJson = (rawResponse: unknown): string => {
   const sampleJson = JSON.stringify(rawResponse, null, 2) || "";
@@ -34,21 +9,19 @@ const formatSampleJson = (rawResponse: unknown): string => {
     : sampleJson;
 };
 
-export const analyzeWithGemini = async (
+export const analyzeWithOpenRouter = async (
   rawResponse: unknown,
   options?: AnalyzerOptions,
+  logFn?: (level: "info" | "warn" | "error", msg: string) => void,
 ): Promise<ApiSchema> => {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey || !apiKey.trim()) {
-    const errMsg =
-      "GEMINI_API_KEY is not configured on the server environment.";
-    addGeminiLog("error", errMsg);
-    throw new Error(errMsg);
+    throw new Error(
+      "OPENROUTER_API_KEY is not configured on the server environment.",
+    );
   }
 
-  const ai = new GoogleGenAI({ apiKey });
   const sampleJson = formatSampleJson(rawResponse);
-
   const prompt = `You are a Senior Staff API Schema & UI Architect.
 Analyze the following raw API response sample from an API named "${options?.apiName || "Unknown API"}" (Endpoint: "${options?.endpoint || "N/A"}", Industry: "${options?.industry || "General"}").
 
@@ -95,51 +68,59 @@ Rules:
 2. Identify currency fields (amount, price, cost, fee, revenue) as type "currency".
 3. Identify status fields (status, state) as type "status".
 4. Mark internal metadata (_id, __v, password, token, secret) as "hidden": true.
-5. All actual business keys (including orderamount, total, status, username, userdate, etc.) MUST be included in the "fields" array.
+5. All actual business keys MUST be included in the "fields" array.
 
 Raw API Response Sample:
 ${sampleJson}`;
 
-  addGeminiLog(
+  logFn?.(
     "info",
-    `Requesting AI schema analysis for "${options?.apiName || "API"}" (${options?.endpoint || "URL"}). Prompt length: ${sampleJson.length} chars.`,
+    `🌐 Requesting AI schema analysis from OpenRouter Free Tier (meta-llama/llama-3.3-70b-instruct:free)...`,
   );
 
-  let responseText = "";
   const startTime = Date.now();
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: prompt,
-      config: {
-        temperature: 0.1,
-        responseMimeType: "application/json",
+  const response = await fetch(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey.trim()}`,
+        "HTTP-Referer": "https://softtechai.com",
+        "X-Title": "SoftTech AI Schema Analyzer",
+        "Content-Type": "application/json",
       },
-    });
+      body: JSON.stringify({
+        model: "google/gemma-4-31b-it:free",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.1,
+      }),
+    },
+  );
 
-    responseText = response.text || "";
-  } catch (primaryErr: any) {
-    addGeminiLog(
-      "warn",
-      `gemini-3.5-flash-lite failed (${primaryErr.message || primaryErr}).`,
+  const duration = Date.now() - startTime;
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(
+      `OpenRouter API returned HTTP ${response.status}: ${errText}`,
     );
   }
 
-  const duration = Date.now() - startTime;
-
-  if (!responseText || !responseText.trim()) {
-    const errMsg = `Gemini AI returned empty response text for "${options?.apiName || "API"}" after ${duration}ms.`;
-    addGeminiLog("error", errMsg);
-    throw new Error(errMsg);
+  const data = await response.json();
+  let content = data.choices?.[0]?.message?.content;
+  if (!content || !content.trim()) {
+    throw new Error(`OpenRouter returned empty response content.`);
   }
 
-  const parsedSchema = JSON.parse(responseText) as ApiSchema;
+  content = content
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+  const parsedSchema = JSON.parse(content) as ApiSchema;
   parsedSchema.analyzedAt = new Date().toISOString();
 
-  addGeminiLog(
+  logFn?.(
     "info",
-    `Gemini AI successfully generated schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields in ${duration}ms.`,
+    `✅ OpenRouter successfully generated schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields in ${duration}ms.`,
   );
 
   return parsedSchema;
