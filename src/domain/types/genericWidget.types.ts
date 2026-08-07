@@ -1,17 +1,14 @@
-import { WidgetBlock } from "./widgetBlock.types";
+import { JsonValue } from "./mcpjsonprimitive.types";
+import { CollectionResult } from "./mcpcollection.types";
+import { CapabilitiesResult } from "./mcpcapabilities.types";
+import { PaginationResult } from "./mcppagination.types";
 
-export type WidgetMetadata = {
-  companyName: string;
-  apiName: string;
-  generatedAt: string;
-  version: string;
-};
-
-export type GenericWidgetContent = {
+export type GenericWidgetResult = {
   title: string;
   subtitle?: string;
-  layout: string;
-  industry?: string;
-  blocks: WidgetBlock[];
-  metadata?: WidgetMetadata;
+  data: JsonValue;
+  collection?: CollectionResult;
+  capabilities?: CapabilitiesResult;
+  pagination?: PaginationResult;
+  metadata?: Record<string, JsonValue>;
 };

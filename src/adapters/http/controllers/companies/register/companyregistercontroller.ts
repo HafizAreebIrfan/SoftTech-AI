@@ -8,7 +8,7 @@ import {
   authCookieOptions,
   createToken,
 } from "../../../../../infrastructure/middlewares/AuthMiddleware/authmiddleware";
-import { getGeminiLogs } from "../../../../../infrastructure/mcp/schema_analyzer/geminiAnalyzer";
+import { getAILogs } from "../../../../../infrastructure/mcp/schema_analyzer/ailogsgenerator";
 
 const companyRepository = createCompanyRepository();
 
@@ -86,7 +86,7 @@ export async function getGeminiLogsController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const logs = getGeminiLogs();
+    const logs = getAILogs();
     res.status(200).json({
       success: true,
       count: logs.length,
@@ -107,15 +107,19 @@ export async function analyzeSingleApiController(
     const apiIndex = parseInt(req.params.apiIndex as string, 10);
     const { sampleResponse } = req.body || {};
 
-    const result = await analyzeSingleApi(companyRepository, companyId, apiIndex, sampleResponse);
+    const result = await analyzeSingleApi(
+      companyRepository,
+      companyId,
+      apiIndex,
+      sampleResponse,
+    );
 
     res.status(200).json({
       success: true,
-      message: `API #${apiIndex + 1} analyzed successfully with Gemini AI`,
+      message: `API #${apiIndex + 1} analyzed successfully with AI`,
       data: result,
     });
   } catch (error) {
     next(error);
   }
 }
-

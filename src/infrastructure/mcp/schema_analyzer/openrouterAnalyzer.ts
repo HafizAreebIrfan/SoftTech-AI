@@ -1,18 +1,9 @@
 import { ApiSchema, AnalyzerOptions } from "./interfaces";
 
-const MAX_PROMPT_CHARS = 8000;
-
-const formatSampleJson = (rawResponse: unknown): string => {
-  const sampleJson = JSON.stringify(rawResponse, null, 2) || "";
-  return sampleJson.length > MAX_PROMPT_CHARS
-    ? sampleJson.slice(0, MAX_PROMPT_CHARS) + "\n...[truncated]"
-    : sampleJson;
-};
-
 export const analyzeWithOpenRouter = async (
-  rawResponse: unknown,
   options?: AnalyzerOptions,
   logFn?: (level: "info" | "warn" | "error", msg: string) => void,
+  prompt?: string,
 ): Promise<ApiSchema> => {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey || !apiKey.trim()) {
@@ -21,71 +12,15 @@ export const analyzeWithOpenRouter = async (
     );
   }
 
-  const sampleJson = formatSampleJson(rawResponse);
-  const prompt = `You are a Senior Staff API Schema & UI Architect.
-Analyze the following raw API response sample from an API named "${options?.apiName || "Unknown API"}" (Endpoint: "${options?.endpoint || "N/A"}", Industry: "${options?.industry || "General"}").
+  logFn?.("info", `Requesting AI schema analysis for ${options?.apiName}`);
 
-Output a valid JSON object matching this EXACT schema structure:
-{
-  "entity": "entity_name (e.g. orders, products, weather, customers, bookings, packages)",
-  "defaultLayout": "table | cards | dashboard | timeline | gallery | map | chart | form",
-  "fields": [
-    {
-      "key": "raw_field_key",
-      "label": "Human Readable Label",
-      "type": "text | number | currency | date | datetime | image | email | phone | status | boolean | latitude | longitude | url | object | array",
-      "hidden": false,
-      "primary": false,
-      "sortable": true,
-      "searchable": true,
-      "filterable": true
-    }
-  ],
-  "entityMeta": {
-    "entity": "entity_name",
-    "primaryKey": "id_key",
-    "titleKey": "title_or_name_key",
-    "subtitleKey": "subtitle_or_email_key",
-    "imageKey": "image_url_key",
-    "statusKey": "status_key",
-    "dateKey": "date_key",
-    "amountKey": "price_or_amount_key"
-  },
-  "uiHints": {
-    "search": true,
-    "sorting": true,
-    "filters": true,
-    "pagination": true,
-    "bulkActions": false,
-    "editable": false,
-    "chart": false,
-    "map": false
-  }
-}
-
-Rules:
-1. Return ONLY the raw JSON object. Do not include markdown code blocks (\`\`\`json), explanations, or notes.
-2. Identify currency fields (amount, price, cost, fee, revenue) as type "currency".
-3. Identify status fields (status, state) as type "status".
-4. Mark internal metadata (_id, __v, password, token, secret) as "hidden": true.
-5. All actual business keys MUST be included in the "fields" array.
-
-Raw API Response Sample:
-${sampleJson}`;
-
-  logFn?.(
-    "info",
-    `🌐 Requesting AI schema analysis from OpenRouter Free Tier (meta-llama/llama-3.3-70b-instruct:free)...`,
-  );
-
-  const startTime = Date.now();
   const response = await fetch(
     "https://openrouter.ai/api/v1/chat/completions",
     {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey.trim()}`,
-        "HTTP-Referer": "https://softtechai.com",
+        "HTTP-Referer": "https://softtechai.onrender.com",
         "X-Title": "SoftTech AI Schema Analyzer",
         "Content-Type": "application/json",
       },
@@ -97,18 +32,19 @@ ${sampleJson}`;
     },
   );
 
-  const duration = Date.now() - startTime;
   if (!response.ok) {
     const errText = await response.text();
     throw new Error(
-      `OpenRouter API returned HTTP ${response.status}: ${errText}`,
+      `AI returned HTTP ${response.status}: ${errText} for "${options?.apiName}"`,
     );
   }
 
   const data = await response.json();
   let content = data.choices?.[0]?.message?.content;
   if (!content || !content.trim()) {
-    throw new Error(`OpenRouter returned empty response content.`);
+    throw new Error(
+      `AI returned empty response content for "${options?.apiName}"`,
+    );
   }
 
   content = content
@@ -120,7 +56,7 @@ ${sampleJson}`;
 
   logFn?.(
     "info",
-    `✅ OpenRouter successfully generated schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length || 0} fields in ${duration}ms.`,
+    `AI successfully generated schema for "${parsedSchema.entity}" with ${parsedSchema.fields?.length}`,
   );
 
   return parsedSchema;

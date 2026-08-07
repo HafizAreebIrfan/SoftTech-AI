@@ -1,53 +1,57 @@
 import { ApiSchema, AnalyzerOptions } from "./interfaces";
-import { analyzeWithGemini, addAILogs } from "./geminiAnalyzer";
+import { analyzeWithGemini } from "./geminiAnalyzer";
 import { analyzeWithGroq } from "./groqAnalyzer";
 import { analyzeWithOpenRouter } from "./openrouterAnalyzer";
-import { generateHeuristicSchema } from "./heuristicAnalyzer";
+import { AIPrompt } from "./prompt";
+import { addAILogs } from "./ailogsgenerator";
 
 export const analyzeApiResponse = async (
   rawResponse: unknown,
   options?: AnalyzerOptions,
 ): Promise<ApiSchema> => {
-  // 1. Try Gemini AI (if key is set)
+  const MAX_PROMPT_CHARS = 8000;
+
+  const formatSampleJson = (rawResponse: unknown): string => {
+    const sampleJson = JSON.stringify(rawResponse, null, 2) || "";
+    return sampleJson.length > MAX_PROMPT_CHARS
+      ? sampleJson.slice(0, MAX_PROMPT_CHARS) + "\n...[truncated]"
+      : sampleJson;
+  };
+  const sampleJson = formatSampleJson(rawResponse);
+
+  const prompt = AIPrompt({
+    options: options,
+    sampleJson,
+  });
   if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()) {
     try {
-      return await analyzeWithGemini(rawResponse, options);
+      return await analyzeWithGemini(options, prompt);
     } catch (geminiErr: any) {
       addAILogs(
         "warn",
-        `Gemini AI provider failed/exhausted (${geminiErr.message || geminiErr}). Attempting fallbacks...`,
+        `AI provider failed/exhausted (${geminiErr.message || geminiErr}). Retrying...`,
       );
     }
   }
 
-  // 2. Try Groq Cloud AI (if key is set)
   if (process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim()) {
     try {
-      return await analyzeWithGroq(rawResponse, options, addAILogs);
+      return await analyzeWithGroq(options, addAILogs, prompt);
     } catch (groqErr: any) {
       addAILogs(
         "warn",
-        `Groq Cloud provider failed (${groqErr.message || groqErr}). Attempting next fallback...`,
+        `AI provider failed (${groqErr.message || groqErr}). Retrying...`,
       );
     }
   }
-
-  // 3. Try OpenRouter Free Tier AI (if key is set)
   if (process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim()) {
     try {
-      return await analyzeWithOpenRouter(rawResponse, options, addAILogs);
+      return await analyzeWithOpenRouter(options, addAILogs, prompt);
     } catch (openRouterErr: any) {
       addAILogs(
         "warn",
-        `OpenRouter Free Tier provider failed (${openRouterErr.message || openRouterErr}). Attempting next fallback...`,
+        `AI provider failed (${openRouterErr.message || openRouterErr}). Retrying...`,
       );
     }
   }
-
-  // 5. 100% Fail-Safe Rule-Based Heuristic Schema (Guarantees zero app crashes!)
-  addAILogs(
-    "info",
-    `⚙️ Generated Rule-Based Heuristic Schema for "${options?.apiName || "API"}" (100% Fail-Safe Active).`,
-  );
-  return generateHeuristicSchema(rawResponse, options);
 };

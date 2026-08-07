@@ -1,3 +1,5 @@
+import { ApiParam } from "./apiparam.types";
+
 export interface IOAuth {
   tokenUrl?: string;
   clientId?: string;
@@ -13,8 +15,8 @@ export interface IApi {
   method?: string;
   authType?: string;
   headers?: any[];
-  params?: any[];
-  body?: any[];
+  params?: ApiParam[];
+  body?: ApiParam[];
   apiKey?: string;
   authHeader?: string;
   bearerToken?: string;

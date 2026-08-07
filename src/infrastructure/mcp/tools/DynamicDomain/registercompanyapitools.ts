@@ -2,9 +2,13 @@ import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { IApi, ICompany } from "../../../../domain/types/company.types";
 import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwidgetoutputschema";
-import { buildCustomMcpInputSchema } from "../../../middlewares/ValidationMiddleware/schemas";
 import { normalizeApiResponseToWidget } from "./genericwidgetnormalizer";
 import { translateApiError } from "../../errors/errorTranslator";
+import { buildCustomMcpInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
+
+const HTTP_METHODS_WITH_BODY = ["POST", "PUT", "PATCH"];
+
+const DEFAULT_RESOURCE_URI = "ui://generic/widgets.html";
 
 export const registerCompanyApiTools = (
   server: McpServer,
@@ -18,20 +22,18 @@ export const registerCompanyApiTools = (
       index,
     );
 
-    const customInputSchema = buildCustomMcpInputSchema(api.params ?? []);
+    const configuredInputFields = [
+      ...(Array.isArray(api.params) ? api.params : []),
+      ...(Array.isArray(api.body) ? api.body : []),
+    ];
 
-    const isUpdateOrDelete = ["PUT", "PATCH", "DELETE", "POST"].includes(
-      (api.method || "GET").toUpperCase(),
-    );
-    const hasPathParams =
-      api.endpoint.includes(":") || api.endpoint.includes("{");
+    const customInputSchema = buildCustomMcpInputSchema(configuredInputFields);
 
-    let toolDescription =
+    const toolDescription =
       api.mcpDescription ||
-      `Calls ${company.companyName} -> ${api.name} and returns a generic widget response.`;
-    if (isUpdateOrDelete || hasPathParams) {
-      toolDescription += ` Note: To update or edit an item, prefer calling the GET listing tool first to obtain available item IDs.`;
-    }
+      `Calls ${company.companyName} -> ${
+        api.name || `API ${index + 1}`
+      } and returns the API result as an interactive widget.`;
 
     registerAppTool(
       server,
@@ -43,64 +45,25 @@ export const registerCompanyApiTools = (
         outputSchema: genericWidgetOutputSchema,
         _meta: {
           ui: {
-            resourceUri: "ui://generic/widgets.html",
+            resourceUri: DEFAULT_RESOURCE_URI,
           },
-          "openai/outputTemplate": "ui://generic/widgets.html",
+          "openai/outputTemplate": DEFAULT_RESOURCE_URI,
           "openai/widgetAccessible": true,
           "openai/toolInvocation/invoking": `Preparing ${api.name || "widget"}...`,
           "openai/toolInvocation/invoked": "Loaded",
         },
       },
       async (input: any) => {
-        const isUpdateOrDeleteMethod = ["PUT", "PATCH", "DELETE"].includes(
-          (api.method || "GET").toUpperCase(),
-        );
-        const rawInput = typeof input === "object" && input !== null ? input : {};
-        const hasProvidedId = Boolean(
-          rawInput.id ||
-            rawInput.itemId ||
-            rawInput.packageId ||
-            rawInput.params?.id,
-        );
-
-        // If an update/delete tool is called without an explicit ID, pre-fetch GET listing
-        if (isUpdateOrDeleteMethod && !hasProvidedId) {
-          const getListingApi = (company.apis ?? []).find(
-            (a, i) => (a.method || "GET").toUpperCase() === "GET" && i !== index,
-          );
-
-          if (getListingApi) {
-            try {
-              const listResponse = await callRegisteredApi(getListingApi, input);
-              const listWidget = normalizeApiResponseToWidget(
-                company.companyName,
-                getListingApi.name || "Available Items",
-                listResponse,
-                company.uiPreference?.layout ?? "dashboard",
-                company.industry,
-                getListingApi.apiSchema as any,
-              );
-              listWidget.subtitle = `Select an item below to ${api.name || "update"}`;
-              return buildMcpSuccessResult(
-                listWidget,
-                company.companyName,
-                api.name || `API ${index + 1}`,
-              );
-            } catch {
-              // Fallback to option widget
-            }
-          }
-        }
-
         try {
           const rawResponse = await callRegisteredApi(api, input);
           const widgetContent = normalizeApiResponseToWidget(
             company.companyName,
             api.name || `API ${index + 1}`,
             rawResponse,
-            company.uiPreference?.layout ?? "dashboard",
+            company.uiPreference?.layout,
             company.industry,
             api.apiSchema as any,
+            api.params ?? [],
           );
 
           return buildMcpSuccessResult(
@@ -111,86 +74,40 @@ export const registerCompanyApiTools = (
         } catch (error: any) {
           console.error(
             `[MCP Tool Error] ${api.name} (${api.baseUrl}${api.endpoint}):`,
-            error?.message || error,
+            {
+              status: error?.status,
+              message: error?.message,
+              responseBody: error?.responseBody,
+            },
           );
-          const isListingApi =
-            (api.method || "GET").toUpperCase() === "GET" &&
-            !api.endpoint.includes(":") &&
-            !api.endpoint.includes("{");
-
-          if (isListingApi) {
-            const translation = translateApiError(
-              error?.status,
-              error?.message,
-              api.name || "service",
-            );
-            const errorWidget = {
-              title: api.name || "Service Notice",
-              subtitle: translation.userMessage,
-              layout: company.uiPreference?.layout ?? "dashboard",
-              industry: company.industry ?? "general",
-              blocks: [
-                {
-                  type: "keyValue",
-                  title: "Service Status",
-                  keyValueItems: [
-                    { key: "Status", value: "Unable to retrieve records" },
-                    { key: "Action", value: translation.actionSuggestion },
-                  ],
-                },
-              ],
-              metadata: {
-                companyName: company.companyName,
-                apiName: api.name,
-                generatedAt: new Date().toISOString(),
+          const translation = translateApiError(
+            error?.status,
+            error?.message,
+            api.name || "service",
+          );
+          const errorWidget = {
+            title: api.name || "Service Notice",
+            subtitle: translation.userMessage,
+            layout: company.uiPreference?.layout ?? "dashboard",
+            industry: company.industry ?? "general",
+            blocks: [
+              {
+                type: "keyValue",
+                title: "Service Status",
+                keyValueItems: [
+                  { key: "Status", value: "Unable to retrieve records" },
+                  { key: "Action", value: translation.actionSuggestion },
+                ],
               },
-            };
-            return buildMcpSuccessResult(
-              errorWidget,
-              company.companyName,
-              api.name || `API ${index + 1}`,
-            );
-          }
-
-          // Graceful Error Recovery: Never return raw 404/500 text to user
-          const getListingApi = (company.apis ?? []).find(
-            (a, i) =>
-              (a.method || "GET").toUpperCase() === "GET" && i !== index,
-          );
-
-          if (getListingApi) {
-            try {
-              const listResponse = await callRegisteredApi(
-                getListingApi,
-                input,
-              );
-              const listWidget = normalizeApiResponseToWidget(
-                company.companyName,
-                getListingApi.name || "Available Items",
-                listResponse,
-                company.uiPreference?.layout ?? "dashboard",
-                company.industry,
-                getListingApi.apiSchema as any,
-              );
-              listWidget.subtitle = `Select an item below to ${api.name || "update"}`;
-              return buildMcpSuccessResult(
-                listWidget,
-                company.companyName,
-                api.name || `API ${index + 1}`,
-              );
-            } catch {
-              // Fallback to option widget
-            }
-          }
-
-          const fallbackWidget = buildFallbackOptionWidget(
-            company,
-            api,
-            input,
-            error,
-          );
+            ],
+            metadata: {
+              companyName: company.companyName,
+              apiName: api.name,
+              generatedAt: new Date().toISOString(),
+            },
+          };
           return buildMcpSuccessResult(
-            fallbackWidget,
+            errorWidget,
             company.companyName,
             api.name || `API ${index + 1}`,
           );
@@ -215,9 +132,9 @@ const buildMcpSuccessResult = (
     ],
     _meta: {
       ui: {
-        resourceUri: "ui://generic/widgets.html",
+        resourceUri: DEFAULT_RESOURCE_URI,
       },
-      "openai/outputTemplate": "ui://generic/widgets.html",
+      "openai/outputTemplate": DEFAULT_RESOURCE_URI,
       "openai/widgetAccessible": true,
       "openai/toolInvocation/invoking": `Loading ${apiName}...`,
       "openai/toolInvocation/invoked": "Loaded",
@@ -227,242 +144,293 @@ const buildMcpSuccessResult = (
   };
 };
 
-const buildFallbackOptionWidget = (
-  company: ICompany,
-  api: IApi,
-  input: any,
-  rawError?: any,
-) => {
-  const status = rawError?.status || (rawError?.message?.includes("404") ? 404 : undefined);
-  const translation = translateApiError(status, rawError?.message, api.name || "service");
-
-  return {
-    title: api.name || "Manage Item",
-    subtitle: translation.userMessage,
-    layout: company.uiPreference?.layout ?? "dashboard",
-    industry: company.industry ?? "general",
-    blocks: [
-      {
-        type: "form",
-        title: `Configure ${api.name || "Update"}`,
-        fields: [
-          {
-            id: "itemId",
-            name: "itemId",
-            label: "Item / Package ID",
-            type: "text",
-            required: true,
-          },
-          {
-            id: "fieldToUpdate",
-            name: "fieldToUpdate",
-            label: "Field to Update (e.g. Price, Status, Name)",
-            type: "text",
-            required: false,
-          },
-          {
-            id: "newValue",
-            name: "newValue",
-            label: "New Value",
-            type: "text",
-            required: false,
-          },
-        ],
-        submitAction: api.name || "submit",
-      },
-      {
-        type: "keyValue",
-        title: "Status & Next Step",
-        keyValueItems: [
-          { key: "Status", value: "Awaiting selection" },
-          { key: "Action Required", value: translation.actionSuggestion },
-        ],
-      },
-    ],
-    metadata: {
-      companyName: company.companyName,
-      apiName: api.name,
-      generatedAt: new Date().toISOString(),
-      version: "1.0",
-    },
-  };
-};
-
 const callRegisteredApi = async (api: IApi, input: any) => {
   const url = buildApiUrl(api, input);
-
-  const decodedPath = decodeURIComponent(url.pathname);
-  if (
-    decodedPath.includes(":id") ||
-    decodedPath.includes("{id}") ||
-    decodedPath.includes("%7bid%7d")
-  ) {
-    throw new Error(`Missing required ID parameter for ${api.name}`);
-  }
 
   const method = (api.method || "GET").toUpperCase();
 
   const headers = buildHeaders(api);
+
   const options: RequestInit = {
     method,
     headers,
   };
 
-  const rawInput = typeof input === "object" && input !== null ? input : {};
-  const allParams: Record<string, any> = {
-    ...(rawInput.params ?? {}),
-    ...rawInput,
-  };
+  if (HTTP_METHODS_WITH_BODY.includes(method)) {
+    const bodyPayload = buildRequestBody(api, input);
 
-  if (["POST", "PUT", "PATCH"].includes(method)) {
-    headers["Content-Type"] = "application/json";
-
-    const bodyPayload = { ...allParams };
-    delete bodyPayload.params; // Clean utility params
-
-    options.body = JSON.stringify(bodyPayload);
+    if (Object.keys(bodyPayload).length > 0) {
+      headers["Content-Type"] = "application/json";
+      options.body = JSON.stringify(bodyPayload);
+    }
   }
 
-  const response = await fetch(url, options);
+  let response: Response;
+
+  try {
+    response = await fetch(url, options);
+  } catch (error: any) {
+    const networkError: any = new Error(
+      error?.message || `Unable to connect to ${api.name}.`,
+    );
+
+    networkError.status = undefined;
+    networkError.responseBody = undefined;
+
+    throw networkError;
+  }
+
+  const responseText = await response.text();
 
   if (!response.ok) {
-    throw new Error(
+    const error: any = new Error(
       `Registered API "${api.name}" failed with status ${response.status}`,
     );
+
+    error.status = response.status;
+    error.responseBody = responseText;
+
+    throw error;
   }
 
-  return response.json();
+  if (!responseText.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    return responseText;
+  }
 };
 
-const buildApiUrl = (api: IApi, input: any) => {
+const buildApiUrl = (api: IApi, input: any): URL => {
   const baseUrl = api.baseUrl.endsWith("/") ? api.baseUrl : `${api.baseUrl}/`;
+
   let endpoint = decodeURIComponent((api.endpoint || "").replace(/^\//, ""));
 
   const rawInput = typeof input === "object" && input !== null ? input : {};
-  const queryOrLocation =
-    rawInput.city ||
-    rawInput.location ||
-    rawInput.query ||
-    rawInput.q ||
-    rawInput.search;
 
-  // 1. Extract static configured parameters from api.params
-  const configuredStaticParams: Record<string, string> = {};
-  if (Array.isArray(api.params)) {
-    api.params.forEach((paramItem: any) => {
-      if (!paramItem) return;
-      if (typeof paramItem === "object" && paramItem.key) {
-        if (paramItem.value !== undefined && paramItem.value !== null) {
-          configuredStaticParams[paramItem.key.trim()] = String(
-            paramItem.value,
-          ).trim();
-        }
-      } else if (typeof paramItem === "string" && paramItem.trim()) {
-        try {
-          const parsed = JSON.parse(paramItem.trim());
-          if (Array.isArray(parsed)) {
-            parsed.forEach((p: any) => {
-              if (p?.key && p?.value !== undefined)
-                configuredStaticParams[p.key.trim()] = String(p.value).trim();
-            });
-          } else if (typeof parsed === "object" && parsed !== null) {
-            Object.entries(parsed).forEach(([k, v]) => {
-              if (v !== undefined)
-                configuredStaticParams[k.trim()] = String(v).trim();
-            });
-          }
-        } catch {
-          // ignore invalid json string
-        }
-      }
-    });
-  }
+  const configuredParams = normalizeConfiguredParameters(api.params);
 
-  const allParams: Record<string, any> = {
-    ...configuredStaticParams,
-    ...(rawInput.params ?? {}),
+  const inputParams =
+    rawInput.params && typeof rawInput.params === "object"
+      ? rawInput.params
+      : {};
+
+  const allInputValues: Record<string, any> = {
+    ...getStaticParameterValues(configuredParams),
+    ...inputParams,
     ...rawInput,
   };
 
-  // 2. Replace template placeholders in path/query (e.g., {city}, {location}, {q}, :city)
-  Object.entries(allParams).forEach(([key, value]) => {
-    if (value === undefined || value === null) return;
-    const valStr = encodeURIComponent(String(value));
+  for (const parameter of configuredParams) {
+    const key = cleanParameterKey(parameter.key);
+
+    if (!key) continue;
+
+    const value = resolveParameterValue(parameter, allInputValues);
+
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+
+    const encodedValue = encodeURIComponent(String(value));
+
     endpoint = endpoint
-      .replace(new RegExp(`:${escapeRegExp(key)}\\b`, "gi"), valStr)
-      .replace(new RegExp(`\\{${escapeRegExp(key)}\\}`, "gi"), valStr);
-  });
+      .replace(new RegExp(`\\{${escapeRegExp(key)}\\}`, "gi"), encodedValue)
+      .replace(new RegExp(`:${escapeRegExp(key)}\\b`, "gi"), encodedValue);
+  }
+
+  if (/{[^}]+}/.test(endpoint) || /:[a-zA-Z0-9_-]+/.test(endpoint)) {
+    throw new Error(`Missing required path parameter for ${api.name || "API"}`);
+  }
 
   const url = new URL(endpoint, baseUrl);
 
-  // 3. Attach query parameters ONLY if configured or explicitly supplied
-  if ((api.method || "GET").toUpperCase() === "GET") {
-    // Attach configured static params from api.params
-    Object.entries(configuredStaticParams).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && String(v).trim() !== "") {
-        url.searchParams.set(k, String(v).trim());
-      }
-    });
+  for (const parameter of configuredParams) {
+    const key = cleanParameterKey(parameter.key);
 
-    // Attach dynamic input params if they are part of configured params or rawInput.params
-    const validConfiguredKeys = new Set([
-      ...Object.keys(configuredStaticParams),
-      ...Object.keys(rawInput.params ?? {}),
-    ]);
+    if (!key) continue;
 
-    Object.entries(rawInput).forEach(([key, value]) => {
-      if (
-        validConfiguredKeys.has(key) &&
-        value !== undefined &&
-        value !== null &&
-        String(value).trim() !== "" &&
-        key !== "params"
-      ) {
-        url.searchParams.set(key, String(value).trim());
-      }
-    });
+    const isPathParameter = endpointContainsParameter(api.endpoint, key);
+
+    if (isPathParameter) {
+      continue;
+    }
+
+    const value = resolveParameterValue(parameter, allInputValues);
+
+    if (value === undefined || value === null || String(value).trim() === "") {
+      continue;
+    }
+
+    url.searchParams.set(key, String(value));
   }
 
   return url;
 };
 
-const buildHeaders = (api: IApi) => {
+const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
+  const rawInput = typeof input === "object" && input !== null ? input : {};
+
+  const inputParams =
+    rawInput.params && typeof rawInput.params === "object"
+      ? rawInput.params
+      : {};
+
+  const bodyFields = normalizeConfiguredParameters(api.body);
+
+  if (bodyFields.length > 0) {
+    const body: Record<string, any> = {};
+
+    for (const field of bodyFields) {
+      const key = cleanParameterKey(field.key);
+
+      if (!key) continue;
+
+      const value = resolveParameterValue(field, {
+        ...inputParams,
+        ...rawInput,
+      });
+
+      if (value !== undefined && value !== null) {
+        body[key] = value;
+      }
+    }
+
+    return body;
+  }
+
+  return {};
+};
+
+const normalizeConfiguredParameters = (params: any): any[] => {
+  if (!Array.isArray(params)) {
+    return [];
+  }
+
+  return params
+    .map((param) => {
+      if (!param) {
+        return null;
+      }
+
+      if (typeof param === "object" && param.key) {
+        return param;
+      }
+
+      if (typeof param === "string" && param.trim()) {
+        return {
+          key: param.trim(),
+          value: undefined,
+          isDynamic: true,
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+};
+
+const getStaticParameterValues = (params: any[]): Record<string, any> => {
+  const result: Record<string, any> = {};
+
+  for (const param of params) {
+    const key = cleanParameterKey(param.key);
+
+    if (!key) continue;
+
+    if (
+      param.isDynamic === false &&
+      param.value !== undefined &&
+      param.value !== null
+    ) {
+      result[key] = param.value;
+    }
+  }
+
+  return result;
+};
+
+const resolveParameterValue = (
+  parameter: any,
+  inputValues: Record<string, any>,
+) => {
+  const key = cleanParameterKey(parameter.key);
+
+  if (!key) {
+    return undefined;
+  }
+
+  if (parameter.isDynamic !== false) {
+    if (inputValues[key] !== undefined && inputValues[key] !== null) {
+      return inputValues[key];
+    }
+
+    const originalKey = String(parameter.key || "").trim();
+
+    if (
+      inputValues[originalKey] !== undefined &&
+      inputValues[originalKey] !== null
+    ) {
+      return inputValues[originalKey];
+    }
+
+    return undefined;
+  }
+
+  return parameter.value;
+};
+
+const cleanParameterKey = (key: unknown): string => {
+  return String(key || "")
+    .trim()
+    .replace(/^\{|\}$/g, "")
+    .replace(/^:/, "")
+    .trim();
+};
+
+const endpointContainsParameter = (endpoint: string, key: string): boolean => {
+  return (
+    new RegExp(`\\{${escapeRegExp(key)}\\}`, "i").test(endpoint) ||
+    new RegExp(`:${escapeRegExp(key)}\\b`, "i").test(endpoint)
+  );
+};
+
+const buildHeaders = (api: IApi): Record<string, string> => {
   const headers: Record<string, string> = {
     Accept: "application/json",
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
   };
 
   (api.headers ?? []).forEach((header: any) => {
     if (typeof header === "string") {
       const [key, ...rest] = header.split(":");
+
       const value = rest.join(":").trim();
-      if (key && value) {
+
+      if (key?.trim() && value) {
         headers[key.trim()] = value;
       }
-    } else if (typeof header === "object" && header !== null && header.key) {
-      headers[header.key.trim()] = String(header.value ?? "").trim();
+
+      return;
+    }
+
+    if (typeof header === "object" && header !== null && header.key) {
+      headers[String(header.key).trim()] = String(header.value ?? "").trim();
     }
   });
 
-  const authTypeUpper = (api.authType || "").toUpperCase();
+  const authType = String(api.authType || "").toUpperCase();
 
-  if (
-    (authTypeUpper === "BEARER" || authTypeUpper === "BEARER TOKEN") &&
-    api.bearerToken
-  ) {
+  if (["BEARER", "BEARER TOKEN"].includes(authType) && api.bearerToken) {
     headers.Authorization = `Bearer ${api.bearerToken}`;
   }
 
-  if (
-    (authTypeUpper === "API_KEY" || authTypeUpper === "API KEY") &&
-    api.apiKey
-  ) {
-    const authHeaderName = (api.authHeader || "x-api-key").trim();
-    const isQueryParamKey = ["key", "appid"].includes(
-      authHeaderName.toLowerCase(),
-    );
-    if (!isQueryParamKey) {
+  if (["API_KEY", "API KEY"].includes(authType) && api.apiKey) {
+    const authHeaderName = String(api.authHeader || "x-api-key").trim();
+
+    if (authHeaderName) {
       headers[authHeaderName] = api.apiKey;
     }
   }
@@ -471,13 +439,14 @@ const buildHeaders = (api: IApi) => {
 };
 
 const toToolName = (name: string, index: number) => {
-  const normalized = name
+  const normalized = String(name || "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
-  return normalized ? `call_${normalized}` : `call_api_${index + 1}`;
+  return normalized ? normalized : `api_${index + 1}`;
 };
 
-const escapeRegExp = (value: string) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegExp = (value: string) => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};

@@ -1,114 +1,146 @@
 import { z } from "zod";
 
-const widgetToneSchema = z.enum(["default", "good", "warning", "danger"]);
+/**
+ * Primitive values that can safely travel through structuredContent.
+ */
+const primitiveSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.null(),
+]);
 
-const widgetMetricSchema = z.object({
-  label: z.string(),
-  value: z.union([z.string(), z.number()]),
-  tone: widgetToneSchema.optional(),
-  change: z.string().optional(),
-  changeTone: widgetToneSchema.optional(),
-});
-
-const widgetListItemSchema = z.object({
-  title: z.string(),
-  description: z.string().optional(),
-  icon: z.string().optional(),
-  tone: widgetToneSchema.optional(),
-  meta: z.string().optional(),
-});
-
-const widgetKeyValueItemSchema = z.object({
-  key: z.string(),
-  value: z.union([z.string(), z.number()]),
-  tone: widgetToneSchema.optional(),
-});
-
-const widgetTableCellSchema = z.object({
-  value: z.union([z.string(), z.number()]),
-  tone: widgetToneSchema.optional(),
-});
-
-const widgetTableRowSchema = z.array(
-  z.union([z.string(), z.number(), widgetTableCellSchema]),
+/**
+ * Recursive JSON value.
+ */
+const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
+  z.union([
+    primitiveSchema,
+    z.array(jsonValueSchema),
+    z.record(z.string(), jsonValueSchema),
+  ]),
 );
 
-const widgetCardSchema = z.object({
-  id: z.string().optional(),
-  title: z.string().optional(),
-  subtitle: z.string().optional(),
-  image: z.string().optional(),
-  icon: z.string().optional(),
-  badge: z.string().optional(),
-  attributes: z
-    .array(
-      z.object({
-        label: z.string(),
-        value: z.union([z.string(), z.number()]),
-      }),
-    )
+/**
+ * Describes one field returned by the API.
+ *
+ * This is metadata about the DATA, not a UI component.
+ */
+const fieldSchema = z.object({
+  key: z.string(),
+  label: z.string().optional(),
+  type: z
+    .enum([
+      "string",
+      "number",
+      "boolean",
+      "date",
+      "datetime",
+      "currency",
+      "url",
+      "image",
+      "email",
+      "phone",
+      "status",
+      "location",
+      "object",
+      "array",
+      "unknown",
+    ])
     .optional(),
-  actions: z
-    .array(
-      z.object({
-        id: z.string(),
-        label: z.string(),
-        action: z.string(),
-        variant: z.string().optional(),
-      }),
-    )
-    .optional(),
 });
 
-const widgetTimelineEventSchema = z.object({
-  id: z.string().optional(),
-  title: z.string().optional(),
-  subtitle: z.string().optional(),
-  date: z.string().optional(),
-  status: z.string().optional(),
-  icon: z.string().optional(),
+/**
+ * Information about the collection/result.
+ */
+const collectionSchema = z.object({
+  entity: z.string().optional(),
+
+  /**
+   * Example:
+   * "products", "orders", "packages", "hotels"
+   */
+  itemLabel: z.string().optional(),
+
+  /**
+   * Useful when the API itself exposes these values.
+   */
+  total: z.number().optional(),
+  page: z.number().optional(),
+  limit: z.number().optional(),
+  totalPages: z.number().optional(),
+
+  /**
+   * Field definitions for the returned records.
+   */
+  fields: z.array(fieldSchema).optional(),
 });
 
-const widgetFormFieldSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  label: z.string(),
-  type: z.string(),
-  required: z.boolean().optional(),
-  placeholder: z.string().optional(),
-  defaultValue: z.any().optional(),
+/**
+ * Describes capabilities that are actually supported by the API.
+ *
+ * These should NOT be guessed by the frontend.
+ */
+const capabilitiesSchema = z.object({
+  search: z.boolean().optional(),
+  sort: z.boolean().optional(),
+  filter: z.boolean().optional(),
+  pagination: z.boolean().optional(),
+  create: z.boolean().optional(),
+  update: z.boolean().optional(),
+  delete: z.boolean().optional(),
 });
 
-const widgetBlockSchema = z.object({
-  type: z.enum([
-    "metrics",
-    "list",
-    "keyValue",
-    "table",
-    "cards",
-    "timeline",
-    "form",
-    "weather",
-    "chart",
-  ]),
-  title: z.string().optional(),
-  metrics: z.array(widgetMetricSchema).optional(),
-  listItems: z.array(widgetListItemSchema).optional(),
-  keyValueItems: z.array(widgetKeyValueItemSchema).optional(),
-  tableHeaders: z.array(z.string()).optional(),
-  tableRows: z.array(widgetTableRowSchema).optional(),
-  cards: z.array(widgetCardSchema).optional(),
-  events: z.array(widgetTimelineEventSchema).optional(),
-  fields: z.array(widgetFormFieldSchema).optional(),
-  submitAction: z.string().optional(),
-  data: z.any().optional(),
+/**
+ * Pagination metadata.
+ */
+const paginationSchema = z.object({
+  page: z.number().optional(),
+  limit: z.number().optional(),
+  total: z.number().optional(),
+  totalPages: z.number().optional(),
+  hasNext: z.boolean().optional(),
+  hasPrevious: z.boolean().optional(),
 });
 
+/**
+ * Final generic MCP output.
+ */
 export const genericWidgetOutputSchema = z.object({
+  /**
+   * Human-readable name of the result.
+   */
   title: z.string(),
+
+  /**
+   * Optional description/context.
+   */
   subtitle: z.string().optional(),
-  layout: z.string().optional(),
-  industry: z.string().optional(),
-  blocks: z.array(widgetBlockSchema),
-  metadata: z.record(z.string(), z.any()).optional(),
+
+  /**
+   * Original/normalized API result.
+   *
+   * This is the important part.
+   */
+  data: jsonValueSchema,
+
+  /**
+   * Information about what the data represents.
+   */
+  collection: collectionSchema.optional(),
+
+  /**
+   * Capabilities supported by the API/tool.
+   */
+  capabilities: capabilitiesSchema.optional(),
+
+  /**
+   * Pagination information when available.
+   */
+  pagination: paginationSchema.optional(),
+
+  /**
+   * Additional non-UI metadata.
+   */
+  metadata: z.record(z.string(), jsonValueSchema).optional(),
 });
