@@ -127,7 +127,7 @@ const buildMcpSuccessResult = (
     content: [
       {
         type: "text" as const,
-        text: `${widgetContent.title}: ${widgetContent.blocks?.length ?? 1} widget block(s) rendered.`,
+        text: `${widgetContent.title} rendered`,
       },
     ],
     _meta: {

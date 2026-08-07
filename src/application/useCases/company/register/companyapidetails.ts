@@ -18,7 +18,11 @@ const parseParams = (api: any): any[] => {
       const parsed = JSON.parse(api.apiQueryParams.trim());
       if (Array.isArray(parsed)) return parsed;
       if (typeof parsed === "object" && parsed !== null) {
-        return Object.entries(parsed).map(([key, value]) => ({ key, value, isDynamic: true }));
+        return Object.entries(parsed).map(([key, value]) => ({
+          key,
+          value,
+          isDynamic: true,
+        }));
       }
     } catch {
       // Fallback text parsing if not raw JSON
@@ -52,7 +56,8 @@ const transformApiEntry = (api: any, index: number): any => {
   const existingSchema = api.apiSchema || api.schema || null;
 
   const oauth =
-    api.oauth || (api.oauthTokenUrl || api.oauthClientId
+    api.oauth ||
+    (api.oauthTokenUrl || api.oauthClientId
       ? {
           tokenUrl: api.oauthTokenUrl || "",
           clientId: api.oauthClientId || "",
@@ -73,10 +78,12 @@ const transformApiEntry = (api: any, index: number): any => {
     bearerToken: api.bearerToken || undefined,
     oauth,
     platformType: api.platformType || "web",
+    audience: api.audience || "",
     webCheckoutUrl: api.webCheckoutUrl || api.checkoutTemplate || undefined,
     mobileDeepLink: api.mobileDeepLink || undefined,
     apiSchema: existingSchema,
-    mcpToolName: api.mcpToolName || toToolName(api.name || api.apiName || "", index),
+    mcpToolName:
+      api.mcpToolName || toToolName(api.name || api.apiName || "", index),
     mcpDescription:
       api.mcpDescription ||
       `Calls ${api.name || api.apiName || "a registered company API"} and returns a generic widget response.`,
@@ -91,14 +98,20 @@ const transformApiEntry = (api: any, index: number): any => {
 export async function saveCompanyApiDetails(
   companyRepository: ICompanyRepository,
   companyId: string,
-  payload: any
+  payload: any,
 ): Promise<ICompany | null> {
   if (!companyId) throw new Error("companyId is required");
-  if (!payload.apis || !Array.isArray(payload.apis) || payload.apis.length === 0) {
+  if (
+    !payload.apis ||
+    !Array.isArray(payload.apis) ||
+    payload.apis.length === 0
+  ) {
     throw new Error("apis must be a non-empty array");
   }
 
-  const apis = payload.apis.map((api: any, index: number) => transformApiEntry(api, index));
+  const apis = payload.apis.map((api: any, index: number) =>
+    transformApiEntry(api, index),
+  );
 
   return await companyRepository.update(companyId, {
     apis,
