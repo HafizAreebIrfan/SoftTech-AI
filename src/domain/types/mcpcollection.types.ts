@@ -20,7 +20,7 @@ export type FieldSchema = {
 };
 
 export type CollectionResult = {
-  entity: string;
+  entity?: string;
   layout?: string;
   itemLabel?: string;
   total?: number;

@@ -26,28 +26,28 @@ const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
  *
  * This is metadata about the DATA, not a UI component.
  */
+export const fieldTypeSchema = z.enum([
+  "text",
+  "number",
+  "currency",
+  "date",
+  "datetime",
+  "image",
+  "email",
+  "phone",
+  "status",
+  "boolean",
+  "latitude",
+  "longitude",
+  "url",
+  "object",
+  "array",
+]);
+
 const fieldSchema = z.object({
   key: z.string(),
   label: z.string().optional(),
-  type: z
-    .enum([
-      "string",
-      "number",
-      "boolean",
-      "date",
-      "datetime",
-      "currency",
-      "url",
-      "image",
-      "email",
-      "phone",
-      "status",
-      "location",
-      "object",
-      "array",
-      "unknown",
-    ])
-    .optional(),
+  type: fieldTypeSchema,
 });
 
 /**
