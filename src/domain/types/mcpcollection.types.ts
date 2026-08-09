@@ -1,4 +1,4 @@
-type FieldSchema = {
+export type FieldSchema = {
   key: string;
   label: string;
   type:

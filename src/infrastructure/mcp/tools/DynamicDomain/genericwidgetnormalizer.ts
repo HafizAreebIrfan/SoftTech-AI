@@ -2,7 +2,10 @@ import { ApiSchema, FieldType } from "../../schema_analyzer/interfaces";
 import { GenericWidgetResult } from "../../../../domain/types/genericWidget.types";
 import { JsonValue } from "../../../../domain/types/mcpjsonprimitive.types";
 import { CapabilitiesResult } from "../../../../domain/types/mcpcapabilities.types";
-import { CollectionResult } from "../../../../domain/types/mcpcollection.types";
+import {
+  CollectionResult,
+  FieldSchema,
+} from "../../../../domain/types/mcpcollection.types";
 import { PaginationResult } from "../../../../domain/types/mcppagination.types";
 
 export const normalizeApiResponseToWidget = (
@@ -96,12 +99,389 @@ const buildCollectionMetadata = (
   if (selectedLayout) {
     result.layout = selectedLayout;
   }
+  const collectionData = findRecordCollection(data);
 
-  if (Array.isArray(data)) {
+  if (collectionData) {
+    const { key, records } = collectionData;
+
+    result.entity = apiSchema?.entity || key || entity;
+
+    result.itemLabel = inferItemLabel(result.entity);
+
+    /**
+     * Prefer schema information generated during API registration.
+     */
+    const schemaFields = buildFieldsFromApiSchema(apiSchema);
+
+    if (schemaFields.length > 0) {
+      result.fields = schemaFields;
+    } else {
+      /**
+       * Fall back to inspecting the actual API response.
+       */
+      result.fields = buildFieldsFromRecords(records);
+    }
+
+    /**
+     * Only use array length when the API does not provide
+     * a separate pagination total.
+     */
+    result.total = records.length;
+  } else if (Array.isArray(data)) {
+    result.itemLabel = inferItemLabel(result.entity);
+
+    const schemaFields = buildFieldsFromApiSchema(apiSchema);
+
+    if (schemaFields.length > 0) {
+      result.fields = schemaFields;
+    } else {
+      result.fields = buildFieldsFromRecords(data.filter(isObject));
+    }
+
     result.total = data.length;
   }
 
+  const pagination = extractPagination(data);
+
+  if (pagination?.page !== undefined) {
+    result.page = pagination.page;
+  }
+
+  if (pagination?.limit !== undefined) {
+    result.limit = pagination.limit;
+  }
+
+  if (pagination?.totalPages !== undefined) {
+    result.totalPages = pagination.totalPages;
+  }
+
+  if (pagination?.total !== undefined) {
+    result.total = pagination.total;
+  }
+
   return result;
+};
+
+const findRecordCollection = (
+  value: JsonValue,
+  currentKey?: string,
+): { key?: string; records: Record<string, JsonValue>[] } | undefined => {
+  if (Array.isArray(value)) {
+    const records = value.filter(isObject);
+
+    if (records.length > 0) {
+      return {
+        key: currentKey,
+        records,
+      };
+    }
+
+    return undefined;
+  }
+
+  if (!isObject(value)) {
+    return undefined;
+  }
+
+  /**
+   * Prefer arrays that contain objects.
+   */
+  for (const [key, child] of Object.entries(value)) {
+    if (Array.isArray(child)) {
+      const records = child.filter(isObject);
+
+      if (records.length > 0) {
+        return {
+          key,
+          records,
+        };
+      }
+    }
+  }
+
+  /**
+   * If there is no direct array, recursively inspect
+   * nested objects.
+   */
+  for (const [key, child] of Object.entries(value)) {
+    if (isObject(child) || Array.isArray(child)) {
+      const result = findRecordCollection(child, key);
+
+      if (result) {
+        return result;
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const buildFieldsFromApiSchema = (apiSchema?: ApiSchema): FieldSchema[] => {
+  if (!apiSchema?.fields || apiSchema.fields.length === 0) {
+    return [];
+  }
+
+  return apiSchema.fields
+    .filter((field) => !field.hidden)
+    .map((field) => ({
+      key: field.key,
+      label: field.label,
+      type: normalizeFieldSchemaType(field.type),
+    }));
+};
+
+/**
+ * Infers fields from actual API records when schema information
+ * is unavailable.
+ */
+const buildFieldsFromRecords = (
+  records: Record<string, JsonValue>[],
+): FieldSchema[] => {
+  if (records.length === 0) {
+    return [];
+  }
+
+  /**
+   * Use keys from the first record as the initial field set.
+   */
+  const firstRecord = records[0];
+
+  return Object.entries(firstRecord)
+    .filter(([key]) => !isInternalField(key))
+    .map(([key, value]) => ({
+      key,
+      label: toLabel(key),
+      type: detectFieldSchemaType(key, value),
+    }));
+};
+
+const normalizeFieldSchemaType = (
+  type: string | undefined,
+): FieldSchema["type"] => {
+  if (!type) {
+    return "text";
+  }
+
+  const normalized = type.toLowerCase();
+
+  switch (normalized) {
+    case "text":
+    case "string":
+      return "text";
+
+    case "number":
+    case "integer":
+    case "float":
+    case "decimal":
+      return "number";
+
+    case "currency":
+    case "money":
+    case "price":
+    case "amount":
+      return "currency";
+
+    case "date":
+      return "date";
+
+    case "datetime":
+    case "timestamp":
+      return "datetime";
+
+    case "image":
+      return "image";
+
+    case "email":
+      return "email";
+
+    case "phone":
+    case "tel":
+    case "telephone":
+      return "phone";
+
+    case "status":
+      return "status";
+
+    case "boolean":
+    case "bool":
+      return "boolean";
+
+    case "latitude":
+      return "latitude";
+
+    case "longitude":
+      return "longitude";
+
+    case "url":
+    case "uri":
+      return "url";
+
+    case "object":
+      return "object";
+
+    case "array":
+      return "array";
+
+    default:
+      return "text";
+  }
+};
+
+/**
+ * Detects the generic field type from a real API value.
+ */
+const detectFieldSchemaType = (
+  key: string,
+  value: JsonValue,
+): FieldSchema["type"] => {
+  const normalizedKey = key.toLowerCase();
+
+  if (isInternalField(key)) {
+    return "text";
+  }
+
+  if (normalizedKey.includes("email") || normalizedKey === "mail") {
+    return "email";
+  }
+
+  if (
+    normalizedKey.includes("phone") ||
+    normalizedKey.includes("mobile") ||
+    normalizedKey.includes("telephone")
+  ) {
+    return "phone";
+  }
+
+  if (
+    normalizedKey === "status" ||
+    normalizedKey.endsWith("status") ||
+    normalizedKey.includes("state")
+  ) {
+    return "status";
+  }
+
+  if (normalizedKey === "latitude" || normalizedKey === "lat") {
+    return "latitude";
+  }
+
+  if (
+    normalizedKey === "longitude" ||
+    normalizedKey === "lng" ||
+    normalizedKey === "lon"
+  ) {
+    return "longitude";
+  }
+
+  if (
+    normalizedKey.includes("image") ||
+    normalizedKey.includes("thumbnail") ||
+    normalizedKey.includes("photo")
+  ) {
+    return "image";
+  }
+
+  if (
+    normalizedKey === "url" ||
+    normalizedKey.endsWith("url") ||
+    normalizedKey.includes("website")
+  ) {
+    return "url";
+  }
+
+  if (
+    normalizedKey.includes("amount") ||
+    normalizedKey.includes("price") ||
+    normalizedKey.includes("cost") ||
+    normalizedKey.includes("revenue") ||
+    normalizedKey.includes("salary") ||
+    normalizedKey.includes("total")
+  ) {
+    if (typeof value === "number" || typeof value === "string") {
+      return "currency";
+    }
+  }
+
+  if (
+    normalizedKey.includes("date") ||
+    normalizedKey.includes("time") ||
+    normalizedKey.endsWith("at")
+  ) {
+    if (typeof value === "string") {
+      return "datetime";
+    }
+  }
+
+  if (typeof value === "boolean") {
+    return "boolean";
+  }
+
+  if (typeof value === "number") {
+    return "number";
+  }
+
+  if (Array.isArray(value)) {
+    return "array";
+  }
+
+  if (isObject(value)) {
+    return "object";
+  }
+
+  return "text";
+};
+
+/**
+ * Converts API keys such as:
+ *
+ * useremail -> Useremail
+ * order_amount -> Order Amount
+ * createdAt -> Created At
+ */
+const toLabel = (value: string): string => {
+  return value
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+/**
+ * Internal database/system fields that generally should not
+ * become visible UI fields.
+ */
+const isInternalField = (key: string): boolean => {
+  const normalized = key.toLowerCase();
+
+  return (
+    normalized === "__v" || normalized === "_v" || normalized === "__typename"
+  );
+};
+
+const inferItemLabel = (entity: string): string => {
+  const normalized = entity
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ");
+
+  if (normalized.endsWith("ies")) {
+    return `${normalized.slice(0, -3)}y`;
+  }
+
+  if (
+    normalized.endsWith("ses") ||
+    normalized.endsWith("xes") ||
+    normalized.endsWith("ches") ||
+    normalized.endsWith("shes")
+  ) {
+    return normalized.slice(0, -2);
+  }
+
+  if (normalized.endsWith("s")) {
+    return normalized.slice(0, -1);
+  }
+
+  return normalized || "item";
 };
 
 const buildCapabilities = (params: any[] = []): CapabilitiesResult => {
@@ -124,7 +504,7 @@ const buildCapabilities = (params: any[] = []): CapabilitiesResult => {
     capabilities.search = true;
   }
 
-  if (hasAny("sort", "sortby", "sortby", "orderby", "order", "direction")) {
+  if (hasAny("sort", "sortby", "orderby", "order", "direction")) {
     capabilities.sort = true;
   }
 
@@ -171,6 +551,9 @@ const extractPagination = (data: JsonValue): PaginationResult | undefined => {
   let totalItems: number | undefined;
   let pageSize: number | undefined;
 
+  /**
+   * Check the current object first.
+   */
   for (const [key, value] of Object.entries(data)) {
     if (typeof value !== "number") {
       continue;
@@ -200,6 +583,29 @@ const extractPagination = (data: JsonValue): PaginationResult | undefined => {
 
     if (["limit", "pagesize", "perpage", "per_page"].includes(normalizedKey)) {
       pageSize = value;
+    }
+  }
+
+  /**
+   * If pagination wasn't found at the top level,
+   * inspect nested objects.
+   */
+  if (
+    page === undefined &&
+    totalPages === undefined &&
+    totalItems === undefined &&
+    pageSize === undefined
+  ) {
+    for (const value of Object.values(data)) {
+      if (!isObject(value)) {
+        continue;
+      }
+
+      const nested = extractPagination(value);
+
+      if (nested) {
+        return nested;
+      }
     }
   }
 
@@ -250,10 +656,10 @@ const inferEntityName = (
   }
 
   if (isObject(data)) {
-    const arrayKey = Object.keys(data).find((key) => Array.isArray(data[key]));
+    const collection = findRecordCollection(data);
 
-    if (arrayKey) {
-      return arrayKey;
+    if (collection?.key) {
+      return collection.key;
     }
   }
 
