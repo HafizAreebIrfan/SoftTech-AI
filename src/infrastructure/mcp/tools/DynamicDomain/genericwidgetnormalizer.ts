@@ -92,6 +92,17 @@ const buildCollectionMetadata = (
 
   const result: CollectionResult = {
     entity,
+    ...(apiSchema?.dataPath ? { dataPath: apiSchema.dataPath } : {}),
+    ...(apiSchema?.fields?.length
+      ? {
+          fields: apiSchema.fields.map((field) => ({
+            key: field.key,
+            label: field.label,
+            type: field.type,
+            path: field.path,
+          })),
+        }
+      : {}),
   };
 
   const selectedLayout = apiSchema?.defaultLayout || layout;
