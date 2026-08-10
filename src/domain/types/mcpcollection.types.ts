@@ -17,10 +17,12 @@ export type FieldSchema = {
     | "url"
     | "object"
     | "array";
+  path?: string;
 };
 
 export type CollectionResult = {
   entity?: string;
+  dataPath?: string;
   layout?: string;
   itemLabel?: string;
   total?: number;

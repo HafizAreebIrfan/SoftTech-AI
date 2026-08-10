@@ -19,6 +19,7 @@ export interface FieldMetadata {
   key: string;
   label: string;
   type: FieldType;
+  path: string;
   hidden?: boolean;
   primary?: boolean;
   sortable?: boolean;
@@ -28,6 +29,7 @@ export interface FieldMetadata {
 
 export interface ApiSchema {
   entity: string;
+  dataPath?: string;
   fields: FieldMetadata[];
   analyzedAt: string;
   defaultLayout?: string;

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { z } from "zod";
 
 /**
@@ -48,6 +49,7 @@ const fieldSchema = z.object({
   key: z.string(),
   label: z.string().optional(),
   type: fieldTypeSchema,
+  path: z.string().optional(),
 });
 
 /**

@@ -1,4 +1,4 @@
-import { ApiSchema, FieldType } from "../../schema_analyzer/interfaces";
+import { ApiSchema } from "../../schema_analyzer/interfaces";
 import { GenericWidgetResult } from "../../../../domain/types/genericWidget.types";
 import { JsonValue } from "../../../../domain/types/mcpjsonprimitive.types";
 import { CapabilitiesResult } from "../../../../domain/types/mcpcapabilities.types";
@@ -227,6 +227,7 @@ const buildFieldsFromApiSchema = (apiSchema?: ApiSchema): FieldSchema[] => {
       key: field.key,
       label: field.label,
       type: normalizeFieldSchemaType(field.type),
+      ...(field.path ? { path: field.path } : {}),
     }));
 };
 
