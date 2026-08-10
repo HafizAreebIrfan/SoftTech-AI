@@ -1,4 +1,4 @@
-import { User } from "../domain/entities/CompanyLogin";
+import { User } from "../../domain/entities/CompanyLogin";
 
 export interface ApiConnection {
   id: string;
@@ -20,12 +20,28 @@ export interface AuthStore {
   isAuthenticated: boolean;
   authReady: boolean;
   apisList: ApiConnection[];
-  selectedLayout: "dashboard" | "catalog" | "table" | "timeline" | "grid" | "list" | "cards";
+  selectedLayout:
+    | "dashboard"
+    | "catalog"
+    | "table"
+    | "timeline"
+    | "grid"
+    | "list"
+    | "cards";
   setAuth: (user: any) => void;
   setAuthReady: (ready: boolean) => void;
   setApisList: (
     apis: ApiConnection[] | ((prev: ApiConnection[]) => ApiConnection[]),
   ) => void;
-  setSelectedLayout: (layout: "dashboard" | "catalog" | "table" | "timeline" | "grid" | "list" | "cards") => void;
+  setSelectedLayout: (
+    layout:
+      | "dashboard"
+      | "catalog"
+      | "table"
+      | "timeline"
+      | "grid"
+      | "list"
+      | "cards",
+  ) => void;
   clearAuth: () => void;
 }

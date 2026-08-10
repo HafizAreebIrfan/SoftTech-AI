@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { AuthStore, ApiConnection } from "../../interfaces/auth.interface";
+import { AuthStore, ApiConnection } from "../../interfaces/auth/auth.interface";
 
 const normalizeLayout = (layout: string): any => {
   if (layout === "grid") return "dashboard";
@@ -22,14 +22,18 @@ export const useAuthStore = create<AuthStore>()(
           id: api.id || `api-${index + 1}`,
           apiName: api.name || "",
           apiMethod: api.method || "GET",
-          apiEndpoint: api.baseUrl && api.endpoint ? `${api.baseUrl}${api.endpoint}` : "",
+          apiEndpoint:
+            api.baseUrl && api.endpoint ? `${api.baseUrl}${api.endpoint}` : "",
           apiAuthType: api.authType || "No Auth",
-          apiCredentials: api.bearerToken || api.apiKey || api.oauthClientSecret || "",
+          apiCredentials:
+            api.bearerToken || api.apiKey || api.oauthClientSecret || "",
           apiAuthHeader: api.authHeader || "",
           oauthTokenUrl: api.oauthTokenUrl || "",
           oauthClientId: api.oauthClientId || "",
-          apiHeaders: api.headers && api.headers.length > 0 ? api.headers[0] : "",
-          apiQueryParams: api.params && api.params.length > 0 ? api.params[0] : "",
+          apiHeaders:
+            api.headers && api.headers.length > 0 ? api.headers[0] : "",
+          apiQueryParams:
+            api.params && api.params.length > 0 ? api.params[0] : "",
         }));
 
         set((state) => ({
@@ -48,7 +52,8 @@ export const useAuthStore = create<AuthStore>()(
         set((state) => ({
           apisList: typeof apis === "function" ? apis(state.apisList) : apis,
         })),
-      setSelectedLayout: (layout) => set({ selectedLayout: normalizeLayout(layout) }),
+      setSelectedLayout: (layout) =>
+        set({ selectedLayout: normalizeLayout(layout) }),
       clearAuth: () =>
         set({
           user: null,

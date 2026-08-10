@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { SignupStore, ParamRow } from "../../interfaces/signup.interface";
+import { SignupStore, ParamRow } from "../../interfaces/auth/signup.interface";
 import {
   saveCompanyApiDetails,
   analyzeSingleCompanyApi,
@@ -104,11 +104,15 @@ export const parseJsonToRows = (
             rows.push({
               id: `row-${Date.now()}-${idx}-${subIdx}`,
               key: k,
-              value: typeof v === "object" ? JSON.stringify(v) : String(v ?? ""),
+              value:
+                typeof v === "object" ? JSON.stringify(v) : String(v ?? ""),
               isDynamic: defaultDynamic,
             });
           });
-        } else if (typeof normalizedItem === "object" && normalizedItem !== null) {
+        } else if (
+          typeof normalizedItem === "object" &&
+          normalizedItem !== null
+        ) {
           rows.push({
             id: `row-${Date.now()}-${idx}`,
             key: String(normalizedItem.key ?? normalizedItem.name ?? ""),
@@ -127,7 +131,16 @@ export const parseJsonToRows = (
           });
         }
       });
-      return rows.length > 0 ? rows : [{ id: `row-${Date.now()}-0`, key: "", value: "", isDynamic: defaultDynamic }];
+      return rows.length > 0
+        ? rows
+        : [
+            {
+              id: `row-${Date.now()}-0`,
+              key: "",
+              value: "",
+              isDynamic: defaultDynamic,
+            },
+          ];
     }
 
     if (typeof parsed === "object" && parsed !== null) {

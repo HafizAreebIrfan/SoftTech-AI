@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { useMcpToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import { useThemeStore } from "../../../hooks";
 import { DashboardLayout } from "../layouts/DashboardLayout";
@@ -6,6 +6,14 @@ import { CatalogLayout } from "../layouts/CatalogLayout";
 import { TableLayout } from "../layouts/TableLayout";
 import { GeneralLayout } from "../layouts/GeneralLayout";
 import { EmptyStateBlock } from "../components/EmptyStateBlock";
+import { getValue } from "../../../utils";
+import type {
+  CollectionResult,
+  FieldSchema,
+  GenericWidgetContent,
+  JsonValue,
+} from "../../../domain/entities/GenericWidget";
+import { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
 import styles from "../../../styles/genericwidgetrenderer.module.css";
 
 export const GenericWidgetRenderer: React.FC = () => {
@@ -29,29 +37,86 @@ export const GenericWidgetRenderer: React.FC = () => {
   }
 
   const structuredContent = toolResult?.structuredContent;
-  const structuredData = structuredContent?.data;
-  const structuredFields = structuredContent?.collection?.fields ?? [];
 
-  if (
-    !structuredContent ||
-    !structuredContent.data ||
-    structuredContent.data.length === 0
-  ) {
+  if (!structuredContent) {
     return <EmptyStateBlock />;
   }
 
-  const {
-    title,
-    subtitle,
-    data,
-    collection,
-    capabilities,
-    actions,
-    pagination,
-    metadata,
-  } = structuredContent;
+  const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
+    const content = structuredContent;
 
-  if (data === undefined || data === null) {
+    if (!content.data) {
+      return null;
+    }
+
+    const collection = content.collection;
+
+    const fields = collection?.fields ?? [];
+
+    /**
+     * Find the actual records using dataPath.
+     *
+     * Example:
+     *
+     * data:
+     * {
+     *   getorder: [...]
+     * }
+     *
+     * dataPath:
+     * "getorder"
+     *
+     * records:
+     * [...]
+     */
+    let records: unknown[] = [];
+
+    if (collection?.dataPath) {
+      const collectionData = getValue(content.data, collection.dataPath);
+
+      if (Array.isArray(collectionData)) {
+        records = collectionData;
+      } else if (collectionData !== undefined) {
+        records = [collectionData];
+      }
+    } else if (Array.isArray(content.data)) {
+      /**
+       * Root-level array response.
+       */
+      records = content.data;
+    } else if (isRecordCollection(content.data)) {
+      /**
+       * Backwards/fallback detection when dataPath is unavailable.
+       */
+      const detectedArray = Object.values(content.data).find(Array.isArray);
+
+      if (Array.isArray(detectedArray)) {
+        records = detectedArray;
+      }
+    }
+
+    return {
+      content,
+      collection,
+      fields,
+      records,
+      rawData: content.data,
+    };
+  }, [structuredContent]);
+
+  if (!normalizedData) {
+    return <EmptyStateBlock />;
+  }
+
+  const { content, collection, fields, records, rawData } = normalizedData;
+
+  /**
+   * At this stage, do not force the response into a UI.
+   *
+   * If the API returned a simple object rather than a collection,
+   * we still have valid data.
+   */
+  if (!collection && !rawData) {
     return <EmptyStateBlock />;
   }
 
@@ -59,33 +124,86 @@ export const GenericWidgetRenderer: React.FC = () => {
     collection?.layout || "general",
   ).toLowerCase();
 
-  const commonProps = {
-    title,
-    subtitle,
-    data,
-    collection,
-    capabilities,
-    actions,
-    pagination,
-    metadata,
-  };
-
   const renderLayout = () => {
     switch (normalizedLayout) {
       case "dashboard":
-        return <DashboardLayout />;
+        return (
+          <DashboardLayout
+            title={content.title}
+            subtitle={content.subtitle}
+            data={rawData}
+            records={records}
+            fields={fields}
+            collection={collection}
+            capabilities={content.capabilities}
+            pagination={content.pagination}
+            actions={content.actions}
+          />
+        );
 
       case "catalog":
-        return <CatalogLayout />;
+        return (
+          <CatalogLayout
+            title={content.title}
+            subtitle={content.subtitle}
+            data={rawData}
+            records={records}
+            fields={fields}
+            collection={collection}
+            capabilities={content.capabilities}
+            pagination={content.pagination}
+            actions={content.actions}
+          />
+        );
 
       case "table":
-        return <TableLayout />;
+        return (
+          <TableLayout
+            title={content.title}
+            subtitle={content.subtitle}
+            data={rawData}
+            records={records}
+            fields={fields}
+            collection={collection}
+            capabilities={content.capabilities}
+            pagination={content.pagination}
+            actions={content.actions}
+          />
+        );
 
       case "general":
       default:
-        return <GeneralLayout />;
+        return (
+          <GeneralLayout
+            title={content.title}
+            subtitle={content.subtitle}
+            data={rawData}
+            records={records}
+            fields={fields}
+            collection={collection}
+            capabilities={content.capabilities}
+            pagination={content.pagination}
+            actions={content.actions}
+          />
+        );
     }
   };
 
-  return <div className={styles.container}>{renderLayout()}</div>;
+  return (
+    <div
+      className={styles.container}
+      style={{
+        color: colors.TextHeading,
+        background: colors.Background,
+      }}
+    >
+      {renderLayout()}
+    </div>
+  );
+};
+
+const isRecordCollection = (
+  value: JsonValue,
+): value is Record<string, JsonValue> => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 };

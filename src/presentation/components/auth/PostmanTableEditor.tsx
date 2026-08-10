@@ -2,7 +2,7 @@ import React, { FC, useState, useEffect } from "react";
 import {
   PostmanTableEditorProps,
   ParamRow,
-} from "../../../interfaces/signup.interface";
+} from "../../../interfaces/auth/signup.interface";
 import {
   parseJsonToRows,
   rowsToJsonStr,
@@ -62,7 +62,11 @@ export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({
       idx === index ? { ...row, [updatedField]: val } : row,
     );
     setRows(updatedRows);
-    updateApiField(api.id, field, rowsToJsonStr(updatedRows, showDynamicToggle));
+    updateApiField(
+      api.id,
+      field,
+      rowsToJsonStr(updatedRows, showDynamicToggle),
+    );
   };
 
   const handleAddRow = () => {
