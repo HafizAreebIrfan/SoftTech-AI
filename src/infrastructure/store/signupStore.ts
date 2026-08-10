@@ -166,15 +166,25 @@ export const parseJsonToRows = (
   ];
 };
 
-export const rowsToJsonStr = (rows: ParamRow[]): string => {
-  const obj: Record<string, any> = {};
-  rows.forEach((row) => {
-    const trimmedKey = row.key.trim();
-    if (trimmedKey) {
-      obj[trimmedKey] = row.value.trim();
-    }
-  });
-  return JSON.stringify(obj, null, 2);
+export const rowsToJsonStr = (
+  rows: ParamRow[],
+  showDynamicToggle: boolean = true,
+): string => {
+  const validRows = rows.filter((r) => r.key.trim() !== "");
+  if (!showDynamicToggle) {
+    const obj: Record<string, any> = {};
+    validRows.forEach((row) => {
+      obj[row.key.trim()] = row.value.trim();
+    });
+    return JSON.stringify(obj, null, 2);
+  }
+
+  const arr = validRows.map((row) => ({
+    key: row.key.trim(),
+    value: row.value.trim(),
+    isDynamic: Boolean(row.isDynamic),
+  }));
+  return JSON.stringify(arr, null, 2);
 };
 
 export const truncateSampleResponse = (
@@ -882,6 +892,7 @@ export const useSignupStore = create<SignupStore>()(
                 testedonregister:
                   get().apiTestStates[api.id]?.status === "success",
                 platformType: api.platformType || "web",
+                audience: api.audience || "both",
                 webCheckoutUrl:
                   api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
                 mobileDeepLink: api.mobileDeepLink || undefined,
@@ -1031,6 +1042,7 @@ export const useSignupStore = create<SignupStore>()(
               testedonregister:
                 get().apiTestStates[api.id]?.status === "success",
               platformType: api.platformType || "web",
+              audience: api.audience || "both",
               webCheckoutUrl:
                 api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
               mobileDeepLink: api.mobileDeepLink || undefined,

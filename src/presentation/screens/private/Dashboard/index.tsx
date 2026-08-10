@@ -15,7 +15,6 @@ import {
 } from "../../../../assets/icons";
 import styles from "../../../../styles/dashboard.module.css";
 import { logout } from "../../../../adapters/api/authApi";
-import CardWidget from "../../../widgets/card";
 
 const Dashboard: FC = () => {
   const navigate = useNavigate();
@@ -292,79 +291,81 @@ const Dashboard: FC = () => {
               instantly to all telemetry visualizers.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
-              {(["dashboard", "catalog", "table", "timeline"] as const).map((lay) => (
-                <div
-                  key={lay}
-                  onClick={() => {
-                    setSelectedLayout(lay);
-                    showToast(
-                      `Interface curator set to ${lay.toUpperCase()} layout.`,
-                      "success",
-                    );
-                  }}
-                  className="p-6 rounded-2xl cursor-pointer border-2 transition-all text-left flex flex-col justify-between"
-                  style={
-                    selectedLayout === lay
-                      ? {
-                          background: colors.UISelectionCardBackground,
-                          borderColor: colors.CardActiveBorder,
-                        }
-                      : {
-                          background: colors.Background,
-                          borderColor: colors.Border,
-                        }
-                  }
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-indigo-500/10">
-                      {lay === "dashboard" && (
-                        <LayoutGridIcon
-                          size={20}
-                          color={colors.TextHighlightedHeading}
-                        />
-                      )}
-                      {lay === "catalog" && (
-                        <SlidersIcon
-                          size={20}
-                          color={colors.TextHighlightedHeading}
-                        />
-                      )}
-                      {lay === "table" && (
-                        <DatabaseIcon
-                          size={20}
-                          color={colors.TextHighlightedHeading}
-                        />
-                      )}
-                      {lay === "timeline" && (
-                        <TerminalIcon
-                          size={20}
-                          color={colors.TextHighlightedHeading}
-                        />
+              {(["dashboard", "catalog", "table", "timeline"] as const).map(
+                (lay) => (
+                  <div
+                    key={lay}
+                    onClick={() => {
+                      setSelectedLayout(lay);
+                      showToast(
+                        `Interface curator set to ${lay.toUpperCase()} layout.`,
+                        "success",
+                      );
+                    }}
+                    className="p-6 rounded-2xl cursor-pointer border-2 transition-all text-left flex flex-col justify-between"
+                    style={
+                      selectedLayout === lay
+                        ? {
+                            background: colors.UISelectionCardBackground,
+                            borderColor: colors.CardActiveBorder,
+                          }
+                        : {
+                            background: colors.Background,
+                            borderColor: colors.Border,
+                          }
+                    }
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-indigo-500/10">
+                        {lay === "dashboard" && (
+                          <LayoutGridIcon
+                            size={20}
+                            color={colors.TextHighlightedHeading}
+                          />
+                        )}
+                        {lay === "catalog" && (
+                          <SlidersIcon
+                            size={20}
+                            color={colors.TextHighlightedHeading}
+                          />
+                        )}
+                        {lay === "table" && (
+                          <DatabaseIcon
+                            size={20}
+                            color={colors.TextHighlightedHeading}
+                          />
+                        )}
+                        {lay === "timeline" && (
+                          <TerminalIcon
+                            size={20}
+                            color={colors.TextHighlightedHeading}
+                          />
+                        )}
+                      </div>
+                      {selectedLayout === lay && (
+                        <span className="text-xs font-bold text-indigo-400">
+                          SELECTED
+                        </span>
                       )}
                     </div>
-                    {selectedLayout === lay && (
-                      <span className="text-xs font-bold text-indigo-400">
-                        SELECTED
-                      </span>
-                    )}
+                    <div>
+                      <h4 className="font-bold text-base mb-1 text-slate-200 capitalize">
+                        {lay} Layout
+                      </h4>
+                      <p className="text-xs text-slate-500 font-sans leading-relaxed">
+                        {lay === "dashboard" &&
+                          "Modular bento-style layout optimized for data telemetry, analytics, and interactive metrics dashboards."}
+                        {lay === "catalog" &&
+                          "Grid layout optimized for item cards, product listings, travel bookings, and category catalogs."}
+                        {lay === "table" &&
+                          "Condensed spreadsheet-style view for power users handling massive data sets, transaction ledger list."}
+                        {lay === "timeline" &&
+                          "Milestone progress tracker optimized for package shipping routes, logistics, and process stages."}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-base mb-1 text-slate-200 capitalize">
-                      {lay} Layout
-                    </h4>
-                    <p className="text-xs text-slate-500 font-sans leading-relaxed">
-                      {lay === "dashboard" &&
-                        "Modular bento-style layout optimized for data telemetry, analytics, and interactive metrics dashboards."}
-                      {lay === "catalog" &&
-                        "Grid layout optimized for item cards, product listings, travel bookings, and category catalogs."}
-                      {lay === "table" &&
-                        "Condensed spreadsheet-style view for power users handling massive data sets, transaction ledger list."}
-                      {lay === "timeline" &&
-                        "Milestone progress tracker optimized for package shipping routes, logistics, and process stages."}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </div>
         )}

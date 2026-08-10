@@ -92,9 +92,6 @@ const Signup: FC = () => {
         </nav>
 
         <div className="md:flex items-center gap-4">
-          <button className="p-2 hover:text-white">
-            <HelpIcon size={20} color={colors.HeaderIconColor} />
-          </button>
           <button
             onClick={toggleTheme}
             className={isDark ? styles.themeButton : styles.themeButtonLight}

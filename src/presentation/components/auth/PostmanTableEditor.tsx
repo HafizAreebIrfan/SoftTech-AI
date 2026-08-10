@@ -62,7 +62,7 @@ export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({
       idx === index ? { ...row, [updatedField]: val } : row,
     );
     setRows(updatedRows);
-    updateApiField(api.id, field, rowsToJsonStr(updatedRows));
+    updateApiField(api.id, field, rowsToJsonStr(updatedRows, showDynamicToggle));
   };
 
   const handleAddRow = () => {
@@ -76,6 +76,7 @@ export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({
       },
     ];
     setRows(newRows);
+    updateApiField(api.id, field, rowsToJsonStr(newRows, showDynamicToggle));
   };
 
   const handleDeleteRow = (index: number) => {
@@ -92,18 +93,7 @@ export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({
           ]
         : newRows;
     setRows(resultRows);
-    updateApiField(api.id, field, rowsToJsonStr(resultRows));
-  };
-
-  const handleApplySuggestion = () => {
-    applyTemplateSuggestions(
-      api.id,
-      field,
-      stepOneData?.primaryIndustry || "",
-      api.apiName || "",
-      api.apiMethod || "GET",
-    );
-    setRows(parseJsonToRows(api[field], showDynamicToggle));
+    updateApiField(api.id, field, rowsToJsonStr(resultRows, showDynamicToggle));
   };
 
   return (
@@ -122,16 +112,6 @@ export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({
           </p>
         </div>
         <div className={styles.controlGroup}>
-          {field === "apiQueryParams" && (
-            <button
-              type="button"
-              onClick={handleApplySuggestion}
-              className={styles.btnSuggest}
-            >
-              <SparklesIcon size={13} color={colors.QueryParamsButtonBg} />
-              <span>Suggest Fields</span>
-            </button>
-          )}
           <button
             type="button"
             onClick={() => setIsRawJsonMode(!isRawJsonMode)}
@@ -332,14 +312,16 @@ export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({
                   className={styles.cellDelete}
                   style={{ gridColumn: "span 1 / span 1" }}
                 >
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteRow(idx)}
-                    className={styles.btnDelete}
-                    title="Delete row"
-                  >
-                    <TrashIcon size={13} color="#ef4444" />
-                  </button>
+                  {rows.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRow(idx)}
+                      className={styles.btnDelete}
+                      title="Delete row"
+                    >
+                      <TrashIcon size={13} color="#ef4444" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

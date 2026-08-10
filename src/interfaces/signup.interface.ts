@@ -8,6 +8,7 @@ export interface ApiConnection {
   apiQueryParams?: string;
   apiRequestBody?: string;
   platformType?: "web" | "mobile" | "both";
+  audience?: "customer" | "admin" | "both";
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
   isCheckoutApi?: boolean;

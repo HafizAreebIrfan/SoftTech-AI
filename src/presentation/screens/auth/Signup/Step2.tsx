@@ -26,6 +26,7 @@ import {
   XMarkIcon,
   RefreshIcon,
   UploadIcon,
+  HelpIcon,
 } from "../../../../assets/icons";
 import { showToast } from "../../../../utils/toasts";
 import styles from "../../../../styles/signup.module.css";
@@ -106,6 +107,9 @@ const SignupStep2: FC = () => {
   const [showApiKeyMask, setShowApiKeyMask] = useState<Record<string, boolean>>(
     {},
   );
+  const [showHelpGuide, setShowHelpGuide] = useState<Record<string, boolean>>(
+    {},
+  );
   const [uploadingSampleApiId, setUploadingSampleApiId] = useState<
     string | null
   >(null);
@@ -139,7 +143,7 @@ const SignupStep2: FC = () => {
     if (isStepTwoPending) return "Saving...";
     if (anyApiHasError) return "Fix API Errors to Continue";
     if (!allApisTestedSuccessfully)
-      return "Test or Upload Samples for All APIs to Continue";
+      return "Upload Samples for All APIs to Continue";
     return "Continue";
   };
 
@@ -154,7 +158,7 @@ const SignupStep2: FC = () => {
 
     if (!allApisTestedSuccessfully) {
       showToast(
-        "Please test or upload sample responses for all APIs before continuing.",
+        "Please upload sample responses for all APIs before continuing.",
         "warning",
       );
       return;
@@ -276,139 +280,6 @@ const SignupStep2: FC = () => {
                   </div>
                 </div>
 
-                {/* Section 1.5: Checkout API Toggle & Redirect URLs (POST Only) */}
-                {api.apiMethod === "POST" && (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.75rem",
-                      marginTop: "0.5rem",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        id={`checkout-toggle-${api.id}`}
-                        checked={Boolean(api.isCheckoutApi)}
-                        onChange={(e) =>
-                          updateApiField(
-                            api.id,
-                            "isCheckoutApi",
-                            e.target.checked,
-                          )
-                        }
-                        style={{
-                          width: "16px",
-                          height: "16px",
-                          cursor: "pointer",
-                          accentColor: colors.BrandIndigo,
-                        }}
-                      />
-                      <label
-                        htmlFor={`checkout-toggle-${api.id}`}
-                        className={styles.fieldLabel}
-                        style={{
-                          color: colors.TextHeading,
-                          margin: 0,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Is this a Checkout / Order Creation API?
-                      </label>
-                    </div>
-
-                    {api.isCheckoutApi && (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "0.75rem",
-                          paddingLeft: "1.5rem",
-                        }}
-                      >
-                        {((stepOneData.targetPlatform || "web") === "web" ||
-                          (stepOneData.targetPlatform || "web") === "both") && (
-                          <div>
-                            <label
-                              className={styles.fieldLabel}
-                              style={{ color: colors.TextBody }}
-                            >
-                              Official Web Checkout Redirect URL (Optional)
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. https://cardetailerzzexpress.com/order/checkout"
-                              value={
-                                api.webCheckoutUrl ||
-                                api.apiCheckoutTemplate ||
-                                ""
-                              }
-                              onChange={(e) =>
-                                updateApiField(
-                                  api.id,
-                                  "webCheckoutUrl",
-                                  e.target.value,
-                                )
-                              }
-                              className={styles.urlInput}
-                              style={{
-                                width: "100%",
-                                background: colors.BackgroundSecondary,
-                                border: `1px solid ${colors.CardBorder}`,
-                                borderRadius: "0.375rem",
-                                color: colors.TextHeading,
-                                padding: "0.5rem 0.75rem",
-                                fontSize: "0.8125rem",
-                              }}
-                            />
-                          </div>
-                        )}
-
-                        {((stepOneData.targetPlatform || "web") === "mobile" ||
-                          (stepOneData.targetPlatform || "web") === "both") && (
-                          <div>
-                            <label
-                              className={styles.fieldLabel}
-                              style={{ color: colors.TextBody }}
-                            >
-                              Mobile App Deep Link Scheme (Optional)
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="e.g. cardetailerzz://checkout"
-                              value={api.mobileDeepLink || ""}
-                              onChange={(e) =>
-                                updateApiField(
-                                  api.id,
-                                  "mobileDeepLink",
-                                  e.target.value,
-                                )
-                              }
-                              className={styles.urlInput}
-                              style={{
-                                width: "100%",
-                                background: colors.BackgroundSecondary,
-                                border: `1px solid ${colors.CardBorder}`,
-                                borderRadius: "0.375rem",
-                                color: colors.TextHeading,
-                                padding: "0.5rem 0.75rem",
-                                fontSize: "0.8125rem",
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {/* Section 2: HTTP Method & Postman Endpoint URL Bar */}
                 <div
                   style={{
@@ -442,13 +313,16 @@ const SignupStep2: FC = () => {
                     >
                       <select
                         value={api.apiMethod}
-                        onChange={(e) =>
-                          updateApiField(
-                            api.id,
-                            "apiMethod",
-                            e.target.value as any,
-                          )
-                        }
+                        onChange={(e) => {
+                          const newMethod = e.target.value as any;
+                          updateApiField(api.id, "apiMethod", newMethod);
+                          if (
+                            (newMethod === "GET" || newMethod === "DELETE") &&
+                            getActiveTab(api.id) === "body"
+                          ) {
+                            setActiveTabForApi(api.id, "params");
+                          }
+                        }}
                         className={styles.methodSelect}
                         style={{
                           color: colors.TextBody,
@@ -495,78 +369,14 @@ const SignupStep2: FC = () => {
                       />
                     </div>
 
-                    {/* Test API & Upload Sample Response Buttons */}
+                    {/* Upload Sample Response Button */}
                     <div
                       className={styles.testBtnWrapper}
                       style={{
                         borderColor: colors.CardBorder,
-                        gap: "0.5rem",
                         alignItems: "center",
                       }}
                     >
-                      <button
-                        type="button"
-                        onClick={() => handleTestApi(api)}
-                        disabled={
-                          api.isTested ||
-                          apiTestStates[api.id]?.status === "loading"
-                        }
-                        className={styles.testBtn}
-                        style={{
-                          background:
-                            api.isTested ||
-                            apiTestStates[api.id]?.status === "success"
-                              ? colors.SuccessBtnBg
-                              : colors.TestApiBtnBg,
-                          color: colors.TestApiBtnText,
-                          opacity: api.isTested ? 0.85 : 1,
-                        }}
-                      >
-                        {apiTestStates[api.id]?.status === "loading" ? (
-                          <>
-                            <SpinnerIcon
-                              size={13}
-                              color={colors.TestApiBtnText}
-                            />
-                            <span>Testing...</span>
-                          </>
-                        ) : api.isTested ||
-                          apiTestStates[api.id]?.status === "success" ? (
-                          <>
-                            <CheckIcon
-                              size={13}
-                              color={colors.TestApiBtnText}
-                            />
-                            <span>Tested ✓</span>
-                          </>
-                        ) : apiTestStates[api.id]?.status === "error" ? (
-                          <>
-                            <RefreshIcon
-                              size={13}
-                              color={colors.TestApiBtnText}
-                            />
-                            <span>Re-Test</span>
-                          </>
-                        ) : (
-                          <>
-                            <BoltIcon size={13} color={colors.TestApiBtnText} />
-                            <span>Test API</span>
-                          </>
-                        )}
-                      </button>
-
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                          color: colors.DividerColor || colors.TextBody,
-                          opacity: 0.8,
-                          userSelect: "none",
-                        }}
-                      >
-                        - OR -
-                      </span>
-
                       <button
                         type="button"
                         onClick={() => {
@@ -618,6 +428,191 @@ const SignupStep2: FC = () => {
                       </button>
                     </div>
                   </div>
+                </div>
+
+                {/* Section 2.5: Checkout API Toggle, Audience Selector & Redirect URLs */}
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.75rem",
+                    marginTop: "0.5rem",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      id={`checkout-toggle-${api.id}`}
+                      checked={Boolean(api.isCheckoutApi)}
+                      onChange={(e) =>
+                        updateApiField(
+                          api.id,
+                          "isCheckoutApi",
+                          e.target.checked,
+                        )
+                      }
+                      style={{
+                        width: "16px",
+                        height: "16px",
+                        cursor: "pointer",
+                        accentColor: colors.BrandIndigo,
+                      }}
+                    />
+                    <label
+                      htmlFor={`checkout-toggle-${api.id}`}
+                      className={styles.fieldLabel}
+                      style={{
+                        color: colors.TextHeading,
+                        margin: 0,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Is this a Checkout / Order Creation API?
+                    </label>
+                  </div>
+
+                  {api.isCheckoutApi && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.75rem",
+                        paddingLeft: "1.5rem",
+                        borderLeft: `2px solid ${colors.CardActiveBorder}`,
+                      }}
+                    >
+                      {/* Target Audience Toggle */}
+                      <div>
+                        <label
+                          className={styles.fieldLabel}
+                          style={{
+                            color: colors.TextBody,
+                            marginBottom: "0.375rem",
+                            display: "block",
+                          }}
+                        >
+                          Target Audience
+                        </label>
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          {(["customer", "admin", "both"] as const).map(
+                            (aud) => (
+                              <button
+                                key={aud}
+                                type="button"
+                                onClick={() =>
+                                  updateApiField(api.id, "audience", aud)
+                                }
+                                style={{
+                                  padding: "0.375rem 0.75rem",
+                                  borderRadius: "0.375rem",
+                                  fontSize: "0.75rem",
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  textTransform: "capitalize",
+                                  background:
+                                    (api.audience || "both") === aud
+                                      ? "rgba(99, 102, 241, 0.2)"
+                                      : colors.BackgroundSecondary,
+                                  border: `1px solid ${
+                                    (api.audience || "both") === aud
+                                      ? colors.CardActiveBorder
+                                      : colors.CardBorder
+                                  }`,
+                                  color:
+                                    (api.audience || "both") === aud
+                                      ? colors.TextHeading
+                                      : colors.TextBody,
+                                  transition: "all 0.15s ease",
+                                }}
+                              >
+                                {aud}
+                              </button>
+                            ),
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Official Web Checkout URL */}
+                      {((stepOneData.targetPlatform || "web") === "web" ||
+                        (stepOneData.targetPlatform || "web") === "both") && (
+                        <div>
+                          <label
+                            className={styles.fieldLabel}
+                            style={{ color: colors.TextBody }}
+                          >
+                            Official Web Checkout Redirect URL (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. https://cardetailerzzexpress.com/order/checkout"
+                            value={
+                              api.webCheckoutUrl ||
+                              api.apiCheckoutTemplate ||
+                              ""
+                            }
+                            onChange={(e) =>
+                              updateApiField(
+                                api.id,
+                                "webCheckoutUrl",
+                                e.target.value,
+                              )
+                            }
+                            className={styles.urlInput}
+                            style={{
+                              width: "100%",
+                              background: colors.BackgroundSecondary,
+                              border: `1px solid ${colors.CardBorder}`,
+                              borderRadius: "0.375rem",
+                              color: colors.TextHeading,
+                              padding: "0.5rem 0.75rem",
+                              fontSize: "0.8125rem",
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Mobile App Deep Link Scheme */}
+                      {((stepOneData.targetPlatform || "web") === "mobile" ||
+                        (stepOneData.targetPlatform || "web") === "both") && (
+                        <div>
+                          <label
+                            className={styles.fieldLabel}
+                            style={{ color: colors.TextBody }}
+                          >
+                            Mobile App Deep Link Scheme (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. cardetailerzz://checkout"
+                            value={api.mobileDeepLink || ""}
+                            onChange={(e) =>
+                              updateApiField(
+                                api.id,
+                                "mobileDeepLink",
+                                e.target.value,
+                              )
+                            }
+                            className={styles.urlInput}
+                            style={{
+                              width: "100%",
+                              background: colors.BackgroundSecondary,
+                              border: `1px solid ${colors.CardBorder}`,
+                              borderRadius: "0.375rem",
+                              color: colors.TextHeading,
+                              padding: "0.5rem 0.75rem",
+                              fontSize: "0.8125rem",
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Section 3: Postman Request Config & AI Response Inspector */}
@@ -724,24 +719,117 @@ const SignupStep2: FC = () => {
                       <button
                         type="button"
                         onClick={() => setActiveTabForApi(api.id, "body")}
+                        disabled={
+                          api.apiMethod === "GET" || api.apiMethod === "DELETE"
+                        }
                         className={`${styles.tabBtn} ${
                           activeTab === "body" ? styles.tabActive : ""
                         }`}
                         style={{
                           color:
-                            activeTab === "body"
-                              ? colors.TextHeading
-                              : colors.TextBody,
+                            api.apiMethod === "GET" || api.apiMethod === "DELETE"
+                              ? colors.TextBody
+                              : activeTab === "body"
+                                ? colors.TextHeading
+                                : colors.TextBody,
                           borderColor:
                             activeTab === "body"
                               ? colors.CardActiveBorder
                               : "transparent",
+                          opacity:
+                            api.apiMethod === "GET" || api.apiMethod === "DELETE"
+                              ? 0.4
+                              : 1,
+                          cursor:
+                            api.apiMethod === "GET" || api.apiMethod === "DELETE"
+                              ? "not-allowed"
+                              : "pointer",
                         }}
                       >
-                        <span>Body / Sample Response</span>
+                        <span>Body</span>
                         <span className={styles.jsonBodyPill}>JSON</span>
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowHelpGuide((prev) => ({
+                            ...prev,
+                            [api.id]: !prev[api.id],
+                          }))
+                        }
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          padding: "0.25rem 0.5rem",
+                          borderRadius: "0.375rem",
+                          background: showHelpGuide[api.id]
+                            ? "rgba(99, 102, 241, 0.2)"
+                            : "transparent",
+                          border: `1px solid ${
+                            showHelpGuide[api.id]
+                              ? colors.CardActiveBorder
+                              : colors.CardBorder
+                          }`,
+                          color: colors.TextHeading,
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          marginLeft: "auto",
+                        }}
+                        title="Toggle tab guide"
+                      >
+                        <HelpIcon size={14} color={colors.BrandIndigo} />
+                        <span>Help</span>
+                      </button>
                     </div>
+
+                    {showHelpGuide[api.id] && (
+                      <div
+                        style={{
+                          margin: "0.5rem 0",
+                          padding: "0.75rem",
+                          borderRadius: "0.5rem",
+                          background: colors.BackgroundSecondary,
+                          border: `1px solid ${colors.CardActiveBorder}`,
+                          color: colors.TextHeading,
+                          fontSize: "0.8125rem",
+                          lineHeight: 1.4,
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <span style={{ flexShrink: 0, marginTop: "2px" }}>
+                          <HelpIcon size={16} color={colors.BrandIndigo} />
+                        </span>
+                        <div>
+                          <strong>
+                            {activeTab === "params" && "Params Tab Guide"}
+                            {activeTab === "auth" && "Authorization Tab Guide"}
+                            {activeTab === "headers" && "Headers Tab Guide"}
+                            {activeTab === "body" && "Body Tab Guide"}
+                          </strong>
+                          <p
+                            style={{
+                              margin: "0.25rem 0 0 0",
+                              color: colors.TextBody,
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            {activeTab === "params" &&
+                              "Query parameters are appended to your URL endpoint (e.g. ?q=search&limit=10). Toggle 'Dynamic (AI)' so ChatGPT can automatically supply values based on user chat queries."}
+                            {activeTab === "auth" &&
+                              "Select the authentication type required by your endpoint (No Auth, API Key, Bearer Token, or OAuth 2.0). Credentials are stored encrypted and injected by our server-side MCP bridge."}
+                            {activeTab === "headers" &&
+                              "Specify custom HTTP headers sent with every request (e.g. Accept-Language, X-Client-Version)."}
+                            {activeTab === "body" &&
+                              "Define the JSON request payload expected by your POST, PUT, or PATCH endpoints. GET and DELETE endpoints do not take request bodies."}
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* 3-Fail Fallback Warning Banner */}
                     {(apiTestStates[api.id]?.failCount || 0) >= 3 && (
@@ -1337,49 +1425,7 @@ const SignupStep2: FC = () => {
                             alignItems: "center",
                             gap: "0.5rem",
                           }}
-                        >
-                          {apiTestStates[api.id]?.status === "error" && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (
-                                  api.sampleresponse &&
-                                  api.sampleresponse.trim()
-                                ) {
-                                  handleSaveSampleResponse(
-                                    api.id,
-                                    api.sampleresponse,
-                                  );
-                                } else {
-                                  setUploadingSampleApiId(api.id);
-                                  setSampleInputText(api.sampleresponse || "");
-                                }
-                              }}
-                              style={{
-                                padding: "0 0.625rem",
-                                borderRadius: "0.375rem",
-                                background: colors.ErrorBadgeBg,
-                                border: `1px solid ${colors.ErrorBadgeBorder}`,
-                                color: colors.ErrorBadgeText,
-                                fontSize: "0.75rem",
-                                fontWeight: 600,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "0.25rem",
-                                height: "28px",
-                                lineHeight: 1,
-                              }}
-                            >
-                              <RefreshIcon
-                                size={12}
-                                color={colors.ErrorBadgeText}
-                              />
-                              <span>Upload Sample / Retry AI</span>
-                            </button>
-                          )}
-                        </div>
+                        />
                       </div>
 
                       {/* Terminal body */}
@@ -1417,17 +1463,15 @@ const SignupStep2: FC = () => {
                               className={styles.emptyTitle}
                               style={{ color: colors.TextHeading }}
                             >
-                              Hit 'Test API' or 'Upload Sample' to inspect
-                              response
+                              Hit 'Upload Sample' to inspect response
                             </div>
                             <p
                               className={styles.emptyDesc}
                               style={{ color: colors.TextBody }}
                             >
-                              When you test your connection or upload a sample
-                              response, our AI automatically analyzes the
-                              response schema to configure dynamic widgets and
-                              filters.
+                              When you upload a sample response, our AI
+                              automatically analyzes the response schema to
+                              configure dynamic widgets and filters.
                             </p>
                           </div>
                         )}

@@ -24,6 +24,7 @@ export interface ApisInformation {
   samplequery?: any;
   sampleresponse?: any;
   platformType?: string;
+  audience?: "customer" | "admin" | "both";
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
   apiSchema?: any;

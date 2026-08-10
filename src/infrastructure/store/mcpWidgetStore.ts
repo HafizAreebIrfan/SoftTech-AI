@@ -1,18 +1,14 @@
 import { create } from "zustand";
 import { useEffect } from "react";
+import { useApp } from "@modelcontextprotocol/ext-apps/react";
+
 import {
   McpToolResultPayload,
   OpenAiGlobals,
+  McpWidgetState,
 } from "../../domain/entities/GenericWidget";
-import { useApp } from "@modelcontextprotocol/ext-apps/react";
 
 export const TOOL_RESULT_NOTIFICATION = "ui/notifications/tool-result";
-
-interface McpWidgetState {
-  toolResult: McpToolResultPayload | null;
-  setToolResult: (payload: McpToolResultPayload | null) => void;
-  resetToolResult: () => void;
-}
 
 export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
   toolResult: null,
@@ -20,120 +16,58 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
   resetToolResult: () => set({ toolResult: null }),
 }));
 
-export const previewGenericToolResult: McpToolResultPayload = {
-  _meta: {
-    company: "WeatherWay",
-    source: "https://api.weatherapi.com/v1/forecast.json?q=Karachi&days=3",
-    lastFetched: new Date().toISOString(),
-    isPreview: true,
-  },
-  content: [
-    {
-      type: "text",
-      text: "Get Weather Data: 3 widget block(s) returned.",
-    },
-  ],
-  structuredContent: {
-    title: "Karachi Weather",
-    subtitle: "Current conditions and 3-day forecast",
-    layout: "dashboard",
-    blocks: [
-      {
-        type: "metrics",
-        title: "Current Conditions",
-        metrics: [
-          {
-            label: "Temperature",
-            value: "32°C",
-            tone: "warning",
-            change: "Feels like 38°C",
-            changeTone: "danger",
-          },
-          {
-            label: "Humidity",
-            value: "78%",
-            tone: "default",
-          },
-          {
-            label: "Wind Speed",
-            value: "14 km/h",
-            tone: "good",
-            change: "SW",
-            changeTone: "default",
-          },
-        ],
-      },
-      {
-        type: "keyValue",
-        title: "Location Details",
-        keyValueItems: [
-          { key: "Region", value: "Sindh", tone: "default" },
-          { key: "Country", value: "Pakistan", tone: "default" },
-          { key: "Local Time", value: "16:25", tone: "good" },
-        ],
-      },
-      {
-        type: "table",
-        title: "3-Day Forecast",
-        tableHeaders: ["Date", "Condition", "Max Temp", "Min Temp"],
-        tableRows: [
-          ["Today", { value: "Sunny", tone: "warning" }, "34°C", "28°C"],
-          [
-            "Tomorrow",
-            { value: "Partly Cloudy", tone: "default" },
-            "33°C",
-            "27°C",
-          ],
-          ["Day 3", { value: "Rain Showers", tone: "good" }, "30°C", "26°C"],
-        ],
-      },
-    ],
-  },
-};
-
-/**
- * Hook to synchronize OpenAI App SDK/MCP message actions with Zustand store
- * and return the current toolResult.
- */
 export const useMcpToolResult = () => {
   const { toolResult, setToolResult } = useMcpWidgetStore();
   useApp({
     appInfo: {
-      name: toolResult?.structuredContent?.title || "Your MCP",
+      name: `${toolResult?.structuredContent?.title}`,
       version: "1.0.0",
     },
     capabilities: {},
     onAppCreated: (app) => {
       try {
         app.ontoolresult = (result) => {
-          console.log("[MCP Apps Bridge] ✅ tool result via useApp:", result);
+          console.log("AI - MCP Bridge Sucessfull", result);
           setToolResult((result as unknown as McpToolResultPayload) ?? null);
         };
       } catch (e) {
-        console.log("Bridge fails to build via useApp", e);
+        console.log("Bridge fails to build", e);
       }
     },
   });
   useEffect(() => {
-    if (window.openai?.toolOutput) {
+    const initialToolOutput = window.openai?.toolOutput;
+
+    if (initialToolOutput !== undefined) {
       console.log(
-        "[ChatGPT Bridge] 📥 Initial toolResult loaded from window.openai:",
-        window.openai.toolOutput,
+        "Initial tool result loaded from window.openai:",
+        initialToolOutput,
       );
-      setToolResult(window.openai.toolOutput as McpToolResultPayload);
+
+      setToolResult(initialToolOutput ?? null);
     }
 
     const handleGlobals = (event: Event) => {
-      const customEvent = event as CustomEvent<{ globals?: OpenAiGlobals }>;
+      const customEvent = event as CustomEvent<{
+        globals?: OpenAiGlobals;
+      }>;
+
       const output = customEvent.detail?.globals?.toolOutput;
-      if (output === undefined) return;
-      console.log("[ChatGPT Bridge] 🔄 openai:set_globals received:", output);
-      setToolResult((output as McpToolResultPayload) ?? null);
+
+      if (output === undefined) {
+        return;
+      }
+
+      console.log("Tool result received from openai:set_globals:", output);
+
+      setToolResult(output ?? null);
     };
 
     window.addEventListener("openai:set_globals", handleGlobals);
-    return () =>
+
+    return () => {
       window.removeEventListener("openai:set_globals", handleGlobals);
+    };
   }, [setToolResult]);
 
   return toolResult;
