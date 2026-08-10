@@ -200,7 +200,7 @@ export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({
             {showDynamicToggle ? (
               <>
                 <div style={{ gridColumn: "span 3 / span 3" }}>
-                  RUNTIME CONTROL
+                  IS DYNAMIC
                 </div>
                 <div
                   style={{ gridColumn: "span 1 / span 1", textAlign: "center" }}
@@ -269,35 +269,62 @@ export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({
                   >
                     <button
                       type="button"
+                      role="switch"
+                      aria-checked={Boolean(row.isDynamic)}
                       onClick={() =>
                         handleRowChange(idx, "isDynamic", !row.isDynamic)
                       }
-                      className={styles.cellDynamic}
                       style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        padding: "0.25rem 0.625rem",
+                        borderRadius: "1rem",
+                        border: `1px solid ${
+                          row.isDynamic ? colors.CardActiveBorder : colors.CardBorder
+                        }`,
                         background: row.isDynamic
                           ? colors.DynamicBadgeBg
                           : "rgba(255, 255, 255, 0.03)",
-                        borderColor: row.isDynamic
-                          ? colors.DynamicBadgeBorder
-                          : colors.CardBorder,
-                        color: row.isDynamic
-                          ? colors.DynamicBadgeText
-                          : colors.TextBody,
+                        color: row.isDynamic ? colors.DynamicBadgeText : colors.TextBody,
+                        cursor: "pointer",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        transition: "all 0.2s ease",
                       }}
                       title={
                         row.isDynamic
-                          ? "ChatGPT will dynamically provide this parameter at runtime based on user prompts."
-                          : "Always sent as a fixed static value."
+                          ? "ON: GPT will need this parameter dynamically from user"
+                          : "OFF: Sent as fixed static value"
                       }
                     >
-                      {row.isDynamic ? (
-                        <>
-                          <BoltIcon size={11} color={colors.DynamicBadgeText} />
-                          <span>Dynamic (AI)</span>
-                        </>
-                      ) : (
-                        <span>Static Value</span>
-                      )}
+                      <span
+                        style={{
+                          width: "28px",
+                          height: "16px",
+                          borderRadius: "10px",
+                          background: row.isDynamic
+                            ? colors.ButtonGradientTwo
+                            : "rgba(148, 163, 184, 0.3)",
+                          display: "inline-block",
+                          position: "relative",
+                          transition: "background 0.2s ease",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "12px",
+                            height: "12px",
+                            borderRadius: "50%",
+                            background: "#ffffff",
+                            position: "absolute",
+                            top: "2px",
+                            left: row.isDynamic ? "14px" : "2px",
+                            transition: "left 0.2s ease",
+                          }}
+                        />
+                      </span>
+                      <span>{row.isDynamic ? "Dynamic (AI)" : "Static Value"}</span>
                     </button>
                   </div>
                 ) : (
@@ -316,16 +343,20 @@ export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({
                   className={styles.cellDelete}
                   style={{ gridColumn: "span 1 / span 1" }}
                 >
-                  {rows.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteRow(idx)}
-                      className={styles.btnDelete}
-                      title="Delete row"
-                    >
-                      <TrashIcon size={13} color="#ef4444" />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    disabled={idx === 0}
+                    onClick={() => handleDeleteRow(idx)}
+                    className={styles.btnDelete}
+                    style={{
+                      opacity: idx === 0 ? 0.35 : 1,
+                      cursor: idx === 0 ? "not-allowed" : "pointer",
+                      filter: idx === 0 ? "grayscale(80%)" : "none",
+                    }}
+                    title={idx === 0 ? "Default row cannot be deleted" : "Delete row"}
+                  >
+                    <TrashIcon size={13} color={idx === 0 ? "#ef444466" : "#ef4444"} />
+                  </button>
                 </div>
               </div>
             ))}

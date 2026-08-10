@@ -430,190 +430,192 @@ const SignupStep2: FC = () => {
                   </div>
                 </div>
 
-                {/* Section 2.5: Checkout API Toggle, Audience Selector & Redirect URLs */}
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.75rem",
-                    marginTop: "0.5rem",
-                  }}
-                >
+                {/* Section 2.5: Checkout API Toggle, Audience Selector & Redirect URLs (Only visible for POST method) */}
+                {api.apiMethod === "POST" && (
                   <div
                     style={{
                       display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
+                      flexDirection: "column",
+                      gap: "0.75rem",
+                      marginTop: "0.5rem",
                     }}
                   >
-                    <input
-                      type="checkbox"
-                      id={`checkout-toggle-${api.id}`}
-                      checked={Boolean(api.isCheckoutApi)}
-                      onChange={(e) =>
-                        updateApiField(
-                          api.id,
-                          "isCheckoutApi",
-                          e.target.checked,
-                        )
-                      }
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        cursor: "pointer",
-                        accentColor: colors.BrandIndigo,
-                      }}
-                    />
-                    <label
-                      htmlFor={`checkout-toggle-${api.id}`}
-                      className={styles.fieldLabel}
-                      style={{
-                        color: colors.TextHeading,
-                        margin: 0,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Is this a Checkout / Order Creation API?
-                    </label>
-                  </div>
-
-                  {api.isCheckoutApi && (
                     <div
                       style={{
                         display: "flex",
-                        flexDirection: "column",
-                        gap: "0.75rem",
-                        paddingLeft: "1.5rem",
-                        borderLeft: `2px solid ${colors.CardActiveBorder}`,
+                        alignItems: "center",
+                        gap: "0.5rem",
                       }}
                     >
-                      {/* Target Audience Toggle */}
-                      <div>
-                        <label
-                          className={styles.fieldLabel}
-                          style={{
-                            color: colors.TextBody,
-                            marginBottom: "0.375rem",
-                            display: "block",
-                          }}
-                        >
-                          Target Audience
-                        </label>
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
-                          {(["customer", "admin", "both"] as const).map(
-                            (aud) => (
-                              <button
-                                key={aud}
-                                type="button"
-                                onClick={() =>
-                                  updateApiField(api.id, "audience", aud)
-                                }
-                                style={{
-                                  padding: "0.375rem 0.75rem",
-                                  borderRadius: "0.375rem",
-                                  fontSize: "0.75rem",
-                                  fontWeight: 600,
-                                  cursor: "pointer",
-                                  textTransform: "capitalize",
-                                  background:
-                                    (api.audience || "both") === aud
-                                      ? "rgba(99, 102, 241, 0.2)"
-                                      : colors.BackgroundSecondary,
-                                  border: `1px solid ${
-                                    (api.audience || "both") === aud
-                                      ? colors.CardActiveBorder
-                                      : colors.CardBorder
-                                  }`,
-                                  color:
-                                    (api.audience || "both") === aud
-                                      ? colors.TextHeading
-                                      : colors.TextBody,
-                                  transition: "all 0.15s ease",
-                                }}
-                              >
-                                {aud}
-                              </button>
-                            ),
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Official Web Checkout URL */}
-                      {((stepOneData.targetPlatform || "web") === "web" ||
-                        (stepOneData.targetPlatform || "web") === "both") && (
-                        <div>
-                          <label
-                            className={styles.fieldLabel}
-                            style={{ color: colors.TextBody }}
-                          >
-                            Official Web Checkout Redirect URL (Optional)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. https://cardetailerzzexpress.com/order/checkout"
-                            value={
-                              api.webCheckoutUrl ||
-                              api.apiCheckoutTemplate ||
-                              ""
-                            }
-                            onChange={(e) =>
-                              updateApiField(
-                                api.id,
-                                "webCheckoutUrl",
-                                e.target.value,
-                              )
-                            }
-                            className={styles.urlInput}
-                            style={{
-                              width: "100%",
-                              background: colors.BackgroundSecondary,
-                              border: `1px solid ${colors.CardBorder}`,
-                              borderRadius: "0.375rem",
-                              color: colors.TextHeading,
-                              padding: "0.5rem 0.75rem",
-                              fontSize: "0.8125rem",
-                            }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Mobile App Deep Link Scheme */}
-                      {((stepOneData.targetPlatform || "web") === "mobile" ||
-                        (stepOneData.targetPlatform || "web") === "both") && (
-                        <div>
-                          <label
-                            className={styles.fieldLabel}
-                            style={{ color: colors.TextBody }}
-                          >
-                            Mobile App Deep Link Scheme (Optional)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. cardetailerzz://checkout"
-                            value={api.mobileDeepLink || ""}
-                            onChange={(e) =>
-                              updateApiField(
-                                api.id,
-                                "mobileDeepLink",
-                                e.target.value,
-                              )
-                            }
-                            className={styles.urlInput}
-                            style={{
-                              width: "100%",
-                              background: colors.BackgroundSecondary,
-                              border: `1px solid ${colors.CardBorder}`,
-                              borderRadius: "0.375rem",
-                              color: colors.TextHeading,
-                              padding: "0.5rem 0.75rem",
-                              fontSize: "0.8125rem",
-                            }}
-                          />
-                        </div>
-                      )}
+                      <input
+                        type="checkbox"
+                        id={`checkout-toggle-${api.id}`}
+                        checked={Boolean(api.isCheckoutApi)}
+                        onChange={(e) =>
+                          updateApiField(
+                            api.id,
+                            "isCheckoutApi",
+                            e.target.checked,
+                          )
+                        }
+                        style={{
+                          width: "16px",
+                          height: "16px",
+                          cursor: "pointer",
+                          accentColor: colors.BrandIndigo,
+                        }}
+                      />
+                      <label
+                        htmlFor={`checkout-toggle-${api.id}`}
+                        className={styles.fieldLabel}
+                        style={{
+                          color: colors.TextHeading,
+                          margin: 0,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Is this a Checkout / Order Creation API?
+                      </label>
                     </div>
-                  )}
-                </div>
+
+                    {api.isCheckoutApi && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.75rem",
+                          paddingLeft: "1.5rem",
+                          borderLeft: `2px solid ${colors.CardActiveBorder}`,
+                        }}
+                      >
+                        {/* Target Audience Toggle */}
+                        <div>
+                          <label
+                            className={styles.fieldLabel}
+                            style={{
+                              color: colors.TextBody,
+                              marginBottom: "0.375rem",
+                              display: "block",
+                            }}
+                          >
+                            Target Audience
+                          </label>
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
+                            {(["customer", "admin", "both"] as const).map(
+                              (aud) => (
+                                <button
+                                  key={aud}
+                                  type="button"
+                                  onClick={() =>
+                                    updateApiField(api.id, "audience", aud)
+                                  }
+                                  style={{
+                                    padding: "0.375rem 0.75rem",
+                                    borderRadius: "0.375rem",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    textTransform: "capitalize",
+                                    background:
+                                      (api.audience || "both") === aud
+                                        ? "rgba(59, 130, 246, 0.2)"
+                                        : colors.BackgroundSecondary,
+                                    border: `1px solid ${
+                                      (api.audience || "both") === aud
+                                        ? colors.CardActiveBorder
+                                        : colors.CardBorder
+                                    }`,
+                                    color:
+                                      (api.audience || "both") === aud
+                                        ? colors.TextHeading
+                                        : colors.TextBody,
+                                    transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  {aud}
+                                </button>
+                              ),
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Official Web Checkout URL */}
+                        {((stepOneData.targetPlatform || "web") === "web" ||
+                          (stepOneData.targetPlatform || "web") === "both") && (
+                          <div>
+                            <label
+                              className={styles.fieldLabel}
+                              style={{ color: colors.TextBody }}
+                            >
+                              Official Web Checkout Redirect URL (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. https://cardetailerzzexpress.com/order/checkout"
+                              value={
+                                api.webCheckoutUrl ||
+                                api.apiCheckoutTemplate ||
+                                ""
+                              }
+                              onChange={(e) =>
+                                updateApiField(
+                                  api.id,
+                                  "webCheckoutUrl",
+                                  e.target.value,
+                                )
+                              }
+                              className={styles.urlInput}
+                              style={{
+                                width: "100%",
+                                background: colors.BackgroundSecondary,
+                                border: `1px solid ${colors.CardBorder}`,
+                                borderRadius: "0.375rem",
+                                color: colors.TextHeading,
+                                padding: "0.5rem 0.75rem",
+                                fontSize: "0.8125rem",
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Mobile App Deep Link Scheme */}
+                        {((stepOneData.targetPlatform || "web") === "mobile" ||
+                          (stepOneData.targetPlatform || "web") === "both") && (
+                          <div>
+                            <label
+                              className={styles.fieldLabel}
+                              style={{ color: colors.TextBody }}
+                            >
+                              Mobile App Deep Link Scheme (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. cardetailerzz://checkout"
+                              value={api.mobileDeepLink || ""}
+                              onChange={(e) =>
+                                updateApiField(
+                                  api.id,
+                                  "mobileDeepLink",
+                                  e.target.value,
+                                )
+                              }
+                              className={styles.urlInput}
+                              style={{
+                                width: "100%",
+                                background: colors.BackgroundSecondary,
+                                border: `1px solid ${colors.CardBorder}`,
+                                borderRadius: "0.375rem",
+                                color: colors.TextHeading,
+                                padding: "0.5rem 0.75rem",
+                                fontSize: "0.8125rem",
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Section 3: Postman Request Config & AI Response Inspector */}
                 <div className={styles.configGrid}>
@@ -1435,7 +1437,9 @@ const SignupStep2: FC = () => {
                             className={styles.logPre}
                             style={{
                               color:
-                                apiTestStates[api.id]?.status === "error"
+                                apiTestStates[api.id]?.status === "error" &&
+                                !api.isTested &&
+                                !api.isAnalyzed
                                   ? colors.ErrorBadgeText
                                   : colors.SuccessBadgeText,
                             }}
@@ -1517,24 +1521,24 @@ const SignupStep2: FC = () => {
               className={styles.btn}
               style={{
                 background:
-                  isStepTwoPending || !allApisTestedSuccessfully
+                  isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
                     ? colors.Background
                     : `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
                 color:
-                  isStepTwoPending || !allApisTestedSuccessfully
+                  isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
                     ? colors.TextBody
                     : "#ffffff",
                 border:
-                  isStepTwoPending || !allApisTestedSuccessfully
+                  isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
                     ? `1px solid ${colors.CardBorder}`
                     : "none",
                 cursor:
-                  isStepTwoPending || !allApisTestedSuccessfully
+                  isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
                     ? "not-allowed"
                     : "pointer",
                 opacity: 1,
               }}
-              disabled={isStepTwoPending || !allApisTestedSuccessfully}
+              disabled={isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError}
             >
               {getButtonText()}
             </button>

@@ -17,7 +17,7 @@ export const registerCompanyInfo = async (
   payload: any,
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
   const url = `${env.apiBaseUrl}/api/companies/registerstep`;
-  return post(url, payload);
+  return post(url, payload, { skipRedirect: true });
 };
 
 export const saveCompanyApiDetails = async (
@@ -25,7 +25,7 @@ export const saveCompanyApiDetails = async (
   apis: ApisInformation[],
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
   const url = `${env.apiBaseUrl}/api/companies/${companyId}/apidetailsstep`;
-  return post(url, { apis });
+  return post(url, { apis }, { skipRedirect: true });
 };
 
 export const analyzeSingleCompanyApi = async (
@@ -34,7 +34,7 @@ export const analyzeSingleCompanyApi = async (
   sampleResponse?: string,
 ): Promise<{ success: boolean; message: string; data: { apiIndex: number; apiSchema: any; api: any } }> => {
   const url = `${env.apiBaseUrl}/api/companies/${companyId}/apis/${apiIndex}/analyze`;
-  return post(url, { sampleResponse });
+  return post(url, { sampleResponse }, { skipRedirect: true });
 };
 
 export const saveCompanyUiSelection = async (
@@ -47,7 +47,7 @@ export const saveCompanyUiSelection = async (
   token?: string;
 }> => {
   const url = `${env.apiBaseUrl}/api/companies/${companyId}/uiselectionstep`;
-  return post(url, { uiPreference });
+  return post(url, { uiPreference }, { skipRedirect: true });
 };
 
 export const verifySession = async (): Promise<{ user?: User }> => {

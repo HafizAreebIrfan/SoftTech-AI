@@ -8,5 +8,65 @@
   text-decoration: none !important;
   list-style: none !important;
   scroll-behavior: smooth;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Poppins', sans-serif;
 }
+
+h1, h2, h3, h4, h5, h6, .font-headline {
+  font-family: 'Jost', sans-serif !important;
+}
+
+/* Glassmorphic & Theme-Aware Toast Styling */
+.Toastify__toast-container {
+  padding: 1rem;
+  width: auto;
+  max-width: 440px;
+}
+
+.Toastify__toast {
+  background: var(--app-bg-secondary) !important;
+  color: var(--app-text-heading) !important;
+  border: 1px solid var(--app-card-border) !important;
+  border-radius: 0.875rem !important;
+  box-shadow: 0 12px 32px var(--app-overlay-shadow) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  padding: 0.875rem 1.125rem !important;
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+}
+
+.Toastify__toast--success {
+  border-left: 4px solid #10b981 !important;
+}
+
+.Toastify__toast--error {
+  border-left: 4px solid #ef4444 !important;
+}
+
+.Toastify__toast--warning {
+  border-left: 4px solid #f59e0b !important;
+}
+
+.Toastify__toast--info {
+  border-left: 4px solid #3b82f6 !important;
+}
+
+.Toastify__toast-body {
+  padding: 0 !important;
+  margin: 0 !important;
+  color: var(--app-text-heading) !important;
+}
+
+.Toastify__close-button {
+  color: var(--app-text-body) !important;
+  opacity: 0.7 !important;
+  align-self: center !important;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1 !important;
+  color: var(--app-text-heading) !important;
+}
+
