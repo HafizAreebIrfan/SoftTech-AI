@@ -86,6 +86,12 @@ export const GenericWidgetRenderer: React.FC = () => {
       }
     }
 
+    console.log("WIDGET DEBUG", {
+      data: content.data,
+      dataPath: collection?.dataPath,
+      fields: collection?.fields,
+    });
+
     return {
       content,
       collection,
@@ -94,6 +100,8 @@ export const GenericWidgetRenderer: React.FC = () => {
       rawData: content.data,
     };
   }, [structuredContent]);
+
+  console.log("NORMALIZED WIDGET", normalizedData);
 
   if (!structuredContent || !normalizedData) {
     return <EmptyStateBlock />;
