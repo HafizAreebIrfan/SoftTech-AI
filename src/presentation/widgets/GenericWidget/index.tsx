@@ -7,12 +7,7 @@ import { TableLayout } from "../layouts/TableLayout";
 import { GeneralLayout } from "../layouts/GeneralLayout";
 import { EmptyStateBlock } from "../components/EmptyStateBlock";
 import { getValue } from "../../../utils";
-import type {
-  CollectionResult,
-  FieldSchema,
-  GenericWidgetContent,
-  JsonValue,
-} from "../../../domain/entities/GenericWidget";
+import type { JsonValue } from "../../../domain/entities/GenericWidget";
 import { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
 import styles from "../../../styles/genericwidgetrenderer.module.css";
 
@@ -37,10 +32,6 @@ export const GenericWidgetRenderer: React.FC = () => {
   }
 
   const structuredContent = toolResult?.structuredContent;
-
-  if (!structuredContent) {
-    return <EmptyStateBlock />;
-  }
 
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
     const content = structuredContent;
@@ -104,7 +95,7 @@ export const GenericWidgetRenderer: React.FC = () => {
     };
   }, [structuredContent]);
 
-  if (!normalizedData) {
+  if (!structuredContent || !normalizedData) {
     return <EmptyStateBlock />;
   }
 

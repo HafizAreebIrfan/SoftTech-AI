@@ -12,7 +12,6 @@ const isObject = (
 const normalizePath = (path: string): string => {
   return path
     .replace(/\[(\d+)\]/g, ".$1")
-    .replace(/\.\./g, ".")
     .replace(/^\./, "")
     .replace(/\.$/, "");
 };
