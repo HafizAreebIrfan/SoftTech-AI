@@ -119,67 +119,67 @@ export type ThemeColors = {
 };
 
 export const darkColors: ThemeColors = {
-  Headerbackground: "#111614",
+  Headerbackground: "#111715",
   HeaderBoxShadow: "rgba(0, 0, 0, 0.45)",
   HeaderBottomBorder: "rgba(255, 255, 255, 0.07)",
-  HeaderItemColor: "#9CA8A2",
+  HeaderItemColor: "#94A39D",
   HeaderItemHoverColor: "#34D399",
   HeaderItemActiveColor: "#34D399",
-  HeaderIconColor: "#A7B0AB",
+  HeaderIconColor: "#94A39D",
 
   Background: "#0B0F0D",
-  BackgroundSecondary: "#111614",
-  OverlayShadow: "rgba(16, 185, 129, 0.16)",
+  BackgroundSecondary: "#111715",
+  OverlayShadow: "rgba(0, 0, 0, 0.55)",
 
-  Card: "#131916",
-  CardSecondary: "#18201C",
-  CardBorder: "#26332C",
+  Card: "#121916",
+  CardSecondary: "#16201C",
+  CardBorder: "#202A25",
   CardBorderSecondary: "rgba(255, 255, 255, 0.06)",
   CardActiveBorder: "#10B981",
 
-  TextPrimary: "#E8EEE9",
-  TextSecondary: "#9CA8A2",
+  TextPrimary: "#ECEFEF",
+  TextSecondary: "#94A39D",
   TextOverlay: "#FFFFFF",
 
-  ButtonGradientOne: "#059669",
-  ButtonGradientTwo: "#10B981",
+  ButtonGradientOne: "#10B981",
+  ButtonGradientTwo: "#059669",
   ButtonSecondary: "rgba(255, 255, 255, 0.05)",
 
-  HeaderButtonGradientOne: "#059669",
-  HeaderButtonGradientTwo: "#10B981",
+  HeaderButtonGradientOne: "#10B981",
+  HeaderButtonGradientTwo: "#059669",
   HeaderButtonGradientText: "#FFFFFF",
   HeaderButtonSecondary: "rgba(255, 255, 255, 0)",
-  HeaderButtonSecondaryText: "#A7B0AB",
+  HeaderButtonSecondaryText: "#94A39D",
 
   ButtonPricing: "#10B981",
-  ButtonPricingText: "#E8EEE9",
-  ButtonPricingSecondary: "#25312B",
-  ButtonPricingSecondaryText: "#A7B0AB",
+  ButtonPricingText: "#ECEFEF",
+  ButtonPricingSecondary: "#1D2823",
+  ButtonPricingSecondaryText: "#94A39D",
 
   ButtonOverlay: "#FFFFFF",
   ButtonOverlayText: "#047857",
   ButtonOverlaySecondary: "rgba(255, 255, 255, 0)",
   ButtonOverlaySecondaryText: "#FFFFFF",
 
-  FooterText: "#6F7C75",
-  FooterHeading: "#F1F5F2",
+  FooterText: "#687670",
+  FooterHeading: "#F0F4F2",
 
-  TextHeading: "#E8EEE9",
-  TextBody: "#A7B0AB",
+  TextHeading: "#ECEFEF",
+  TextBody: "#94A39D",
 
   TextGradientOne: "#34D399",
   TextGradientTwo: "#10B981",
   TextGradientThree: "#6EE7B7",
   TextHighlightedHeading: "#34D399",
 
-  Border: "#334139",
+  Border: "#2A3831",
 
-  BackgroundGradientOne: "#12352A",
-  BackgroundGradientTwo: "#0D241C",
+  BackgroundGradientOne: "#111715",
+  BackgroundGradientTwo: "#0D1311",
 
-  RatingIconColor: "#F4D35E",
-  AuthIconColor: "#A7B0AB",
-  IconColor: "#A7B0AB",
+  RatingIconColor: "#F59E0B",
+  AuthIconColor: "#94A39D",
+  IconColor: "#94A39D",
 
   UISelectionCardBackground: "rgba(16, 185, 129, 0.10)",
 
@@ -196,8 +196,8 @@ export const darkColors: ThemeColors = {
 
   BrandIndigo: "#10B981",
   BrandIndigoHover: "#059669",
-  BrandEmerald: "#059669",
-  BrandEmeraldHover: "#047857",
+  BrandEmerald: "#10B981",
+  BrandEmeraldHover: "#059669",
   BrandBlue: "#10B981",
   BrandBlueHover: "#059669",
   BrandFuchsia: "#34D399",
@@ -207,7 +207,7 @@ export const darkColors: ThemeColors = {
 
   LogoutButtonBackground: "rgba(239, 68, 68, 0.06)",
 
-  GlassBg: "rgba(17, 22, 20, 0.60)",
+  GlassBg: "rgba(17, 23, 21, 0.65)",
   GlassBorder: "rgba(255, 255, 255, 0.08)",
   GlassBorderSecondary: "rgba(255, 255, 255, 0.04)",
 
@@ -215,17 +215,17 @@ export const darkColors: ThemeColors = {
   MethodGetText: "#34D399",
   MethodGetBorder: "rgba(16, 185, 129, 0.28)",
 
-  MethodPostBg: "rgba(139, 92, 246, 0.12)",
-  MethodPostText: "#A78BFA",
-  MethodPostBorder: "rgba(139, 92, 246, 0.28)",
+  MethodPostBg: "rgba(99, 102, 241, 0.12)",
+  MethodPostText: "#818CF8",
+  MethodPostBorder: "rgba(99, 102, 241, 0.28)",
 
   MethodPutBg: "rgba(245, 158, 11, 0.12)",
   MethodPutText: "#FBBF24",
   MethodPutBorder: "rgba(245, 158, 11, 0.28)",
 
-  MethodPatchBg: "rgba(20, 184, 166, 0.12)",
-  MethodPatchText: "#2DD4BF",
-  MethodPatchBorder: "rgba(20, 184, 166, 0.28)",
+  MethodPatchBg: "rgba(6, 182, 212, 0.12)",
+  MethodPatchText: "#22D3EE",
+  MethodPatchBorder: "rgba(6, 182, 212, 0.28)",
 
   MethodDeleteBg: "rgba(239, 68, 68, 0.12)",
   MethodDeleteText: "#F87171",
@@ -261,81 +261,81 @@ export const darkColors: ThemeColors = {
   ToggleTableTextViewBg: "rgba(255, 255, 255, 0.05)",
   ToggleTableTextViewBorder: "rgba(255, 255, 255, 0.10)",
 
-  TestApiBtnBg: "linear-gradient(90deg, #047857, #10B981)",
+  TestApiBtnBg: "#10B981",
   TestApiBtnText: "#FFFFFF",
 
   UploadSampleBtnBg: "rgba(16, 185, 129, 0.10)",
   UploadSampleBtnBorder: "rgba(16, 185, 129, 0.25)",
   UploadSampleBtnText: "#34D399",
 
-  SuccessBtnBg: "linear-gradient(90deg, #059669, #10B981)",
+  SuccessBtnBg: "#10B981",
 
   ModalBackdrop: "rgba(0, 0, 0, 0.78)",
-  DividerColor: "#39463F",
+  DividerColor: "#34423B",
 };
 
 export const lightColors: ThemeColors = {
   Headerbackground: "#FFFFFF",
-  HeaderBoxShadow: "rgba(15, 23, 20, 0.08)",
+  HeaderBoxShadow: "rgba(15, 23, 20, 0.06)",
   HeaderBottomBorder: "rgba(15, 23, 20, 0.08)",
-  HeaderItemColor: "#64716A",
-  HeaderItemHoverColor: "#047857",
-  HeaderItemActiveColor: "#047857",
-  HeaderIconColor: "#66736C",
+  HeaderItemColor: "#616E68",
+  HeaderItemHoverColor: "#059669",
+  HeaderItemActiveColor: "#059669",
+  HeaderIconColor: "#616E68",
 
-  Background: "#F6F8F7",
-  BackgroundSecondary: "#EEF2EF",
+  Background: "#F5F7F6",
+  BackgroundSecondary: "#ECEFEF",
   OverlayShadow: "rgba(5, 150, 105, 0.12)",
 
   Card: "#FFFFFF",
-  CardSecondary: "#F8FAF9",
-  CardBorder: "#DCE4DF",
-  CardBorderSecondary: "#E8EDE9",
+  CardSecondary: "#e9e9e9ff",
+  CardBorder: "#DCE3DE",
+  CardBorderSecondary: "#E6ECE8",
   CardActiveBorder: "#059669",
 
-  TextPrimary: "#18211D",
-  TextSecondary: "#65716B",
+  TextPrimary: "#151F1B",
+  TextSecondary: "#616E68",
   TextOverlay: "#FFFFFF",
 
-  ButtonGradientOne: "#047857",
-  ButtonGradientTwo: "#059669",
-  ButtonSecondary: "#EEF2EF",
+  ButtonGradientOne: "#059669",
+  ButtonGradientTwo: "#10B981",
+  ButtonSecondary: "#ECEFEF",
 
-  HeaderButtonGradientOne: "#047857",
-  HeaderButtonGradientTwo: "#059669",
+  HeaderButtonGradientOne: "#059669",
+  HeaderButtonGradientTwo: "#10B981",
   HeaderButtonGradientText: "#FFFFFF",
   HeaderButtonSecondary: "rgba(255, 255, 255, 0)",
-  HeaderButtonSecondaryText: "#59665F",
+  HeaderButtonSecondaryText: "#57645E",
 
   ButtonPricing: "#059669",
   ButtonPricingText: "#FFFFFF",
-  ButtonPricingSecondary: "#E8EEEA",
-  ButtonPricingSecondaryText: "#3F4B45",
+  ButtonPricingSecondary: "#E5EBE7",
+  ButtonPricingSecondaryText: "#3B4741",
 
   ButtonOverlay: "#FFFFFF",
   ButtonOverlayText: "#047857",
   ButtonOverlaySecondary: "rgba(255, 255, 255, 0)",
   ButtonOverlaySecondaryText: "#FFFFFF",
 
-  FooterText: "#6B7771",
-  FooterHeading: "#18211D",
+  FooterText: "#67746E",
+  FooterHeading: "#151F1B",
 
-  TextHeading: "#18211D",
-  TextBody: "#59665F",
+  TextHeading: "#151F1B",
+  TextBody: "#57645E",
 
-  TextGradientOne: "#047857",
-  TextGradientTwo: "#059669",
-  TextGradientThree: "#10B981",
-  TextHighlightedHeading: "#047857",
+  TextGradientOne: "#059669",
+  TextGradientTwo: "#10B981",
+  TextGradientThree: "#34D399",
+  TextHighlightedHeading: "#059669",
 
   Border: "#CBD5CF",
 
-  BackgroundGradientOne: "#D8F3E8",
+  BackgroundGradientOne: "#D5F2E6",
   BackgroundGradientTwo: "#ECFDF5",
 
   RatingIconColor: "#D4A72C",
-  AuthIconColor: "#66736C",
-  IconColor: "#66736C",
+  AuthIconColor: "#616E68",
+  IconColor: "#616E68",
 
   UISelectionCardBackground: "rgba(5, 150, 105, 0.08)",
 
@@ -363,7 +363,7 @@ export const lightColors: ThemeColors = {
 
   LogoutButtonBackground: "rgba(220, 38, 38, 0.06)",
 
-  GlassBg: "rgba(255, 255, 255, 0.72)",
+  GlassBg: "rgba(255, 255, 255, 0.75)",
   GlassBorder: "rgba(15, 23, 20, 0.10)",
   GlassBorderSecondary: "rgba(15, 23, 20, 0.05)",
 
@@ -399,7 +399,7 @@ export const lightColors: ThemeColors = {
   ErrorBadgeText: "#DC2626",
   ErrorBadgeBorder: "rgba(220, 38, 38, 0.22)",
 
-  TableDivider: "#E4EAE6",
+  TableDivider: "#E2E8E4",
 
   DeleteAPIButtonBg: "rgba(220, 38, 38, 0.08)",
   DeleteAPIButtonBorder: "rgba(220, 38, 38, 0.22)",
@@ -414,17 +414,17 @@ export const lightColors: ThemeColors = {
   QueryParamsButtonBorder: "rgba(5, 150, 105, 0.20)",
   QueryParamsButtonBgHover: "rgba(5, 150, 105, 0.14)",
 
-  ToggleTableTextViewBg: "#F0F4F1",
-  ToggleTableTextViewBorder: "#D8E0DB",
+  ToggleTableTextViewBg: "#EDF2EE",
+  ToggleTableTextViewBorder: "#D6E0D9",
 
-  TestApiBtnBg: "linear-gradient(90deg, #047857, #059669)",
+  TestApiBtnBg: "#059669",
   TestApiBtnText: "#FFFFFF",
 
   UploadSampleBtnBg: "rgba(5, 150, 105, 0.08)",
   UploadSampleBtnBorder: "rgba(5, 150, 105, 0.22)",
   UploadSampleBtnText: "#047857",
 
-  SuccessBtnBg: "linear-gradient(90deg, #047857, #059669)",
+  SuccessBtnBg: "#059669",
 
   ModalBackdrop: "rgba(15, 23, 20, 0.60)",
   DividerColor: "#CBD5CF",

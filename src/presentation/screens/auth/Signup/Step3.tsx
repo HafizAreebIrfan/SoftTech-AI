@@ -142,9 +142,9 @@ const SignupStep3: FC = () => {
       <div
         className={styles.signupcard}
         style={{
-          background: colors.BackgroundSecondary,
+          background: colors.Headerbackground,
           border: `1px solid ${colors.CardBorder}`,
-          borderLeft: `4px solid ${colors.CardActiveBorder}`,
+          borderRadius: "16px",
           boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`,
         }}
       >

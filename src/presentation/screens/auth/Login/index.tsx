@@ -97,7 +97,7 @@ const Login: FC = () => {
       <div
         className={styles.loginheader}
         style={{
-          background: colors.BackgroundSecondary,
+          background: colors.Headerbackground,
           borderBottom: `1px solid ${colors.HeaderBottomBorder}`,
         }}
       >
@@ -112,10 +112,7 @@ const Login: FC = () => {
             onClick={() => navigate({ to: "/" })}
             className={styles.logoText}
             style={{
-              background: `linear-gradient(120deg, ${colors.TextGradientOne}, ${colors.TextGradientTwo}, ${colors.TextGradientThree})`,
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
+              color: colors.TextHeading,
             }}
           >
             SoftTech AI
@@ -151,9 +148,9 @@ const Login: FC = () => {
           <div
             className={styles.logincard}
             style={{
-              background: colors.BackgroundSecondary,
+              background: colors.Headerbackground,
               border: `1px solid ${colors.CardBorder}`,
-              borderLeft: `4px solid ${colors.CardActiveBorder}`,
+              borderRadius: "16px",
               boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`,
             }}
           >

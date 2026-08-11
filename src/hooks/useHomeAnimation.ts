@@ -197,7 +197,7 @@ export const useHomeAnimation = ({ containerRef, isYearly }: UseHomeAnimationPro
             zIndex: 20,
             duration: 0.4,
             boxShadow:
-              "0 30px 60px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(99,102,241,0.5)",
+              "0 30px 60px -12px rgba(0,0,0,0.9), 0 0 0 1px rgba(16,185,129,0.6)",
           });
           cards.forEach(
             (c) =>
@@ -325,7 +325,7 @@ export const useHomeAnimation = ({ containerRef, isYearly }: UseHomeAnimationPro
             duration: 1.5,
             ease: "power2.inOut",
             boxShadow:
-              "0 25px 50px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(99,102,241,0.2)",
+              "0 25px 50px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(16,185,129,0.3)",
           },
           1
         );
@@ -359,7 +359,7 @@ export const useHomeAnimation = ({ containerRef, isYearly }: UseHomeAnimationPro
             scale: activeScale,
             rotation: 0,
             boxShadow:
-              "0 30px 60px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(99,102,241,0.3)",
+              "0 30px 60px -12px rgba(0,0,0,0.8), 0 0 0 1px rgba(16,185,129,0.4)",
             duration: 1.5,
           },
           startTime + 0.5

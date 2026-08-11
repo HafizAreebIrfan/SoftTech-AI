@@ -38,15 +38,15 @@ h1, h2, h3, h4, h5, h6, .font-headline {
 }
 
 .Toastify__toast--success {
-  border-left: 4px solid #10b981 !important;
+  border-left: 4px solid var(--app-success-badge-text) !important;
 }
 
 .Toastify__toast--error {
-  border-left: 4px solid #ef4444 !important;
+  border-left: 4px solid var(--app-error-badge-text) !important;
 }
 
 .Toastify__toast--warning {
-  border-left: 4px solid #f59e0b !important;
+  border-left: 4px solid var(--app-rating-icon) !important;
 }
 
 .Toastify__toast--info {
@@ -69,4 +69,4 @@ h1, h2, h3, h4, h5, h6, .font-headline {
   opacity: 1 !important;
   color: var(--app-text-heading) !important;
 }
-
+
