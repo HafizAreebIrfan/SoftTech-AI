@@ -31,12 +31,13 @@ export const GenericWidgetRenderer: React.FC = () => {
     );
   }
 
-  const structuredContent = toolResult?.structuredContent;
+  const structuredContent =
+    (toolResult as any)?.structuredContent ?? toolResult;
 
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
     const content = structuredContent;
 
-    if (!content.data) {
+    if (!content || typeof content !== "object" || !content.data) {
       return null;
     }
 
@@ -67,7 +68,7 @@ export const GenericWidgetRenderer: React.FC = () => {
 
       if (Array.isArray(collectionData)) {
         records = collectionData;
-      } else if (collectionData !== undefined) {
+      } else if (collectionData !== undefined && collectionData !== null) {
         records = [collectionData];
       }
     } else if (Array.isArray(content.data)) {
@@ -83,7 +84,11 @@ export const GenericWidgetRenderer: React.FC = () => {
 
       if (Array.isArray(detectedArray)) {
         records = detectedArray;
+      } else {
+        records = [content.data];
       }
+    } else if (content.data) {
+      records = [content.data];
     }
 
     console.log("WIDGET DEBUG", {

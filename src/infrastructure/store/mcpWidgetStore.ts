@@ -20,7 +20,10 @@ export const useMcpToolResult = () => {
   const { toolResult, setToolResult } = useMcpWidgetStore();
   useApp({
     appInfo: {
-      name: `${toolResult?.structuredContent?.title}`,
+      name:
+        toolResult?.structuredContent?.title ||
+        (toolResult as any)?.title ||
+        "Widget",
       version: "1.0.0",
     },
     capabilities: {},

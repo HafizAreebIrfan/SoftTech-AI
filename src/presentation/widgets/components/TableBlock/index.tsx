@@ -116,20 +116,22 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   }, [searchQuery, sortCol, sortDir]);
 
   // 3. Pagination
-  const totalItems =
-    pagination?.totalItems !== undefined
-      ? pagination.totalItems
+  const totalItems: number = Number(
+    pagination?.total !== undefined
+      ? pagination.total
       : propTotalItems !== undefined
         ? propTotalItems
-        : sortedRows.length;
+        : sortedRows.length,
+  );
 
   const localTotalPages = Math.ceil(sortedRows.length / pageSize) || 1;
-  const totalPages =
+  const totalPages: number = Number(
     pagination?.totalPages !== undefined
       ? pagination.totalPages
       : propTotalPages !== undefined
         ? propTotalPages
-        : localTotalPages;
+        : localTotalPages,
+  );
 
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize;

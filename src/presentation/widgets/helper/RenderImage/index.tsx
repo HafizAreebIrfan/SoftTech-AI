@@ -2,7 +2,11 @@ import React from "react";
 import styles from "../../../../styles/fieldrenderer.module.css";
 
 export const renderImage = (value: unknown): React.ReactNode => {
-  const src = String(value);
+  let src = String(value);
+
+  if (src.startsWith("//")) {
+    src = `https:${src}`;
+  }
 
   return (
     <img

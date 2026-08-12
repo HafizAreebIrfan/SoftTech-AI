@@ -120,3 +120,29 @@ export interface WidgetAction {
   requiresConfirmation?: boolean;
   confirmationMessage?: string;
 }
+
+export type WidgetTone = "default" | "good" | "warning" | "danger";
+
+export interface TableColumn {
+  key?: string;
+  label?: string;
+  path?: string;
+}
+
+export interface WidgetTableCell {
+  value: any;
+  tone?: WidgetTone;
+}
+
+export interface WidgetTableRow {
+  id?: string;
+  cells?: (string | number | WidgetTableCell)[];
+  [key: string]: any;
+}
+
+export interface WidgetBlock {
+  type: string;
+  title?: string;
+  subtitle?: string;
+  [key: string]: any;
+}
