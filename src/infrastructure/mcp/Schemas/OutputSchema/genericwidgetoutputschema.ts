@@ -145,4 +145,14 @@ export const genericWidgetOutputSchema = z.object({
    * Additional non-UI metadata.
    */
   metadata: z.record(z.string(), jsonValueSchema).optional(),
+
+  /**
+   * Target audience for the widget.
+   */
+  audience: z.enum(["admin", "user", "customer", "both"]).optional(),
+
+  /**
+   * Target platform for the widget.
+   */
+  platformtype: z.enum(["web", "mobile", "both"]).optional(),
 });

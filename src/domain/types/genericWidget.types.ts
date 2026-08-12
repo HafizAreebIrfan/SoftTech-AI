@@ -2,6 +2,8 @@ import { JsonValue } from "./mcpjsonprimitive.types";
 import { CollectionResult } from "./mcpcollection.types";
 import { CapabilitiesResult } from "./mcpcapabilities.types";
 import { PaginationResult } from "./mcppagination.types";
+import { WidgetAudience } from "./widgetaudience.types";
+import { PlatformType } from "./widgetplatform.types";
 
 export type GenericWidgetResult = {
   title: string;
@@ -11,4 +13,6 @@ export type GenericWidgetResult = {
   capabilities?: CapabilitiesResult;
   pagination?: PaginationResult;
   metadata?: Record<string, JsonValue>;
+  audience?: WidgetAudience;
+  platformtype?: PlatformType;
 };

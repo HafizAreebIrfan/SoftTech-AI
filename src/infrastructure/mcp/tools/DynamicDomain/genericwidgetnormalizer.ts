@@ -7,6 +7,8 @@ import {
   FieldSchema,
 } from "../../../../domain/types/mcpcollection.types";
 import { PaginationResult } from "../../../../domain/types/mcppagination.types";
+import { WidgetAudience } from "../../../../domain/types/widgetaudience.types";
+import { PlatformType } from "../../../../domain/types/widgetplatform.types";
 
 export const normalizeApiResponseToWidget = (
   companyName: string,
@@ -16,6 +18,8 @@ export const normalizeApiResponseToWidget = (
   industry?: string,
   apiSchema?: ApiSchema,
   apiParams: any[] = [],
+  audience?: WidgetAudience,
+  platformType?: PlatformType,
 ): GenericWidgetResult => {
   const data = normalizeJsonValue(response);
 
@@ -37,6 +41,10 @@ export const normalizeApiResponseToWidget = (
     ...(hasCapabilities(capabilities) ? { capabilities } : {}),
 
     ...(pagination ? { pagination } : {}),
+
+    ...(audience ? { audience } : {}),
+
+    ...(platformType ? { platformtype: platformType } : {}),
 
     metadata: {
       companyName,

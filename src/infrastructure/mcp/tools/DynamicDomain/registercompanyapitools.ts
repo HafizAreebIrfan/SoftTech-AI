@@ -64,6 +64,8 @@ export const registerCompanyApiTools = (
             company.industry,
             api.apiSchema as any,
             api.params ?? [],
+            api.audience as any,
+            api.platformType as any,
           );
 
           return buildMcpSuccessResult(

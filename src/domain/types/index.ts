@@ -6,3 +6,5 @@ export * from "./mcpcapabilities.types";
 export * from "./mcpcollection.types";
 export * from "./mcpjsonprimitive.types";
 export * from "./mcppagination.types";
+export * from "./widgetaudience.types";
+export * from "./widgetplatform.types";
