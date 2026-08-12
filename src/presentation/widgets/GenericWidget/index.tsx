@@ -14,22 +14,14 @@ import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
 
 export const GenericWidgetRenderer: React.FC = () => {
   const { colors } = useThemeStore();
-  let toolResult;
+  let toolResult: any = null;
+  let hasLoadError = false;
 
   try {
     toolResult = useMcpToolResult();
   } catch (e) {
     console.error("Cannot Load UI Widget:", e);
-    return (
-      <div
-        style={{
-          color: colors.TextHeading,
-          background: colors.Background,
-        }}
-      >
-        Failed to load UI.
-      </div>
-    );
+    hasLoadError = true;
   }
 
   const structuredContent =
@@ -107,15 +99,11 @@ export const GenericWidgetRenderer: React.FC = () => {
     };
   }, [structuredContent]);
 
-  console.log("NORMALIZED WIDGET", normalizedData);
-
-  if (!structuredContent || !normalizedData) {
-    return <EmptyStateBlock />;
-  }
-
-  const { content, collection, fields, records, rawData } = normalizedData;
-
   const presentationPlan = useMemo(() => {
+    if (!normalizedData) return null;
+
+    const { collection, fields, records, content } = normalizedData;
+
     return buildPresentationPlan({
       entity: collection?.entity,
       records,
@@ -127,16 +115,26 @@ export const GenericWidgetRenderer: React.FC = () => {
       platformType: content.platformType,
       intent: content.intent,
     });
-  }, [
-    collection,
-    records,
-    fields,
-    content.capabilities,
-    content.pagination,
-    content.audience,
-    content.platformType,
-    content.intent,
-  ]);
+  }, [normalizedData]);
+
+  if (hasLoadError) {
+    return (
+      <div
+        style={{
+          color: colors.TextHeading,
+          background: colors.Background,
+        }}
+      >
+        Failed to load UI.
+      </div>
+    );
+  }
+
+  if (!structuredContent || !normalizedData || !presentationPlan) {
+    return <EmptyStateBlock />;
+  }
+
+  const { content, collection, fields, records, rawData } = normalizedData;
 
   console.log("[GenericWidgetRenderer] Presentation Plan:", presentationPlan);
 
