@@ -1,8 +1,5 @@
 import React, { useMemo } from "react";
-import {
-  useMcpToolResult,
-  useMcpWidgetStore,
-} from "../../../infrastructure/store/mcpWidgetStore";
+import { useMcpToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import { useThemeStore } from "../../../hooks";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import { CatalogLayout } from "../layouts/CatalogLayout";
@@ -14,14 +11,11 @@ import type { JsonValue } from "../../../domain/entities/GenericWidget";
 import { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
 import styles from "../../../styles/genericwidgetrenderer.module.css";
 import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
-import { combineToolResults } from "../helper/WidgetDeciderHelper/combinetoolresult";
 
 export const GenericWidgetRenderer: React.FC = () => {
   const { colors } = useThemeStore();
   let toolResult: any = null;
   let hasLoadError = false;
-
-  const toolResults = useMcpWidgetStore((state) => state.toolResults);
 
   try {
     toolResult = useMcpToolResult();
@@ -32,14 +26,6 @@ export const GenericWidgetRenderer: React.FC = () => {
 
   const structuredContent =
     (toolResult as any)?.structuredContent ?? toolResult;
-
-  const combinedResult = useMemo(() => {
-    if (!toolResults.length) {
-      return null;
-    }
-
-    return combineToolResults(toolResults);
-  }, [toolResults]);
 
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
     const content = structuredContent;
@@ -104,27 +90,12 @@ export const GenericWidgetRenderer: React.FC = () => {
       fields: collection?.fields,
     });
 
-    const sections = combinedResult?.collections.map((item) => ({
-      title: item.title,
-
-      content: item.structuredContent,
-
-      collection: item.collection,
-
-      fields: item.collection?.fields ?? [],
-
-      records: item.data,
-
-      rawData: item.structuredContent?.data,
-    }));
-
     return {
       content,
       collection,
       fields,
       records,
       rawData: content.data,
-      sections,
     };
   }, [structuredContent]);
 
@@ -163,7 +134,7 @@ export const GenericWidgetRenderer: React.FC = () => {
     return <EmptyStateBlock />;
   }
 
-  const { content, collection, fields, records, rawData, sections } = normalizedData;
+  const { content, collection, fields, records, rawData } = normalizedData;
 
   console.log("[GenericWidgetRenderer] Presentation Plan:", presentationPlan);
 
@@ -194,7 +165,6 @@ export const GenericWidgetRenderer: React.FC = () => {
             pagination={content.pagination}
             actions={content.actions}
             presentationPlan={presentationPlan}
-            sections={sections}
           />
         );
 
@@ -211,7 +181,6 @@ export const GenericWidgetRenderer: React.FC = () => {
             pagination={content.pagination}
             actions={content.actions}
             presentationPlan={presentationPlan}
-            sections={sections}
           />
         );
 
@@ -228,7 +197,6 @@ export const GenericWidgetRenderer: React.FC = () => {
             pagination={content.pagination}
             actions={content.actions}
             presentationPlan={presentationPlan}
-            sections={sections}
           />
         );
 
@@ -246,7 +214,6 @@ export const GenericWidgetRenderer: React.FC = () => {
             pagination={content.pagination}
             actions={content.actions}
             presentationPlan={presentationPlan}
-            sections={sections}
           />
         );
     }

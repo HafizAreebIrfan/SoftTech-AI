@@ -117,9 +117,7 @@ export const combineToolResults = (
     title: firstContent?.title || "Data",
 
     subtitle:
-      validResults.length > 1
-        ? "Combined API results"
-        : firstContent?.subtitle,
+      validResults.length > 1 ? "Combined API results" : firstContent?.subtitle,
 
     data: combinedData,
 

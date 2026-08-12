@@ -119,17 +119,7 @@ declare global {
 
 export interface McpWidgetState {
   toolResult: McpToolResultPayload | null;
-
-  toolResults: McpToolResultPayload[];
-
-  resultGroupId: string | null;
-
   setToolResult: (payload: McpToolResultPayload | null) => void;
-
-  addToolResult: (payload: McpToolResultPayload) => void;
-
-  setResultGroupId: (groupId: string) => void;
-
   resetToolResult: () => void;
 }
 
