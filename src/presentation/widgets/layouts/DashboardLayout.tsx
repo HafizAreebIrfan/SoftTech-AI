@@ -9,14 +9,26 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
   title,
   subtitle,
   data,
-  records,
-  fields,
-  collection,
+  records: propRecords,
+  fields: propFields,
+  collection: propCollection,
   capabilities,
   pagination,
   actions,
+  sections,
 }) => {
   const { colors } = useThemeStore();
+  const [activeSectionIndex, setActiveSectionIndex] = React.useState(0);
+
+  const currentSection =
+    sections && sections.length > 1 && sections[activeSectionIndex]
+      ? sections[activeSectionIndex]
+      : null;
+
+  const records = currentSection ? currentSection.records : propRecords;
+  const fields = currentSection ? currentSection.fields : propFields;
+  const collection = currentSection ? currentSection.collection : propCollection;
+  const displayTitle = currentSection ? currentSection.title : title;
 
   const numericFields = useMemo(() => {
     return fields.filter(
@@ -64,7 +76,7 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
               color: colors.TextHeading,
             }}
           >
-            {title}
+            {displayTitle}
           </h1>
 
           {subtitle && (
@@ -79,6 +91,38 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
           )}
         </div>
       </header>
+
+      {/* Combined Multi-Tool Section Tabs */}
+      {sections && sections.length > 1 && (
+        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+          {sections.map((section, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveSectionIndex(idx)}
+              style={{
+                padding: "0.4rem 0.85rem",
+                borderRadius: "0.5rem",
+                fontSize: "0.8rem",
+                fontWeight: activeSectionIndex === idx ? 600 : 400,
+                cursor: "pointer",
+                background:
+                  activeSectionIndex === idx
+                    ? colors.CardActiveBorder
+                    : colors.Card,
+                color: activeSectionIndex === idx ? "#ffffff" : colors.TextSecondary,
+                border: `1px solid ${
+                  activeSectionIndex === idx
+                    ? colors.CardActiveBorder
+                    : colors.CardBorder
+                }`,
+                transition: "all 0.15s ease",
+              }}
+            >
+              {section.title}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Summary */}
       {summaries.length > 0 && (

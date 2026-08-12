@@ -163,7 +163,7 @@ export const GenericWidgetRenderer: React.FC = () => {
     return <EmptyStateBlock />;
   }
 
-  const { content, collection, fields, records, rawData } = normalizedData;
+  const { content, collection, fields, records, rawData, sections } = normalizedData;
 
   console.log("[GenericWidgetRenderer] Presentation Plan:", presentationPlan);
 
@@ -194,6 +194,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             pagination={content.pagination}
             actions={content.actions}
             presentationPlan={presentationPlan}
+            sections={sections}
           />
         );
 
@@ -210,6 +211,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             pagination={content.pagination}
             actions={content.actions}
             presentationPlan={presentationPlan}
+            sections={sections}
           />
         );
 
@@ -226,6 +228,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             pagination={content.pagination}
             actions={content.actions}
             presentationPlan={presentationPlan}
+            sections={sections}
           />
         );
 
@@ -243,6 +246,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             pagination={content.pagination}
             actions={content.actions}
             presentationPlan={presentationPlan}
+            sections={sections}
           />
         );
     }

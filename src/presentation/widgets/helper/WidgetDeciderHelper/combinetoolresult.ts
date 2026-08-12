@@ -24,21 +24,23 @@ export interface CombinedWidgetResult {
 export const combineToolResults = (
   results: McpToolResultPayload[],
 ): CombinedWidgetResult | null => {
-  if (!results.length) {
+  if (!results || !results.length) {
     return null;
   }
 
-  const validResults = results.filter(
-    (result) =>
-      result && typeof result === "object" && result.structuredContent,
-  );
+  const getContent = (res: any) => res?.structuredContent ?? res;
+
+  const validResults = results.filter((result) => {
+    const content = getContent(result);
+    return content && typeof content === "object" && content.data;
+  });
 
   if (!validResults.length) {
     return null;
   }
 
   const collections = validResults.map((result, index) => {
-    const content = result.structuredContent;
+    const content = getContent(result);
 
     const collection = content?.collection;
 
@@ -94,7 +96,9 @@ export const combineToolResults = (
   const capabilities: Record<string, boolean> = {};
 
   validResults.forEach((result) => {
-    const resultCapabilities = result.structuredContent?.capabilities;
+    const content = getContent(result);
+
+    const resultCapabilities = content?.capabilities;
 
     if (!resultCapabilities) {
       return;
@@ -107,13 +111,15 @@ export const combineToolResults = (
     });
   });
 
+  const firstContent = getContent(validResults[0]);
+
   return {
-    title: validResults[0].structuredContent?.title || "Data",
+    title: firstContent?.title || "Data",
 
     subtitle:
       validResults.length > 1
         ? "Combined API results"
-        : validResults[0].structuredContent?.subtitle,
+        : firstContent?.subtitle,
 
     data: combinedData,
 
@@ -121,10 +127,10 @@ export const combineToolResults = (
 
     capabilities,
 
-    audience: validResults[0].structuredContent?.audience,
+    audience: firstContent?.audience,
 
-    platformType: validResults[0].structuredContent?.platformType,
+    platformType: firstContent?.platformType,
 
-    intent: validResults[0].structuredContent?.intent,
+    intent: firstContent?.intent,
   };
 };

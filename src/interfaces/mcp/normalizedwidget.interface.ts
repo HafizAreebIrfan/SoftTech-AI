@@ -38,4 +38,5 @@ export interface WidgetLayoutProps {
   pagination?: Pagination;
   actions?: WidgetAction[];
   presentationPlan?: PresentationPlan;
+  sections?: NormalizedWidgetSection[];
 }
