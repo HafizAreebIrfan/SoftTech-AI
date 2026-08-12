@@ -1,10 +1,6 @@
-import React, { useState } from "react";
-import styles from "../../../../styles/formblock.module.css";
-
-export const FormBlock: React.FC = () => {
-  return (
-    <div className={styles.successOverlay}>
-      <div className={styles.successIcon}></div>
-    </div>
-  );
-};
+export { FormBlock } from "./FormBlock";
+export { FormField } from "./FormField";
+export type {
+  FormBlockProps,
+  FormFieldProps,
+} from "../../../../interfaces/mcp/formblock.interface";

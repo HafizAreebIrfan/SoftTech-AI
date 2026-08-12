@@ -3,50 +3,25 @@ import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.inte
 import { getFieldValue } from "../../../utils/schema/getValue";
 import styles from "../../../styles/dashboardwidget.module.css";
 import { useThemeStore } from "../../../hooks";
-import { FieldRenderer } from "../components/FieldRenderer/fieldrenderer";
+import { ChartsBlock, TableBlock } from "../components";
+import { SummaryBlock } from "../components/SummaryBlock";
+import { DetailBlock } from "../components/DetailBlock";
+import { CardsBlock } from "../components/CardsBlock";
+import { AssetBlock } from "../components/AssetBlock";
+import { FormBlock } from "../components/FormBlock";
 
 export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
   title,
   subtitle,
-  data,
   records,
   fields,
   collection,
-  capabilities,
   pagination,
   actions,
+  presentationPlan,
 }) => {
   const { colors } = useThemeStore();
-
-  const numericFields = useMemo(() => {
-    return fields.filter(
-      (field) => field.type === "number" || field.type === "currency",
-    );
-  }, [fields]);
-
-  const summaryFields = numericFields.slice(0, 3);
-
-  /**
-   * Calculate summary values from the records.
-   */
-  const summaries = useMemo(() => {
-    return summaryFields.map((field) => {
-      const values = records
-        .map((record) => getFieldValue(record, field))
-        .filter(
-          (value): value is number =>
-            typeof value === "number" && Number.isFinite(value),
-        );
-
-      const total = values.reduce((sum, value) => sum + value, 0);
-
-      return {
-        field,
-        total,
-        count: values.length,
-      };
-    });
-  }, [records, summaryFields]);
+  const blocks = presentationPlan?.blocks ?? [];
 
   return (
     <section
@@ -58,105 +33,100 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
       {/* Header */}
       <header className={styles.header}>
         <div>
-          <h1
-            className={styles.title}
-            style={{
-              color: colors.TextHeading,
-            }}
-          >
-            {title}
+          <h1 className={styles.title} style={{ color: colors.TextHeading }}>
+            {title || collection?.entity || "Dashboard"}
           </h1>
 
           {subtitle && (
             <p
               className={styles.subtitle}
-              style={{
-                color: colors.TextSecondary,
-              }}
+              style={{ color: colors.TextSecondary }}
             >
               {subtitle}
             </p>
           )}
         </div>
       </header>
+      <div className={styles.blockContainer}>
+        {blocks.map((block, index) => {
+          switch (block.type) {
+            case "summary":
+              return (
+                <SummaryBlock
+                  key={`summary-${index}`}
+                  block={block}
+                  records={records}
+                  fields={fields}
+                  collection={collection}
+                />
+              );
 
-      {/* Summary */}
-      {summaries.length > 0 && (
-        <section className={styles.summaryGrid}>
-          {summaries.map(({ field, total }) => (
-            <div
-              key={field.key}
-              className={styles.summaryCard}
-              style={{
-                background: colors.Card,
-                borderColor: colors.CardBorder,
-              }}
-            >
-              <span
-                className={styles.summaryLabel}
-                style={{
-                  color: colors.TextSecondary,
-                }}
-              >
-                {field.label}
-              </span>
+            case "chart":
+              return (
+                <ChartsBlock
+                  key={`chart-${index}`}
+                  block={block}
+                  records={records}
+                  fields={fields}
+                />
+              );
 
-              <strong
-                className={styles.summaryValue}
-                style={{
-                  color: colors.TextPrimary,
-                }}
-              >
-                {field.type === "currency"
-                  ? `$${total.toLocaleString()}`
-                  : total.toLocaleString()}
-              </strong>
-            </div>
-          ))}
-        </section>
-      )}
+            case "table":
+              return (
+                <TableBlock
+                  key={`table-${index}`}
+                  block={block}
+                  records={records}
+                  fields={fields}
+                />
+              );
 
-      {/* Collection information */}
-      <section
-        className={styles.contentCard}
-        style={{
-          background: colors.Card,
-          borderColor: colors.CardBorder,
-        }}
-      >
-        <div className={styles.contentHeader}>
-          <div>
-            <h2
-              style={{
-                color: colors.TextHeading,
-              }}
-            >
-              {collection?.entity || "Results"}
-            </h2>
+            case "cards":
+              return (
+                <CardsBlock
+                  key={`cards-${index}`}
+                  block={block}
+                  records={records}
+                  fields={fields}
+                />
+              );
 
-            <p
-              style={{
-                color: colors.TextSecondary,
-              }}
-            >
-              {pagination?.total ?? collection?.total ?? records.length} records
-            </p>
-          </div>
-        </div>
+            case "details":
+              return (
+                <DetailBlock
+                  key={`detail-${index}`}
+                  block={block}
+                  records={records}
+                  fields={fields}
+                />
+              );
 
-        {/* Pagination information */}
-        {pagination && (
-          <div
-            className={styles.pagination}
-            style={{
-              color: colors.TextSecondary,
-            }}
-          >
-            Page {pagination.page ?? 1}
-            {pagination.totalPages ? ` of ${pagination.totalPages}` : ""}
-          </div>
-        )}
-      </section>
+            case "assets":
+            case "asset":
+              return (
+                <AssetBlock
+                  key={`asset-${index}`}
+                  block={block}
+                  records={records}
+                  fields={fields}
+                />
+              );
+
+            case "filters":
+              return (
+                <FormBlock
+                  key={`form-${index}`}
+                  block={block}
+                  fields={fields}
+                  actions={actions}
+                />
+              );
+
+            default:
+              return null;
+          }
+        })}
+      </div>
     </section>
   );
 };

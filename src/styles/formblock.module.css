@@ -1,124 +1,123 @@
-.formContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
-  background-color: var(--app-bg-secondary, #0c0c0e);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+.container {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.card {
+  background-color: var(--widget-card-bg);
+  border: 1px solid var(--widget-card-border);
   border-radius: 12px;
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.formTitle {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--app-text-primary, #ffffff);
-  margin: 0 0 0.25rem 0;
-}
-
-.inputGroup {
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
 }
 
 .label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--app-text-secondary, #8a8d98);
-}
-
-.requiredStar {
-  color: #ef4444;
-  margin-left: 0.15rem;
-}
-
-.input, .textarea, .select {
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 0.65rem 0.85rem;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--widget-header-subtitle);
   font-size: 0.825rem;
-  font-family: inherit;
-  transition: all 0.2s ease-in-out;
-  outline: none;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.input:focus, .textarea:focus, .select:focus {
-  border-color: var(--app-wavy-emerald, #06b6d4);
-  background-color: rgba(255, 255, 255, 0.06);
-  box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.15);
+.requiredAsterisk {
+  color: var(--app-error-badge-text);
+  font-weight: 700;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  background-color: var(--widget-container-bg);
+  border: 1px solid var(--widget-card-border);
+  color: var(--widget-header-title);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--widget-badge-text);
+}
+
+.inputError {
+  border-color: var(--app-error-badge-text);
 }
 
 .textarea {
-  resize: vertical;
   min-height: 80px;
+  resize: vertical;
 }
 
-.submitBtn {
-  margin-top: 0.5rem;
-  background: linear-gradient(135deg, var(--app-wavy-emerald, #06b6d4) 0%, #3b82f6 100%);
-  border: none;
-  border-radius: 8px;
-  padding: 0.75rem;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: transform 0.2s ease, opacity 0.2s ease;
+.checkboxGroup {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  gap: 10px;
+  cursor: pointer;
 }
 
-.submitBtn:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--widget-badge-text);
+  cursor: pointer;
 }
 
-.submitBtn:active {
-  transform: translateY(0);
+.errorText {
+  color: var(--app-error-badge-text);
+  font-size: 0.75rem;
+  line-height: 1.2;
 }
 
-.submitBtn:disabled {
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--widget-card-border);
+}
+
+.submitButton {
+  background-color: var(--widget-badge-bg);
+  color: var(--widget-badge-text);
+  border: 1px solid var(--widget-badge-border);
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: var(--widget-card-hover);
+}
+
+.submitButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.successOverlay {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-  text-align: center;
-  gap: 0.75rem;
-}
-
-.successIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background-color: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-}
-
-.successTitle {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--app-text-primary, #ffffff);
-  margin: 0;
-}
-
-.successDesc {
-  font-size: 0.75rem;
-  color: var(--app-text-secondary, #8a8d98);
-  margin: 0;
-  max-width: 250px;
+.successNotice {
+  color: var(--widget-badge-text);
+  font-size: 0.825rem;
+  font-weight: 500;
 }

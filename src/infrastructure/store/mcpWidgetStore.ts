@@ -11,11 +11,18 @@ import {
 
 export const TOOL_RESULT_NOTIFICATION = "ui/notifications/tool-result";
 
-export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
-  toolResult: null,
-  setToolResult: (payload) => set({ toolResult: payload }),
-  resetToolResult: () => set({ toolResult: null }),
-}));
+export const useMcpWidgetStore = create<McpWidgetState>()(
+  persist(
+    (set) => ({
+      toolResult: null,
+      setToolResult: (payload) => set({ toolResult: payload }),
+      resetToolResult: () => set({ toolResult: null }),
+    }),
+    {
+      name: "mcp-widget-single-store",
+    },
+  ),
+);
 
 export const useMcpToolResult = () => {
   const { toolResult, setToolResult } = useMcpWidgetStore();

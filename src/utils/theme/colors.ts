@@ -116,6 +116,24 @@ export type ThemeColors = {
   SuccessBtnBg: string;
   ModalBackdrop: string;
   DividerColor: string;
+
+  /*--*/
+  /* Widget Theme Tokens */
+  WidgetContainerBg: string;
+  WidgetContainerBorder: string;
+  WidgetCardBg: string;
+  WidgetCardBorder: string;
+  WidgetCardHover: string;
+  WidgetHeaderTitle: string;
+  WidgetHeaderSubtitle: string;
+  WidgetMetricVal: string;
+  WidgetMetricLabel: string;
+  WidgetBadgeBg: string;
+  WidgetBadgeText: string;
+  WidgetBadgeBorder: string;
+  WidgetChartPrimary: string;
+  WidgetChartSecondary: string;
+  WidgetChartGrid: string;
 };
 
 export const darkColors: ThemeColors = {
@@ -272,6 +290,24 @@ export const darkColors: ThemeColors = {
 
   ModalBackdrop: "rgba(0, 0, 0, 0.78)",
   DividerColor: "#34423B",
+
+  /*--*/
+  /* Widget Theme Tokens */
+  WidgetContainerBg: "rgba(18, 25, 22, 0.95)",
+  WidgetContainerBorder: "rgba(255, 255, 255, 0.08)",
+  WidgetCardBg: "rgba(255, 255, 255, 0.03)",
+  WidgetCardBorder: "rgba(255, 255, 255, 0.07)",
+  WidgetCardHover: "rgba(255, 255, 255, 0.06)",
+  WidgetHeaderTitle: "#ECEFEF",
+  WidgetHeaderSubtitle: "#94A39D",
+  WidgetMetricVal: "#34D399",
+  WidgetMetricLabel: "#6B7C75",
+  WidgetBadgeBg: "rgba(16, 185, 129, 0.12)",
+  WidgetBadgeText: "#34D399",
+  WidgetBadgeBorder: "rgba(16, 185, 129, 0.25)",
+  WidgetChartPrimary: "#10B981",
+  WidgetChartSecondary: "#3B82F6",
+  WidgetChartGrid: "rgba(255, 255, 255, 0.06)",
 };
 
 export const lightColors: ThemeColors = {
@@ -428,4 +464,22 @@ export const lightColors: ThemeColors = {
 
   ModalBackdrop: "rgba(15, 23, 20, 0.60)",
   DividerColor: "#CBD5CF",
+
+  /*--*/
+  /* Widget Theme Tokens */
+  WidgetContainerBg: "#FFFFFF",
+  WidgetContainerBorder: "rgba(15, 23, 20, 0.10)",
+  WidgetCardBg: "#F8FAFC",
+  WidgetCardBorder: "#E2E8F0",
+  WidgetCardHover: "#F1F5F9",
+  WidgetHeaderTitle: "#0F172A",
+  WidgetHeaderSubtitle: "#64748B",
+  WidgetMetricVal: "#059669",
+  WidgetMetricLabel: "#64748B",
+  WidgetBadgeBg: "rgba(5, 150, 105, 0.10)",
+  WidgetBadgeText: "#047857",
+  WidgetBadgeBorder: "rgba(5, 150, 105, 0.22)",
+  WidgetChartPrimary: "#059669",
+  WidgetChartSecondary: "#2563EB",
+  WidgetChartGrid: "rgba(15, 23, 20, 0.08)",
 };

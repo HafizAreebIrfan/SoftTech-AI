@@ -6,4 +6,7 @@ export type PresentationBlockType =
   | "chart"
   | "table"
   | "details"
+  | "detail"
+  | "assets"
+  | "asset"
   | "filters";

@@ -1,6 +1,8 @@
-import React from "react";
-import styles from "../../../../styles/chartsblock.module.css";
-
-export const ChartsBlock: React.FC = () => {
-  return <div className={styles.container}></div>;
-};
+export { ChartBlock, ChartBlock as ChartsBlock } from "./ChartBlock";
+export { ChartRenderer } from "./ChartRenderer";
+export type {
+  ChartBlockProps,
+  ChartRendererProps,
+  ChartDataPoint,
+  ChartType,
+} from "../../../../interfaces/mcp/chartblock.interface";
