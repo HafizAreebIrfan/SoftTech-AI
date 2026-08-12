@@ -32,7 +32,9 @@ export const FieldRenderer: React.FC<FieldRendererProps> = ({
     <div className={styles.field}>
       <div className={styles.label}>{field.label}</div>
 
-      <div className={styles.value}>{renderFieldValue(value, field.type)}</div>
+      <div className={styles.value}>
+        {renderFieldValue(value, field.type, field.label)}
+      </div>
     </div>
   );
 };
@@ -40,6 +42,7 @@ export const FieldRenderer: React.FC<FieldRendererProps> = ({
 const renderFieldValue = (
   value: unknown,
   type: FieldSchema["type"],
+  label: string,
 ): React.ReactNode => {
   if (value === null || value === undefined || value === "") {
     return <span className={styles.emptyValue}>-</span>;
@@ -74,7 +77,7 @@ const renderFieldValue = (
       return renderUrl(value);
 
     case "image":
-      return renderImage(value);
+      return renderImage(value, label);
 
     case "latitude":
     case "longitude":

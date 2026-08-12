@@ -5,6 +5,10 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
+export type WidgetAudience = "admin" | "user" | "both";
+
+export type PlatformType = "web" | "mobile" | "both";
+
 export interface FieldSchema {
   key: string;
   label: string;
@@ -25,6 +29,11 @@ export interface FieldSchema {
     | "object"
     | "array";
   path?: string;
+  hidden?: boolean;
+  primary?: boolean;
+  sortable?: boolean;
+  searchable?: boolean;
+  filterable?: boolean;
 }
 
 export interface CollectionResult {
@@ -70,6 +79,9 @@ export interface GenericWidgetContent {
   pagination?: Pagination;
   actions?: WidgetAction[];
   metadata?: Record<string, JsonValue>;
+  audience?: WidgetAudience;
+  platformType?: PlatformType;
+  intent?: string;
 }
 
 export interface McpContentItem {

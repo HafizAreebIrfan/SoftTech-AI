@@ -1,12 +1,4 @@
 import React, { useMemo } from "react";
-import type {
-  Capabilities,
-  CollectionResult,
-  FieldSchema,
-  JsonValue,
-  Pagination,
-  WidgetAction,
-} from "../../../domain/entities/GenericWidget";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { getFieldValue } from "../../../utils/schema/getValue";
 import styles from "../../../styles/dashboardwidget.module.css";
@@ -150,45 +142,6 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
               {pagination?.total ?? collection?.total ?? records.length} records
             </p>
           </div>
-        </div>
-
-        {/* Temporary generic table */}
-        <div className={styles.tableWrapper}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                {fields.map((field) => (
-                  <th
-                    key={field.key}
-                    style={{
-                      color: colors.TextSecondary,
-                      borderColor: colors.TableDivider,
-                    }}
-                  >
-                    {field.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-
-            <tbody>
-              {records.map((record, rowIndex) => (
-                <tr key={rowIndex}>
-                  {fields.map((field) => (
-                    <td
-                      key={field.key}
-                      style={{
-                        color: colors.TextPrimary,
-                        borderColor: colors.TableDivider,
-                      }}
-                    >
-                      <FieldRenderer record={record} field={field} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
 
         {/* Pagination information */}

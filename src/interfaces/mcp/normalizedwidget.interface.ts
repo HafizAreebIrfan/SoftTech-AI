@@ -7,6 +7,7 @@ import {
   Pagination,
   WidgetAction,
 } from "../../domain/entities/GenericWidget";
+import { PresentationPlan } from "./widgetdecider.interface";
 
 export interface NormalizedWidgetData {
   content: GenericWidgetContent;
@@ -26,5 +27,5 @@ export interface WidgetLayoutProps {
   capabilities?: Capabilities;
   pagination?: Pagination;
   actions?: WidgetAction[];
+  presentationPlan?: PresentationPlan;
 }
-

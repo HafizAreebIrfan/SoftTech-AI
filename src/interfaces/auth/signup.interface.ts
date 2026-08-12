@@ -1,3 +1,8 @@
+import {
+  PlatformType,
+  WidgetAudience,
+} from "../../domain/entities/GenericWidget";
+
 export interface ApiConnection {
   id: string;
   apiName: string;
@@ -7,8 +12,8 @@ export interface ApiConnection {
   apiCredentials?: string;
   apiQueryParams?: string;
   apiRequestBody?: string;
-  platformType?: "web" | "mobile" | "both";
-  audience?: "customer" | "admin" | "both";
+  platformType?: PlatformType;
+  audience?: WidgetAudience;
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
   isCheckoutApi?: boolean;
@@ -38,24 +43,53 @@ export interface SignupStore {
   stepOneData: StepOneData;
   lastSavedStepOneData?: StepOneData | null;
   apisList: ApiConnection[];
-  selectedLayout: "dashboard" | "catalog" | "table" | "timeline" | "grid" | "list" | "cards";
-  apiTestStates: Record<string, { status: "idle" | "loading" | "success" | "error"; logs: string; sampleResponse?: string; failCount?: number; apiSchema?: any }>;
+  selectedLayout:
+    | "dashboard"
+    | "catalog"
+    | "table"
+    | "timeline"
+    | "grid"
+    | "list"
+    | "cards";
+  apiTestStates: Record<
+    string,
+    {
+      status: "idle" | "loading" | "success" | "error";
+      logs: string;
+      sampleResponse?: string;
+      failCount?: number;
+      apiSchema?: any;
+    }
+  >;
   saveStatus: "idle" | "saving" | "saved" | "error";
   isStepTwoPending: boolean;
 
   setCompanyId: (id: string | null) => void;
   setStepOneData: (data: Partial<StepOneData>) => void;
   setLastSavedStepOneData: (data: StepOneData | null) => void;
-  setApisList: (apis: ApiConnection[] | ((prev: ApiConnection[]) => ApiConnection[])) => void;
+  setApisList: (
+    apis: ApiConnection[] | ((prev: ApiConnection[]) => ApiConnection[]),
+  ) => void;
   updateApiField: (id: string, field: keyof ApiConnection, value: any) => void;
   handleAddApi: () => void;
   handleDeleteApi: (id: string) => void;
-  setSelectedLayout: (layout: "dashboard" | "catalog" | "table" | "timeline" | "grid" | "list" | "cards") => void;
+  setSelectedLayout: (
+    layout:
+      | "dashboard"
+      | "catalog"
+      | "table"
+      | "timeline"
+      | "grid"
+      | "list"
+      | "cards",
+  ) => void;
   clearSignupProgress: () => void;
   handleTestApi: (api: ApiConnection) => Promise<void>;
   handleSaveSampleResponse: (apiId: string, sampleJson: string) => void;
   triggerAutoSave: () => void;
-  handleStepTwoSubmit: (navigate: (opts: { to: string }) => void) => Promise<void>;
+  handleStepTwoSubmit: (
+    navigate: (opts: { to: string }) => void,
+  ) => Promise<void>;
   handleEndpointUrlChange: (apiId: string, inputUrl: string) => void;
   applyTemplateSuggestions: (
     apiId: string,
@@ -80,6 +114,10 @@ export interface PostmanTableEditorProps {
   description: string;
   showDynamicToggle?: boolean;
   colors: Record<string, string>;
-  updateApiField: (id: string, field: keyof ApiConnection, value: string) => void;
+  updateApiField: (
+    id: string,
+    field: keyof ApiConnection,
+    value: string,
+  ) => void;
   stepOneData?: StepOneData;
 }

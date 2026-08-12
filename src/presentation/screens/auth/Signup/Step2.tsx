@@ -430,6 +430,53 @@ const SignupStep2: FC = () => {
                   </div>
                 </div>
 
+                {/* Target Audience Toggle */}
+                <div>
+                  <label
+                    className={styles.fieldLabel}
+                    style={{
+                      color: colors.TextBody,
+                      marginBottom: "0.375rem",
+                      display: "block",
+                    }}
+                  >
+                    Target Audience
+                  </label>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    {(["customer", "admin", "both"] as const).map((aud) => (
+                      <button
+                        key={aud}
+                        type="button"
+                        onClick={() => updateApiField(api.id, "audience", aud)}
+                        style={{
+                          padding: "0.375rem 0.75rem",
+                          borderRadius: "0.375rem",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          textTransform: "capitalize",
+                          background:
+                            (api.audience || "both") === aud
+                              ? "rgba(59, 130, 246, 0.2)"
+                              : colors.BackgroundSecondary,
+                          border: `1px solid ${
+                            (api.audience || "both") === aud
+                              ? colors.CardActiveBorder
+                              : colors.CardBorder
+                          }`,
+                          color:
+                            (api.audience || "both") === aud
+                              ? colors.TextHeading
+                              : colors.TextBody,
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {aud}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Section 2.5: Checkout API Toggle, Audience Selector & Redirect URLs (Only visible for POST method) */}
                 {api.apiMethod === "POST" && (
                   <div
@@ -488,57 +535,6 @@ const SignupStep2: FC = () => {
                           borderLeft: `2px solid ${colors.CardActiveBorder}`,
                         }}
                       >
-                        {/* Target Audience Toggle */}
-                        <div>
-                          <label
-                            className={styles.fieldLabel}
-                            style={{
-                              color: colors.TextBody,
-                              marginBottom: "0.375rem",
-                              display: "block",
-                            }}
-                          >
-                            Target Audience
-                          </label>
-                          <div style={{ display: "flex", gap: "0.5rem" }}>
-                            {(["customer", "admin", "both"] as const).map(
-                              (aud) => (
-                                <button
-                                  key={aud}
-                                  type="button"
-                                  onClick={() =>
-                                    updateApiField(api.id, "audience", aud)
-                                  }
-                                  style={{
-                                    padding: "0.375rem 0.75rem",
-                                    borderRadius: "0.375rem",
-                                    fontSize: "0.75rem",
-                                    fontWeight: 600,
-                                    cursor: "pointer",
-                                    textTransform: "capitalize",
-                                    background:
-                                      (api.audience || "both") === aud
-                                        ? "rgba(59, 130, 246, 0.2)"
-                                        : colors.BackgroundSecondary,
-                                    border: `1px solid ${
-                                      (api.audience || "both") === aud
-                                        ? colors.CardActiveBorder
-                                        : colors.CardBorder
-                                    }`,
-                                    color:
-                                      (api.audience || "both") === aud
-                                        ? colors.TextHeading
-                                        : colors.TextBody,
-                                    transition: "all 0.15s ease",
-                                  }}
-                                >
-                                  {aud}
-                                </button>
-                              ),
-                            )}
-                          </div>
-                        </div>
-
                         {/* Official Web Checkout URL */}
                         {((stepOneData.targetPlatform || "web") === "web" ||
                           (stepOneData.targetPlatform || "web") === "both") && (
@@ -729,7 +725,8 @@ const SignupStep2: FC = () => {
                         }`}
                         style={{
                           color:
-                            api.apiMethod === "GET" || api.apiMethod === "DELETE"
+                            api.apiMethod === "GET" ||
+                            api.apiMethod === "DELETE"
                               ? colors.TextBody
                               : activeTab === "body"
                                 ? colors.TextHeading
@@ -739,11 +736,13 @@ const SignupStep2: FC = () => {
                               ? colors.CardActiveBorder
                               : "transparent",
                           opacity:
-                            api.apiMethod === "GET" || api.apiMethod === "DELETE"
+                            api.apiMethod === "GET" ||
+                            api.apiMethod === "DELETE"
                               ? 0.4
                               : 1,
                           cursor:
-                            api.apiMethod === "GET" || api.apiMethod === "DELETE"
+                            api.apiMethod === "GET" ||
+                            api.apiMethod === "DELETE"
                               ? "not-allowed"
                               : "pointer",
                         }}
@@ -1521,24 +1520,34 @@ const SignupStep2: FC = () => {
               className={styles.btn}
               style={{
                 background:
-                  isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
+                  isStepTwoPending ||
+                  !allApisTestedSuccessfully ||
+                  anyApiHasError
                     ? colors.Background
                     : `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
                 color:
-                  isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
+                  isStepTwoPending ||
+                  !allApisTestedSuccessfully ||
+                  anyApiHasError
                     ? colors.TextBody
                     : "#ffffff",
                 border:
-                  isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
+                  isStepTwoPending ||
+                  !allApisTestedSuccessfully ||
+                  anyApiHasError
                     ? `1px solid ${colors.CardBorder}`
                     : "none",
                 cursor:
-                  isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
+                  isStepTwoPending ||
+                  !allApisTestedSuccessfully ||
+                  anyApiHasError
                     ? "not-allowed"
                     : "pointer",
                 opacity: 1,
               }}
-              disabled={isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError}
+              disabled={
+                isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
+              }
             >
               {getButtonText()}
             </button>

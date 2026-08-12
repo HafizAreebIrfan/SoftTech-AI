@@ -1,22 +1,69 @@
-import React from "react";
+import React, { useState } from "react";
 import styles from "../../../../styles/fieldrenderer.module.css";
+import { getProxiedImageUrl } from "./getproxiedimageurl";
+import { RenderImageProps } from "../../../../interfaces/mcp/renderimageprops.interface";
 
-export const renderImage = (value: unknown): React.ReactNode => {
-  let src = String(value);
+export const renderImage = (value: unknown, alt = "Image"): React.ReactNode => {
+  return <ImageField value={value} alt={alt} />;
+};
 
-  if (src.startsWith("//")) {
-    src = `https:${src}`;
+const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
+  const [hasError, setHasError] = useState(false);
+
+  const src = getProxiedImageUrl(value);
+
+  /**
+   * No valid image URL.
+   */
+  if (!src || hasError) {
+    return <ImageFallback />;
   }
 
   return (
-    <img
-      src={src}
-      alt="Field"
-      className={styles.image}
-      loading="lazy"
-      onError={(event) => {
-        event.currentTarget.style.display = "none";
-      }}
-    />
+    <div className={styles.imageWrapper}>
+      <img
+        src={src}
+        alt={alt}
+        className={styles.image}
+        loading="lazy"
+        onError={() => {
+          setHasError(true);
+        }}
+      />
+    </div>
+  );
+};
+
+const ImageFallback: React.FC = () => {
+  return (
+    <div className={styles.imageFallback} aria-label="Image unavailable">
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+      >
+        <rect
+          x="3"
+          y="4"
+          width="18"
+          height="16"
+          rx="2"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+
+        <circle cx="8" cy="9" r="1.5" stroke="currentColor" strokeWidth="1.5" />
+
+        <path
+          d="M4 17L9 12L13 16L16 13L20 17"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
   );
 };

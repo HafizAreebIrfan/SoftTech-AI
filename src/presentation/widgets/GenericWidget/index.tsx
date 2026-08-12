@@ -10,6 +10,7 @@ import { getValue } from "../../../utils";
 import type { JsonValue } from "../../../domain/entities/GenericWidget";
 import { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
 import styles from "../../../styles/genericwidgetrenderer.module.css";
+import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
 
 export const GenericWidgetRenderer: React.FC = () => {
   const { colors } = useThemeStore();
@@ -114,6 +115,31 @@ export const GenericWidgetRenderer: React.FC = () => {
 
   const { content, collection, fields, records, rawData } = normalizedData;
 
+  const presentationPlan = useMemo(() => {
+    return buildPresentationPlan({
+      entity: collection?.entity,
+      records,
+      fields,
+      collection,
+      capabilities: content.capabilities,
+      pagination: content.pagination,
+      audience: content.audience,
+      platformType: content.platformType,
+      intent: content.intent,
+    });
+  }, [
+    collection,
+    records,
+    fields,
+    content.capabilities,
+    content.pagination,
+    content.audience,
+    content.platformType,
+    content.intent,
+  ]);
+
+  console.log("[GenericWidgetRenderer] Presentation Plan:", presentationPlan);
+
   /**
    * At this stage, do not force the response into a UI.
    *
@@ -124,9 +150,7 @@ export const GenericWidgetRenderer: React.FC = () => {
     return <EmptyStateBlock />;
   }
 
-  const normalizedLayout = String(
-    collection?.layout || "general",
-  ).toLowerCase();
+  const normalizedLayout = presentationPlan.layout;
 
   const renderLayout = () => {
     switch (normalizedLayout) {
@@ -142,6 +166,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             capabilities={content.capabilities}
             pagination={content.pagination}
             actions={content.actions}
+            presentationPlan={presentationPlan}
           />
         );
 
@@ -157,6 +182,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             capabilities={content.capabilities}
             pagination={content.pagination}
             actions={content.actions}
+            presentationPlan={presentationPlan}
           />
         );
 
@@ -172,6 +198,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             capabilities={content.capabilities}
             pagination={content.pagination}
             actions={content.actions}
+            presentationPlan={presentationPlan}
           />
         );
 
@@ -188,6 +215,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             capabilities={content.capabilities}
             pagination={content.pagination}
             actions={content.actions}
+            presentationPlan={presentationPlan}
           />
         );
     }

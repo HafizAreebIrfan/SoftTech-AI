@@ -1,3 +1,5 @@
+import { PlatformType, WidgetAudience } from "./GenericWidget";
+
 export interface CompanyInformation {
   id: string;
   name: string;
@@ -23,8 +25,8 @@ export interface ApisInformation {
   body?: any[];
   samplequery?: any;
   sampleresponse?: any;
-  platformType?: string;
-  audience?: "customer" | "admin" | "both";
+  platformType?: PlatformType;
+  audience?: WidgetAudience;
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
   apiSchema?: any;
