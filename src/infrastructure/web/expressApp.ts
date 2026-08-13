@@ -12,6 +12,7 @@ import { CompanyLoginRoutes } from "../../adapters/http/routes/companies/login/c
 import { CompanyLogoutRoutes } from "../../adapters/http/routes/companies/logout/companylogoutroute";
 import { mcpRoutes } from "../../adapters/http/routes/mcp/mcpRoutes";
 import { ImageRoutes } from "../../adapters/http/routes/mcp/imageproxyroutes";
+import oauthRoutes from "../routes/oauthRoutes";
 
 export const buildApp = (): Express => {
   const app = express();
@@ -49,6 +50,7 @@ export const buildApp = (): Express => {
   app.use("/api/company", CompanyForgetPasswordRoutes);
   app.use("/mcp", mcpRoutes);
   app.use("/api/images", ImageRoutes);
+  app.use("/api/oauth", oauthRoutes);
 
   app.use(errorMiddleware);
 

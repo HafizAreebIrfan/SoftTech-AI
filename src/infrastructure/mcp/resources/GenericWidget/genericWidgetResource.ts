@@ -3,39 +3,29 @@ import {
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
 import { ICompany } from "../../../../domain/types/company.types";
-import {
-  getCompanyWidgetResourceUris,
-  loadCompanyWidgetSnapshot,
-  serializeWidgetBootstrap,
-} from "../../tools/WidgetSnapshot/widgetSnapshot";
 
 const WIDGET_BASE_URL = "https://softtech-ai-app.onrender.com";
 const WIDGET_SERVER_URL = "https://softtech-ai.onrender.com";
-const WIDGET_NGROK_URL = "https://scone-hatchling-relenting.ngrok-free.dev";
 
 export const registerGenericWidgetResources = (
   server: any,
   company: ICompany,
 ) => {
-  const resourceUris = getCompanyWidgetResourceUris(company);
-
-  resourceUris.forEach((uri) => {
-    registerAppResource(
-      server,
-      "Widgets",
-      uri,
-      {
-        description: "Interactive Widgets visualizer.",
-      },
-      async () => {
-        const snapshot = await loadCompanyWidgetSnapshot(company);
-        const HTML = await fetch(`${WIDGET_BASE_URL}/widget.js`).then((r) =>
-          r.text(),
-        );
-        const CSS = await fetch(`${WIDGET_BASE_URL}/widget.css`).then((r) =>
-          r.text(),
-        );
-        const widgetHtml = `
+  registerAppResource(
+    server,
+    "Widgets",
+    "ui://generic/widgets.html",
+    {
+      description: "Interactive Widgets visualizer.",
+    },
+    async () => {
+      const HTML = await fetch(`${WIDGET_BASE_URL}/widget.js`).then((r) =>
+        r.text(),
+      );
+      const CSS = await fetch(`${WIDGET_BASE_URL}/widget.css`).then((r) =>
+        r.text(),
+      );
+      const widgetHtml = `
          <!DOCTYPE html>
       <html lang="en">
         <head>
@@ -58,46 +48,35 @@ export const registerGenericWidgetResources = (
               </div>
             </div>
           </div>
-          <script>
-            ${serializeWidgetBootstrap(snapshot)}
-          </script>
           <script type="module">${HTML}</script>
         </body>
       </html>
         `;
 
-        return {
-          contents: [
-            {
-              uri,
-              mimeType: RESOURCE_MIME_TYPE,
-              text: widgetHtml,
-              _meta: {
-                "openai/outputTemplate": uri,
-                "openai/widgetAccessible": true,
-                "openai/toolInvocation/invoking": "Loading...",
-                "openai/toolInvocation/invoked": "Loaded",
-                ui: {
-                  prefersBorder: true,
-                  domain: WIDGET_SERVER_URL,
-                  csp: {
-                    connectDomains: [
-                      WIDGET_BASE_URL,
-                      WIDGET_NGROK_URL,
-                      WIDGET_SERVER_URL,
-                    ],
-                    resourceDomains: [
-                      WIDGET_BASE_URL,
-                      WIDGET_NGROK_URL,
-                      WIDGET_SERVER_URL,
-                    ],
-                  },
+      return {
+        contents: [
+          {
+            uri: "ui://generic/widgets.html",
+
+            mimeType: RESOURCE_MIME_TYPE,
+            text: widgetHtml,
+            _meta: {
+              "openai/outputTemplate": "ui://generic/widgets.html",
+              "openai/widgetAccessible": true,
+              "openai/toolInvocation/invoking": "Loading...",
+              "openai/toolInvocation/invoked": "Loaded",
+              ui: {
+                prefersBorder: true,
+                domain: WIDGET_SERVER_URL,
+                csp: {
+                  connectDomains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
+                  resourceDomains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
                 },
               },
             },
-          ],
-        };
-      },
-    );
-  });
+          },
+        ],
+      };
+    },
+  );
 };

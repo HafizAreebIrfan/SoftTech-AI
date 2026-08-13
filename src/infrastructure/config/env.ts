@@ -17,6 +17,7 @@ export interface IEnv {
   GEMINI_API_KEY: string;
   OPENROUTER_API_KEY: string;
   GROQ_API_KEY: string;
+  OAUTH_CALLBACK_URL: string;
 }
 
 export const env: IEnv = {
@@ -39,4 +40,7 @@ export const env: IEnv = {
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
   GROQ_API_KEY: process.env.GROQ_API_KEY,
+  OAUTH_CALLBACK_URL:
+    process.env.OAUTH_CALLBACK_URL ||
+    "https://softtech-ai.onrender.com/api/oauth/callback",
 };

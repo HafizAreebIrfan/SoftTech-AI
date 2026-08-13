@@ -28,5 +28,3 @@ export type McpToolResultPayload = {
   content?: McpContentItem[];
   _meta?: Record<string, unknown>;
 };
-
-export type WidgetSnapshotPayload = McpToolResultPayload;

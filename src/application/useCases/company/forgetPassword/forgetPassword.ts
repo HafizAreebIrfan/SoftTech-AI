@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { createCompanyForgotPasswordRepositoryPort, ICompanyForgotPasswordRepository } from "../../../ports/companies/forgetPassword/companyforgetpasswordrepository";
 import { comparePassword, Hashpassword } from "../../../../infrastructure/middlewares/SecurityMiddleware/bcrypt";
 import { sendPasswordResetOtpEmail } from "../../../../infrastructure/services/emailService";
@@ -5,7 +6,7 @@ import { sendPasswordResetOtpEmail } from "../../../../infrastructure/services/e
 const OTP_TTL_MS = 5 * 60 * 1000;
 
 const generateOtp = (): string => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 };
 
 export async function sendForgotPasswordOtp(

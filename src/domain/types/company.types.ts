@@ -1,10 +1,11 @@
 import { ApiParam } from "./apiparam.types";
-import { McpToolResultPayload } from "./genericWidget.types";
 
 export interface IOAuth {
+  authorizationUrl?: string;
   tokenUrl?: string;
   clientId?: string;
   clientSecret?: string;
+  scopes?: string[];
 }
 
 export interface IApi {
@@ -51,8 +52,6 @@ export interface ICompany {
   status?: string;
   passwordResetOTP?: string;
   passwordResetOTPExpires?: Date;
-  latestWidgetSnapshot?: McpToolResultPayload | null;
-  latestWidgetSnapshotUpdatedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
