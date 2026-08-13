@@ -237,6 +237,11 @@ const buildFieldsFromApiSchema = (apiSchema?: ApiSchema): FieldSchema[] => {
       label: field.label,
       type: normalizeFieldSchemaType(field.type),
       ...(field.path ? { path: field.path } : {}),
+      hidden: field.hidden,
+      primary: field.primary,
+      sortable: field.sortable,
+      searchable: field.searchable,
+      filterable: field.filterable,
     }));
 };
 
