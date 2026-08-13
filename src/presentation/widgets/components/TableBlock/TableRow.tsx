@@ -1,6 +1,8 @@
 import React from "react";
 import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderImage } from "../../helper/RenderImage";
+import { renderArray } from "../../helper/RenderArray";
+import { renderObject } from "../../helper/RenderObject";
 import { renderStatus } from "../../helper/RenderStatus";
 import { renderCurrency } from "../../helper/RenderCurrency";
 import { renderDate } from "../../helper/RenderDate";
@@ -36,6 +38,14 @@ const formatTableCell = (val: unknown, field: FieldSchema): React.ReactNode => {
 
   if (field.type === "url") {
     return renderUrl(val);
+  }
+
+  if (field.type === "array") {
+    return renderArray(val);
+  }
+
+  if (field.type === "object") {
+    return renderObject(val);
   }
 
   if (typeof val === "number") {

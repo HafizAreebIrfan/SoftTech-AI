@@ -79,7 +79,7 @@ export const buildPresentationPlan = ({
     hasMultipleRecords && (hasImages || hasPrices || hasStatus);
 
   const isDashboardCandidate =
-    isAdmin && (hasMultipleRecords || numericFields.length > 0 || hasStatus);
+    isAdmin && hasMultipleRecords && (numericFields.length > 0 || hasStatus);
 
   const blocks: PresentationBlock[] = [];
 

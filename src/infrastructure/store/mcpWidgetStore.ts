@@ -11,13 +11,56 @@ import {
 
 export const TOOL_RESULT_NOTIFICATION = "ui/notifications/tool-result";
 const WIDGET_SNAPSHOT_KEY = "softtech-ai:mcp-widget-snapshot";
+let lastSyncedWidgetState: string | null = null;
+
+const extractToolResultPayload = (
+  value: unknown,
+): McpToolResultPayload | null => {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const maybeSnapshot = value as Record<string, unknown>;
+
+  if ("structuredContent" in maybeSnapshot || "content" in maybeSnapshot) {
+    return maybeSnapshot as unknown as McpToolResultPayload;
+  }
+
+  if ("toolResult" in maybeSnapshot) {
+    const nested = (maybeSnapshot as { toolResult?: unknown }).toolResult;
+    if (nested && typeof nested === "object") {
+      return nested as unknown as McpToolResultPayload;
+    }
+  }
+
+  return maybeSnapshot as unknown as McpToolResultPayload;
+};
+
+const syncWidgetState = (payload: McpToolResultPayload | null) => {
+  if (typeof window === "undefined") return;
+  if (!window.openai?.setWidgetState) return;
+
+  try {
+    const serialized = payload ? JSON.stringify(payload) : "null";
+    if (serialized === lastSyncedWidgetState) {
+      return;
+    }
+
+    lastSyncedWidgetState = serialized;
+    window.openai.setWidgetState(
+      payload as unknown as Record<string, unknown> | null,
+    );
+  } catch {
+    // Ignore host widget-state write failures and keep local fallbacks.
+  }
+};
 
 const readBootstrapSnapshot = (): McpToolResultPayload | null => {
   if (typeof window === "undefined") return null;
 
   const bootstrapSnapshot = window.__SOFTTECH_AI_WIDGET_BOOTSTRAP__;
   if (bootstrapSnapshot && typeof bootstrapSnapshot === "object") {
-    return bootstrapSnapshot;
+    return extractToolResultPayload(bootstrapSnapshot);
   }
 
   return null;
@@ -32,15 +75,9 @@ const readWidgetSnapshot = (): McpToolResultPayload | null => {
   }
 
   const widgetState = window.openai?.widgetState;
-  if (
-    widgetState &&
-    typeof widgetState === "object" &&
-    "toolResult" in widgetState
-  ) {
-    const toolResult = (widgetState as { toolResult?: unknown }).toolResult;
-    if (toolResult && typeof toolResult === "object") {
-      return toolResult as McpToolResultPayload;
-    }
+  const widgetSnapshot = extractToolResultPayload(widgetState);
+  if (widgetSnapshot) {
+    return widgetSnapshot;
   }
 
   try {
@@ -94,11 +131,13 @@ export const useMcpWidgetStore = create<McpWidgetState>()(
         console.log("[MCP STORE DEBUG] setToolResult called with:", payload);
         set({ toolResult: payload });
         writeWidgetSnapshot(payload);
+        syncWidgetState(payload);
       },
       resetToolResult: () => {
         console.log("[MCP STORE DEBUG] resetToolResult called");
         set({ toolResult: null });
         writeWidgetSnapshot(null);
+        syncWidgetState(null);
       },
     }),
     {
@@ -147,6 +186,8 @@ export const useMcpToolResult = () => {
       console.log("[MCP STORE DEBUG] Restored widget snapshot on mount:", initialSnapshot);
       if (!toolResult) {
         setToolResult(initialSnapshot);
+      } else {
+        syncWidgetState(toolResult);
       }
     } else {
       console.log("[MCP STORE DEBUG] No widget snapshot available on mount:", window.openai);
@@ -174,7 +215,7 @@ export const useMcpToolResult = () => {
       const output = customEvent.detail?.globals?.toolOutput;
       console.log("[MCP STORE DEBUG] Event openai:set_globals fired with output:", output);
       if (output && typeof output === "object") {
-        setToolResult(output as McpToolResultPayload);
+        setToolResult(extractToolResultPayload(output));
       }
     };
 
@@ -186,7 +227,7 @@ export const useMcpToolResult = () => {
             const output = event.data.toolOutput || event.data.globals?.toolOutput;
             if (output && typeof output === "object") {
               console.log("[MCP STORE DEBUG] postMessage toolOutput received:", output);
-              setToolResult(output as McpToolResultPayload);
+              setToolResult(extractToolResultPayload(output));
             }
           }
         }

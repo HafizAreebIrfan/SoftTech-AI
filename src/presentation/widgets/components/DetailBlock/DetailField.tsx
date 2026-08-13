@@ -6,6 +6,9 @@ import { renderDate } from "../../helper/RenderDate";
 import { renderStatus } from "../../helper/RenderStatus";
 import { renderBoolean } from "../../helper/RenderBoolean";
 import { renderUrl } from "../../helper/RenderUrl";
+import { renderImage } from "../../helper/RenderImage";
+import { renderArray } from "../../helper/RenderArray";
+import { renderObject } from "../../helper/RenderObject";
 import styles from "../../../../styles/detailblock.module.css";
 import type { DetailFieldProps } from "../../../../interfaces/mcp/detailblock.interface";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
@@ -31,7 +34,11 @@ const formatDetailValue = (val: unknown, type: FieldSchema["type"]): React.React
     case "url":
       return renderUrl(val);
     case "image":
-      return String(val);
+      return renderImage(val, "Image");
+    case "array":
+      return renderArray(val);
+    case "object":
+      return renderObject(val);
     default:
       return typeof val === "object" ? JSON.stringify(val) : String(val);
   }

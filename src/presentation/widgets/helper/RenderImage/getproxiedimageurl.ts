@@ -48,7 +48,7 @@ const normalizeImageUrl = (value: string): string | null => {
       return src;
     }
 
-    return `${API_BASE_URL}/api/image-proxy?url=${encodeURIComponent(src)}`;
+    return `${API_BASE_URL}/api/images/image-proxy?url=${encodeURIComponent(src)}`;
   } catch {
     return null;
   }
