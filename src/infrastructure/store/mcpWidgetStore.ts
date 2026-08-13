@@ -51,9 +51,8 @@ const syncWidgetState = (payload: McpToolResultPayload | null) => {
     const res = fn(payload);
 
     if (res && typeof (res as Record<string, unknown>)?.catch === "function") {
-      (res as Promise<unknown>).catch((err: unknown) => {
+      (res as Promise<unknown>).catch(() => {
         // Silently catch stale widget_state_revision_conflict from ChatGPT host
-        console.warn("[MCP STORE] Host setWidgetState notice:", err);
       });
     }
   } catch {
@@ -134,13 +133,14 @@ export const useMcpWidgetStore = create<McpWidgetState>()(
     (set) => ({
       toolResult: readWidgetSnapshot(),
       setToolResult: (payload) => {
-        console.log("[MCP STORE DEBUG] setToolResult called with:", payload);
+        if (payload) {
+          console.log("[MCP Widget] Result displayed:", payload);
+        }
         set({ toolResult: payload });
         writeWidgetSnapshot(payload);
         syncWidgetState(payload);
       },
       resetToolResult: () => {
-        console.log("[MCP STORE DEBUG] resetToolResult called");
         set({ toolResult: null });
         writeWidgetSnapshot(null);
         syncWidgetState(null);
@@ -169,34 +169,28 @@ export const useMcpToolResult = () => {
 
     onAppCreated: (app) => {
       try {
-        console.log("[MCP STORE DEBUG] Ext-Apps App created:", app);
         app.ontoolresult = (result) => {
-          console.log("[MCP STORE DEBUG] Ext-Apps ontoolresult received:", result);
           const payload = (result as unknown as McpToolResultPayload) ?? null;
           if (payload) {
             setToolResult(payload);
           }
         };
-      } catch (e) {
-        console.error("[MCP STORE DEBUG] Ext-Apps bridge failed:", e);
+      } catch {
+        // Ignore ext-apps bridge init errors
       }
     },
   });
 
   useEffect(() => {
-    console.log("[MCP STORE DEBUG] Mounting useMcpToolResult hook. Current state:", toolResult);
-
     // 1. Immediate check on mount
     const initialSnapshot = readWidgetSnapshot();
     if (initialSnapshot) {
-      console.log("[MCP STORE DEBUG] Restored widget snapshot on mount:", initialSnapshot);
+      console.log("[MCP Widget] Restored on reload:", initialSnapshot);
       if (!toolResult) {
         setToolResult(initialSnapshot);
       } else {
         syncWidgetState(toolResult);
       }
-    } else {
-      console.log("[MCP STORE DEBUG] No widget snapshot available on mount:", window.openai);
     }
 
     // 2. Short polling fallback (to catch late host injection in ChatGPT webview)
@@ -205,7 +199,6 @@ export const useMcpToolResult = () => {
       pollCount++;
       const currentSnapshot = readWidgetSnapshot();
       if (currentSnapshot) {
-        console.log(`[MCP STORE DEBUG] Late widget snapshot detected at poll #${pollCount}:`, currentSnapshot);
         if (!toolResult) {
           setToolResult(currentSnapshot);
         }
@@ -219,7 +212,6 @@ export const useMcpToolResult = () => {
     const handleGlobals = (event: Event) => {
       const customEvent = event as CustomEvent<{ globals?: OpenAiGlobals }>;
       const output = customEvent.detail?.globals?.toolOutput;
-      console.log("[MCP STORE DEBUG] Event openai:set_globals fired with output:", output);
       if (output && typeof output === "object") {
         setToolResult(extractToolResultPayload(output));
       }
@@ -232,7 +224,6 @@ export const useMcpToolResult = () => {
           if (event.data.type === "openai:set_globals" || event.data.toolOutput) {
             const output = event.data.toolOutput || event.data.globals?.toolOutput;
             if (output && typeof output === "object") {
-              console.log("[MCP STORE DEBUG] postMessage toolOutput received:", output);
               setToolResult(extractToolResultPayload(output));
             }
           }

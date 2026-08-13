@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "../../../../styles/fieldrenderer.module.css";
 import { getProxiedImageUrl, getRawImageUrl } from "./getproxiedimageurl";
 import { RenderImageProps } from "../../../../interfaces/mcp/renderimageprops.interface";
@@ -8,33 +8,82 @@ export const renderImage = (value: unknown, alt = "Image"): React.ReactNode => {
 };
 
 const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
-  const [useRawFallback, setUseRawFallback] = useState(false);
+  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
   const proxiedSrc = getProxiedImageUrl(value);
   const rawSrc = getRawImageUrl(value);
 
-  const activeSrc = useRawFallback
-    ? rawSrc
-    : proxiedSrc || rawSrc;
+  useEffect(() => {
+    let isMounted = true;
+    let createdBlobUrl: string | null = null;
 
-  if (!activeSrc || hasError) {
+    const loadImage = async () => {
+      const targetUrl = proxiedSrc || rawSrc;
+
+      if (!targetUrl) {
+        if (isMounted) {
+          setHasError(true);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (targetUrl.startsWith("data:") || targetUrl.startsWith("blob:")) {
+        if (isMounted) {
+          setImgSrc(targetUrl);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch(targetUrl, { mode: "cors" });
+        if (response.ok) {
+          const blob = await response.blob();
+          if (isMounted) {
+            createdBlobUrl = URL.createObjectURL(blob);
+            setImgSrc(createdBlobUrl);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Fall back to direct target URL if fetch fails
+      }
+
+      if (isMounted) {
+        setImgSrc(targetUrl);
+        setIsLoading(false);
+      }
+    };
+
+    setIsLoading(true);
+    setHasError(false);
+    loadImage();
+
+    return () => {
+      isMounted = false;
+      if (createdBlobUrl) {
+        URL.revokeObjectURL(createdBlobUrl);
+      }
+    };
+  }, [proxiedSrc, rawSrc]);
+
+  if (hasError || (!isLoading && !imgSrc)) {
     return <ImageFallback />;
   }
 
   return (
     <div className={styles.imageWrapper}>
       <img
-        src={activeSrc}
+        src={imgSrc || undefined}
         alt={alt}
         className={styles.image}
         loading="lazy"
         onError={() => {
-          if (!useRawFallback && rawSrc && rawSrc !== proxiedSrc) {
-            setUseRawFallback(true);
-          } else {
-            setHasError(true);
-          }
+          setHasError(true);
         }}
       />
     </div>

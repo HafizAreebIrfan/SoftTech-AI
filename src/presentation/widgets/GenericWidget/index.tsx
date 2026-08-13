@@ -27,13 +27,6 @@ export const GenericWidgetRenderer: React.FC = () => {
   const structuredContent =
     (toolResult as any)?.structuredContent ?? toolResult;
 
-  console.log("[GenericWidgetRenderer DEBUG] Render tick:", {
-    toolResult,
-    structuredContent,
-    windowOpenAi: window.openai,
-    localStorage: localStorage.getItem("mcp-widget-single-store"),
-  });
-
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
     const content = structuredContent;
 
@@ -42,25 +35,7 @@ export const GenericWidgetRenderer: React.FC = () => {
     }
 
     const collection = content.collection;
-
     const fields = collection?.fields ?? [];
-
-    /**
-     * Find the actual records using dataPath.
-     *
-     * Example:
-     *
-     * data:
-     * {
-     *   getorder: [...]
-     * }
-     *
-     * dataPath:
-     * "getorder"
-     *
-     * records:
-     * [...]
-     */
     let records: unknown[] = [];
 
     if (collection?.dataPath) {
@@ -72,14 +47,8 @@ export const GenericWidgetRenderer: React.FC = () => {
         records = [collectionData];
       }
     } else if (Array.isArray(content.data)) {
-      /**
-       * Root-level array response.
-       */
       records = content.data;
     } else if (isRecordCollection(content.data)) {
-      /**
-       * Backwards/fallback detection when dataPath is unavailable.
-       */
       const detectedArray = Object.values(content.data).find(Array.isArray);
 
       if (Array.isArray(detectedArray)) {
@@ -90,12 +59,6 @@ export const GenericWidgetRenderer: React.FC = () => {
     } else if (content.data) {
       records = [content.data];
     }
-
-    console.log("WIDGET DEBUG", {
-      data: content.data,
-      dataPath: collection?.dataPath,
-      fields: collection?.fields,
-    });
 
     return {
       content,
@@ -143,14 +106,6 @@ export const GenericWidgetRenderer: React.FC = () => {
 
   const { content, collection, fields, records, rawData } = normalizedData;
 
-  console.log("[GenericWidgetRenderer] Presentation Plan:", presentationPlan);
-
-  /**
-   * At this stage, do not force the response into a UI.
-   *
-   * If the API returned a simple object rather than a collection,
-   * we still have valid data.
-   */
   if (!collection && !rawData) {
     return <EmptyStateBlock />;
   }
