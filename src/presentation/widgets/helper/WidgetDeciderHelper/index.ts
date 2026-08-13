@@ -39,9 +39,6 @@ export const buildPresentationPlan = ({
     return true;
   };
 
-  const isScalarField = (field: FieldSchema) =>
-    field.type !== "object" && field.type !== "array";
-
   const numericFields = fields.filter(
     (field) =>
       (field.type === "number" || field.type === "currency") &&
@@ -91,6 +88,12 @@ export const buildPresentationPlan = ({
 
   const blocks: PresentationBlock[] = [];
 
+  const hasFiltering = Boolean(capabilities?.canFilter);
+
+  const hasSorting = Boolean(capabilities?.canSort);
+
+  const hasPaginationCapability = Boolean(capabilities?.canPaginate);
+
   let layout: PresentationLayout = "general";
 
   if (isComparison && hasMultipleRecords) {
@@ -126,7 +129,7 @@ export const buildPresentationPlan = ({
      */
     layout = "catalog";
 
-    if (capabilities?.filtering || hasPrices || hasStatus) {
+    if (hasFiltering || hasPrices || hasStatus) {
       blocks.push({
         type: "filters",
       });
@@ -187,14 +190,11 @@ export const buildPresentationPlan = ({
     layout,
     blocks,
 
-    showPagination: hasPagination,
+    showPagination: hasPagination || hasPaginationCapability,
 
-    showFilters:
-      Boolean(capabilities?.filtering) ||
-      hasPrices ||
-      hasStatus,
+    showFilters: hasFiltering || hasPrices || hasStatus,
 
-    showSorting: Boolean(capabilities?.sorting) && layout === "table",
+    showSorting: hasSorting && layout === "table",
 
     primaryFields,
     numericFields,
