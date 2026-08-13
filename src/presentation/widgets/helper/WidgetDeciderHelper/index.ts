@@ -15,8 +15,16 @@ export const buildPresentationPlan = ({
   audience,
   intent,
 }: BuildPresentationPlanOptions): PresentationPlan => {
+  const isMeaningfulNumericField = (field: { key: string; label: string }) => {
+    const key = field.key.toLowerCase();
+    const label = field.label.toLowerCase();
+    if (key.includes("epoch") || label.includes("epoch") || key.includes("timestamp") || label.includes("timestamp")) return false;
+    if (key === "code" || key === "tz_id" || key === "is_day" || key === "is_moon_up" || key === "is_sun_up") return false;
+    return true;
+  };
+
   const numericFields = fields.filter(
-    (field) => field.type === "number" || field.type === "currency",
+    (field) => (field.type === "number" || field.type === "currency") && isMeaningfulNumericField(field),
   );
 
   const imageFields = fields.filter((field) => field.type === "image");

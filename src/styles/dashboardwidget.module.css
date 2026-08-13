@@ -7,6 +7,7 @@
   backdrop-filter: blur(18px);
   border: 1px solid var(--app-card-border);
   border-radius: 16px;
+  box-sizing: border-box;
 }
 
 .header {
@@ -35,35 +36,17 @@
 }
 
 .blockContainer {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 16px;
+  width: 100%;
 }
 
-.summaryBlock {
-  grid-column: span 4;
+.blockWrapper {
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.chartBlock {
-  grid-column: span 8;
-}
-
-.detailBlock {
-  grid-column: span 4;
-}
-
-.tableBlock {
-  grid-column: 1 / -1;
-}
-
-@media (max-width: 800px) {
-  .summaryBlock,
-  .chartBlock,
-  .detailBlock,
-  .tableBlock {
-    grid-column: 1 / -1;
-  }
-}
 @media (max-width: 560px) {
   .header {
     flex-direction: column;

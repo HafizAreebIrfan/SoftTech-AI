@@ -111,14 +111,19 @@ export const SummaryBlock: React.FC<SummaryBlockProps> = ({
     if (block?.fields && block.fields.length > 0) {
       targetFields = block.fields;
     } else {
-      targetFields = fields.filter(
-        (f) =>
-          !f.hidden &&
-          (f.type === "number" ||
-            f.type === "currency" ||
-            f.type === "status" ||
-            f.type === "boolean"),
-      );
+      targetFields = fields.filter((f) => {
+        if (f.hidden) return false;
+        const key = f.key.toLowerCase();
+        const label = f.label.toLowerCase();
+        if (key.includes("epoch") || label.includes("epoch") || key.includes("timestamp") || label.includes("timestamp")) return false;
+        if (key === "code" || key === "tz_id" || key === "is_day" || key === "is_moon_up" || key === "is_sun_up") return false;
+        return (
+          f.type === "number" ||
+          f.type === "currency" ||
+          f.type === "status" ||
+          f.type === "boolean"
+        );
+      });
     }
 
     const calculatedMetrics: MetricCardData[] = [];

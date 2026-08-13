@@ -24,7 +24,15 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
     const activeFields =
       block?.fields && block.fields.length > 0 ? block.fields : fields;
 
-    const nonHiddenFields = activeFields.filter((f) => !f.hidden);
+    const isMeaningful = (f: FieldSchema) => {
+      const key = f.key.toLowerCase();
+      const label = f.label.toLowerCase();
+      if (key.includes("epoch") || label.includes("epoch") || key.includes("timestamp") || label.includes("timestamp")) return false;
+      if (key === "code" || key === "tz_id" || key === "is_day" || key === "is_moon_up" || key === "is_sun_up") return false;
+      return true;
+    };
+
+    const nonHiddenFields = activeFields.filter((f) => !f.hidden && isMeaningful(f));
 
     // 1. Identify Y-Axis numeric field
     const yField =

@@ -27,6 +27,13 @@ export const GenericWidgetRenderer: React.FC = () => {
   const structuredContent =
     (toolResult as any)?.structuredContent ?? toolResult;
 
+  console.log("[GenericWidgetRenderer DEBUG] Render tick:", {
+    toolResult,
+    structuredContent,
+    windowOpenAi: window.openai,
+    localStorage: localStorage.getItem("mcp-widget-single-store"),
+  });
+
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
     const content = structuredContent;
 

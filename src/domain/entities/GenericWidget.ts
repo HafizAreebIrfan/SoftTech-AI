@@ -101,6 +101,8 @@ export interface McpToolResultPayload {
 export interface OpenAiGlobals {
   toolInput?: unknown;
   toolOutput?: McpToolResultPayload | null;
+  widgetState?: Record<string, unknown> | null;
+  setWidgetState?: (state: Record<string, unknown> | null) => void;
 }
 
 export interface OpenAiSetGlobalsEventDetail {

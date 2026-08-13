@@ -49,82 +49,92 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
       </header>
       <div className={styles.blockContainer}>
         {blocks.map((block, index) => {
+          let content: React.ReactNode = null;
+
           switch (block.type) {
             case "summary":
-              return (
+              content = (
                 <SummaryBlock
-                  key={`summary-${index}`}
                   block={block}
                   records={records}
                   fields={fields}
                   collection={collection}
                 />
               );
+              break;
 
             case "chart":
-              return (
+              content = (
                 <ChartsBlock
-                  key={`chart-${index}`}
                   block={block}
                   records={records}
                   fields={fields}
                 />
               );
+              break;
 
             case "table":
-              return (
+              content = (
                 <TableBlock
-                  key={`table-${index}`}
                   block={block}
                   records={records}
                   fields={fields}
                 />
               );
+              break;
 
             case "cards":
-              return (
+              content = (
                 <CardsBlock
-                  key={`cards-${index}`}
                   block={block}
                   records={records}
                   fields={fields}
                 />
               );
+              break;
 
             case "details":
-              return (
+              content = (
                 <DetailBlock
-                  key={`detail-${index}`}
                   block={block}
                   records={records}
                   fields={fields}
                 />
               );
+              break;
 
             case "assets":
             case "asset":
-              return (
+              content = (
                 <AssetBlock
-                  key={`asset-${index}`}
                   block={block}
                   records={records}
                   fields={fields}
                 />
               );
+              break;
 
             case "filters":
-              return (
+              content = (
                 <FormBlock
-                  key={`form-${index}`}
                   block={block}
                   fields={fields}
                   actions={actions}
                 />
               );
+              break;
 
             default:
-              return null;
+              content = null;
           }
+
+          if (!content) return null;
+
+          return (
+            <div key={`block-${index}`} className={styles.blockWrapper}>
+              {content}
+            </div>
+          );
         })}
       </div>
     </section>
