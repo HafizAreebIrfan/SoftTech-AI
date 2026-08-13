@@ -18,6 +18,11 @@ export type FieldSchema = {
     | "object"
     | "array";
   path?: string;
+  hidden?: boolean;
+  primary?: boolean;
+  sortable?: boolean;
+  searchable?: boolean;
+  filterable?: boolean;
 };
 
 export type CollectionResult = {
