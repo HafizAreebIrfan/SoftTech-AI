@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { createCompanyForgotPasswordRepositoryPort, ICompanyForgotPasswordRepository } from "../../../ports/companies/forgetPassword/companyforgetpasswordrepository";
 import { comparePassword, Hashpassword } from "../../../../infrastructure/middlewares/SecurityMiddleware/bcrypt";
-import { sendPasswordResetOtpEmail } from "../../../../infrastructure/services/emailService";
+import { sendPasswordResetOtpEmail } from "../../../services/email/emailService";
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 

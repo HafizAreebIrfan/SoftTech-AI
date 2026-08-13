@@ -1,24 +1,33 @@
 import test, { beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { OAuthPkceService } from "../OAuthPkceService";
-import { OAuthTokenService } from "../OAuthTokenService";
+import {
+  generateState,
+  generateCodeVerifier,
+  generateCodeChallenge,
+  buildAuthorizationUrl,
+} from "../OAuthPkceService";
+import {
+  exchangeAuthorizationCode,
+  refreshUserAccessToken,
+  clearCache,
+} from "../OAuthTokenService";
 
 test("User OAuth 2.0 PKCE & Authorization Code Flow Tests", async (t) => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
-    OAuthTokenService.clearCache();
+    clearCache();
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
-    OAuthTokenService.clearCache();
+    clearCache();
   });
 
   await t.test("1. Generates valid PKCE state, code_verifier, and S256 code_challenge", () => {
-    const state = OAuthPkceService.generateState();
-    const verifier = OAuthPkceService.generateCodeVerifier();
-    const challenge = OAuthPkceService.generateCodeChallenge(verifier);
+    const state = generateState();
+    const verifier = generateCodeVerifier();
+    const challenge = generateCodeChallenge(verifier);
 
     assert.equal(typeof state, "string");
     assert.equal(state.length, 64);
@@ -29,12 +38,12 @@ test("User OAuth 2.0 PKCE & Authorization Code Flow Tests", async (t) => {
     assert.equal(typeof challenge, "string");
     assert.ok(challenge.length >= 43);
 
-    const challenge2 = OAuthPkceService.generateCodeChallenge(verifier);
+    const challenge2 = generateCodeChallenge(verifier);
     assert.equal(challenge, challenge2);
   });
 
   await t.test("2. Builds authorization URL with safe URL parameters and PKCE S256 method", () => {
-    const url = OAuthPkceService.buildAuthorizationUrl({
+    const url = buildAuthorizationUrl({
       authorizationUrl: "https://auth.company.com/oauth/authorize",
       clientId: "client_abc_123",
       redirectUri: "https://softtech-ai.onrender.com/api/oauth/callback",
@@ -81,17 +90,20 @@ test("User OAuth 2.0 PKCE & Authorization Code Flow Tests", async (t) => {
     }) as typeof fetch;
 
     // Mock connection save to bypass database dependency in unit test
-    const saveOriginal = (OAuthTokenService as any).saveUserConnection;
+    const mockRepo = require("../../../../adapters/persistence/mongo/oauth/oauthConnectionRepository");
+    const saveOriginal = mockRepo.saveUserConnection;
     let savedConnection: any = null;
 
     try {
-      const mockRepo = require("../../../../adapters/persistence/mongo/oauth/oauthConnectionRepository");
-      mockRepo.OAuthConnectionRepository.saveUserConnection = async (conn: any) => {
+      mockRepo.saveUserConnection = async (conn: any) => {
         savedConnection = conn;
         return conn;
       };
+      if (mockRepo.OAuthConnectionRepository) {
+        mockRepo.OAuthConnectionRepository.saveUserConnection = mockRepo.saveUserConnection;
+      }
 
-      const result = await OAuthTokenService.exchangeAuthorizationCode({
+      const result = await exchangeAuthorizationCode({
         tokenUrl: "https://auth.company.com/oauth/token",
         clientId: "client_123",
         clientSecret: "secret_456",
@@ -116,7 +128,7 @@ test("User OAuth 2.0 PKCE & Authorization Code Flow Tests", async (t) => {
         "application/x-www-form-urlencoded",
       );
     } finally {
-      if (saveOriginal) (OAuthTokenService as any).saveUserConnection = saveOriginal;
+      if (saveOriginal) mockRepo.saveUserConnection = saveOriginal;
     }
   });
 
@@ -139,9 +151,12 @@ test("User OAuth 2.0 PKCE & Authorization Code Flow Tests", async (t) => {
     }) as typeof fetch;
 
     const mockRepo = require("../../../../adapters/persistence/mongo/oauth/oauthConnectionRepository");
-    mockRepo.OAuthConnectionRepository.saveUserConnection = async (conn: any) => conn;
+    mockRepo.saveUserConnection = async (conn: any) => conn;
+    if (mockRepo.OAuthConnectionRepository) {
+      mockRepo.OAuthConnectionRepository.saveUserConnection = mockRepo.saveUserConnection;
+    }
 
-    const refreshed = await OAuthTokenService.refreshUserAccessToken(
+    const refreshed = await refreshUserAccessToken(
       {
         companyId: "comp_1",
         apiId: "api_1",

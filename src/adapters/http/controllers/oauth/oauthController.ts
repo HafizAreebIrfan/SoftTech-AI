@@ -1,8 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import { CompanyModel } from "../../../persistence/models/companies/register/companyinfo";
-import { OAuthPkceService } from "../../../../application/services/oauth/OAuthPkceService";
-import { OAuthConnectionRepository } from "../../../persistence/mongo/oauth/oauthConnectionRepository";
-import { OAuthTokenService } from "../../../../application/services/oauth/OAuthTokenService";
+import {
+  generateState,
+  generateCodeVerifier,
+  generateCodeChallenge,
+  buildAuthorizationUrl,
+} from "../../../../application/services/oauth/OAuthPkceService";
+import {
+  createTransaction,
+  consumeTransaction,
+} from "../../../persistence/mongo/oauth/oauthConnectionRepository";
+import { exchangeAuthorizationCode } from "../../../../application/services/oauth/OAuthTokenService";
 import { env } from "../../../../infrastructure/config/env";
 import { resolveMcpUserId } from "../../middlewares/mcpUserAuthMiddleware";
 
@@ -66,13 +74,13 @@ export async function initiateUserOAuthController(
       return;
     }
 
-    const state = OAuthPkceService.generateState();
-    const codeVerifier = OAuthPkceService.generateCodeVerifier();
-    const codeChallenge = OAuthPkceService.generateCodeChallenge(codeVerifier);
+    const state = generateState();
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = generateCodeChallenge(codeVerifier);
     const redirectUri = env.OAUTH_CALLBACK_URL;
     const expiresAt = new Date(Date.now() + TRANSACTION_TTL_MS);
 
-    await OAuthConnectionRepository.createTransaction({
+    await createTransaction({
       state,
       companyId: String((company as any)._id),
       apiId,
@@ -82,7 +90,7 @@ export async function initiateUserOAuthController(
       expiresAt,
     });
 
-    const targetUrl = OAuthPkceService.buildAuthorizationUrl({
+    const targetUrl = buildAuthorizationUrl({
       authorizationUrl: oauth.authorizationUrl,
       clientId: oauth.clientId,
       redirectUri,
@@ -137,7 +145,7 @@ export async function handleOAuthCallbackController(
       return;
     }
 
-    const transaction = await OAuthConnectionRepository.consumeTransaction(state);
+    const transaction = await consumeTransaction(state);
 
     if (!transaction) {
       res.status(400).send("Invalid or expired OAuth state. Please initiate authorization again.");
@@ -164,7 +172,7 @@ export async function handleOAuthCallbackController(
       return;
     }
 
-    await OAuthTokenService.exchangeAuthorizationCode({
+    await exchangeAuthorizationCode({
       tokenUrl: api.oauth.tokenUrl,
       clientId: api.oauth.clientId,
       clientSecret: api.oauth.clientSecret,

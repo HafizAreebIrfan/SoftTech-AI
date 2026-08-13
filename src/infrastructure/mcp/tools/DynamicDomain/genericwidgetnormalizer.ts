@@ -20,6 +20,7 @@ export const normalizeApiResponseToWidget = (
   apiParams: any[] = [],
   audience?: WidgetAudience,
   platformType?: PlatformType,
+  method = "GET",
 ): GenericWidgetResult => {
   const data = normalizeJsonValue(response);
 
@@ -49,6 +50,8 @@ export const normalizeApiResponseToWidget = (
     metadata: {
       companyName,
       apiName,
+      httpMethod: method.toUpperCase(),
+      isAction: method.toUpperCase() !== "GET",
       ...(industry ? { industry } : {}),
       ...(apiSchema?.entity ? { entity: apiSchema.entity } : {}),
       generatedAt: new Date().toISOString(),

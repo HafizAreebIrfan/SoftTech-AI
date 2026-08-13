@@ -1,36 +1,43 @@
 import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { IApi, ICompany } from "../../../../domain/types/company.types";
+import {
+  NormalizedAuthType,
+  IUserAuthRequiredNotice,
+} from "../../../../domain/types/oauthConnection.types";
 import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwidgetoutputschema";
 import { normalizeApiResponseToWidget } from "./genericwidgetnormalizer";
 import { translateApiError } from "../../errors/errorTranslator";
 import { buildCustomMcpInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
-import { OAuthTokenService } from "../../../../application/services/oauth/OAuthTokenService";
+import {
+  getAccessToken,
+  getUserAccessToken,
+  invalidateToken,
+} from "../../../../application/services/oauth/OAuthTokenService";
 import { env } from "../../../../infrastructure/config/env";
 import { resolveMcpUserId } from "../../../../adapters/http/middlewares/mcpUserAuthMiddleware";
 
 const HTTP_METHODS_WITH_BODY = ["POST", "PUT", "PATCH"];
 
-export type NormalizedAuthType =
-  | "BEARER"
-  | "API_KEY"
-  | "OAUTH"
-  | "OAUTH_USER"
-  | "NONE";
+export const createUserAuthRequiredNotice = (
+  companyId: string,
+  apiId: string,
+  connectUrl: string,
+): IUserAuthRequiredNotice => ({
+  isAuthRequired: true,
+  companyId,
+  apiId,
+  connectUrl,
+  message: "User authorization is required to access this API.",
+});
 
-export class UserAuthRequiredError extends Error {
-  public companyId: string;
-  public apiId: string;
-  public connectUrl: string;
-
-  constructor(companyId: string, apiId: string, connectUrl: string) {
-    super("User authorization is required to access this API.");
-    this.name = "UserAuthRequiredError";
-    this.companyId = companyId;
-    this.apiId = apiId;
-    this.connectUrl = connectUrl;
-  }
-}
+export const isUserAuthRequiredNotice = (
+  error: any,
+): error is IUserAuthRequiredNotice => {
+  return (
+    error && typeof error === "object" && error.isAuthRequired === true
+  );
+};
 
 /**
  * Robustly normalizes authType strings into standard categories.
@@ -142,6 +149,47 @@ export const registerCompanyApiTools = (
             input,
             req,
           );
+
+          if (isUserAuthRequiredNotice(rawResponse)) {
+            const authWidget = {
+              title: `${api.name || "API"} Connection Required`,
+              subtitle: `Account authorization is required to access ${company.companyName}.`,
+              layout: company.uiPreference?.layout ?? "dashboard",
+              industry: company.industry ?? "general",
+              blocks: [
+                {
+                  type: "keyValue",
+                  title: "Authorization Needed",
+                  keyValueItems: [
+                    {
+                      key: "Status",
+                      value: "Account Not Connected",
+                    },
+                    {
+                      key: "Connect Account",
+                      value: rawResponse.connectUrl,
+                    },
+                  ],
+                },
+              ],
+              metadata: {
+                companyName: company.companyName,
+                apiName: api.name,
+                httpMethod: method,
+                isAction: method !== "GET",
+                generatedAt: new Date().toISOString(),
+              },
+            };
+
+            return buildMcpSuccessResult(
+              authWidget,
+              api.name || `API ${index + 1}`,
+              company,
+              resourceUri,
+              method,
+            );
+          }
+
           const widgetContent = normalizeApiResponseToWidget(
             company.companyName,
             api.name || `API ${index + 1}`,
@@ -152,6 +200,7 @@ export const registerCompanyApiTools = (
             api.params ?? [],
             api.audience as any,
             api.platformType as any,
+            method,
           );
 
           return buildMcpSuccessResult(
@@ -159,9 +208,10 @@ export const registerCompanyApiTools = (
             api.name || `API ${index + 1}`,
             company,
             resourceUri,
+            method,
           );
         } catch (error: any) {
-          if (error instanceof UserAuthRequiredError) {
+          if (isUserAuthRequiredNotice(error)) {
             const authWidget = {
               title: `${api.name || "API"} Connection Required`,
               subtitle: `Account authorization is required to access ${company.companyName}.`,
@@ -186,6 +236,8 @@ export const registerCompanyApiTools = (
               metadata: {
                 companyName: company.companyName,
                 apiName: api.name,
+                httpMethod: method,
+                isAction: method !== "GET",
                 generatedAt: new Date().toISOString(),
               },
             };
@@ -195,6 +247,7 @@ export const registerCompanyApiTools = (
               api.name || `API ${index + 1}`,
               company,
               resourceUri,
+              method,
             );
           }
 
@@ -234,6 +287,8 @@ export const registerCompanyApiTools = (
             metadata: {
               companyName: company.companyName,
               apiName: api.name,
+              httpMethod: method,
+              isAction: method !== "GET",
               generatedAt: new Date().toISOString(),
             },
           };
@@ -243,6 +298,7 @@ export const registerCompanyApiTools = (
             api.name || `API ${index + 1}`,
             company,
             resourceUri,
+            method,
           );
         }
       },
@@ -255,6 +311,7 @@ const buildMcpSuccessResult = (
   apiName: string,
   company: ICompany,
   resourceUri?: string,
+  method = "GET",
 ) => {
   const metaObject: Record<string, any> = {
     ui: {
@@ -262,10 +319,14 @@ const buildMcpSuccessResult = (
     },
     "openai/outputTemplate": resourceUri,
     "openai/widgetAccessible": true,
-    "openai/toolInvocation/invoking": `Loading ${apiName}...`,
-    "openai/toolInvocation/invoked": "Loaded",
+    "openai/toolInvocation/invoking":
+      method !== "GET" ? `Executing ${apiName}...` : `Loading ${apiName}...`,
+    "openai/toolInvocation/invoked": method !== "GET" ? "Action completed" : "Loaded",
     company: company.companyName,
     lastFetched: new Date().toISOString(),
+    "softtech/action": method !== "GET",
+    "softtech/httpMethod": method,
+    "softtech/apiName": apiName,
   };
 
   const result = {
@@ -292,7 +353,13 @@ const callRegisteredApi = async (
   const url = buildApiUrl(api, input);
   const method = (api.method || "GET").toUpperCase();
 
-  const headers = await buildHeaders(companyId, apiId, api, false, req);
+  const headerResult = await buildHeaders(companyId, apiId, api, false, req);
+
+  if (isUserAuthRequiredNotice(headerResult)) {
+    return headerResult;
+  }
+
+  const headers = headerResult as Record<string, string>;
 
   const options: RequestInit = {
     method,
@@ -329,20 +396,24 @@ const callRegisteredApi = async (
   // Perform at most ONE token refresh retry on HTTP 401 for OAuth APIs
   if (response.status === 401 && (authType === "OAUTH" || authType === "OAUTH_USER")) {
     if (authType === "OAUTH") {
-      OAuthTokenService.invalidateToken(
-        api.oauth?.tokenUrl,
-        api.oauth?.clientId,
-      );
+      invalidateToken(api.oauth?.tokenUrl, api.oauth?.clientId);
     }
 
     try {
-      const refreshedHeaders = await buildHeaders(
+      const refreshedHeaderResult = await buildHeaders(
         companyId,
         apiId,
         api,
         true,
         req,
       );
+
+      if (isUserAuthRequiredNotice(refreshedHeaderResult)) {
+        return refreshedHeaderResult;
+      }
+
+      const refreshedHeaders = refreshedHeaderResult as Record<string, string>;
+
       const retryOptions: RequestInit = {
         ...options,
         headers: { ...refreshedHeaders },
@@ -591,7 +662,7 @@ const buildHeaders = async (
   api: IApi,
   forceRefreshToken = false,
   req?: any,
-): Promise<Record<string, string>> => {
+): Promise<Record<string, string> | IUserAuthRequiredNotice> => {
   const headers: Record<string, string> = {
     Accept: "application/json",
   };
@@ -625,7 +696,7 @@ const buildHeaders = async (
       headers[authHeaderName] = api.apiKey;
     }
   } else if (authType === "OAUTH") {
-    const token = await OAuthTokenService.getAccessToken(
+    const token = await getAccessToken(
       api.oauth,
       forceRefreshToken,
       api.name,
@@ -634,7 +705,7 @@ const buildHeaders = async (
     headers.Authorization = `Bearer ${token}`;
   } else if (authType === "OAUTH_USER") {
     const userId = req ? resolveMcpUserId(req) : "anonymous_user";
-    const token = await OAuthTokenService.getUserAccessToken({
+    const token = await getUserAccessToken({
       companyId,
       apiId,
       userId,
@@ -644,7 +715,7 @@ const buildHeaders = async (
 
     if (!token) {
       const connectUrl = `${env.OAUTH_CALLBACK_URL.replace("/callback", "/authorize")}?companyId=${encodeURIComponent(companyId)}&apiId=${encodeURIComponent(apiId)}`;
-      throw new UserAuthRequiredError(companyId, apiId, connectUrl);
+      return createUserAuthRequiredNotice(companyId, apiId, connectUrl);
     }
 
     headers.Authorization = `Bearer ${token}`;
