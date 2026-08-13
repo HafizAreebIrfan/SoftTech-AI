@@ -2,28 +2,33 @@ import {
   registerAppResource,
   RESOURCE_MIME_TYPE,
 } from "@modelcontextprotocol/ext-apps/server";
+import { ICompany } from "../../../../domain/types/company.types";
+import {
+  getCompanyWidgetResourceUris,
+  loadCompanyWidgetSnapshot,
+  serializeWidgetBootstrap,
+} from "../../tools/WidgetSnapshot/widgetSnapshot";
 
 const WIDGET_BASE_URL = "https://softtech-ai-app.onrender.com";
 const WIDGET_SERVER_URL = "https://softtech-ai.onrender.com";
 const WIDGET_NGROK_URL = "https://scone-hatchling-relenting.ngrok-free.dev";
 
-const GENERIC_WIDGET_RESOURCES = [
-  {
-    name: "Widgets",
-    uri: "ui://generic/widgets.html",
-  },
-];
+export const registerGenericWidgetResources = (
+  server: any,
+  company: ICompany,
+) => {
+  const resourceUris = getCompanyWidgetResourceUris(company);
 
-export const registerGenericWidgetResources = (server: any) => {
-  GENERIC_WIDGET_RESOURCES.forEach((widget) => {
+  resourceUris.forEach((uri) => {
     registerAppResource(
       server,
-      widget.name,
-      widget.uri,
+      "Widgets",
+      uri,
       {
-        description: "Interactive " + widget.name + " visualizer.",
+        description: "Interactive Widgets visualizer.",
       },
       async () => {
+        const snapshot = await loadCompanyWidgetSnapshot(company);
         const HTML = await fetch(`${WIDGET_BASE_URL}/widget.js`).then((r) =>
           r.text(),
         );
@@ -53,6 +58,9 @@ export const registerGenericWidgetResources = (server: any) => {
               </div>
             </div>
           </div>
+          <script>
+            ${serializeWidgetBootstrap(snapshot)}
+          </script>
           <script type="module">${HTML}</script>
         </body>
       </html>
@@ -61,11 +69,11 @@ export const registerGenericWidgetResources = (server: any) => {
         return {
           contents: [
             {
-              uri: widget.uri,
+              uri,
               mimeType: RESOURCE_MIME_TYPE,
               text: widgetHtml,
               _meta: {
-                "openai/outputTemplate": widget.uri,
+                "openai/outputTemplate": uri,
                 "openai/widgetAccessible": true,
                 "openai/toolInvocation/invoking": "Loading...",
                 "openai/toolInvocation/invoked": "Loaded",

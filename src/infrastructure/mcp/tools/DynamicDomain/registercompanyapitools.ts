@@ -5,10 +5,12 @@ import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwid
 import { normalizeApiResponseToWidget } from "./genericwidgetnormalizer";
 import { translateApiError } from "../../errors/errorTranslator";
 import { buildCustomMcpInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
+import {
+  getCompanyWidgetResourceUri,
+  persistCompanyWidgetSnapshot,
+} from "../WidgetSnapshot/widgetSnapshot";
 
 const HTTP_METHODS_WITH_BODY = ["POST", "PUT", "PATCH"];
-
-const DEFAULT_RESOURCE_URI = "ui://generic/widgets.html";
 
 export const registerCompanyApiTools = (
   server: McpServer,
@@ -34,6 +36,8 @@ export const registerCompanyApiTools = (
       `Calls ${company.companyName} -> ${
         api.name || `API ${index + 1}`
       } and returns the API result as an interactive widget.`;
+    const resourceUri =
+      api.mcpResourceUri || getCompanyWidgetResourceUri(company);
 
     registerAppTool(
       server,
@@ -45,9 +49,9 @@ export const registerCompanyApiTools = (
         outputSchema: genericWidgetOutputSchema,
         _meta: {
           ui: {
-            resourceUri: DEFAULT_RESOURCE_URI,
+            resourceUri,
           },
-          "openai/outputTemplate": DEFAULT_RESOURCE_URI,
+          "openai/outputTemplate": resourceUri,
           "openai/widgetAccessible": true,
           "openai/toolInvocation/invoking": `Preparing ${api.name || "widget"}...`,
           "openai/toolInvocation/invoked": "Loaded",
@@ -72,6 +76,8 @@ export const registerCompanyApiTools = (
             widgetContent,
             company.companyName,
             api.name || `API ${index + 1}`,
+            company,
+            resourceUri,
           );
         } catch (error: any) {
           console.error(
@@ -112,6 +118,8 @@ export const registerCompanyApiTools = (
             errorWidget,
             company.companyName,
             api.name || `API ${index + 1}`,
+            company,
+            resourceUri,
           );
         }
       },
@@ -123,8 +131,10 @@ const buildMcpSuccessResult = (
   widgetContent: any,
   companyName: string,
   apiName: string,
+  company: ICompany,
+  resourceUri: string,
 ) => {
-  return {
+  const result = {
     structuredContent: widgetContent,
     content: [
       {
@@ -134,9 +144,9 @@ const buildMcpSuccessResult = (
     ],
     _meta: {
       ui: {
-        resourceUri: DEFAULT_RESOURCE_URI,
+        resourceUri,
       },
-      "openai/outputTemplate": DEFAULT_RESOURCE_URI,
+      "openai/outputTemplate": resourceUri,
       "openai/widgetAccessible": true,
       "openai/toolInvocation/invoking": `Loading ${apiName}...`,
       "openai/toolInvocation/invoked": "Loaded",
@@ -144,6 +154,10 @@ const buildMcpSuccessResult = (
       lastFetched: new Date().toISOString(),
     },
   };
+
+  void persistCompanyWidgetSnapshot(company, result);
+
+  return result;
 };
 
 const callRegisteredApi = async (api: IApi, input: any) => {

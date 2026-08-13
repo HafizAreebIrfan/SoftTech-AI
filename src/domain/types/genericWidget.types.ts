@@ -16,3 +16,17 @@ export type GenericWidgetResult = {
   audience?: WidgetAudience;
   platformtype?: PlatformType;
 };
+
+export type McpContentItem = {
+  type?: string;
+  text?: string;
+  [key: string]: unknown;
+};
+
+export type McpToolResultPayload = {
+  structuredContent: GenericWidgetResult;
+  content?: McpContentItem[];
+  _meta?: Record<string, unknown>;
+};
+
+export type WidgetSnapshotPayload = McpToolResultPayload;
