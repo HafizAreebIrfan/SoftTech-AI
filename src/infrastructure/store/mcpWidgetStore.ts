@@ -12,8 +12,24 @@ import {
 export const TOOL_RESULT_NOTIFICATION = "ui/notifications/tool-result";
 const WIDGET_SNAPSHOT_KEY = "softtech-ai:mcp-widget-snapshot";
 
+const readBootstrapSnapshot = (): McpToolResultPayload | null => {
+  if (typeof window === "undefined") return null;
+
+  const bootstrapSnapshot = window.__SOFTTECH_AI_WIDGET_BOOTSTRAP__;
+  if (bootstrapSnapshot && typeof bootstrapSnapshot === "object") {
+    return bootstrapSnapshot;
+  }
+
+  return null;
+};
+
 const readWidgetSnapshot = (): McpToolResultPayload | null => {
   if (typeof window === "undefined") return null;
+
+  const bootstrapSnapshot = readBootstrapSnapshot();
+  if (bootstrapSnapshot) {
+    return bootstrapSnapshot;
+  }
 
   const widgetState = window.openai?.widgetState;
   if (
@@ -60,6 +76,7 @@ const writeWidgetSnapshot = (payload: McpToolResultPayload | null) => {
     } catch {
       // Ignore storage access failures in embedded contexts.
     }
+    window.__SOFTTECH_AI_WIDGET_BOOTSTRAP__ = null;
     window.openai?.setWidgetState?.(null);
     return;
   }
@@ -69,6 +86,7 @@ const writeWidgetSnapshot = (payload: McpToolResultPayload | null) => {
   } catch {
     // Ignore storage access failures in embedded contexts.
   }
+  window.__SOFTTECH_AI_WIDGET_BOOTSTRAP__ = payload;
   window.openai?.setWidgetState?.({ toolResult: payload });
 };
 
@@ -89,6 +107,7 @@ export const useMcpWidgetStore = create<McpWidgetState>()(
     }),
     {
       name: "mcp-widget-single-store",
+      merge: (_persistedState, currentState) => currentState,
     },
   ),
 );

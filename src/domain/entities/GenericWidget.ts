@@ -112,6 +112,7 @@ export interface OpenAiSetGlobalsEventDetail {
 declare global {
   interface Window {
     openai?: OpenAiGlobals;
+    __SOFTTECH_AI_WIDGET_BOOTSTRAP__?: McpToolResultPayload | null;
   }
 
   interface WindowEventMap {
