@@ -82,6 +82,30 @@ const extractImageCandidate = (value: unknown, depth = 0): string | null => {
   return null;
 };
 
+export const getRawImageUrl = (value: unknown): string | null => {
+  if (isNonEmptyString(value)) {
+    let src = value.trim();
+    if (src.startsWith("//")) src = `https:${src}`;
+    return src;
+  }
+
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  for (const key of IMAGE_KEYS) {
+    if (isNonEmptyString(record[key])) {
+      let src = (record[key] as string).trim();
+      if (src.startsWith("//")) src = `https:${src}`;
+      return src;
+    }
+  }
+
+  return null;
+};
+
 export const getProxiedImageUrl = (value: unknown): string | null => {
   return extractImageCandidate(value);
 };

@@ -75,6 +75,14 @@ export const buildPresentationPlan = ({
 
   const isAdmin = audience === "admin" || audience === "both";
 
+  const entityName = String(entity || collection?.entity || "").toLowerCase();
+
+  const isWeatherLike =
+    /weather|forecast|climate|temperature/.test(entityName) ||
+    fields.some((f) =>
+      /temp_|maxtemp|mintemp|weather|forecast/.test(f.key.toLowerCase()),
+    );
+
   const isCatalogCandidate =
     hasMultipleRecords && (hasImages || hasPrices || hasStatus);
 
@@ -95,9 +103,26 @@ export const buildPresentationPlan = ({
       type: "table",
       fields,
     });
+  } else if (isWeatherLike) {
+    /*
+     * 2. Weather & Forecast
+     */
+    layout = "dashboard";
+
+    if (numericFields.length > 0) {
+      blocks.push({
+        type: "summary",
+        fields: numericFields.slice(0, 4),
+      });
+    }
+
+    blocks.push({
+      type: "details",
+      fields,
+    });
   } else if (isCatalogCandidate && hasMultipleRecords) {
     /*
-     * 2. Multi-record collection with visual or commercial fields
+     * 3. Multi-record collection with visual or commercial fields
      */
     layout = "catalog";
 
@@ -113,7 +138,7 @@ export const buildPresentationPlan = ({
     });
   } else if (isDashboardCandidate) {
     /*
-     * 3. Dashboard-style data
+     * 4. Dashboard-style data
      */
     layout = "dashboard";
 
@@ -138,7 +163,7 @@ export const buildPresentationPlan = ({
     });
   } else if (hasMultipleRecords) {
     /*
-     * 4. Generic collection with multiple records
+     * 5. Generic collection with multiple records
      */
     layout = "table";
 
@@ -148,7 +173,7 @@ export const buildPresentationPlan = ({
     });
   } else {
     /*
-     * 5. Single object
+     * 6. Single object
      */
     layout = "general";
 

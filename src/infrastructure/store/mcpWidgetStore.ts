@@ -47,9 +47,15 @@ const syncWidgetState = (payload: McpToolResultPayload | null) => {
     }
 
     lastSyncedWidgetState = serialized;
-    window.openai.setWidgetState(
-      payload as unknown as Record<string, unknown> | null,
-    );
+    const fn = window.openai.setWidgetState as (state: unknown) => unknown;
+    const res = fn(payload);
+
+    if (res && typeof (res as Record<string, unknown>)?.catch === "function") {
+      (res as Promise<unknown>).catch((err: unknown) => {
+        // Silently catch stale widget_state_revision_conflict from ChatGPT host
+        console.warn("[MCP STORE] Host setWidgetState notice:", err);
+      });
+    }
   } catch {
     // Ignore host widget-state write failures and keep local fallbacks.
   }

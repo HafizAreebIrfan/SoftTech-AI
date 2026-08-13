@@ -22,9 +22,41 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     const activeFields =
       block?.fields && block.fields.length > 0 ? block.fields : fields;
 
-    const nonHiddenFields = activeFields.filter((f) => !f.hidden);
+    const isMeaningfulDetailField = (f: FieldSchema) => {
+      if (f.hidden) return false;
+      if (f.type === "array" || f.type === "object") return false;
+      const key = f.key.toLowerCase();
+      const label = f.label?.toLowerCase() || "";
 
-    const imageField = nonHiddenFields.find((f) => f.type === "image");
+      if (
+        key.includes("epoch") ||
+        label.includes("epoch") ||
+        key.includes("timestamp") ||
+        label.includes("timestamp")
+      ) {
+        return false;
+      }
+
+      if (key === "code" || key === "tz_id" || key === "is_day") {
+        return false;
+      }
+
+      // Filter out redundant imperial duplicates (e.g. maxtemp_f, maxwind_mph, totalprecip_in, avgvis_miles)
+      if (
+        key.endsWith("_f") ||
+        key.endsWith("_mph") ||
+        key.endsWith("_in") ||
+        key.endsWith("_miles")
+      ) {
+        return false;
+      }
+
+      return true;
+    };
+
+    const nonHiddenFields = activeFields.filter(isMeaningfulDetailField);
+
+    const imageField = activeFields.find((f) => f.type === "image" && !f.hidden);
     const rawImage = imageField
       ? getFieldValue(targetRecord, imageField)
       : getValue(targetRecord, "image") ||
@@ -59,11 +91,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       ? getFieldValue(targetRecord, subtitleField)
       : null;
 
-    const headerFieldKeys = new Set([
-      imageField?.key,
-      titleField?.key,
-      subtitleField?.key,
-    ].filter(Boolean));
+    const headerFieldKeys = new Set(
+      [imageField?.key, titleField?.key, subtitleField?.key].filter(Boolean),
+    );
 
     const detailFields = nonHiddenFields.filter(
       (f) => !headerFieldKeys.has(f.key) && f.type !== "image",

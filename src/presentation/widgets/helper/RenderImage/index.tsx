@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import styles from "../../../../styles/fieldrenderer.module.css";
-import { getProxiedImageUrl } from "./getproxiedimageurl";
+import { getProxiedImageUrl, getRawImageUrl } from "./getproxiedimageurl";
 import { RenderImageProps } from "../../../../interfaces/mcp/renderimageprops.interface";
 
 export const renderImage = (value: unknown, alt = "Image"): React.ReactNode => {
@@ -8,26 +8,33 @@ export const renderImage = (value: unknown, alt = "Image"): React.ReactNode => {
 };
 
 const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
+  const [useRawFallback, setUseRawFallback] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  const src = getProxiedImageUrl(value);
+  const proxiedSrc = getProxiedImageUrl(value);
+  const rawSrc = getRawImageUrl(value);
 
-  /**
-   * No valid image URL.
-   */
-  if (!src || hasError) {
+  const activeSrc = useRawFallback
+    ? rawSrc
+    : proxiedSrc || rawSrc;
+
+  if (!activeSrc || hasError) {
     return <ImageFallback />;
   }
 
   return (
     <div className={styles.imageWrapper}>
       <img
-        src={src}
+        src={activeSrc}
         alt={alt}
         className={styles.image}
         loading="lazy"
         onError={() => {
-          setHasError(true);
+          if (!useRawFallback && rawSrc && rawSrc !== proxiedSrc) {
+            setUseRawFallback(true);
+          } else {
+            setHasError(true);
+          }
         }}
       />
     </div>
