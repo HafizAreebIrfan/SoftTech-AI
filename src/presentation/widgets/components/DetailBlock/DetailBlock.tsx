@@ -70,7 +70,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     );
 
     return {
-      headerImage: rawImage ? String(rawImage) : null,
+      headerImage: rawImage ?? null,
       title: rawTitle !== undefined && rawTitle !== null ? String(rawTitle) : null,
       subtitle: rawSubtitle !== undefined && rawSubtitle !== null ? String(rawSubtitle) : null,
       detailFields,

@@ -75,14 +75,14 @@
 .chartLine {
   fill: none;
   stroke: var(--widget-chart-primary);
-  stroke-width: 2.5;
+  stroke-width: 2.75;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .chartArea {
   fill: var(--widget-chart-primary);
-  opacity: 0.12;
+  opacity: 0.16;
 }
 
 .chartPoint {
@@ -101,13 +101,15 @@
   fill: var(--widget-chart-primary);
   rx: 4;
   ry: 4;
-  transition: opacity 0.15s ease, fill 0.15s ease;
+  opacity: 0.92;
+  transition: opacity 0.15s ease, fill 0.15s ease, transform 0.15s ease;
   cursor: pointer;
 }
 
 .bar:hover {
-  opacity: 0.85;
+  opacity: 1;
   fill: var(--widget-chart-secondary);
+  transform: translateY(-1px);
 }
 
 .pieSlice {

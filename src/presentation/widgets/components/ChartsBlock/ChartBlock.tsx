@@ -87,6 +87,10 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
       });
     });
 
+    if (points.length < 2) {
+      return { chartType: "line" as ChartType, dataPoints: [], title: undefined };
+    }
+
     // 4. Infer chart type from variant or data characteristics
     let type: ChartType = "line";
     if (block?.variant === "bar" || block?.variant === "categorical") {

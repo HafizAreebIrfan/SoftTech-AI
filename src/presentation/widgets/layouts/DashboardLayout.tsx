@@ -1,6 +1,5 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
-import { getFieldValue } from "../../../utils/schema/getValue";
 import styles from "../../../styles/dashboardwidget.module.css";
 import { useThemeStore } from "../../../hooks";
 import { ChartsBlock, TableBlock } from "../components";
@@ -65,62 +64,38 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
 
             case "chart":
               content = (
-                <ChartsBlock
-                  block={block}
-                  records={records}
-                  fields={fields}
-                />
+                <ChartsBlock block={block} records={records} fields={fields} />
               );
               break;
 
             case "table":
               content = (
-                <TableBlock
-                  block={block}
-                  records={records}
-                  fields={fields}
-                />
+                <TableBlock block={block} records={records} fields={fields} />
               );
               break;
 
             case "cards":
               content = (
-                <CardsBlock
-                  block={block}
-                  records={records}
-                  fields={fields}
-                />
+                <CardsBlock block={block} records={records} fields={fields} />
               );
               break;
 
             case "details":
               content = (
-                <DetailBlock
-                  block={block}
-                  records={records}
-                  fields={fields}
-                />
+                <DetailBlock block={block} records={records} fields={fields} />
               );
               break;
 
             case "assets":
             case "asset":
               content = (
-                <AssetBlock
-                  block={block}
-                  records={records}
-                  fields={fields}
-                />
+                <AssetBlock block={block} records={records} fields={fields} />
               );
               break;
 
             case "filters":
               content = (
-                <FormBlock
-                  block={block}
-                  fields={fields}
-                  actions={actions}
-                />
+                <FormBlock block={block} fields={fields} actions={actions} />
               );
               break;
 

@@ -305,9 +305,9 @@ export const darkColors: ThemeColors = {
   WidgetBadgeBg: "rgba(16, 185, 129, 0.12)",
   WidgetBadgeText: "#34D399",
   WidgetBadgeBorder: "rgba(16, 185, 129, 0.25)",
-  WidgetChartPrimary: "#10B981",
-  WidgetChartSecondary: "#3B82F6",
-  WidgetChartGrid: "rgba(255, 255, 255, 0.06)",
+  WidgetChartPrimary: "#34D399",
+  WidgetChartSecondary: "#60A5FA",
+  WidgetChartGrid: "rgba(255, 255, 255, 0.08)",
 };
 
 export const lightColors: ThemeColors = {
@@ -480,6 +480,6 @@ export const lightColors: ThemeColors = {
   WidgetBadgeText: "#047857",
   WidgetBadgeBorder: "rgba(5, 150, 105, 0.22)",
   WidgetChartPrimary: "#059669",
-  WidgetChartSecondary: "#2563EB",
-  WidgetChartGrid: "rgba(15, 23, 20, 0.08)",
+  WidgetChartSecondary: "#0EA5E9",
+  WidgetChartGrid: "rgba(15, 23, 20, 0.10)",
 };

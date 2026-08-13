@@ -76,8 +76,6 @@ const writeWidgetSnapshot = (payload: McpToolResultPayload | null) => {
     } catch {
       // Ignore storage access failures in embedded contexts.
     }
-    window.__SOFTTECH_AI_WIDGET_BOOTSTRAP__ = null;
-    window.openai?.setWidgetState?.(null);
     return;
   }
 
@@ -86,8 +84,6 @@ const writeWidgetSnapshot = (payload: McpToolResultPayload | null) => {
   } catch {
     // Ignore storage access failures in embedded contexts.
   }
-  window.__SOFTTECH_AI_WIDGET_BOOTSTRAP__ = payload;
-  window.openai?.setWidgetState?.({ toolResult: payload });
 };
 
 export const useMcpWidgetStore = create<McpWidgetState>()(
@@ -149,7 +145,9 @@ export const useMcpToolResult = () => {
     const initialSnapshot = readWidgetSnapshot();
     if (initialSnapshot) {
       console.log("[MCP STORE DEBUG] Restored widget snapshot on mount:", initialSnapshot);
-      setToolResult(initialSnapshot);
+      if (!toolResult) {
+        setToolResult(initialSnapshot);
+      }
     } else {
       console.log("[MCP STORE DEBUG] No widget snapshot available on mount:", window.openai);
     }
@@ -161,7 +159,9 @@ export const useMcpToolResult = () => {
       const currentSnapshot = readWidgetSnapshot();
       if (currentSnapshot) {
         console.log(`[MCP STORE DEBUG] Late widget snapshot detected at poll #${pollCount}:`, currentSnapshot);
-        setToolResult(currentSnapshot);
+        if (!toolResult) {
+          setToolResult(currentSnapshot);
+        }
         clearInterval(pollInterval);
       } else if (pollCount >= 10) {
         clearInterval(pollInterval);

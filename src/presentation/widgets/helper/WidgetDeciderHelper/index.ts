@@ -4,6 +4,7 @@ import {
   PresentationPlan,
   BuildPresentationPlanOptions,
 } from "../../../../interfaces/mcp/widgetdecider.interface";
+import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 
 export const buildPresentationPlan = ({
   entity,
@@ -15,16 +16,36 @@ export const buildPresentationPlan = ({
   audience,
   intent,
 }: BuildPresentationPlanOptions): PresentationPlan => {
+  const normalizedIntent = String(intent || "").toLowerCase();
+
   const isMeaningfulNumericField = (field: { key: string; label: string }) => {
     const key = field.key.toLowerCase();
     const label = field.label.toLowerCase();
-    if (key.includes("epoch") || label.includes("epoch") || key.includes("timestamp") || label.includes("timestamp")) return false;
-    if (key === "code" || key === "tz_id" || key === "is_day" || key === "is_moon_up" || key === "is_sun_up") return false;
+    if (
+      key.includes("epoch") ||
+      label.includes("epoch") ||
+      key.includes("timestamp") ||
+      label.includes("timestamp")
+    )
+      return false;
+    if (
+      key === "code" ||
+      key === "tz_id" ||
+      key === "is_day" ||
+      key === "is_moon_up" ||
+      key === "is_sun_up"
+    )
+      return false;
     return true;
   };
 
+  const isScalarField = (field: FieldSchema) =>
+    field.type !== "object" && field.type !== "array";
+
   const numericFields = fields.filter(
-    (field) => (field.type === "number" || field.type === "currency") && isMeaningfulNumericField(field),
+    (field) =>
+      (field.type === "number" || field.type === "currency") &&
+      isMeaningfulNumericField(field),
   );
 
   const imageFields = fields.filter((field) => field.type === "image");
@@ -36,10 +57,6 @@ export const buildPresentationPlan = ({
   );
 
   const primaryFields = fields.filter((field) => field.primary);
-
-  const entityName = String(entity || collection?.entity || "").toLowerCase();
-
-  const normalizedIntent = String(intent || "").toLowerCase();
 
   const isComparison =
     normalizedIntent.includes("compare") ||
@@ -58,15 +75,8 @@ export const buildPresentationPlan = ({
 
   const isAdmin = audience === "admin" || audience === "both";
 
-  const isProductLike =
-    /product|products|item|items|package|packages|service|services|property|properties/.test(
-      entityName,
-    );
-
-  const isWeatherLike = /weather|forecast|climate|temperature/.test(entityName);
-
   const isCatalogCandidate =
-    (isProductLike || hasPrices) && (hasImages || hasPrices);
+    hasMultipleRecords && (hasImages || hasPrices || hasStatus);
 
   const isDashboardCandidate =
     isAdmin && (hasMultipleRecords || numericFields.length > 0 || hasStatus);
@@ -75,10 +85,10 @@ export const buildPresentationPlan = ({
 
   let layout: PresentationLayout = "general";
 
-  /*
-   * 1. Explicit comparison request
-   */
   if (isComparison && hasMultipleRecords) {
+    /*
+     * 1. Explicit comparison request
+     */
     layout = "table";
 
     blocks.push({
@@ -87,7 +97,7 @@ export const buildPresentationPlan = ({
     });
   } else if (isCatalogCandidate && hasMultipleRecords) {
     /*
-     * 2. Product/catalog-like data
+     * 2. Multi-record collection with visual or commercial fields
      */
     layout = "catalog";
 
@@ -103,7 +113,7 @@ export const buildPresentationPlan = ({
     });
   } else if (isDashboardCandidate) {
     /*
-     * 3. Admin & Operational Dashboards
+     * 3. Dashboard-style data
      */
     layout = "dashboard";
 
@@ -114,7 +124,7 @@ export const buildPresentationPlan = ({
       });
     }
 
-    if (numericFields.length > 0 && hasDates) {
+    if (numericFields.length > 0 && hasDates && hasMultipleRecords) {
       blocks.push({
         type: "chart",
         fields: numericFields.slice(0, 2),
@@ -126,36 +136,9 @@ export const buildPresentationPlan = ({
       type: "table",
       fields,
     });
-  } else if (isWeatherLike) {
-    /*
-     * 4. Weather / forecast
-     */
-    layout = "dashboard";
-
-    if (numericFields.length > 0) {
-      blocks.push({
-        type: "summary",
-        fields: numericFields.slice(0, 3),
-      });
-    }
-
-    blocks.push({
-      type: "cards",
-      fields,
-      maxItems: 7,
-      variant: "forecast",
-    });
-
-    if (numericFields.length > 0 && hasDates) {
-      blocks.push({
-        type: "chart",
-        fields: numericFields.slice(0, 2),
-        variant: "weather",
-      });
-    }
   } else if (hasMultipleRecords) {
     /*
-     * 5. Generic collection with multiple records
+     * 4. Generic collection with multiple records
      */
     layout = "table";
 
@@ -165,7 +148,7 @@ export const buildPresentationPlan = ({
     });
   } else {
     /*
-     * 6. Single object
+     * 5. Single object
      */
     layout = "general";
 
@@ -183,7 +166,8 @@ export const buildPresentationPlan = ({
 
     showFilters:
       Boolean(capabilities?.filtering) ||
-      (isProductLike && (hasPrices || hasStatus)),
+      hasPrices ||
+      hasStatus,
 
     showSorting: Boolean(capabilities?.sorting) && layout === "table",
 
