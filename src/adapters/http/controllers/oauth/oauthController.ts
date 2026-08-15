@@ -17,6 +17,68 @@ import { resolveMcpUserId } from "../../middlewares/mcpUserAuthMiddleware";
 const TRANSACTION_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
+ * Creates or updates a test company in MongoDB configured with OAuth for instant Postman testing.
+ * POST /api/oauth/test-seed
+ */
+export async function createTestOAuthCompanyController(
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const testCompany = await CompanyModel.findOneAndUpdate(
+      { email: "testoauth@example.com" },
+      {
+        companyName: "Test OAuth Company",
+        mcpSlug: "test-oauth-company",
+        industry: "Technology",
+        email: "testoauth@example.com",
+        apis: [
+          {
+            name: "Test User API",
+            baseUrl: "https://httpbin.org",
+            endpoint: "/anything",
+            method: "GET",
+            authType: "oauth_user",
+            oauth: {
+              authorizationUrl: "https://httpbin.org/get",
+              tokenUrl: "https://httpbin.org/post",
+              clientId: "test_client_id_123",
+              clientSecret: "test_client_secret_456",
+              scopes: ["read", "write"],
+            },
+          },
+        ],
+      },
+      { upsert: true, new: true },
+    ).lean();
+
+    const companyId = String((testCompany as any)._id);
+    const apiId = "api_1";
+    const host = process.env.OAUTH_CALLBACK_URL
+      ? env.OAUTH_CALLBACK_URL.replace("/api/oauth/callback", "")
+      : "http://localhost:4000";
+
+    const authorizeUrl = `${host}/api/oauth/authorize?companyId=${companyId}&apiId=${apiId}`;
+
+    res.status(200).json({
+      success: true,
+      message: "Test OAuth company created/updated successfully in MongoDB.",
+      companyId,
+      apiId,
+      authorizeUrl,
+      instructions: [
+        "1. Open authorizeUrl in browser or send GET request in Postman (Turn auto-redirects OFF).",
+        "2. Copy the 'state' parameter from the redirect URL.",
+        "3. Test the callback endpoint: GET /api/oauth/callback?code=mock_code_123&state=<STATE>",
+      ],
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * Initiates the User OAuth 2.0 Authorization Code + PKCE flow.
  * GET /api/oauth/authorize?companyId=...&apiId=...
  */

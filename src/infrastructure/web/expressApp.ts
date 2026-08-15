@@ -33,10 +33,6 @@ export const buildApp = (): Express => {
     }),
   );
   app.use(cookieParser());
-  app.use(
-    "/assets",
-    express.static(path.join(process.cwd(), "todo-widget/dist/assets")),
-  );
 
   app.use((req, res, next) => {
     console.log(req.path, req.method);
