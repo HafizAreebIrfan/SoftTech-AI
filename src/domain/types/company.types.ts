@@ -37,6 +37,8 @@ export interface IApi {
 
 export interface IUiPreference {
   layout?: string;
+  themeColor?: string;
+  audienceDefault?: string;
 }
 
 export interface ICompany {
