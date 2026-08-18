@@ -121,3 +121,62 @@
     align-items: flex-start;
   }
 }
+
+.actionsCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid var(--widget-card-border);
+  background: var(--widget-card-bg);
+  color: var(--widget-header-title);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editBtn {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.editBtn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.deleteBtn {
+  color: #ef4444;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+}
+
+.deleteBtn:hover {
+  opacity: 0.9;
+}
+
+.createNewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--app-brand-accent, #ef4444);
+  background: transparent;
+  color: var(--widget-header-title);
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.createNewBtn:hover {
+  background: var(--app-brand-accent, rgba(239, 68, 68, 0.1));
+}

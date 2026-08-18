@@ -59,7 +59,19 @@ const formatTableCell = (val: unknown, field: FieldSchema): React.ReactNode => {
   return String(val);
 };
 
-export const TableRow: React.FC<TableRowProps> = ({ record, fields }) => {
+export interface TableRowPropsWithActions extends TableRowProps {
+  showActions?: boolean;
+  onEdit?: (record: unknown) => void;
+  onDelete?: (record: unknown) => void;
+}
+
+export const TableRow: React.FC<TableRowPropsWithActions> = ({
+  record,
+  fields,
+  showActions = true,
+  onEdit,
+  onDelete,
+}) => {
   if (!record || typeof record !== "object") {
     return null;
   }
@@ -74,6 +86,29 @@ export const TableRow: React.FC<TableRowProps> = ({ record, fields }) => {
           </td>
         );
       })}
+
+      {showActions && (
+        <td className={styles.td}>
+          <div className={styles.actionsCell}>
+            <button
+              type="button"
+              className={`${styles.actionBtn} ${styles.editBtn}`}
+              title="Edit"
+              onClick={() => onEdit?.(record)}
+            >
+              ✏️
+            </button>
+            <button
+              type="button"
+              className={`${styles.actionBtn} ${styles.deleteBtn}`}
+              title="Delete"
+              onClick={() => onDelete?.(record)}
+            >
+              🗑️
+            </button>
+          </div>
+        </td>
+      )}
     </tr>
   );
 };

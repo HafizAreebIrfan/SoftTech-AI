@@ -86,20 +86,42 @@ export const TableBlock: React.FC<TableBlockProps> = ({
 
   return (
     <section className={styles.container}>
-      {title && <h3 className={styles.th}>{title}</h3>}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "12px",
+        }}
+      >
+        {title ? <h3 className={styles.title}>{title}</h3> : <div />}
+        <button
+          type="button"
+          className={styles.createNewBtn}
+          onClick={() => {
+            console.log("[MCP Widget] Create New triggered");
+          }}
+        >
+          ⊕ Create New
+        </button>
+      </div>
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>
             <tr>
               {activeFields.map((field) => {
-                const isSortable = Boolean(capabilities?.canSort || field.sortable);
+                const isSortable = Boolean(
+                  capabilities?.canSort || field.sortable,
+                );
                 const isSorted = sortKey === field.key;
 
                 return (
                   <th
                     key={field.key}
-                    className={`${styles.th} ${isSortable ? styles.thSortable : ""}`}
+                    className={`${styles.th} ${
+                      isSortable ? styles.thSortable : ""
+                    }`}
                     onClick={() => handleHeaderClick(field)}
                   >
                     <div className={styles.headerContent}>
@@ -113,6 +135,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
                   </th>
                 );
               })}
+              <th className={styles.th}>Edit</th>
             </tr>
           </thead>
 
@@ -122,6 +145,9 @@ export const TableBlock: React.FC<TableBlockProps> = ({
                 key={`row-${rowIndex}`}
                 record={record}
                 fields={activeFields}
+                showActions={true}
+                onEdit={(rec) => console.log("[MCP Widget] Edit record:", rec)}
+                onDelete={(rec) => console.log("[MCP Widget] Delete record:", rec)}
               />
             ))}
           </tbody>

@@ -106,7 +106,12 @@ export const buildPresentationPlan = ({
       type: "summary",
       fields: numericFields.slice(0, 4),
     });
-  } else if (explicitLayout === "catalog") {
+  } else if (
+    explicitLayout === "catalog" ||
+    (isCatalogCandidate &&
+      (audience === "user" || audience === "both") &&
+      explicitLayout !== "table")
+  ) {
     layout = "catalog";
 
     if (hasFiltering || hasPrices || hasStatus) {
