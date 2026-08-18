@@ -43,11 +43,15 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
           : Number(pt.value).toLocaleString(),
       }));
 
-      const rawType = String(bChart.type || "line").toLowerCase();
+      const rawType = String(bChart.type || block?.variant || "line").toLowerCase();
       const validTypes: ChartType[] = ["line", "bar", "pie", "scatter"];
-      const cType: ChartType = validTypes.includes(rawType as ChartType)
+      let cType: ChartType = validTypes.includes(rawType as ChartType)
         ? (rawType as ChartType)
         : "line";
+
+      if (rawType.includes("pie") || rawType.includes("donut") || chartTitle.includes("pie")) {
+        cType = "pie";
+      }
 
       return {
         chartType: cType,

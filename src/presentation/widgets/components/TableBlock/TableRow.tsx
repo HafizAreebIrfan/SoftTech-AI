@@ -61,16 +61,22 @@ const formatTableCell = (val: unknown, field: FieldSchema): React.ReactNode => {
 
 export interface TableRowPropsWithActions extends TableRowProps {
   showActions?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
   onEdit?: (record: unknown) => void;
   onDelete?: (record: unknown) => void;
+  onView?: (record: unknown) => void;
 }
 
 export const TableRow: React.FC<TableRowPropsWithActions> = ({
   record,
   fields,
-  showActions = true,
+  showActions = false,
+  canUpdate = false,
+  canDelete = false,
   onEdit,
   onDelete,
+  onView,
 }) => {
   if (!record || typeof record !== "object") {
     return null;
@@ -92,20 +98,32 @@ export const TableRow: React.FC<TableRowPropsWithActions> = ({
           <div className={styles.actionsCell}>
             <button
               type="button"
-              className={`${styles.actionBtn} ${styles.editBtn}`}
-              title="Edit"
-              onClick={() => onEdit?.(record)}
+              className={styles.actionBtn}
+              title="View Details"
+              onClick={() => onView?.(record)}
             >
-              ✏️
+              👁️
             </button>
-            <button
-              type="button"
-              className={`${styles.actionBtn} ${styles.deleteBtn}`}
-              title="Delete"
-              onClick={() => onDelete?.(record)}
-            >
-              🗑️
-            </button>
+            {canUpdate && (
+              <button
+                type="button"
+                className={`${styles.actionBtn} ${styles.editBtn}`}
+                title="Edit"
+                onClick={() => onEdit?.(record)}
+              >
+                ✏️
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                title="Delete"
+                onClick={() => onDelete?.(record)}
+              >
+                🗑️
+              </button>
+            )}
           </div>
         </td>
       )}

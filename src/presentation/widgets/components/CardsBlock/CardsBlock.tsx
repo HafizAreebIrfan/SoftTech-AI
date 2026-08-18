@@ -59,7 +59,17 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
     ].filter(Boolean));
 
     const secondaryFields = activeFields
-      .filter((f) => !usedFields.has(f.key))
+      .filter((f) => {
+        if (usedFields.has(f.key)) return false;
+        const keyLower = f.key.toLowerCase();
+        const lblLower = (f.label || "").toLowerCase();
+        return (
+          !keyLower.includes("epoch") &&
+          !lblLower.includes("epoch") &&
+          !keyLower.includes("timestamp") &&
+          !lblLower.includes("timestamp")
+        );
+      })
       .slice(0, 3);
 
     return {

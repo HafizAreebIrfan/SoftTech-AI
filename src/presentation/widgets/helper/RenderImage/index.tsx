@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import styles from "../../../../styles/fieldrenderer.module.css";
 import { getProxiedImageUrl, getRawImageUrl } from "./getproxiedimageurl";
 import { RenderImageProps } from "../../../../interfaces/mcp/renderimageprops.interface";
@@ -8,83 +8,24 @@ export const renderImage = (value: unknown, alt = "Image"): React.ReactNode => {
 };
 
 const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const proxiedSrc = getProxiedImageUrl(value);
   const rawSrc = getRawImageUrl(value);
+  const proxiedSrc = getProxiedImageUrl(value);
+  const targetUrl = rawSrc || proxiedSrc;
 
-  useEffect(() => {
-    let isMounted = true;
-    let createdBlobUrl: string | null = null;
-
-    const loadImage = async () => {
-      const targetUrl = rawSrc || proxiedSrc;
-
-      if (!targetUrl) {
-        if (isMounted) {
-          setHasError(true);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      if (targetUrl.startsWith("data:") || targetUrl.startsWith("blob:")) {
-        if (isMounted) {
-          setImgSrc(targetUrl);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      try {
-        const response = await fetch(targetUrl, { mode: "cors" });
-        if (response.ok) {
-          const blob = await response.blob();
-          if (isMounted) {
-            createdBlobUrl = URL.createObjectURL(blob);
-            setImgSrc(createdBlobUrl);
-            setIsLoading(false);
-            return;
-          }
-        }
-      } catch {
-        // Fall back to direct target URL if fetch fails
-      }
-
-      if (isMounted) {
-        setImgSrc(targetUrl);
-        setIsLoading(false);
-      }
-    };
-
-    setIsLoading(true);
-    setHasError(false);
-    loadImage();
-
-    return () => {
-      isMounted = false;
-      if (createdBlobUrl) {
-        URL.revokeObjectURL(createdBlobUrl);
-      }
-    };
-  }, [proxiedSrc, rawSrc]);
-
-  if (hasError || (!isLoading && !imgSrc)) {
+  if (hasError || !targetUrl) {
     return <ImageFallback />;
   }
 
   return (
     <div className={styles.imageWrapper}>
       <img
-        src={imgSrc || undefined}
+        src={targetUrl}
         alt={alt}
         className={styles.image}
         loading="lazy"
-        onError={() => {
-          setHasError(true);
-        }}
+        onError={() => setHasError(true)}
       />
     </div>
   );
@@ -109,9 +50,7 @@ const ImageFallback: React.FC = () => {
           stroke="currentColor"
           strokeWidth="1.5"
         />
-
         <circle cx="8" cy="9" r="1.5" stroke="currentColor" strokeWidth="1.5" />
-
         <path
           d="M4 17L9 12L13 16L16 13L20 17"
           stroke="currentColor"

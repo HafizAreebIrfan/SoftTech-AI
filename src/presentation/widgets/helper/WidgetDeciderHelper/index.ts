@@ -81,7 +81,9 @@ export const buildPresentationPlan = ({
     );
 
   const isCatalogCandidate =
-    hasMultipleRecords && (hasImages || hasPrices || hasStatus);
+    !isWeatherLike &&
+    hasMultipleRecords &&
+    (hasImages || hasPrices || hasStatus);
 
   const isDashboardCandidate =
     isAdmin && hasMultipleRecords && (numericFields.length > 0 || hasStatus);
@@ -99,7 +101,13 @@ export const buildPresentationPlan = ({
   const explicitLayout = (collection?.layout || "").toLowerCase();
 
   // 1. Explicit layout choices set by company or collection take highest priority
-  if (explicitLayout === "metrics" || explicitLayout === "summary") {
+  if (isWeatherLike) {
+    layout = "general";
+    const nonEpochFields = fields.filter(
+      (f) => !f.key.toLowerCase().includes("epoch"),
+    );
+    blocks.push({ type: "details", fields: nonEpochFields });
+  } else if (explicitLayout === "metrics" || explicitLayout === "summary") {
     layout = "dashboard";
 
     blocks.push({
