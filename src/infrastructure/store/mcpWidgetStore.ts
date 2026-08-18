@@ -19,7 +19,24 @@ const isMcpToolResultPayload = (
 
   const payload = value as Record<string, unknown>;
 
-  return "structuredContent" in payload || "content" in payload;
+  if (!("structuredContent" in payload) && !("content" in payload)) {
+    return false;
+  }
+
+  const sc = payload.structuredContent as Record<string, unknown> | undefined;
+  if (sc && typeof sc === "object") {
+    return Boolean(
+      sc.data !== undefined ||
+        sc.collection !== undefined ||
+        sc.blocks !== undefined ||
+        (Array.isArray(payload.content) &&
+          payload.content.some(
+            (c: any) => c.text && typeof c.text === "string" && c.text.length > 50,
+          )),
+    );
+  }
+
+  return true;
 };
 
 const extractToolResult = (value: unknown): McpToolResultPayload | null => {

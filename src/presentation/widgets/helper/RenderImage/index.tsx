@@ -20,7 +20,7 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
     let createdBlobUrl: string | null = null;
 
     const loadImage = async () => {
-      const targetUrl = proxiedSrc || rawSrc;
+      const targetUrl = rawSrc || proxiedSrc;
 
       if (!targetUrl) {
         if (isMounted) {

@@ -111,13 +111,27 @@ export const SummaryBlock: React.FC<SummaryBlockProps> = ({
       Array.isArray(collection.metrics) &&
       collection.metrics.length > 0
     ) {
-      return collection.metrics.map((m, idx) => ({
-        id: `backend-metric-${idx}`,
-        label: m.label,
-        value: m.value,
-        formattedValue: String(m.value),
-        supportingText: m.change ? `Change: ${m.change}` : undefined,
-      }));
+      const filteredMetrics = collection.metrics.filter((m) => {
+        const lbl = (m.label || "").toLowerCase();
+        return (
+          !lbl.includes("epoch") &&
+          !lbl.includes("timestamp") &&
+          !lbl.includes("tz_id") &&
+          !lbl.includes("is_day") &&
+          !lbl.includes("is_moon_up") &&
+          !lbl.includes("is_sun_up")
+        );
+      });
+
+      if (filteredMetrics.length > 0) {
+        return filteredMetrics.map((m, idx) => ({
+          id: `backend-metric-${idx}`,
+          label: m.label,
+          value: m.value,
+          formattedValue: String(m.value),
+          supportingText: m.change ? `Change: ${m.change}` : undefined,
+        }));
+      }
     }
 
     // 1. Target fields selection

@@ -25,12 +25,22 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
       collection.charts.length > 0
     ) {
       const bChart = collection.charts[0];
+      const chartTitle = (bChart.title || "").toLowerCase();
+      const isCurrency =
+        chartTitle.includes("amount") ||
+        chartTitle.includes("sales") ||
+        chartTitle.includes("price") ||
+        chartTitle.includes("revenue") ||
+        chartTitle.includes("cost");
+
       const points: ChartDataPoint[] = (bChart.data || []).map((pt) => ({
         label: pt.label,
         rawX: pt.label,
         rawY: Number(pt.value),
         formattedX: pt.label,
-        formattedY: `$${Number(pt.value).toLocaleString()}`,
+        formattedY: isCurrency
+          ? `$${Number(pt.value).toLocaleString()}`
+          : Number(pt.value).toLocaleString(),
       }));
 
       const rawType = String(bChart.type || "line").toLowerCase();
@@ -42,9 +52,9 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
       return {
         chartType: cType,
         dataPoints: points,
-        title: bChart.title || "Sales Trend",
+        title: bChart.title || "Data Trend",
         xLabel: "Date",
-        yLabel: "Amount",
+        yLabel: "Value",
       };
     }
 
