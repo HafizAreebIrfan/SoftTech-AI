@@ -1,4 +1,4 @@
-import type { FieldSchema } from "../../domain/entities/GenericWidget";
+import type { FieldSchema, CollectionResult } from "../../domain/entities/GenericWidget";
 import type { PresentationBlock } from "./widgetdecider.interface";
 
 export type ChartType = "line" | "bar" | "pie" | "scatter";
@@ -24,4 +24,5 @@ export interface ChartBlockProps {
   block?: PresentationBlock;
   records?: unknown[];
   fields?: FieldSchema[];
+  collection?: CollectionResult;
 }

@@ -105,6 +105,21 @@ export const SummaryBlock: React.FC<SummaryBlockProps> = ({
   collection,
 }) => {
   const metrics = useMemo<MetricCardData[]>(() => {
+    // 0. If backend pre-calculated metrics exist, use them!
+    if (
+      collection?.metrics &&
+      Array.isArray(collection.metrics) &&
+      collection.metrics.length > 0
+    ) {
+      return collection.metrics.map((m, idx) => ({
+        id: `backend-metric-${idx}`,
+        label: m.label,
+        value: m.value,
+        formattedValue: String(m.value),
+        supportingText: m.change ? `Change: ${m.change}` : undefined,
+      }));
+    }
+
     // 1. Target fields selection
     let targetFields: FieldSchema[] = [];
 

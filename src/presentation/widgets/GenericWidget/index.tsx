@@ -181,12 +181,17 @@ export const GenericWidgetRenderer: React.FC = () => {
     }
   };
 
+  const customThemeColor = content.metadata?.themeColor as string;
+
   return (
     <div
       className={styles.container}
       style={{
         color: colors.TextHeading,
         background: colors.Background,
+        ...(customThemeColor
+          ? ({ "--app-brand-indigo": customThemeColor } as React.CSSProperties)
+          : {}),
       }}
     >
       {renderLayout()}

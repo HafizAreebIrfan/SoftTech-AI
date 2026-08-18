@@ -15,8 +15,39 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
   block,
   records = [],
   fields = [],
+  collection,
 }) => {
   const { chartType, dataPoints, title, xLabel, yLabel } = useMemo(() => {
+    // 0. If backend pre-calculated charts exist, use them!
+    if (
+      collection?.charts &&
+      Array.isArray(collection.charts) &&
+      collection.charts.length > 0
+    ) {
+      const bChart = collection.charts[0];
+      const points: ChartDataPoint[] = (bChart.data || []).map((pt) => ({
+        label: pt.label,
+        rawX: pt.label,
+        rawY: Number(pt.value),
+        formattedX: pt.label,
+        formattedY: `$${Number(pt.value).toLocaleString()}`,
+      }));
+
+      const rawType = String(bChart.type || "line").toLowerCase();
+      const validTypes: ChartType[] = ["line", "bar", "pie", "scatter"];
+      const cType: ChartType = validTypes.includes(rawType as ChartType)
+        ? (rawType as ChartType)
+        : "line";
+
+      return {
+        chartType: cType,
+        dataPoints: points,
+        title: bChart.title || "Sales Trend",
+        xLabel: "Date",
+        yLabel: "Amount",
+      };
+    }
+
     if (!records || records.length === 0) {
       return { chartType: "line" as ChartType, dataPoints: [], title: undefined };
     }

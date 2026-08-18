@@ -36,6 +36,23 @@ export interface FieldSchema {
   filterable?: boolean;
 }
 
+export interface CollectionMetric {
+  label: string;
+  value: string;
+  change?: string;
+}
+
+export interface CollectionChartDataPoint {
+  label: string;
+  value: number;
+}
+
+export interface CollectionChart {
+  type: string;
+  title: string;
+  data: CollectionChartDataPoint[];
+}
+
 export interface CollectionResult {
   entity?: string;
   dataPath?: string;
@@ -46,6 +63,8 @@ export interface CollectionResult {
   limit?: number;
   totalPages?: number;
   fields?: FieldSchema[];
+  metrics?: CollectionMetric[];
+  charts?: CollectionChart[];
 }
 
 export interface Capabilities {

@@ -96,20 +96,60 @@ export const buildPresentationPlan = ({
 
   let layout: PresentationLayout = "general";
 
-  if (isComparison && hasMultipleRecords) {
-    /*
-     * 1. Explicit comparison request
-     */
-    layout = "table";
+  const explicitLayout = (collection?.layout || "").toLowerCase();
 
-    blocks.push({
-      type: "table",
-      fields,
-    });
+  if (
+    explicitLayout === "dashboard" ||
+    (collection?.metrics && collection.metrics.length > 0) ||
+    (collection?.charts && collection.charts.length > 0)
+  ) {
+    layout = "dashboard";
+
+    if (
+      (collection?.metrics && collection.metrics.length > 0) ||
+      numericFields.length > 0 ||
+      hasStatus
+    ) {
+      blocks.push({
+        type: "summary",
+        fields: numericFields.slice(0, 4),
+      });
+    }
+
+    if (
+      (collection?.charts && collection.charts.length > 0) ||
+      (numericFields.length > 0 && hasDates && hasMultipleRecords)
+    ) {
+      blocks.push({
+        type: "chart",
+        fields: numericFields.slice(0, 2),
+        variant: "trend",
+      });
+    }
+
+    if (hasImages || (isCatalogCandidate && !isAdmin)) {
+      blocks.push({ type: "cards", fields });
+    } else {
+      blocks.push({ type: "table", fields });
+    }
+  } else if (explicitLayout === "catalog") {
+    layout = "catalog";
+
+    if (hasFiltering || hasPrices || hasStatus) {
+      blocks.push({ type: "filters" });
+    }
+
+    blocks.push({ type: "cards", fields });
+  } else if (explicitLayout === "table") {
+    layout = "table";
+    blocks.push({ type: "table", fields });
+  } else if (explicitLayout === "general") {
+    layout = "general";
+    blocks.push({ type: "details", fields });
+  } else if (isComparison && hasMultipleRecords) {
+    layout = "table";
+    blocks.push({ type: "table", fields });
   } else if (isWeatherLike) {
-    /*
-     * 2. Weather & Forecast
-     */
     layout = "dashboard";
 
     if (numericFields.length > 0) {
@@ -124,25 +164,14 @@ export const buildPresentationPlan = ({
       fields,
     });
   } else if (isCatalogCandidate && hasMultipleRecords) {
-    /*
-     * 3. Multi-record collection with visual or commercial fields
-     */
     layout = "catalog";
 
     if (hasFiltering || hasPrices || hasStatus) {
-      blocks.push({
-        type: "filters",
-      });
+      blocks.push({ type: "filters" });
     }
 
-    blocks.push({
-      type: "cards",
-      fields,
-    });
+    blocks.push({ type: "cards", fields });
   } else if (isDashboardCandidate) {
-    /*
-     * 4. Dashboard-style data
-     */
     layout = "dashboard";
 
     if (numericFields.length > 0 || hasStatus) {
@@ -160,30 +189,13 @@ export const buildPresentationPlan = ({
       });
     }
 
-    blocks.push({
-      type: "table",
-      fields,
-    });
+    blocks.push({ type: "table", fields });
   } else if (hasMultipleRecords) {
-    /*
-     * 5. Generic collection with multiple records
-     */
     layout = "table";
-
-    blocks.push({
-      type: "table",
-      fields,
-    });
+    blocks.push({ type: "table", fields });
   } else {
-    /*
-     * 6. Single object
-     */
     layout = "general";
-
-    blocks.push({
-      type: "details",
-      fields,
-    });
+    blocks.push({ type: "details", fields });
   }
 
   return {

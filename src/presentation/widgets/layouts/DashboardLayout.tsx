@@ -64,7 +64,12 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
 
             case "chart":
               content = (
-                <ChartsBlock block={block} records={records} fields={fields} />
+                <ChartsBlock
+                  block={block}
+                  records={records}
+                  fields={fields}
+                  collection={collection}
+                />
               );
               break;
 
