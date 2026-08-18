@@ -98,7 +98,22 @@ export const buildPresentationPlan = ({
 
   const explicitLayout = (collection?.layout || "").toLowerCase();
 
-  if (
+  // 1. Explicit layout choices set by company or collection take highest priority
+  if (explicitLayout === "catalog") {
+    layout = "catalog";
+
+    if (hasFiltering || hasPrices || hasStatus) {
+      blocks.push({ type: "filters" });
+    }
+
+    blocks.push({ type: "cards", fields });
+  } else if (explicitLayout === "table") {
+    layout = "table";
+    blocks.push({ type: "table", fields });
+  } else if (explicitLayout === "general") {
+    layout = "general";
+    blocks.push({ type: "details", fields });
+  } else if (
     explicitLayout === "dashboard" ||
     (collection?.metrics && collection.metrics.length > 0) ||
     (collection?.charts && collection.charts.length > 0)
@@ -132,20 +147,6 @@ export const buildPresentationPlan = ({
     } else {
       blocks.push({ type: "table", fields });
     }
-  } else if (explicitLayout === "catalog") {
-    layout = "catalog";
-
-    if (hasFiltering || hasPrices || hasStatus) {
-      blocks.push({ type: "filters" });
-    }
-
-    blocks.push({ type: "cards", fields });
-  } else if (explicitLayout === "table") {
-    layout = "table";
-    blocks.push({ type: "table", fields });
-  } else if (explicitLayout === "general") {
-    layout = "general";
-    blocks.push({ type: "details", fields });
   } else if (isComparison && hasMultipleRecords) {
     layout = "table";
     blocks.push({ type: "table", fields });

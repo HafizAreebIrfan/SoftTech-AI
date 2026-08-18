@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { useMcpToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import { useThemeStore } from "../../../hooks";
+import { useApplyGlobalThemeVars } from "../../../infrastructure/store/themeStore";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import { CatalogLayout } from "../layouts/CatalogLayout";
 import { TableLayout } from "../layouts/TableLayout";
@@ -13,6 +14,7 @@ import styles from "../../../styles/genericwidgetrenderer.module.css";
 import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
 
 export const GenericWidgetRenderer: React.FC = () => {
+  useApplyGlobalThemeVars();
   const { colors } = useThemeStore();
   let toolResult: any = null;
   let hasLoadError = false;
@@ -181,7 +183,9 @@ export const GenericWidgetRenderer: React.FC = () => {
     }
   };
 
-  const customThemeColor = content.metadata?.themeColor as string;
+  const customThemeColor =
+    (content.metadata?.themeColor as string) ||
+    (content.themeColor as string);
 
   return (
     <div
@@ -190,7 +194,13 @@ export const GenericWidgetRenderer: React.FC = () => {
         color: colors.TextHeading,
         background: colors.Background,
         ...(customThemeColor
-          ? ({ "--app-brand-indigo": customThemeColor } as React.CSSProperties)
+          ? ({
+              "--app-brand-indigo": customThemeColor,
+              "--app-brand-accent": customThemeColor,
+              "--widget-chart-primary": customThemeColor,
+              "--widget-metric-val": customThemeColor,
+              "--widget-badge-text": customThemeColor,
+            } as React.CSSProperties)
           : {}),
       }}
     >

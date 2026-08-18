@@ -74,20 +74,20 @@
 
 .chartLine {
   fill: none;
-  stroke: var(--widget-chart-primary);
-  stroke-width: 2.75;
+  stroke: var(--widget-chart-primary, var(--app-brand-accent, var(--app-brand-indigo, #34D399)));
+  stroke-width: 3.25;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .chartArea {
-  fill: var(--widget-chart-primary);
-  opacity: 0.16;
+  fill: var(--widget-chart-primary, var(--app-brand-accent, var(--app-brand-indigo, #34D399)));
+  opacity: 0.22;
 }
 
 .chartPoint {
-  fill: var(--widget-chart-primary);
-  stroke: var(--widget-card-bg);
+  fill: var(--widget-chart-primary, var(--app-brand-accent, var(--app-brand-indigo, #34D399)));
+  stroke: var(--widget-card-bg, #111715);
   stroke-width: 2;
   transition: transform 0.15s ease, r 0.15s ease;
   cursor: pointer;

@@ -131,13 +131,19 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
           {type === "line" && (
             <>
               <polygon points={areaPoints} className={styles.chartArea} />
-              <polyline points={linePoints} className={styles.chartLine} />
+              <polyline
+                points={linePoints}
+                className={styles.chartLine}
+                strokeWidth={3.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
               {dataPoints.map((d, i) => (
                 <circle
                   key={`point-${i}`}
                   cx={getX(i)}
                   cy={getY(d.rawY)}
-                  r={4}
+                  r={5}
                   className={styles.chartPoint}
                   onMouseEnter={() => setHoveredPoint(d)}
                   onMouseLeave={() => setHoveredPoint(null)}
