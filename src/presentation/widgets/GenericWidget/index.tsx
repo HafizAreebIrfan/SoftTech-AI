@@ -183,9 +183,7 @@ export const GenericWidgetRenderer: React.FC = () => {
     }
   };
 
-  const customThemeColor =
-    (content.metadata?.themeColor as string) ||
-    (content.themeColor as string);
+  const customThemeColor = content.metadata?.themeColor as string;
 
   return (
     <div

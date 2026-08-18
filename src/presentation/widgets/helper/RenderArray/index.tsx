@@ -64,9 +64,6 @@ export const renderArray = (value: unknown): React.ReactNode => {
 
   return (
     <div className={styles.arrayValue}>
-      {value.length > 0 && (
-        <span className={styles.arrayItem}>{`${value.length} item${value.length === 1 ? "" : "s"}`}</span>
-      )}
       {value.slice(0, 4).map((item, index) => (
         <span key={index} className={styles.arrayItem}>
           {summarizeItem(item)}

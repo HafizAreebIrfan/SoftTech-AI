@@ -99,7 +99,14 @@ export const buildPresentationPlan = ({
   const explicitLayout = (collection?.layout || "").toLowerCase();
 
   // 1. Explicit layout choices set by company or collection take highest priority
-  if (explicitLayout === "catalog") {
+  if (explicitLayout === "metrics" || explicitLayout === "summary") {
+    layout = "dashboard";
+
+    blocks.push({
+      type: "summary",
+      fields: numericFields.slice(0, 4),
+    });
+  } else if (explicitLayout === "catalog") {
     layout = "catalog";
 
     if (hasFiltering || hasPrices || hasStatus) {
