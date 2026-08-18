@@ -631,7 +631,7 @@ const SignupStep2: FC = () => {
                         style={{
                           color:
                             activeTab === "params"
-                              ? colors.TextHeading
+                              ? colors.TextOverlay
                               : colors.TextBody,
                           borderColor:
                             activeTab === "params"
@@ -924,7 +924,7 @@ const SignupStep2: FC = () => {
                                   style={{
                                     color:
                                       api.apiAuthType === authOption
-                                        ? "#818cf8"
+                                        ? colors.BrandIndigo
                                         : colors.TextBody,
                                     borderColor:
                                       api.apiAuthType === authOption
@@ -940,7 +940,7 @@ const SignupStep2: FC = () => {
                                     size={13}
                                     color={
                                       api.apiAuthType === authOption
-                                        ? "#818cf8"
+                                        ? colors.BrandIndigo
                                         : colors.IconColor
                                     }
                                   />
@@ -1153,6 +1153,102 @@ const SignupStep2: FC = () => {
                                 gap: "0.75rem",
                               }}
                             >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.5rem",
+                                  marginBottom: "0.25rem",
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  id={`user-oauth-toggle-${api.id}`}
+                                  checked={Boolean(api.isUserOAuth)}
+                                  onChange={(e) =>
+                                    updateApiField(
+                                      api.id,
+                                      "isUserOAuth",
+                                      e.target.checked,
+                                    )
+                                  }
+                                  style={{
+                                    width: "16px",
+                                    height: "16px",
+                                    cursor: "pointer",
+                                    accentColor: colors.BrandIndigo,
+                                  }}
+                                />
+                                <label
+                                  htmlFor={`user-oauth-toggle-${api.id}`}
+                                  className={styles.fieldLabel}
+                                  style={{
+                                    color: colors.TextHeading,
+                                    margin: 0,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Requires End-User Authorization (User OAuth
+                                  2.0 PKCE)
+                                </label>
+                              </div>
+
+                              {Boolean(api.isUserOAuth) && (
+                                <div>
+                                  <label
+                                    className={styles.fieldLabel}
+                                    style={{ color: colors.TextBody }}
+                                  >
+                                    Authorization URL (User Login Page){" "}
+                                    <span style={{ color: colors.WarningText }}>
+                                      *
+                                    </span>
+                                  </label>
+                                  <div
+                                    style={{ display: "flex", width: "100%" }}
+                                  >
+                                    <div
+                                      className={styles.protocolPrefix}
+                                      style={{
+                                        display: "flex",
+                                        background: colors.BackgroundSecondary,
+                                        borderColor: colors.CardBorder,
+                                        color: colors.TextBody,
+                                        borderRadius: "0.5rem 0 0 0.5rem",
+                                      }}
+                                    >
+                                      <span>https://</span>
+                                    </div>
+                                    <input
+                                      type="text"
+                                      placeholder="auth.domain.com/oauth/authorize"
+                                      value={(
+                                        api.oauthAuthorizationUrl || ""
+                                      ).replace(/^https?:\/\//, "")}
+                                      onChange={(e) =>
+                                        updateApiField(
+                                          api.id,
+                                          "oauthAuthorizationUrl",
+                                          "https://" +
+                                            e.target.value.replace(
+                                              /^https?:\/\//,
+                                              "",
+                                            ),
+                                        )
+                                      }
+                                      className={styles.urlInput}
+                                      style={{
+                                        background: colors.BackgroundSecondary,
+                                        border: `1px solid ${colors.CardBorder}`,
+                                        borderRadius: "0 0.5rem 0.5rem 0",
+                                        color: colors.TextHeading,
+                                        padding: "0.375rem 0.75rem",
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
                               <div>
                                 <label
                                   className={styles.fieldLabel}
@@ -1496,7 +1592,7 @@ const SignupStep2: FC = () => {
           <div className={styles.addIconBg}>
             <Plus size={14} color={colors.BrandIndigo} />
           </div>
-          <span className={styles.addApiText}>+ Add Another API Endpoint</span>
+          <span className={styles.addApiText}>Add Another API Endpoint</span>
         </button>
 
         {/* Footer Action Bar */}

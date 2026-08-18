@@ -20,7 +20,14 @@ import { IndustryOptions } from "../../../../types/industryoptions";
 const SignupStep1: FC = () => {
   const navigate = useNavigate();
   const { colors } = useThemeStore();
-  const { companyId, setCompanyId, stepOneData, setStepOneData, lastSavedStepOneData, setLastSavedStepOneData } = useSignupStore();
+  const {
+    companyId,
+    setCompanyId,
+    stepOneData,
+    setStepOneData,
+    lastSavedStepOneData,
+    setLastSavedStepOneData,
+  } = useSignupStore();
 
   const { mutate: stepOneMutate, isPending: isStepOnePending } = useMutation({
     mutationFn: registerCompanyInfo,
@@ -613,7 +620,7 @@ const SignupStep1: FC = () => {
               style={{
                 background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
                 opacity: isStepOnePending ? 0.7 : 1,
-                color: colors.TextBody,
+                color: colors.TextOverlay,
               }}
               disabled={isStepOnePending}
             >

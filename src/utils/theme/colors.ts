@@ -134,6 +134,15 @@ export type ThemeColors = {
   WidgetChartPrimary: string;
   WidgetChartSecondary: string;
   WidgetChartGrid: string;
+
+  /* Palette Swatches */
+  SwatchIndigo: string;
+  SwatchEmerald: string;
+  SwatchCrimson: string;
+  SwatchOcean: string;
+  SwatchViolet: string;
+  SwatchAmber: string;
+  SwatchSlate: string;
 };
 
 export const darkColors: ThemeColors = {
@@ -308,6 +317,14 @@ export const darkColors: ThemeColors = {
   WidgetChartPrimary: "#34D399",
   WidgetChartSecondary: "#60A5FA",
   WidgetChartGrid: "rgba(255, 255, 255, 0.08)",
+
+  SwatchIndigo: "#6366f1",
+  SwatchEmerald: "#10b981",
+  SwatchCrimson: "#ef4444",
+  SwatchOcean: "#3b82f6",
+  SwatchViolet: "#a855f7",
+  SwatchAmber: "#f59e0b",
+  SwatchSlate: "#475569",
 };
 
 export const lightColors: ThemeColors = {
@@ -482,4 +499,12 @@ export const lightColors: ThemeColors = {
   WidgetChartPrimary: "#059669",
   WidgetChartSecondary: "#0EA5E9",
   WidgetChartGrid: "rgba(15, 23, 20, 0.10)",
+
+  SwatchIndigo: "#6366f1",
+  SwatchEmerald: "#10b981",
+  SwatchCrimson: "#ef4444",
+  SwatchOcean: "#3b82f6",
+  SwatchViolet: "#a855f7",
+  SwatchAmber: "#f59e0b",
+  SwatchSlate: "#475569",
 };

@@ -323,6 +323,15 @@ export const useApplyGlobalThemeVars = () => {
     );
     root.style.setProperty("--widget-chart-grid", colors.WidgetChartGrid);
 
+    // Palette Swatches
+    root.style.setProperty("--swatch-indigo", colors.SwatchIndigo);
+    root.style.setProperty("--swatch-emerald", colors.SwatchEmerald);
+    root.style.setProperty("--swatch-crimson", colors.SwatchCrimson);
+    root.style.setProperty("--swatch-ocean", colors.SwatchOcean);
+    root.style.setProperty("--swatch-violet", colors.SwatchViolet);
+    root.style.setProperty("--swatch-amber", colors.SwatchAmber);
+    root.style.setProperty("--swatch-slate", colors.SwatchSlate);
+
     root.setAttribute("data-theme", isDark ? "dark" : "light");
   }, [colors, isDark]);
 };

@@ -42,7 +42,9 @@ export interface ApisInformation {
 }
 
 export interface CompanyUIInformation {
-  layout: string;
+  layout?: string;
+  themeColor?: string;
+  audienceDefault?: string;
 }
 
 export interface SignupResonse {

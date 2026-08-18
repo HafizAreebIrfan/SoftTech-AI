@@ -4,6 +4,7 @@ import { SignupStore, ParamRow } from "../../interfaces/auth/signup.interface";
 import {
   saveCompanyApiDetails,
   analyzeSingleCompanyApi,
+  saveCompanyUiSelection,
 } from "../../adapters/api/authApi";
 import { showToast } from "../../utils/toasts";
 
@@ -307,6 +308,7 @@ export const getSuggestionTemplate = (
 };
 
 let autoSaveTimer: any = null;
+let stepThreeAutoSaveTimer: any = null;
 
 export const useSignupStore = create<SignupStore>()(
   persist(
@@ -323,10 +325,11 @@ export const useSignupStore = create<SignupStore>()(
       lastSavedStepOneData: null,
       apisList: [
         {
-          id: "api-1",
-          apiName: "",
+          id: "1",
+          apiName: "Default API",
+          apiEndpoint: "https://api.example.com/data",
           apiMethod: "GET",
-          apiEndpoint: "",
+          audience: "user",
           apiAuthType: "No Auth",
           apiCredentials: "",
           apiQueryParams: "",
@@ -337,10 +340,53 @@ export const useSignupStore = create<SignupStore>()(
           apiHeaders: "",
         },
       ],
-      selectedLayout: "dashboard",
+      selectedLayout: "auto",
+      selectedThemeColor: "#6366f1",
+      selectedAudienceDefault: "both",
       apiTestStates: {},
       saveStatus: "idle",
       isStepTwoPending: false,
+
+      setSelectedThemeColor: (selectedThemeColor: string) => {
+        set({ selectedThemeColor });
+        get().triggerStepThreeAutoSave();
+      },
+
+      setSelectedAudienceDefault: (
+        selectedAudienceDefault: "customer" | "admin" | "both",
+      ) => {
+        set({ selectedAudienceDefault });
+        get().triggerStepThreeAutoSave();
+      },
+
+      setSelectedLayout: (layout) => {
+        set({ selectedLayout: layout });
+        get().triggerStepThreeAutoSave();
+      },
+
+      triggerStepThreeAutoSave: () => {
+        const {
+          companyId,
+          selectedLayout,
+          selectedThemeColor,
+          selectedAudienceDefault,
+        } = get();
+        if (!companyId) return;
+
+        if (stepThreeAutoSaveTimer) clearTimeout(stepThreeAutoSaveTimer);
+
+        stepThreeAutoSaveTimer = setTimeout(async () => {
+          try {
+            await saveCompanyUiSelection(companyId, {
+              layout: selectedLayout || "auto",
+              themeColor: selectedThemeColor || "#6366f1",
+              audienceDefault: selectedAudienceDefault || "customer",
+            });
+          } catch (e) {
+            console.error("Step 3 auto-save failed:", e);
+          }
+        }, 800);
+      },
 
       setCompanyId: (companyId) => set({ companyId }),
       setStepOneData: (data) =>
@@ -389,7 +435,6 @@ export const useSignupStore = create<SignupStore>()(
               ? state.apisList.filter((api) => api.id !== id)
               : state.apisList,
         })),
-      setSelectedLayout: (selectedLayout) => set({ selectedLayout }),
       clearSignupProgress: () =>
         set({
           companyId: null,
@@ -417,7 +462,9 @@ export const useSignupStore = create<SignupStore>()(
               apiHeaders: "",
             },
           ],
-          selectedLayout: "dashboard",
+          selectedLayout: "auto",
+          selectedThemeColor: "#6366f1",
+          selectedAudienceDefault: "both",
           apiTestStates: {},
           saveStatus: "idle",
           isStepTwoPending: false,
@@ -850,6 +897,30 @@ export const useSignupStore = create<SignupStore>()(
                       oauthTokenUrl: api.oauthTokenUrl,
                       oauthClientId: api.oauthClientId,
                       oauthClientSecret: api.apiCredentials,
+                      oauth: {
+                        tokenUrl: api.oauthTokenUrl,
+                        clientId: api.oauthClientId,
+                        clientSecret: api.apiCredentials,
+                        flow: "client_credentials",
+                      },
+                    }
+                  : {};
+              const isuseroauth =
+                api.apiAuthType === "User OAuth"
+                  ? {
+                      authType: "oauth_user",
+                      authtype: "oauth_user",
+                      oauthAuthorizationUrl: api.oauthAuthorizationUrl,
+                      oauthTokenUrl: api.oauthTokenUrl,
+                      oauthClientId: api.oauthClientId,
+                      oauthClientSecret: api.apiCredentials,
+                      oauth: {
+                        authorizationUrl: api.oauthAuthorizationUrl,
+                        tokenUrl: api.oauthTokenUrl,
+                        clientId: api.oauthClientId,
+                        clientSecret: api.apiCredentials,
+                        flow: "authorization_code",
+                      },
                     }
                   : {};
 
@@ -922,6 +993,7 @@ export const useSignupStore = create<SignupStore>()(
                 ...isbearertoken,
                 ...isapikey,
                 ...isoauth,
+                ...isuseroauth,
               };
             });
 
@@ -1001,6 +1073,30 @@ export const useSignupStore = create<SignupStore>()(
                     oauthTokenUrl: api.oauthTokenUrl,
                     oauthClientId: api.oauthClientId,
                     oauthClientSecret: api.apiCredentials,
+                    oauth: {
+                      tokenUrl: api.oauthTokenUrl,
+                      clientId: api.oauthClientId,
+                      clientSecret: api.apiCredentials,
+                      flow: "client_credentials",
+                    },
+                  }
+                : {};
+            const isuseroauth =
+              api.apiAuthType === "User OAuth"
+                ? {
+                    authType: "oauth_user",
+                    authtype: "oauth_user",
+                    oauthAuthorizationUrl: api.oauthAuthorizationUrl,
+                    oauthTokenUrl: api.oauthTokenUrl,
+                    oauthClientId: api.oauthClientId,
+                    oauthClientSecret: api.apiCredentials,
+                    oauth: {
+                      authorizationUrl: api.oauthAuthorizationUrl,
+                      tokenUrl: api.oauthTokenUrl,
+                      clientId: api.oauthClientId,
+                      clientSecret: api.apiCredentials,
+                      flow: "authorization_code",
+                    },
                   }
                 : {};
 
@@ -1072,6 +1168,7 @@ export const useSignupStore = create<SignupStore>()(
               ...isbearertoken,
               ...isapikey,
               ...isoauth,
+              ...isuseroauth,
             };
           });
 
@@ -1199,6 +1296,7 @@ export const useSignupStore = create<SignupStore>()(
         apisList: state.apisList,
         apiTestStates: state.apiTestStates,
         selectedLayout: state.selectedLayout,
+        selectedThemeColor: state.selectedThemeColor,
       }),
     },
   ),

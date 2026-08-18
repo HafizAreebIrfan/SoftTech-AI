@@ -5,6 +5,8 @@ const API_BASE_URL = env.apiBaseUrl || "https://softtech-ai.onrender.com";
 const OWN_HOSTS = new Set([
   "softtech-ai.onrender.com",
   "softtech-ai-app.onrender.com",
+  "localhost",
+  "127.0.0.1",
 ]);
 
 const IMAGE_KEYS = [

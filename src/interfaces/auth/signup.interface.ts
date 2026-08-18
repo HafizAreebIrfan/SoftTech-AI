@@ -17,6 +17,7 @@ export interface ApiConnection {
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
   isCheckoutApi?: boolean;
+  isUserOAuth?: boolean;
   isTested?: boolean;
   isAnalyzed?: boolean;
   apiCheckoutTemplate?: string;
@@ -25,6 +26,7 @@ export interface ApiConnection {
   schema?: any;
   apiAuthHeader?: string;
   oauthTokenUrl?: string;
+  oauthAuthorizationUrl?: string;
   oauthClientId?: string;
   apiHeaders?: string;
 }
@@ -44,6 +46,7 @@ export interface SignupStore {
   lastSavedStepOneData?: StepOneData | null;
   apisList: ApiConnection[];
   selectedLayout:
+    | "auto"
     | "dashboard"
     | "catalog"
     | "table"
@@ -51,6 +54,11 @@ export interface SignupStore {
     | "grid"
     | "list"
     | "cards";
+  selectedThemeColor?: string;
+  selectedAudienceDefault?: "customer" | "admin" | "both";
+  setSelectedThemeColor: (color: string) => void;
+  setSelectedAudienceDefault: (audience: "customer" | "admin" | "both") => void;
+  triggerStepThreeAutoSave: () => void;
   apiTestStates: Record<
     string,
     {

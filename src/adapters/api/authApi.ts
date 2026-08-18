@@ -58,3 +58,17 @@ export const verifySession = async (): Promise<{ user?: User }> => {
 export const logout = async (): Promise<any> => {
   return post(`${env.apiBaseUrl}/api/company/logout`, {});
 };
+
+export const sendForgotPasswordOtpApi = async (
+  email: string,
+): Promise<{ success: boolean; message: string }> => {
+  const url = `${env.apiBaseUrl}/api/company/forgot-password`;
+  return post(url, { email }, { skipRedirect: true });
+};
+
+export const resetPasswordApi = async (
+  payload: { email: string; otp: string; password: string },
+): Promise<{ success: boolean; message: string }> => {
+  const url = `${env.apiBaseUrl}/api/company/forgot-password/reset`;
+  return post(url, payload, { skipRedirect: true });
+};
