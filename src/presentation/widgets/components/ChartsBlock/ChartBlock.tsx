@@ -1,9 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { ChartRenderer } from "./ChartRenderer";
 import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderCurrency } from "../../helper/RenderCurrency";
 import { renderNumber } from "../../helper/RenderNumber";
 import { renderDate } from "../../helper/RenderDate";
-import { ChartRenderer } from "./ChartRenderer";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 import type {
   ChartBlockProps,
@@ -17,7 +17,9 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
   fields = [],
   collection,
 }) => {
-  const { chartType, dataPoints, title, xLabel, yLabel } = useMemo(() => {
+  const [selectedType, setSelectedType] = useState<ChartType | null>(null);
+
+  const { initialType, dataPoints, title, xLabel, yLabel } = useMemo(() => {
     // 0. If backend pre-calculated charts exist, use them!
     if (
       collection?.charts &&
@@ -49,12 +51,16 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
         ? (rawType as ChartType)
         : "line";
 
-      if (rawType.includes("pie") || rawType.includes("donut") || chartTitle.includes("pie")) {
+      if (
+        rawType.includes("pie") ||
+        rawType.includes("donut") ||
+        chartTitle.includes("pie")
+      ) {
         cType = "pie";
       }
 
       return {
-        chartType: cType,
+        initialType: cType,
         dataPoints: points,
         title: bChart.title || "Data Trend",
         xLabel: "Date",
@@ -62,52 +68,46 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
       };
     }
 
-    if (!records || records.length === 0) {
-      return { chartType: "line" as ChartType, dataPoints: [], title: undefined };
+    if (!records || records.length === 0 || fields.length === 0) {
+      return { initialType: "line" as ChartType, dataPoints: [] };
     }
 
-    const activeFields =
-      block?.fields && block.fields.length > 0 ? block.fields : fields;
+    // 1. Identify numeric Y-axis candidate
+    const activeFields = fields.filter((f) => !f.hidden);
+    const numericFields = activeFields.filter(
+      (f) => f.type === "currency" || f.type === "number",
+    );
 
-    const isMeaningful = (f: FieldSchema) => {
-      const key = f.key.toLowerCase();
-      const label = f.label.toLowerCase();
-      if (key.includes("epoch") || label.includes("epoch") || key.includes("timestamp") || label.includes("timestamp")) return false;
-      if (key === "code" || key === "tz_id" || key === "is_day" || key === "is_moon_up" || key === "is_sun_up") return false;
-      return true;
-    };
+    if (numericFields.length === 0) {
+      return { initialType: "line" as ChartType, dataPoints: [] };
+    }
 
-    const nonHiddenFields = activeFields.filter((f) => !f.hidden && isMeaningful(f));
-
-    // 1. Identify Y-Axis numeric field
     const yField =
-      nonHiddenFields.find((f) => f.type === "number" || f.type === "currency") ||
-      nonHiddenFields.find((f) => f.type === "status");
+      numericFields.find((f) => f.type === "currency") || numericFields[0];
 
-    // 2. Identify X-Axis label / temporal field
+    // 2. Identify X-axis candidate
+    const dateFields = activeFields.filter(
+      (f) => f.type === "date" || f.type === "datetime",
+    );
+
     const xField =
-      nonHiddenFields.find((f) => f.type === "date" || f.type === "datetime") ||
-      nonHiddenFields.find((f) => f.primary) ||
-      nonHiddenFields.find((f) => f !== yField && f.type === "text") ||
-      nonHiddenFields[0];
+      dateFields[0] ||
+      activeFields.find((f) => f !== yField && f.type === "text");
 
-    if (!yField) {
-      return { chartType: "line" as ChartType, dataPoints: [], title: undefined };
-    }
-
-    // 3. Formulate Data Points
+    // 3. Build data points
     const points: ChartDataPoint[] = [];
 
     records.forEach((record, index) => {
       const rawYVal = getFieldValue(record, yField);
-      const rawXVal = xField ? getFieldValue(record, xField) : `Item ${index + 1}`;
+      const rawXVal = xField
+        ? getFieldValue(record, xField)
+        : `Item ${index + 1}`;
 
       const numY = Number(rawYVal);
       if (Number.isNaN(numY) || !Number.isFinite(numY)) {
         return;
       }
 
-      // Format Y
       let formattedY = "";
       if (yField.type === "currency") {
         formattedY = String(renderCurrency(numY));
@@ -115,12 +115,14 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
         formattedY = String(renderNumber(numY));
       }
 
-      // Format X
       let formattedX = "";
       if (xField && (xField.type === "date" || xField.type === "datetime")) {
         formattedX = String(renderDate(rawXVal, xField.type === "datetime"));
       } else {
-        formattedX = rawXVal !== undefined && rawXVal !== null ? String(rawXVal) : `Item ${index + 1}`;
+        formattedX =
+          rawXVal !== undefined && rawXVal !== null
+            ? String(rawXVal)
+            : `Item ${index + 1}`;
       }
 
       points.push({
@@ -133,10 +135,10 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
     });
 
     if (points.length < 2) {
-      return { chartType: "line" as ChartType, dataPoints: [], title: undefined };
+      return { initialType: "line" as ChartType, dataPoints: [], title: undefined };
     }
 
-    // 4. Infer chart type from variant or data characteristics
+    // 4. Infer chart type
     let type: ChartType = "line";
     if (block?.variant === "bar" || block?.variant === "categorical") {
       type = "bar";
@@ -144,31 +146,80 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
       type = "pie";
     } else if (block?.variant === "scatter") {
       type = "scatter";
-    } else if (xField && xField.type !== "date" && xField.type !== "datetime" && points.length <= 8) {
+    } else if (
+      xField &&
+      xField.type !== "date" &&
+      xField.type !== "datetime" &&
+      points.length <= 8
+    ) {
       type = "bar";
     }
 
     return {
-      chartType: type,
+      initialType: type,
       dataPoints: points,
       title: `${yField.label} Trend`,
       xLabel: xField?.label,
       yLabel: yField.label,
     };
-  }, [block, records, fields]);
+  }, [block, records, fields, collection]);
 
   if (!dataPoints || dataPoints.length === 0) {
     return null;
   }
 
+  const activeChartType = selectedType || initialType;
+
   return (
-    <ChartRenderer
-      type={chartType}
-      dataPoints={dataPoints}
-      title={title}
-      xLabel={xLabel}
-      yLabel={yLabel}
-      variant={block?.variant}
-    />
+    <div style={{ position: "relative", width: "100%" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: "14px",
+          right: "16px",
+          zIndex: 10,
+          display: "flex",
+          gap: "4px",
+        }}
+      >
+        {(["line", "bar", "pie"] as ChartType[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            style={{
+              padding: "3px 8px",
+              borderRadius: "6px",
+              fontSize: "10px",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              background:
+                activeChartType === t
+                  ? "var(--app-brand-accent, #34D399)"
+                  : "rgba(255,255,255,0.05)",
+              color:
+                activeChartType === t
+                  ? "#ffffff"
+                  : "var(--widget-header-subtitle, #94a3b8)",
+              border: "1px solid var(--widget-card-border, #334155)",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+            }}
+            onClick={() => setSelectedType(t)}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      <ChartRenderer
+        type={activeChartType}
+        dataPoints={dataPoints}
+        title={title}
+        xLabel={xLabel}
+        yLabel={yLabel}
+        variant={block?.variant}
+      />
+    </div>
   );
 };

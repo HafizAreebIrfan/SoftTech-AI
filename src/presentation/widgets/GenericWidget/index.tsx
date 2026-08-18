@@ -7,6 +7,7 @@ import { CatalogLayout } from "../layouts/CatalogLayout";
 import { TableLayout } from "../layouts/TableLayout";
 import { GeneralLayout } from "../layouts/GeneralLayout";
 import { EmptyStateBlock } from "../components/EmptyStateBlock";
+import { WeatherBlock } from "../components/WeatherBlock/WeatherBlock";
 import { getValue } from "../../../utils";
 import type { JsonValue } from "../../../domain/entities/GenericWidget";
 import { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
@@ -32,71 +33,91 @@ export const GenericWidgetRenderer: React.FC = () => {
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
     const content = structuredContent;
 
-    if (!content || typeof content !== "object" || !content.data) {
+    if (!content || typeof content !== "object") {
       return null;
     }
 
-    const collection = content.collection;
-    const fields = collection?.fields ?? [];
-    let records: unknown[] = [];
+    const title = (content.title as string) || "Widget";
+    const subtitle = content.subtitle as string | undefined;
 
-    if (collection?.dataPath) {
-      const collectionData = getValue(content.data, collection.dataPath);
-
-      if (Array.isArray(collectionData)) {
-        records = collectionData;
-      } else if (collectionData !== undefined && collectionData !== null) {
-        records = [collectionData];
-      }
-    } else if (Array.isArray(content.data)) {
-      records = content.data;
-    } else if (isRecordCollection(content.data)) {
-      const detectedArray = Object.values(content.data).find(Array.isArray);
-
-      if (Array.isArray(detectedArray)) {
-        records = detectedArray;
-      } else {
-        records = [content.data];
-      }
-    } else if (content.data) {
-      records = [content.data];
+    let rawData: unknown = content.data;
+    if (
+      rawData &&
+      typeof rawData === "object" &&
+      "data" in (rawData as Record<string, unknown>)
+    ) {
+      rawData = (rawData as Record<string, unknown>).data;
     }
 
+    const collection = content.collection;
+    const capabilities = content.capabilities;
+    const pagination = content.pagination;
+    const actions = content.actions;
+    const metadata = content.metadata;
+
+    const dataPath = collection?.dataPath;
+
+    let targetData: unknown = rawData;
+    if (dataPath) {
+      targetData = getValue(rawData, dataPath);
+    }
+
+    let records: unknown[] = [];
+    if (Array.isArray(targetData)) {
+      records = targetData;
+    } else if (
+      targetData &&
+      typeof targetData === "object" &&
+      !Array.isArray(targetData)
+    ) {
+      records = [targetData];
+    } else if (
+      rawData &&
+      typeof rawData === "object" &&
+      !Array.isArray(rawData)
+    ) {
+      records = [rawData];
+    }
+
+    const fields = collection?.fields || [];
+
     return {
-      content,
+      content: {
+        title,
+        subtitle,
+        data: rawData as any,
+        capabilities,
+        pagination,
+        actions,
+        metadata,
+        audience: (content.audience || metadata?.audience) as any,
+      },
       collection,
       fields,
       records,
-      rawData: content.data,
+      rawData: rawData as any,
     };
   }, [structuredContent]);
 
   const presentationPlan = useMemo(() => {
-    if (!normalizedData) return null;
-
-    const { collection, fields, records, content } = normalizedData;
+    if (!normalizedData) {
+      return null;
+    }
 
     return buildPresentationPlan({
-      entity: collection?.entity,
-      records,
-      fields,
-      collection,
-      capabilities: content.capabilities,
-      pagination: content.pagination,
-      audience: content.audience,
-      platformType: content.platformType,
-      intent: content.intent,
+      collection: normalizedData.collection,
+      fields: normalizedData.fields,
+      records: normalizedData.records,
+      capabilities: normalizedData.content.capabilities,
+      pagination: normalizedData.content.pagination,
+      audience: (normalizedData.content.audience ||
+        normalizedData.content.metadata?.audience) as any,
     });
   }, [normalizedData]);
 
   if (hasLoadError) {
     return (
-      <div
-        style={{
-          color: colors.TextHeading,
-          background: colors.Background,
-        }}
-      >
+      <div style={{ padding: "1rem", color: "#ff4d4f" }}>
         Failed to load UI.
       </div>
     );
@@ -112,9 +133,33 @@ export const GenericWidgetRenderer: React.FC = () => {
     return <EmptyStateBlock />;
   }
 
+  const entityName = String(
+    collection?.entity || content.metadata?.apiName || content.title || "",
+  ).toLowerCase();
+  const isWeather =
+    /weather|forecast|temperature|climate/.test(entityName) ||
+    Boolean(
+      rawData &&
+      typeof rawData === "object" &&
+      ("current" in (rawData as object) ||
+        "location" in (rawData as object) ||
+        "forecast" in (rawData as object)),
+    );
+
   const normalizedLayout = presentationPlan.layout;
 
   const renderLayout = () => {
+    if (isWeather) {
+      return (
+        <WeatherBlock
+          data={rawData}
+          records={records}
+          title={content.title}
+          subtitle={content.subtitle}
+        />
+      );
+    }
+
     switch (normalizedLayout) {
       case "dashboard":
         return (

@@ -12,7 +12,7 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
 
   const rawSrc = getRawImageUrl(value);
   const proxiedSrc = getProxiedImageUrl(value);
-  const targetUrl = rawSrc || proxiedSrc;
+  const targetUrl = proxiedSrc || rawSrc;
 
   if (hasError || !targetUrl) {
     return <ImageFallback />;
