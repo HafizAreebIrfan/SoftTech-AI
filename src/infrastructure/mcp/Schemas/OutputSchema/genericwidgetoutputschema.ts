@@ -57,6 +57,8 @@ const fieldSchema = z.object({
  */
 const collectionSchema = z.object({
   entity: z.string().optional(),
+  dataPath: z.string().optional(),
+  layout: z.string().optional(),
 
   /**
    * Example:
@@ -76,6 +78,29 @@ const collectionSchema = z.object({
    * Field definitions for the returned records.
    */
   fields: z.array(fieldSchema).optional(),
+  metrics: z
+    .array(
+      z.object({
+        label: z.string(),
+        value: z.string(),
+        change: z.string().optional(),
+      }),
+    )
+    .optional(),
+  charts: z
+    .array(
+      z.object({
+        type: z.string(),
+        title: z.string(),
+        data: z.array(
+          z.object({
+            label: z.string(),
+            value: z.number(),
+          }),
+        ),
+      }),
+    )
+    .optional(),
 });
 
 /**

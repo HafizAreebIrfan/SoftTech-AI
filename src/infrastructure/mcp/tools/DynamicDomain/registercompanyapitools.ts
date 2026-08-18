@@ -190,6 +190,9 @@ export const registerCompanyApiTools = (
             );
           }
 
+          const effectiveAudience =
+            api.audience || company.uiPreference?.audienceDefault || "customer";
+
           const widgetContent = normalizeApiResponseToWidget(
             company.companyName,
             api.name || `API ${index + 1}`,
@@ -198,9 +201,10 @@ export const registerCompanyApiTools = (
             company.industry,
             api.apiSchema as any,
             api.params ?? [],
-            api.audience as any,
+            effectiveAudience as any,
             api.platformType as any,
             method,
+            company.uiPreference?.themeColor,
           );
 
           return buildMcpSuccessResult(

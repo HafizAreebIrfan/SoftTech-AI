@@ -25,6 +25,23 @@ export type FieldSchema = {
   filterable?: boolean;
 };
 
+export type CollectionMetric = {
+  label: string;
+  value: string;
+  change?: string;
+};
+
+export type CollectionChartDataPoint = {
+  label: string;
+  value: number;
+};
+
+export type CollectionChart = {
+  type: string;
+  title: string;
+  data: CollectionChartDataPoint[];
+};
+
 export type CollectionResult = {
   entity?: string;
   dataPath?: string;
@@ -35,4 +52,6 @@ export type CollectionResult = {
   limit?: number;
   totalPages?: number;
   fields?: FieldSchema[];
+  metrics?: CollectionMetric[];
+  charts?: CollectionChart[];
 };

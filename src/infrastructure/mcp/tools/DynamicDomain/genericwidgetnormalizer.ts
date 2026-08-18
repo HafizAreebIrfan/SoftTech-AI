@@ -21,6 +21,7 @@ export const normalizeApiResponseToWidget = (
   audience?: WidgetAudience,
   platformType?: PlatformType,
   method = "GET",
+  themeColor?: string,
 ): GenericWidgetResult => {
   const data = normalizeJsonValue(response);
 
@@ -53,6 +54,7 @@ export const normalizeApiResponseToWidget = (
       httpMethod: method.toUpperCase(),
       isAction: method.toUpperCase() !== "GET",
       ...(industry ? { industry } : {}),
+      ...(themeColor ? { themeColor } : {}),
       ...(apiSchema?.entity ? { entity: apiSchema.entity } : {}),
       generatedAt: new Date().toISOString(),
     },
@@ -120,24 +122,14 @@ const buildCollectionMetadata = (
 
     result.itemLabel = inferItemLabel(result.entity);
 
-    /**
-     * Prefer schema information generated during API registration.
-     */
     const schemaFields = buildFieldsFromApiSchema(apiSchema);
 
     if (schemaFields.length > 0) {
       result.fields = schemaFields;
     } else {
-      /**
-       * Fall back to inspecting the actual API response.
-       */
       result.fields = buildFieldsFromRecords(records);
     }
 
-    /**
-     * Only use array length when the API does not provide
-     * a separate pagination total.
-     */
     result.total = records.length;
   } else if (Array.isArray(data)) {
     result.itemLabel = inferItemLabel(result.entity);
@@ -171,6 +163,123 @@ const buildCollectionMetadata = (
     result.total = pagination.total;
   }
 
+  // Calculate dynamic metrics & charts for AI prediction and auto layout resolution
+  const rawRecords = collectionData
+    ? collectionData.records
+    : Array.isArray(data)
+    ? data.filter(isObject)
+    : [];
+
+  if (rawRecords.length > 0) {
+    const fields = result.fields || [];
+
+    const numericFields = fields.filter(
+      (f) => f.type === "currency" || f.type === "number",
+    );
+
+    const dateFields = fields.filter(
+      (f) => f.type === "datetime" || f.type === "date",
+    );
+
+    const computedMetrics: Array<{ label: string; value: string; change?: string }> = [];
+
+    computedMetrics.push({
+      label: `Total ${toLabel(result.itemLabel || "records")}`,
+      value: String(result.total || rawRecords.length),
+    });
+
+    if (numericFields.length > 0) {
+      const primaryNumField = numericFields[0];
+      let sum = 0;
+      let validCount = 0;
+
+      rawRecords.forEach((rec) => {
+        const val = Number(rec[primaryNumField.key]);
+        if (!isNaN(val)) {
+          sum += val;
+          validCount++;
+        }
+      });
+
+      if (validCount > 0) {
+        const isCurrency = primaryNumField.type === "currency";
+        const formattedSum = isCurrency
+          ? `$${sum.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : sum.toLocaleString();
+
+        const avg = sum / validCount;
+        const formattedAvg = isCurrency
+          ? `$${avg.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : avg.toLocaleString();
+
+        computedMetrics.push({
+          label: `Total ${primaryNumField.label || toLabel(primaryNumField.key)}`,
+          value: formattedSum,
+        });
+
+        computedMetrics.push({
+          label: `Avg ${primaryNumField.label || toLabel(primaryNumField.key)}`,
+          value: formattedAvg,
+        });
+      }
+    }
+
+    if (computedMetrics.length > 0) {
+      result.metrics = computedMetrics;
+    }
+
+    // Dynamic Chart Trend Computation
+    if (numericFields.length > 0 && dateFields.length > 0) {
+      const primaryNumField = numericFields[0];
+      const primaryDateField = dateFields[0];
+
+      const monthlyGroups: Record<string, number> = {};
+
+      rawRecords.forEach((rec) => {
+        const dateVal = String(rec[primaryDateField.key] || "");
+        const numVal = Number(rec[primaryNumField.key] || 0);
+
+        if (dateVal && !isNaN(numVal)) {
+          let monthKey = "";
+          try {
+            const d = new Date(dateVal);
+            if (!isNaN(d.getTime())) {
+              monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+            }
+          } catch (e) {
+            monthKey = "";
+          }
+
+          if (monthKey) {
+            monthlyGroups[monthKey] = (monthlyGroups[monthKey] || 0) + numVal;
+          }
+        }
+      });
+
+      const sortedMonths = Object.keys(monthlyGroups).sort();
+      if (sortedMonths.length >= 2) {
+        const chartData = sortedMonths.map((m) => ({
+          label: m,
+          value: Math.round(monthlyGroups[m] * 100) / 100,
+        }));
+
+        result.charts = [
+          {
+            type: "line",
+            title: `${primaryNumField.label || "Sales"} Trend`,
+            data: chartData,
+          },
+        ];
+      }
+    }
+
+    // Auto Layout Resolution
+    if (!selectedLayout || selectedLayout === "auto") {
+      result.layout =
+        result.metrics && result.metrics.length > 1 ? "dashboard" : "table";
+    }
+  }
+
   return result;
 };
 
@@ -195,9 +304,6 @@ const findRecordCollection = (
     return undefined;
   }
 
-  /**
-   * Prefer arrays that contain objects.
-   */
   for (const [key, child] of Object.entries(value)) {
     if (Array.isArray(child)) {
       const records = child.filter(isObject);
@@ -211,10 +317,6 @@ const findRecordCollection = (
     }
   }
 
-  /**
-   * If there is no direct array, recursively inspect
-   * nested objects.
-   */
   for (const [key, child] of Object.entries(value)) {
     if (isObject(child) || Array.isArray(child)) {
       const result = findRecordCollection(child, key);
@@ -248,10 +350,6 @@ const buildFieldsFromApiSchema = (apiSchema?: ApiSchema): FieldSchema[] => {
     }));
 };
 
-/**
- * Infers fields from actual API records when schema information
- * is unavailable.
- */
 const buildFieldsFromRecords = (
   records: Record<string, JsonValue>[],
 ): FieldSchema[] => {
@@ -259,9 +357,6 @@ const buildFieldsFromRecords = (
     return [];
   }
 
-  /**
-   * Use keys from the first record as the initial field set.
-   */
   const firstRecord = records[0];
 
   return Object.entries(firstRecord)
@@ -345,9 +440,6 @@ const normalizeFieldSchemaType = (
   }
 };
 
-/**
- * Detects the generic field type from a real API value.
- */
 const detectFieldSchemaType = (
   key: string,
   value: JsonValue,
@@ -448,13 +540,6 @@ const detectFieldSchemaType = (
   return "text";
 };
 
-/**
- * Converts API keys such as:
- *
- * useremail -> Useremail
- * order_amount -> Order Amount
- * createdAt -> Created At
- */
 const toLabel = (value: string): string => {
   return value
     .replace(/([a-z])([A-Z])/g, "$1 $2")
@@ -464,10 +549,6 @@ const toLabel = (value: string): string => {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-/**
- * Internal database/system fields that generally should not
- * become visible UI fields.
- */
 const isInternalField = (key: string): boolean => {
   const normalized = key.toLowerCase();
 
@@ -569,9 +650,6 @@ const extractPagination = (data: JsonValue): PaginationResult | undefined => {
   let totalItems: number | undefined;
   let pageSize: number | undefined;
 
-  /**
-   * Check the current object first.
-   */
   for (const [key, value] of Object.entries(data)) {
     if (typeof value !== "number") {
       continue;
@@ -604,10 +682,6 @@ const extractPagination = (data: JsonValue): PaginationResult | undefined => {
     }
   }
 
-  /**
-   * If pagination wasn't found at the top level,
-   * inspect nested objects.
-   */
   if (
     page === undefined &&
     totalPages === undefined &&
