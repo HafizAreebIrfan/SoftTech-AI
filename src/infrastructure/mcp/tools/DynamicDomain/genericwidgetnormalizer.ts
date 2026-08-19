@@ -25,9 +25,9 @@ export const normalizeApiResponseToWidget = (
 ): GenericWidgetResult => {
   const data = normalizeJsonValue(response);
 
-  const collection = buildCollectionMetadata(apiName, data, layout, apiSchema);
+  const collection = buildCollectionMetadata(apiName, data, layout, apiSchema, audience);
 
-  const capabilities = buildCapabilities(apiParams);
+  const capabilities = buildCapabilities(apiParams, method);
 
   const pagination = extractPagination(data);
 
@@ -96,6 +96,7 @@ const buildCollectionMetadata = (
   data: JsonValue,
   layout?: string,
   apiSchema?: ApiSchema,
+  audience?: WidgetAudience,
 ): CollectionResult | undefined => {
   const entity = apiSchema?.entity || inferEntityName(apiName, data);
 
@@ -108,7 +109,19 @@ const buildCollectionMetadata = (
     ...(apiSchema?.dataPath ? { dataPath: apiSchema.dataPath } : {}),
   };
 
-  const selectedLayout = apiSchema?.defaultLayout || layout;
+  let selectedLayout = apiSchema?.defaultLayout || layout;
+
+  const entityLower = String(entity || "").toLowerCase();
+  const isCommercial = /package|product|service|hotel|car|item|accommodation/.test(
+    entityLower,
+  );
+
+  if (
+    !selectedLayout ||
+    (isCommercial && (audience === "user" || audience === "both"))
+  ) {
+    selectedLayout = audience === "admin" ? "table" : "catalog";
+  }
 
   if (selectedLayout) {
     result.layout = selectedLayout;
@@ -583,8 +596,22 @@ const inferItemLabel = (entity: string): string => {
   return normalized || "item";
 };
 
-const buildCapabilities = (params: any[] = []): CapabilitiesResult => {
+const buildCapabilities = (
+  params: any[] = [],
+  method = "GET",
+): CapabilitiesResult => {
   const capabilities: CapabilitiesResult = {};
+
+  const upperMethod = String(method || "GET").toUpperCase();
+  if (upperMethod === "POST" || upperMethod === "PUT") {
+    capabilities.create = true;
+  }
+  if (upperMethod === "PUT" || upperMethod === "PATCH") {
+    capabilities.update = true;
+  }
+  if (upperMethod === "DELETE") {
+    capabilities.delete = true;
+  }
 
   const dynamicKeys = params
     .filter((param) => param?.isDynamic)
