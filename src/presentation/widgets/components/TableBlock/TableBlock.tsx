@@ -194,32 +194,32 @@ export const TableBlock: React.FC<TableBlockProps> = ({
             ))}
           </tbody>
         </table>
-
-        {totalPages > 1 && (
-          <div className={styles.pagination}>
-            <span>
-              Page {pagination?.page ?? currentPage} of {totalPages} ({totalItems} items)
-            </span>
-
-            <div style={{ display: "flex", gap: "6px" }}>
-              <button
-                className={styles.pageBtn}
-                disabled={currentPage <= 1}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              >
-                Prev
-              </button>
-              <button
-                className={styles.pageBtn}
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <span>
+            Page {pagination?.page ?? currentPage} of {totalPages} ({totalItems} items)
+          </span>
+
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button
+              className={styles.pageBtn}
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            >
+              Prev
+            </button>
+            <button
+              className={styles.pageBtn}
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Record Detail Modal */}
       {selectedRecord && (

@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import { useMcpToolResult } from "../../../infrastructure/store/mcpWidgetStore";
-import { useThemeStore } from "../../../hooks";
 import { useApplyGlobalThemeVars } from "../../../infrastructure/store/themeStore";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import { CatalogLayout } from "../layouts/CatalogLayout";
@@ -9,15 +8,13 @@ import { GeneralLayout } from "../layouts/GeneralLayout";
 import { EmptyStateBlock } from "../components/EmptyStateBlock";
 import { WeatherBlock } from "../components/WeatherBlock/WeatherBlock";
 import { getValue } from "../../../utils";
-import type { JsonValue } from "../../../domain/entities/GenericWidget";
-import { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
+import type { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
 import styles from "../../../styles/genericwidgetrenderer.module.css";
 import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
 
 export const GenericWidgetRenderer: React.FC = () => {
   useApplyGlobalThemeVars();
-  const { colors } = useThemeStore();
-  let toolResult: any = null;
+  let toolResult: unknown = null;
   let hasLoadError = false;
 
   try {
@@ -28,10 +25,10 @@ export const GenericWidgetRenderer: React.FC = () => {
   }
 
   const structuredContent =
-    (toolResult as any)?.structuredContent ?? toolResult;
+    (toolResult as Record<string, unknown>)?.structuredContent ?? toolResult;
 
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
-    const content = structuredContent;
+    const content = structuredContent as Record<string, unknown>;
 
     if (!content || typeof content !== "object") {
       return null;
@@ -49,11 +46,11 @@ export const GenericWidgetRenderer: React.FC = () => {
       rawData = (rawData as Record<string, unknown>).data;
     }
 
-    const collection = content.collection;
-    const capabilities = content.capabilities;
-    const pagination = content.pagination;
-    const actions = content.actions;
-    const metadata = content.metadata;
+    const collection = content.collection as any;
+    const capabilities = content.capabilities as any;
+    const pagination = content.pagination as any;
+    const actions = content.actions as any;
+    const metadata = content.metadata as any;
 
     const dataPath = collection?.dataPath;
 
@@ -116,11 +113,7 @@ export const GenericWidgetRenderer: React.FC = () => {
   }, [normalizedData]);
 
   if (hasLoadError) {
-    return (
-      <div style={{ padding: "1rem", color: "#ff4d4f" }}>
-        Failed to load UI.
-      </div>
-    );
+    return <div className={styles.errorState}>Failed to load UI.</div>;
   }
 
   if (!structuredContent || !normalizedData || !presentationPlan) {
@@ -140,10 +133,10 @@ export const GenericWidgetRenderer: React.FC = () => {
     /weather|forecast|temperature|climate/.test(entityName) ||
     Boolean(
       rawData &&
-      typeof rawData === "object" &&
-      ("current" in (rawData as object) ||
-        "location" in (rawData as object) ||
-        "forecast" in (rawData as object)),
+        typeof rawData === "object" &&
+        ("current" in (rawData as object) ||
+          "location" in (rawData as object) ||
+          "forecast" in (rawData as object)),
     );
 
   const normalizedLayout = presentationPlan.layout;
@@ -228,32 +221,5 @@ export const GenericWidgetRenderer: React.FC = () => {
     }
   };
 
-  const customThemeColor = content.metadata?.themeColor as string;
-
-  return (
-    <div
-      className={styles.container}
-      style={{
-        color: colors.TextHeading,
-        background: colors.Background,
-        ...(customThemeColor
-          ? ({
-              "--app-brand-indigo": customThemeColor,
-              "--app-brand-accent": customThemeColor,
-              "--widget-chart-primary": customThemeColor,
-              "--widget-metric-val": customThemeColor,
-              "--widget-badge-text": customThemeColor,
-            } as React.CSSProperties)
-          : {}),
-      }}
-    >
-      {renderLayout()}
-    </div>
-  );
-};
-
-const isRecordCollection = (
-  value: JsonValue,
-): value is Record<string, JsonValue> => {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  return <div className={styles.container}>{renderLayout()}</div>;
 };

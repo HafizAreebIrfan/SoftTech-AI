@@ -65,6 +65,7 @@ export interface CollectionResult {
   fields?: FieldSchema[];
   metrics?: CollectionMetric[];
   charts?: CollectionChart[];
+  summary?: string;
 }
 
 export interface Capabilities {

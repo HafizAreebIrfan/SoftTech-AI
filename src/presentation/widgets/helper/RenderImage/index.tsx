@@ -8,24 +8,34 @@ export const renderImage = (value: unknown, alt = "Image"): React.ReactNode => {
 };
 
 const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
-  const [hasError, setHasError] = useState(false);
-
   const rawSrc = getRawImageUrl(value);
   const proxiedSrc = getProxiedImageUrl(value);
-  const targetUrl = proxiedSrc || rawSrc;
 
-  if (hasError || !targetUrl) {
+  const [currentSrc, setCurrentSrc] = useState<string | null>(
+    proxiedSrc || rawSrc,
+  );
+  const [hasError, setHasError] = useState(false);
+
+  const handleError = () => {
+    if (currentSrc === proxiedSrc && rawSrc && rawSrc !== proxiedSrc) {
+      setCurrentSrc(rawSrc);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (hasError || !currentSrc) {
     return <ImageFallback />;
   }
 
   return (
     <div className={styles.imageWrapper}>
       <img
-        src={targetUrl}
+        src={currentSrc}
         alt={alt}
         className={styles.image}
         loading="lazy"
-        onError={() => setHasError(true)}
+        onError={handleError}
       />
     </div>
   );

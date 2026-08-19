@@ -17,8 +17,6 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
   fields = [],
   collection,
 }) => {
-  const [selectedType, setSelectedType] = useState<ChartType | null>(null);
-
   const { initialType, dataPoints, title, xLabel, yLabel } = useMemo(() => {
     // 0. If backend pre-calculated charts exist, use them!
     if (
@@ -45,7 +43,9 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
           : Number(pt.value).toLocaleString(),
       }));
 
-      const rawType = String(bChart.type || block?.variant || "line").toLowerCase();
+      const rawType = String(
+        bChart.type || block?.variant || "line",
+      ).toLowerCase();
       const validTypes: ChartType[] = ["line", "bar", "pie", "scatter"];
       let cType: ChartType = validTypes.includes(rawType as ChartType)
         ? (rawType as ChartType)
@@ -135,7 +135,11 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
     });
 
     if (points.length < 2) {
-      return { initialType: "line" as ChartType, dataPoints: [], title: undefined };
+      return {
+        initialType: "line" as ChartType,
+        dataPoints: [],
+        title: undefined,
+      };
     }
 
     // 4. Infer chart type
@@ -168,52 +172,10 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
     return null;
   }
 
-  const activeChartType = selectedType || initialType;
-
   return (
     <div style={{ position: "relative", width: "100%" }}>
-      <div
-        style={{
-          position: "absolute",
-          top: "14px",
-          right: "16px",
-          zIndex: 10,
-          display: "flex",
-          gap: "4px",
-        }}
-      >
-        {(["line", "bar", "pie"] as ChartType[]).map((t) => (
-          <button
-            key={t}
-            type="button"
-            style={{
-              padding: "3px 8px",
-              borderRadius: "6px",
-              fontSize: "10px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-              background:
-                activeChartType === t
-                  ? "var(--app-brand-accent, #34D399)"
-                  : "rgba(255,255,255,0.05)",
-              color:
-                activeChartType === t
-                  ? "#ffffff"
-                  : "var(--widget-header-subtitle, #94a3b8)",
-              border: "1px solid var(--widget-card-border, #334155)",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-            onClick={() => setSelectedType(t)}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-
       <ChartRenderer
-        type={activeChartType}
+        type={initialType}
         dataPoints={dataPoints}
         title={title}
         xLabel={xLabel}

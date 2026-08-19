@@ -46,6 +46,25 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
           )}
         </div>
       </header>
+
+      {/* Prompt Answer Summary Banner */}
+      {Boolean(collection?.summary || (collection as any)?.text) && (
+        <div
+          style={{
+            background: colors.WidgetCardBg,
+            border: `1px solid ${colors.WidgetCardBorder}`,
+            borderRadius: "10px",
+            padding: "12px 16px",
+            marginBottom: "12px",
+            fontSize: "13.5px",
+            lineHeight: "1.5",
+            color: colors.TextPrimary,
+          }}
+        >
+          ✨ {String(collection?.summary || (collection as any)?.text)}
+        </div>
+      )}
+
       <div className={styles.blockContainer}>
         {blocks.map((block, index) => {
           let content: React.ReactNode = null;

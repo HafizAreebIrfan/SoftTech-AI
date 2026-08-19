@@ -154,13 +154,13 @@ export const darkColors: ThemeColors = {
   HeaderItemActiveColor: "#34D399",
   HeaderIconColor: "#94A39D",
 
-  Background: "#0B0F0D",
-  BackgroundSecondary: "#111715",
-  OverlayShadow: "rgba(0, 0, 0, 0.55)",
+  Background: "#050507",
+  BackgroundSecondary: "#0c0d10",
+  OverlayShadow: "rgba(0, 0, 0, 0.75)",
 
-  Card: "#121916",
-  CardSecondary: "#16201C",
-  CardBorder: "#202A25",
+  Card: "#121316",
+  CardSecondary: "#16171c",
+  CardBorder: "rgba(255, 255, 255, 0.08)",
   CardBorderSecondary: "rgba(255, 255, 255, 0.06)",
   CardActiveBorder: "#10B981",
 
@@ -302,11 +302,11 @@ export const darkColors: ThemeColors = {
 
   /*--*/
   /* Widget Theme Tokens */
-  WidgetContainerBg: "rgba(18, 25, 22, 0.95)",
+  WidgetContainerBg: "#050507",
   WidgetContainerBorder: "rgba(255, 255, 255, 0.08)",
-  WidgetCardBg: "rgba(255, 255, 255, 0.03)",
-  WidgetCardBorder: "rgba(255, 255, 255, 0.07)",
-  WidgetCardHover: "rgba(255, 255, 255, 0.06)",
+  WidgetCardBg: "#121316",
+  WidgetCardBorder: "rgba(255, 255, 255, 0.08)",
+  WidgetCardHover: "rgba(255, 255, 255, 0.04)",
   WidgetHeaderTitle: "#ECEFEF",
   WidgetHeaderSubtitle: "#94A39D",
   WidgetMetricVal: "#34D399",
