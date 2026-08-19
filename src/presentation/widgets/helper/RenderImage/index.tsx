@@ -3,6 +3,8 @@ import styles from "../../../../styles/fieldrenderer.module.css";
 import { getProxiedImageUrl, getRawImageUrl } from "./getproxiedimageurl";
 import { RenderImageProps } from "../../../../interfaces/mcp/renderimageprops.interface";
 
+import { getWeatherConditionSvg } from "../../../../assets/icons/WeatherIcons";
+
 export const renderImage = (value: unknown, alt = "Image"): React.ReactNode => {
   return <ImageField value={value} alt={alt} />;
 };
@@ -25,7 +27,7 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
   };
 
   if (hasError || !currentSrc) {
-    return <ImageFallback />;
+    return <ImageFallback alt={alt} />;
   }
 
   return (
@@ -41,7 +43,14 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
   );
 };
 
-const ImageFallback: React.FC = () => {
+const ImageFallback: React.FC<{ alt?: string }> = ({ alt }) => {
+  if (alt && /weather|rain|cloud|sun|clear|patchy|overcast|snow|drizzle|thunder/i.test(alt)) {
+    return (
+      <div className={styles.imageFallback} style={{ background: "transparent", border: "none" }}>
+        {getWeatherConditionSvg(alt, 36)}
+      </div>
+    );
+  }
   return (
     <div className={styles.imageFallback} aria-label="Image unavailable">
       <svg

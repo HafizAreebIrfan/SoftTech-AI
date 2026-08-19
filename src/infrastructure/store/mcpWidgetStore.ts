@@ -40,11 +40,42 @@ const isMcpToolResultPayload = (
 };
 
 const extractToolResult = (value: unknown): McpToolResultPayload | null => {
-  if (isMcpToolResultPayload(value)) {
-    return value;
+  if (!isMcpToolResultPayload(value)) {
+    return null;
   }
 
-  return null;
+  const rawObj = (value || {}) as unknown as Record<string, unknown>;
+  const structuredContent = (rawObj.structuredContent || {}) as Record<
+    string,
+    unknown
+  >;
+
+  let summaryText = "";
+  if (Array.isArray(rawObj.content) && rawObj.content.length > 0) {
+    const textItem = rawObj.content.find(
+      (c: any) =>
+        c &&
+        c.type === "text" &&
+        typeof c.text === "string" &&
+        c.text.length > 0,
+    );
+    if (textItem && textItem.text) {
+      summaryText = textItem.text;
+    }
+  }
+
+  const mergedStructuredContent = {
+    title: (structuredContent.title as string) || "Widget",
+    data: structuredContent.data || {},
+    ...structuredContent,
+    ...(summaryText ? { summary: summaryText } : {}),
+  };
+
+  return {
+    structuredContent: mergedStructuredContent as any,
+    content: rawObj.content as any,
+    _meta: rawObj._meta as any,
+  };
 };
 
 const getInitialToolResult = (): McpToolResultPayload | null => {
@@ -73,6 +104,7 @@ const getInitialToolResult = (): McpToolResultPayload | null => {
 
 export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
   toolResult: getInitialToolResult(),
+  subViewHistory: [],
 
   setToolResult: (payload) => {
     if (!payload) {
@@ -94,6 +126,7 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
 
     set({
       toolResult: payload,
+      subViewHistory: [],
     });
   },
 
@@ -107,7 +140,24 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
     }
     set({
       toolResult: null,
+      subViewHistory: [],
     });
+  },
+
+  pushSubView: (view) => {
+    set((state) => ({
+      subViewHistory: [...state.subViewHistory, view],
+    }));
+  },
+
+  popSubView: () => {
+    set((state) => ({
+      subViewHistory: state.subViewHistory.slice(0, -1),
+    }));
+  },
+
+  clearSubViews: () => {
+    set({ subViewHistory: [] });
   },
 }));
 

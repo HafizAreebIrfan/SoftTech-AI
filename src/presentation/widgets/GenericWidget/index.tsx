@@ -7,6 +7,8 @@ import { TableLayout } from "../layouts/TableLayout";
 import { GeneralLayout } from "../layouts/GeneralLayout";
 import { EmptyStateBlock } from "../components/EmptyStateBlock";
 import { WeatherBlock } from "../components/WeatherBlock/WeatherBlock";
+import { OptionPickerBlock } from "../components/OptionPickerBlock/OptionPickerBlock";
+import { useMcpWidgetStore } from "../../../infrastructure/store/mcpWidgetStore";
 import { getValue } from "../../../utils";
 import type { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
 import styles from "../../../styles/genericwidgetrenderer.module.css";
@@ -14,6 +16,9 @@ import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
 
 export const GenericWidgetRenderer: React.FC = () => {
   useApplyGlobalThemeVars();
+  const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
+  const popSubView = useMcpWidgetStore((state) => state.popSubView);
+
   let toolResult: unknown = null;
   let hasLoadError = false;
 
@@ -142,6 +147,40 @@ export const GenericWidgetRenderer: React.FC = () => {
   const normalizedLayout = presentationPlan.layout;
 
   const renderLayout = () => {
+    const activeSubView = subViewHistory[subViewHistory.length - 1];
+    if (activeSubView) {
+      return (
+        <OptionPickerBlock
+          title={activeSubView.title}
+          onBack={() => popSubView()}
+          onSelectOption={(opt) =>
+            console.log("[MCP Widget] Sub-option selected:", opt)
+          }
+        />
+      );
+    }
+
+    const rawOptions =
+      (structuredContent as any)?.options ||
+      (structuredContent as any)?.recommendations;
+    const isOptionPicker = Array.isArray(rawOptions) && rawOptions.length > 0;
+
+    if (isOptionPicker) {
+      return (
+        <OptionPickerBlock
+          title={content.title || "Select an option"}
+          options={rawOptions.map((opt: any, idx: number) => ({
+            id: opt.id || String(idx),
+            label: opt.label || opt.name || opt.title || `Option ${idx + 1}`,
+            image: opt.image || opt.thumbnail || opt.icon,
+          }))}
+          onSelectOption={(opt) =>
+            console.log("[MCP Widget] Option selected:", opt)
+          }
+        />
+      );
+    }
+
     if (isWeather) {
       return (
         <WeatherBlock

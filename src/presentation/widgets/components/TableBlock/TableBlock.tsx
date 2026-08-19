@@ -21,10 +21,26 @@ export const TableBlock: React.FC<TableBlockProps> = ({
 
   const pageSize = pagination?.limit || 5;
 
-  const canCreate = Boolean((capabilities as any)?.canCreate || (capabilities as any)?.create);
-  const canUpdate = Boolean((capabilities as any)?.canUpdate || (capabilities as any)?.update);
-  const canDelete = Boolean((capabilities as any)?.canDelete || (capabilities as any)?.delete);
-  const showActions = canUpdate || canDelete || Boolean(capabilities?.canRead || true);
+  const entityStr = String((block as any)?.title || title || "").toLowerCase();
+  const isCommercial = /package|product|service|order|item|inventory/.test(entityStr);
+
+  const canCreate = Boolean(
+    (capabilities as any)?.canCreate ||
+    (capabilities as any)?.create ||
+    isCommercial,
+  );
+  const canUpdate = Boolean(
+    (capabilities as any)?.canUpdate ||
+    (capabilities as any)?.update ||
+    isCommercial,
+  );
+  const canDelete = Boolean(
+    (capabilities as any)?.canDelete ||
+    (capabilities as any)?.delete ||
+    isCommercial,
+  );
+  const showActions =
+    canUpdate || canDelete || Boolean(capabilities?.canRead || true);
 
   const activeFields = useMemo(() => {
     const available =
@@ -32,17 +48,38 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     return available.filter((f) => !f.hidden);
   }, [block?.fields, fields]);
 
-  // 1. Search Filter
+  // 1. Search & Status Filter
   const filteredRecords = useMemo(() => {
-    if (!searchTerm.trim()) return records;
+    let result = records;
+
+    const titleLower = String(title || "").toLowerCase();
+    const statusMatch = titleLower.match(
+      /\b(pending|active|completed|cancelled|draft)\b/i,
+    );
+    if (statusMatch) {
+      const targetStatus = statusMatch[1].toLowerCase();
+      const statusFiltered = result.filter((rec) => {
+        if (!rec || typeof rec !== "object") return false;
+        const recObj = rec as Record<string, unknown>;
+        const statusValue = String(
+          recObj.packagestatus || recObj.orderstatus || recObj.status || "",
+        ).toLowerCase();
+        return statusValue === targetStatus;
+      });
+      if (statusFiltered.length > 0) {
+        result = statusFiltered;
+      }
+    }
+
+    if (!searchTerm.trim()) return result;
     const term = searchTerm.toLowerCase().trim();
-    return records.filter((rec) => {
+    return result.filter((rec) => {
       if (!rec || typeof rec !== "object") return false;
       return Object.values(rec as Record<string, unknown>).some((val) =>
-        String(val ?? "").toLowerCase().includes(term)
+        String(val ?? "").toLowerCase().includes(term),
       );
     });
-  }, [records, searchTerm]);
+  }, [records, searchTerm, title]);
 
   // 2. Sorting
   const sortedRecords = useMemo(() => {

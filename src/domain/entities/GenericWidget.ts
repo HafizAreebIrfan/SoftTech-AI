@@ -142,10 +142,20 @@ declare global {
   }
 }
 
+export interface McpSubView {
+  title: string;
+  data?: unknown;
+  blockType?: string;
+}
+
 export interface McpWidgetState {
   toolResult: McpToolResultPayload | null;
+  subViewHistory: McpSubView[];
   setToolResult: (payload: McpToolResultPayload | null) => void;
   resetToolResult: () => void;
+  pushSubView: (view: McpSubView) => void;
+  popSubView: () => void;
+  clearSubViews: () => void;
 }
 
 export interface WidgetAction {

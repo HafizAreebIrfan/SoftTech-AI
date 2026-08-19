@@ -53,6 +53,8 @@ export const WeatherBlock: React.FC<WeatherBlockProps> = ({
     current.chance_of_rain ?? rawForecast[0]?.day?.daily_chance_of_rain;
   const uv = current.uv ?? rawForecast[0]?.day?.uv;
 
+  const feelsLike = current.feelslike_c;
+
   return (
     <div className={styles.container}>
       <div className={styles.headerGroup}>
@@ -79,6 +81,11 @@ export const WeatherBlock: React.FC<WeatherBlockProps> = ({
               <span className={styles.tempUnit}>°C</span>
             </div>
             <div className={styles.conditionText}>{currentCondition}</div>
+            {feelsLike !== undefined && (
+              <div style={{ fontSize: "12px", opacity: 0.75, marginTop: "2px" }}>
+                Feels like {feelsLike}°C
+              </div>
+            )}
             <div className={styles.locationText}>{locationName}</div>
           </div>
         </div>
