@@ -4,12 +4,11 @@ import type { ToastType } from "../types/toasttypes";
 export const showToast = (message: string, type: ToastType = "default") => {
   const toastConfig: ToastOptions = {
     position: "top-right",
-    autoClose: 5000,
+    autoClose: 4000,
     hideProgressBar: true,
-    closeOnClick: false,
+    closeOnClick: true,
     pauseOnHover: true,
     draggable: true,
-    theme: "colored",
   };
 
   if (type === "default") {

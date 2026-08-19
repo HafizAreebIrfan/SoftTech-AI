@@ -17,7 +17,7 @@ export const registerCompanyInfo = async (
   payload: any,
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
   const url = `${env.apiBaseUrl}/api/companies/registerstep`;
-  return post(url, payload);
+  return post(url, payload, { skipRedirect: true });
 };
 
 export const saveCompanyApiDetails = async (
@@ -25,7 +25,16 @@ export const saveCompanyApiDetails = async (
   apis: ApisInformation[],
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
   const url = `${env.apiBaseUrl}/api/companies/${companyId}/apidetailsstep`;
-  return post(url, { apis });
+  return post(url, { apis }, { skipRedirect: true });
+};
+
+export const analyzeSingleCompanyApi = async (
+  companyId: string,
+  apiIndex: number,
+  sampleResponse?: string,
+): Promise<{ success: boolean; message: string; data: { apiIndex: number; apiSchema: any; api: any } }> => {
+  const url = `${env.apiBaseUrl}/api/companies/${companyId}/apis/${apiIndex}/analyze`;
+  return post(url, { sampleResponse }, { skipRedirect: true });
 };
 
 export const saveCompanyUiSelection = async (
@@ -38,7 +47,7 @@ export const saveCompanyUiSelection = async (
   token?: string;
 }> => {
   const url = `${env.apiBaseUrl}/api/companies/${companyId}/uiselectionstep`;
-  return post(url, { uiPreference });
+  return post(url, { uiPreference }, { skipRedirect: true });
 };
 
 export const verifySession = async (): Promise<{ user?: User }> => {
@@ -50,40 +59,16 @@ export const logout = async (): Promise<any> => {
   return post(`${env.apiBaseUrl}/api/company/logout`, {});
 };
 
-// --- Forgot Password (demo/mock flow) ---
-// TODO: Replace these mock implementations with real endpoints once the
-// backend exposes forgot-password routes, e.g.
-//   POST `${env.apiBaseUrl}/api/company/forgot-password/request-otp`
-//   POST `${env.apiBaseUrl}/api/company/forgot-password/verify-otp`
-//   POST `${env.apiBaseUrl}/api/company/forgot-password/reset`
-// The Stitch design ships with a hardcoded "Demo OTP: 12345" for preview
-// purposes, so the mock below mirrors that behavior until the real API
-// is ready.
-export const DEMO_OTP = "12345";
-
-export const requestPasswordResetOtp = async (
+export const sendForgotPasswordOtpApi = async (
   email: string,
 ): Promise<{ success: boolean; message: string }> => {
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  return {
-    success: true,
-    message: `A verification code was sent to ${email}.`,
-  };
+  const url = `${env.apiBaseUrl}/api/company/forgot-password`;
+  return post(url, { email }, { skipRedirect: true });
 };
 
-export const verifyPasswordResetOtp = async (
-  otp: string,
+export const resetPasswordApi = async (
+  payload: { email: string; otp: string; password: string },
 ): Promise<{ success: boolean; message: string }> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  if (otp === DEMO_OTP) {
-    return { success: true, message: "Verified successfully!" };
-  }
-  return { success: false, message: "Invalid code, please try again." };
-};
-
-export const resetPassword = async (
-  _payload: { email: string; otp: string; newPassword: string },
-): Promise<{ success: boolean; message: string }> => {
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  return { success: true, message: "Password updated successfully!" };
+  const url = `${env.apiBaseUrl}/api/company/forgot-password/reset`;
+  return post(url, payload, { skipRedirect: true });
 };

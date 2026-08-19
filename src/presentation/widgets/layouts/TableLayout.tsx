@@ -1,56 +1,48 @@
 import React from "react";
-import { WidgetBlock } from "../../../domain/entities/GenericWidget";
+import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { TableBlock } from "../components/TableBlock";
-import { MetricBlock } from "../components/MetricBlock";
+import { useThemeStore } from "../../../hooks";
+import styles from "../../../styles/dashboardwidget.module.css";
 
-interface LayoutProps {
-  title?: string;
-  subtitle?: string;
-  blocks: WidgetBlock[];
-}
-
-export const TableLayout: React.FC<LayoutProps> = ({
+export const TableLayout: React.FC<WidgetLayoutProps> = ({
   title,
   subtitle,
-  blocks = [],
+  records,
+  fields,
+  collection,
+  pagination,
+  capabilities,
+  actions,
+  presentationPlan,
 }) => {
+  const { colors } = useThemeStore();
+  const blocks = presentationPlan?.blocks ?? [];
+  const tableBlock = blocks.find((b) => b.type === "table");
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {(title || subtitle) && (
-        <header>
-          {title && (
-            <h2 style={{ margin: "0 0 0.25rem 0", fontSize: "1.25rem", fontWeight: 700 }}>
-              {title}
-            </h2>
-          )}
+    <section className={styles.container} style={{ color: colors.TextPrimary }}>
+      <header className={styles.header}>
+        <div>
+          <h1 className={styles.title} style={{ color: colors.TextHeading }}>
+            {title || collection?.entity || "Data Table"}
+          </h1>
           {subtitle && (
-            <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.7 }}>
+            <p className={styles.subtitle} style={{ color: colors.TextSecondary }}>
               {subtitle}
             </p>
           )}
-        </header>
-      )}
+        </div>
+      </header>
 
-      {blocks.map((block, index) => {
-        switch (block.type) {
-          case "metrics":
-            return <MetricBlock key={index} metrics={block.metrics || []} title={block.title} />;
-          case "table":
-            return (
-              <TableBlock
-                key={index}
-                columns={block.columns}
-                rows={block.rows}
-                tableHeaders={block.tableHeaders}
-                tableRows={block.tableRows}
-                title={block.title}
-                pagination={block.pagination}
-              />
-            );
-          default:
-            return null;
-        }
-      })}
-    </div>
+      <TableBlock
+        block={tableBlock}
+        records={records}
+        fields={fields}
+        pagination={pagination}
+        capabilities={capabilities}
+        actions={actions}
+      />
+    </section>
   );
 };
+

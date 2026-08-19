@@ -1,52 +1,42 @@
 import React from "react";
-import { WidgetBlock } from "../../../domain/entities/GenericWidget";
+import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { CardsBlock } from "../components/CardsBlock";
-import { GalleryBlock } from "../components/GalleryBlock";
-import { MetricBlock } from "../components/MetricBlock";
-import { KeyValueBlock } from "../components/KeyValueBlock";
+import { useThemeStore } from "../../../hooks";
+import styles from "../../../styles/dashboardwidget.module.css";
 
-interface LayoutProps {
-  title?: string;
-  subtitle?: string;
-  blocks: WidgetBlock[];
-}
-
-export const CatalogLayout: React.FC<LayoutProps> = ({
+export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   title,
   subtitle,
-  blocks = [],
+  records,
+  fields,
+  collection,
+  presentationPlan,
 }) => {
+  const { colors } = useThemeStore();
+  const blocks = presentationPlan?.blocks ?? [];
+  const cardsBlock = blocks.find((b) => b.type === "cards");
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {(title || subtitle) && (
-        <header>
-          {title && (
-            <h2 style={{ margin: "0 0 0.25rem 0", fontSize: "1.25rem", fontWeight: 700 }}>
-              {title}
-            </h2>
-          )}
+    <section className={styles.container} style={{ color: colors.TextPrimary }}>
+      <header className={styles.header}>
+        <div>
+          <h1 className={styles.title} style={{ color: colors.TextHeading }}>
+            {title || collection?.entity || "Catalog"}
+          </h1>
           {subtitle && (
-            <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.7 }}>
+            <p className={styles.subtitle} style={{ color: colors.TextSecondary }}>
               {subtitle}
             </p>
           )}
-        </header>
-      )}
+        </div>
+      </header>
 
-      {blocks.map((block, index) => {
-        switch (block.type) {
-          case "cards":
-            return <CardsBlock key={index} cards={block.cards || []} title={block.title} />;
-          case "gallery":
-            return <GalleryBlock key={index} images={block.images || []} title={block.title} />;
-          case "metrics":
-            return <MetricBlock key={index} metrics={block.metrics || []} title={block.title} />;
-          case "keyValue":
-            return <KeyValueBlock key={index} keyValueItems={block.keyValueItems || []} title={block.title} />;
-          default:
-            return null;
-        }
-      })}
-    </div>
+      <CardsBlock
+        block={cardsBlock}
+        records={records}
+        fields={fields}
+      />
+    </section>
   );
 };
+

@@ -1,163 +1,130 @@
-export type WidgetBlockType =
-  | "metrics"
-  | "table"
-  | "cards"
-  | "timeline"
-  | "gallery"
-  | "map"
-  | "alert"
-  | "form"
-  | "list"
-  | "keyValue";
+export type JsonPrimitive = string | number | boolean | null;
 
-export type WidgetTone = "default" | "good" | "warning" | "danger";
+export type JsonValue =
+  | JsonPrimitive
+  | JsonValue[]
+  | { [key: string]: JsonValue };
 
-export interface WidgetMetric {
-  label: string;
-  value: string | number;
-  tone?: WidgetTone;
-  change?: string;
-  changeTone?: WidgetTone;
-}
+export type WidgetAudience = "admin" | "user" | "both";
 
-export interface WidgetListItem {
-  title: string;
-  description?: string;
-  image?: any;
-  icon?: string;
-  tone?: WidgetTone;
-  meta?: string;
-}
+export type PlatformType = "web" | "mobile" | "both";
 
-export interface WidgetKeyValueItem {
-  key: string;
-  value: string | number;
-  tone?: WidgetTone;
-}
-
-export interface WidgetTableCell {
-  value: string | number;
-  tone?: WidgetTone;
-}
-
-export type WidgetTableRow = (string | number | WidgetTableCell)[];
-
-export interface TableColumn {
+export interface FieldSchema {
   key: string;
   label: string;
-  type?: "text" | "number" | "currency" | "date" | "status" | "image";
-  sortable?: boolean;
-}
-
-export interface Pagination {
-  page: number;
-  totalPages: number;
-  totalItems: number;
-  pageSize?: number;
-}
-
-export interface WidgetCardItem {
-  id?: string;
-  title: string;
-  subtitle?: string;
-  image?: string;
-  icon?: string;
-  badge?: string;
-  attributes?: { label: string; value: string | number }[];
-}
-
-export interface WidgetTimelineEvent {
-  id?: string;
-  title: string;
-  subtitle?: string;
-  date: string;
-  status?: string;
-  icon?: string;
-}
-
-export interface WidgetMapMarker {
-  id?: string;
-  lat: number;
-  lng: number;
-  title: string;
-  description?: string;
-  icon?: string;
-  badge?: string;
-}
-
-export interface WidgetGalleryImage {
-  url: string;
-  title?: string;
-}
-
-export interface WidgetFormField {
-  name: string;
   type:
     | "text"
     | "number"
+    | "currency"
+    | "date"
+    | "datetime"
+    | "image"
     | "email"
-    | "password"
-    | "textarea"
-    | "select"
-    | "multiselect"
-    | "checkbox"
-    | "radio"
-    | "switch"
-    | "slider"
-    | "date";
-  label: string;
-  required?: boolean;
-  placeholder?: string;
-  options?: string[];
-  value?: string | number | string[];
+    | "phone"
+    | "status"
+    | "boolean"
+    | "latitude"
+    | "longitude"
+    | "url"
+    | "object"
+    | "array";
+  path?: string;
+  hidden?: boolean;
+  primary?: boolean;
+  sortable?: boolean;
+  searchable?: boolean;
+  filterable?: boolean;
 }
 
-export interface WidgetBlock {
-  type: WidgetBlockType;
-  title?: string;
-  subtitle?: string;
-  image?: any;
-  severity?: "info" | "warning" | "error" | "success";
-  message?: string;
-  metrics?: WidgetMetric[];
-  listItems?: WidgetListItem[];
-  keyValueItems?: WidgetKeyValueItem[];
-  columns?: TableColumn[];
-  rows?: (string | number)[][];
-  tableHeaders?: string[];
-  tableRows?: WidgetTableRow[];
-  cards?: WidgetCardItem[];
-  events?: WidgetTimelineEvent[];
-  markers?: WidgetMapMarker[];
-  images?: WidgetGalleryImage[];
-  fields?: WidgetFormField[];
-  formFields?: WidgetFormField[];
-  submitAction?: string;
-  pagination?: Pagination;
+export interface CollectionMetric {
+  label: string;
+  value: string;
+  change?: string;
+}
+
+export interface CollectionChartDataPoint {
+  label: string;
+  value: number;
+}
+
+export interface CollectionChart {
+  type: string;
+  title: string;
+  data: CollectionChartDataPoint[];
+}
+
+export interface CollectionResult {
+  entity?: string;
+  dataPath?: string;
+  layout?: string;
+  itemLabel?: string;
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  fields?: FieldSchema[];
+  metrics?: CollectionMetric[];
+  charts?: CollectionChart[];
+  summary?: string;
+}
+
+export interface Capabilities {
+  canCreate?: boolean;
+  canRead?: boolean;
+  canUpdate?: boolean;
+  canDelete?: boolean;
+  canSearch?: boolean;
+  canFilter?: boolean;
+  canSort?: boolean;
+  canPaginate?: boolean;
+  [key: string]: boolean | undefined;
+}
+
+export interface Pagination {
+  page?: number;
+  totalPages?: number;
+  total?: number;
+  limit?: number;
+  hasNext?: boolean;
+  hasPrevious?: boolean;
+  [key: string]: JsonValue | undefined;
 }
 
 export interface GenericWidgetContent {
   title: string;
   subtitle?: string;
-  layout?: "dashboard" | "catalog" | "table" | "timeline" | "details" | "general" | string;
-  industry?: string;
-  blocks: WidgetBlock[];
-  meta?: {
-    source?: string;
-    lastFetched?: string;
-    company?: string;
-  };
+  data: JsonValue;
+  collection?: CollectionResult;
+  capabilities?: Capabilities;
+  pagination?: Pagination;
+  actions?: WidgetAction[];
+  metadata?: Record<string, JsonValue>;
+  audience?: WidgetAudience;
+  platformType?: PlatformType;
+  intent?: string;
+}
+
+export interface McpContentItem {
+  type?: string;
+  text?: string;
+  [key: string]: unknown;
 }
 
 export interface McpToolResultPayload {
   structuredContent: GenericWidgetContent;
-  content?: { type?: string; text?: string }[];
-  _meta?: unknown;
+
+  content?: McpContentItem[];
+
+  _meta?: Record<string, unknown>;
 }
 
 export interface OpenAiGlobals {
   toolInput?: unknown;
   toolOutput?: McpToolResultPayload | null;
+  widgetState?: Record<string, unknown> | McpToolResultPayload | null;
+  setWidgetState?: (
+    state: Record<string, unknown> | McpToolResultPayload | null,
+  ) => void;
 }
 
 export interface OpenAiSetGlobalsEventDetail {
@@ -167,8 +134,52 @@ export interface OpenAiSetGlobalsEventDetail {
 declare global {
   interface Window {
     openai?: OpenAiGlobals;
+    __SOFTTECH_AI_WIDGET_BOOTSTRAP__?: McpToolResultPayload | null;
   }
+
   interface WindowEventMap {
     "openai:set_globals": CustomEvent<OpenAiSetGlobalsEventDetail>;
   }
+}
+
+export interface McpWidgetState {
+  toolResult: McpToolResultPayload | null;
+  setToolResult: (payload: McpToolResultPayload | null) => void;
+  resetToolResult: () => void;
+}
+
+export interface WidgetAction {
+  id: string;
+  label: string;
+  tool: string;
+  enabled?: boolean;
+  requiresItem?: boolean;
+  requiresConfirmation?: boolean;
+  confirmationMessage?: string;
+}
+
+export type WidgetTone = "default" | "good" | "warning" | "danger";
+
+export interface TableColumn {
+  key?: string;
+  label?: string;
+  path?: string;
+}
+
+export interface WidgetTableCell {
+  value: any;
+  tone?: WidgetTone;
+}
+
+export interface WidgetTableRow {
+  id?: string;
+  cells?: (string | number | WidgetTableCell)[];
+  [key: string]: any;
+}
+
+export interface WidgetBlock {
+  type: string;
+  title?: string;
+  subtitle?: string;
+  [key: string]: any;
 }

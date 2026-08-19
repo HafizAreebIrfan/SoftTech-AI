@@ -296,6 +296,42 @@ export const useApplyGlobalThemeVars = () => {
     root.style.setProperty("--app-error-badge-border", colors.ErrorBadgeBorder);
     root.style.setProperty("--app-table-divider", colors.TableDivider);
 
+    /*--*/
+    /* Widget Theme Variables */
+    root.style.setProperty("--widget-container-bg", colors.WidgetContainerBg);
+    root.style.setProperty(
+      "--widget-container-border",
+      colors.WidgetContainerBorder,
+    );
+    root.style.setProperty("--widget-card-bg", colors.WidgetCardBg);
+    root.style.setProperty("--widget-card-border", colors.WidgetCardBorder);
+    root.style.setProperty("--widget-card-hover", colors.WidgetCardHover);
+    root.style.setProperty("--widget-header-title", colors.WidgetHeaderTitle);
+    root.style.setProperty(
+      "--widget-header-subtitle",
+      colors.WidgetHeaderSubtitle,
+    );
+    root.style.setProperty("--widget-metric-val", colors.WidgetMetricVal);
+    root.style.setProperty("--widget-metric-label", colors.WidgetMetricLabel);
+    root.style.setProperty("--widget-badge-bg", colors.WidgetBadgeBg);
+    root.style.setProperty("--widget-badge-text", colors.WidgetBadgeText);
+    root.style.setProperty("--widget-badge-border", colors.WidgetBadgeBorder);
+    root.style.setProperty("--widget-chart-primary", colors.WidgetChartPrimary);
+    root.style.setProperty(
+      "--widget-chart-secondary",
+      colors.WidgetChartSecondary,
+    );
+    root.style.setProperty("--widget-chart-grid", colors.WidgetChartGrid);
+
+    // Palette Swatches
+    root.style.setProperty("--swatch-indigo", colors.SwatchIndigo);
+    root.style.setProperty("--swatch-emerald", colors.SwatchEmerald);
+    root.style.setProperty("--swatch-crimson", colors.SwatchCrimson);
+    root.style.setProperty("--swatch-ocean", colors.SwatchOcean);
+    root.style.setProperty("--swatch-violet", colors.SwatchViolet);
+    root.style.setProperty("--swatch-amber", colors.SwatchAmber);
+    root.style.setProperty("--swatch-slate", colors.SwatchSlate);
+
     root.setAttribute("data-theme", isDark ? "dark" : "light");
   }, [colors, isDark]);
 };

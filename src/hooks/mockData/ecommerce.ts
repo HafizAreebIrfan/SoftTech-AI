@@ -1,5 +1,4 @@
 import { WidgetBlock } from "../../domain/entities/GenericWidget";
-import { Product } from "../../types";
 
 export const ecommerceMock = {
   title: "AuraStyle Apparel",
@@ -47,7 +46,7 @@ export const ecommerceMock = {
   ] as WidgetBlock[],
 };
 
-export const PRODUCTS_MOCK: Product[] = [
+export const PRODUCTS_MOCK: any[] = [
   {
     id: "prod-1",
     title: "SoundMax Studio 4",

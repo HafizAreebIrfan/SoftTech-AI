@@ -1,24 +1,24 @@
-import React from 'react';
+import React from "react";
 import { IconProps } from "../../../types/icontypes";
 
-const RefreshIcon: React.FC<IconProps> = ({ size = 24, color = "currentColor" }) => {
+const RefreshIcon: React.FC<IconProps> = ({
+  color = "currentColor",
+  size = 24,
+}) => {
   return (
     <svg
-      xmlns="http://www.w3.org/2000/svg"
       width={size}
       height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke={color}
-      strokeWidth={2}
+      strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <polyline points="23 4 23 10 17 10" />
-      <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
     </svg>
   );
-}
+};
 
 export default RefreshIcon;

@@ -3,7 +3,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  padding: 1.25rem 1.5rem;
+  padding: 20px 24px;
   z-index: 100;
   background-color: var(--app-header-bg);
   backdrop-filter: blur(12px);
@@ -29,22 +29,23 @@
 .logoContainer {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .logoText {
-  font-size: 1.25rem;
+  font-size: 20px;
   font-weight: 800;
   letter-spacing: -0.025em;
   color: var(--app-text-primary);
-  font-family: "Plus Jakarta Sans", sans-serif;
+  font-family: "JOST", sans-serif;
 }
 
 .navLinks {
   display: none;
   align-items: center;
-  gap: 2rem;
-  font-size: 0.875rem;
+  gap: 32px;
+  font-size: 14px;
+  font-family: "Poppins", sans-serif;
   font-weight: 500;
 }
 
@@ -57,6 +58,7 @@
 .navLink {
   color: var(--app-text-secondary);
   text-decoration: none;
+  font-family: "Poppins", sans-serif;
   transition: color 0.2s ease;
 }
 
@@ -67,11 +69,11 @@
 .navActions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 16px;
 }
 
 .actionBtn {
-  padding: 0.625rem;
+  padding: 10px;
   border-radius: 9999px;
   border: 1px solid var(--app-card-border);
   background: transparent;
@@ -89,7 +91,8 @@
 }
 
 .loginLink {
-  font-size: 0.875rem;
+  font-size: 14px;
+  font-family: "Poppins", sans-serif;
   font-weight: 500;
   color: var(--app-text-secondary);
   text-decoration: none;
@@ -110,9 +113,10 @@
 .primaryBtn {
   background-color: var(--app-text-primary);
   color: var(--app-bg);
-  padding: 0.625rem 1.25rem;
+  padding: 10px 20px;
   border-radius: 9999px;
-  font-size: 0.875rem;
+  font-size: 14px;
+  font-family: "Poppins", sans-serif;
   font-weight: 700;
   border: none;
   cursor: pointer;
@@ -154,17 +158,18 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--app-card-border);
-  padding: 2rem;
+  padding: 32px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  font-size: 0.875rem;
+  gap: 24px;
+  font-size: 14px;
+  font-family: "Poppins", sans-serif;
   font-weight: 700;
   letter-spacing: 0.05em;
   z-index: 99;
   box-shadow: var(--app-overlay-shadow);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  transform: translateY(-1rem);
+  transform: translateY(-16px);
   opacity: 0;
   pointer-events: none;
 }
@@ -178,7 +183,8 @@
 .mobileNavLink {
   color: var(--app-text-secondary);
   text-decoration: none;
-  padding: 0.5rem 0;
+  font-family: "Poppins", sans-serif;
+  padding: 8px 0;
   transition: color 0.2s ease;
 }
 
@@ -189,36 +195,39 @@
 .divider {
   height: 1px;
   background-color: var(--app-card-border);
-  margin: 0.5rem 0;
+  margin: 8px 0;
 }
 
 .mobileActions {
   display: flex;
-  gap: 1rem;
+  gap: 16px;
 }
 
 .mobileLoginBtn {
   flex: 1;
   text-align: center;
-  padding: 0.75rem 0;
+  padding: 12px 0;
   border-radius: 9999px;
   border: 1px solid var(--app-card-border);
   color: var(--app-text-secondary);
   text-decoration: none;
+  font-family: "Poppins", sans-serif;
   font-weight: 700;
   transition: all 0.2s ease;
 }
 
 .mobilePrimaryBtn {
   flex: 1;
-  padding: 0.75rem 0;
+  padding: 12px 0;
   border-radius: 9999px;
   background-color: var(--app-text-primary);
   color: var(--app-bg);
   border: none;
+  font-family: "Poppins", sans-serif;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   text-decoration: none;
   text-align: center;
 }
+

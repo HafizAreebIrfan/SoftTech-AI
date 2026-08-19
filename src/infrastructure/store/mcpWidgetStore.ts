@@ -1,139 +1,176 @@
 import { create } from "zustand";
 import { useEffect } from "react";
-import {
-  McpToolResultPayload,
-  OpenAiGlobals,
-} from "../../domain/entities/GenericWidget";
 import { useApp } from "@modelcontextprotocol/ext-apps/react";
 
+import {
+  McpToolResultPayload,
+  McpWidgetState,
+} from "../../domain/entities/GenericWidget";
+
 export const TOOL_RESULT_NOTIFICATION = "ui/notifications/tool-result";
+const STORAGE_KEY = "last_mcp_widget_result";
 
-interface McpWidgetState {
-  toolResult: McpToolResultPayload | null;
-  setToolResult: (payload: McpToolResultPayload | null) => void;
-  resetToolResult: () => void;
-}
+const isMcpToolResultPayload = (
+  value: unknown,
+): value is McpToolResultPayload => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
 
-export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
-  toolResult: null,
-  setToolResult: (payload) => set({ toolResult: payload }),
-  resetToolResult: () => set({ toolResult: null }),
-}));
+  const payload = value as Record<string, unknown>;
 
-export const previewGenericToolResult: McpToolResultPayload = {
-  _meta: {
-    company: "WeatherWay",
-    source: "https://api.weatherapi.com/v1/forecast.json?q=Karachi&days=3",
-    lastFetched: new Date().toISOString(),
-    isPreview: true,
-  },
-  content: [
-    {
-      type: "text",
-      text: "Get Weather Data: 3 widget block(s) returned.",
-    },
-  ],
-  structuredContent: {
-    title: "Karachi Weather",
-    subtitle: "Current conditions and 3-day forecast",
-    layout: "dashboard",
-    blocks: [
-      {
-        type: "metrics",
-        title: "Current Conditions",
-        metrics: [
-          {
-            label: "Temperature",
-            value: "32°C",
-            tone: "warning",
-            change: "Feels like 38°C",
-            changeTone: "danger",
-          },
-          {
-            label: "Humidity",
-            value: "78%",
-            tone: "default",
-          },
-          {
-            label: "Wind Speed",
-            value: "14 km/h",
-            tone: "good",
-            change: "SW",
-            changeTone: "default",
-          },
-        ],
-      },
-      {
-        type: "keyValue",
-        title: "Location Details",
-        keyValueItems: [
-          { key: "Region", value: "Sindh", tone: "default" },
-          { key: "Country", value: "Pakistan", tone: "default" },
-          { key: "Local Time", value: "16:25", tone: "good" },
-        ],
-      },
-      {
-        type: "table",
-        title: "3-Day Forecast",
-        tableHeaders: ["Date", "Condition", "Max Temp", "Min Temp"],
-        tableRows: [
-          ["Today", { value: "Sunny", tone: "warning" }, "34°C", "28°C"],
-          [
-            "Tomorrow",
-            { value: "Partly Cloudy", tone: "default" },
-            "33°C",
-            "27°C",
-          ],
-          ["Day 3", { value: "Rain Showers", tone: "good" }, "30°C", "26°C"],
-        ],
-      },
-    ],
-  },
+  if (!("structuredContent" in payload) && !("content" in payload)) {
+    return false;
+  }
+
+  const sc = payload.structuredContent as Record<string, unknown> | undefined;
+  if (sc && typeof sc === "object") {
+    return Boolean(
+      sc.data !== undefined ||
+        sc.collection !== undefined ||
+        sc.blocks !== undefined ||
+        (Array.isArray(payload.content) &&
+          payload.content.some(
+            (c: any) => c.text && typeof c.text === "string" && c.text.length > 50,
+          )),
+    );
+  }
+
+  return true;
 };
 
-/**
- * Hook to synchronize OpenAI App SDK/MCP message actions with Zustand store
- * and return the current toolResult.
- */
-export const useMcpToolResult = () => {
-  const { toolResult, setToolResult } = useMcpWidgetStore();
-  useApp({
-    appInfo: {
-      name: toolResult?.structuredContent?.title || "Your MCP",
-      version: "1.0.0",
-    },
-    capabilities: {},
-    onAppCreated: (app) => {
-      try {
-        app.ontoolresult = (result) => {
-          console.log("[MCP Apps Bridge] ✅ tool result via useApp:", result);
-          setToolResult((result as unknown as McpToolResultPayload) ?? null);
-        };
-      } catch (e) {
-        console.log("Bridge fails to build via useApp", e);
-      }
-    },
-  });
-  useEffect(() => {
-    if (window.openai?.toolOutput) {
-      console.log(
-        "[ChatGPT Bridge] 📥 Initial toolResult loaded from window.openai:",
-        window.openai.toolOutput,
-      );
-      setToolResult(window.openai.toolOutput as McpToolResultPayload);
+const extractToolResult = (value: unknown): McpToolResultPayload | null => {
+  if (isMcpToolResultPayload(value)) {
+    return value;
+  }
+
+  return null;
+};
+
+const getInitialToolResult = (): McpToolResultPayload | null => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const bootstrap =
+      (window as any).__SOFTTECH_AI_WIDGET_BOOTSTRAP__ ||
+      (window as any).openai?.widgetState ||
+      (window as any).openai?.toolOutput;
+
+    const extracted = extractToolResult(bootstrap);
+    if (extracted) return extracted;
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return extractToolResult(parsed);
+    }
+  } catch (e) {
+    console.error("[MCP Widget] Failed restoring state:", e);
+  }
+
+  return null;
+};
+
+export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
+  toolResult: getInitialToolResult(),
+
+  setToolResult: (payload) => {
+    if (!payload) {
+      return;
     }
 
-    const handleGlobals = (event: Event) => {
-      const customEvent = event as CustomEvent<{ globals?: OpenAiGlobals }>;
-      const output = customEvent.detail?.globals?.toolOutput;
-      if (output === undefined) return;
-      console.log("[ChatGPT Bridge] 🔄 openai:set_globals received:", output);
-      setToolResult((output as McpToolResultPayload) ?? null);
+    console.log("[MCP Widget] ui/notifications/tool-result received:", payload);
+
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        if ((window as any).openai?.setWidgetState) {
+          (window as any).openai.setWidgetState(payload);
+        }
+      }
+    } catch (e) {
+      console.warn("[MCP Widget] Save state error:", e);
+    }
+
+    set({
+      toolResult: payload,
+    });
+  },
+
+  resetToolResult: () => {
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (e) {
+      // ignore
+    }
+    set({
+      toolResult: null,
+    });
+  },
+}));
+
+export const useMcpToolResult = () => {
+  const toolResult = useMcpWidgetStore((state) => state.toolResult);
+  const setToolResult = useMcpWidgetStore((state) => state.setToolResult);
+
+  useApp({
+    appInfo: {
+      name: toolResult?.structuredContent?.title || "SoftTech AI Widget",
+      version: "1.0.0",
+    },
+
+    capabilities: {},
+
+    onAppCreated: (app) => {
+      console.log("[MCP Widget] App created");
+
+      app.ontoolresult = (result) => {
+        console.log("[MCP Widget] ontoolresult:", result);
+        const payload = extractToolResult(result);
+        if (payload) {
+          setToolResult(payload);
+        }
+      };
+    },
+  });
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data;
+
+      if (!message || typeof message !== "object") {
+        return;
+      }
+
+      if (
+        message.jsonrpc !== "2.0" ||
+        message.method !== TOOL_RESULT_NOTIFICATION
+      ) {
+        return;
+      }
+
+      console.log("[MCP Widget] JSON-RPC tool result notification:", message);
+
+      const payload = extractToolResult(message.params);
+
+      if (!payload) {
+        console.warn(
+          "[MCP Widget] Invalid tool result params:",
+          message.params,
+        );
+        return;
+      }
+
+      setToolResult(payload);
     };
 
-    window.addEventListener("openai:set_globals", handleGlobals);
-    return () =>
-      window.removeEventListener("openai:set_globals", handleGlobals);
+    window.addEventListener("message", handleMessage);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
   }, [setToolResult]);
 
   return toolResult;

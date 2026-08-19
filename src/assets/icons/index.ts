@@ -41,3 +41,5 @@ export { default as SpinnerIcon } from './SpinnerIcon/index';
 export { default as CodeIcon } from './CodeIcon/index';
 export { default as ShieldLockIcon } from './ShieldLockIcon/index';
 export { default as XMarkIcon } from './XMarkIcon/index';
+export { default as RefreshIcon } from './RefreshIcon/index';
+export { default as UploadIcon } from './UploadIcon/index';

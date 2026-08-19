@@ -1,162 +1,182 @@
+.container {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
 .tableWrapper {
   width: 100%;
   overflow-x: auto;
-  background-color: var(--app-bg-secondary, #0c0c0e);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
-  border-radius: 8px;
-  margin-top: 0.5rem;
-  margin-bottom: 0.75rem;
+  background-color: var(--widget-card-bg);
+  border: 1px solid var(--widget-card-border);
+  border-radius: 12px;
+  box-sizing: border-box;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.8125rem;
+  font-size: 0.85rem;
 }
 
 .th {
-  padding: 0.625rem 0.75rem;
+  background-color: var(--widget-container-bg);
+  color: var(--widget-header-subtitle);
   font-weight: 600;
-  color: var(--app-text-secondary, #8a8d98);
-  border-bottom: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--widget-card-border);
   white-space: nowrap;
+  user-select: none;
 }
 
-.td {
-  padding: 0.625rem 0.75rem;
-  color: var(--app-text-primary, #ffffff);
-  border-bottom: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
-}
-
-.tr:last-child .td {
-  border-bottom: none;
-}
-
-.good {
-  color: var(--app-wavy-emerald, #10b981) !important;
-}
-
-.warning {
-  color: var(--app-warning-text, #f59e0b) !important;
-}
-
-.danger {
-  color: #ef4444 !important;
-}
-
-.default {
-  color: var(--app-text-primary, #ffffff) !important;
-}
-
-/* Search bar */
-.searchContainer {
-  position: relative;
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.searchInput {
-  width: 100%;
-  max-width: 300px;
-  padding: 0.45rem 0.75rem 0.45rem 2rem;
-  font-size: 0.8125rem;
-  border-radius: 6px;
-  background-color: var(--app-bg-secondary, #0c0c0e);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
-  color: var(--app-text-primary, #ffffff);
-  outline: none;
-  transition: all 0.2s ease-in-out;
-}
-
-.searchInput:focus {
-  border-color: var(--app-card-active-border, #3b82f6);
-}
-
-.searchIcon {
-  position: absolute;
-  left: 0.625rem;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Sortable Headers */
 .thSortable {
   cursor: pointer;
-  user-select: none;
-  transition: background-color 0.2s;
+  transition: color 0.15s ease;
 }
 
 .thSortable:hover {
-  background-color: rgba(255, 255, 255, 0.02);
+  color: var(--widget-header-title);
 }
 
 .headerContent {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 6px;
 }
 
 .sortIcon {
-  opacity: 0.5;
-  transition: opacity 0.2s;
   display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
 }
 
-.thSortable:hover .sortIcon {
-  opacity: 0.9;
+.tr {
+  border-bottom: 1px solid var(--widget-card-border);
+  transition: background-color 0.15s ease;
 }
 
-/* Pagination Controls */
+.tr:last-child {
+  border-bottom: none;
+}
+
+.tr:hover {
+  background-color: var(--widget-card-hover);
+}
+
+.td {
+  padding: 12px 14px;
+  color: var(--widget-header-title);
+  vertical-align: middle;
+}
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--widget-card-bg);
+  border: 1px solid var(--widget-card-border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  width: max-content;
+}
+
+.searchInput {
+  background: transparent;
+  border: none;
+  color: var(--widget-header-title);
+  font-size: 0.825rem;
+  outline: none;
+}
+
 .pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.75rem;
-  padding: 0.25rem 0;
-  font-size: 0.8125rem;
-  color: var(--app-text-secondary, #8a8d98);
-}
-
-.paginationButtons {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  gap: 12px;
+  padding: 10px 16px;
+  color: var(--widget-header-subtitle);
+  font-size: 0.8rem;
+  border-top: 1px solid var(--widget-card-border);
 }
 
 .pageBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.35rem 0.6rem;
-  background-color: var(--app-bg-secondary, #0c0c0e);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  background-color: var(--widget-badge-bg);
+  color: var(--widget-badge-text);
+  border: 1px solid var(--widget-badge-border);
+  padding: 4px 10px;
   border-radius: 6px;
-  color: var(--app-text-primary, #ffffff);
+  font-size: 0.775rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pageBtn:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.04);
-  border-color: var(--app-card-active-border, #3b82f6);
 }
 
 .pageBtn:disabled {
-  opacity: 0.3;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
-.pageSizeSelect {
-  padding: 0.25rem 0.5rem;
-  background-color: var(--app-bg-secondary, #0c0c0e);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+@media (max-width: 540px) {
+  .pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.actionsCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
   border-radius: 6px;
-  color: var(--app-text-primary, #ffffff);
-  font-size: 0.75rem;
-  outline: none;
+  border: 1px solid var(--widget-card-border);
+  background: var(--widget-card-bg);
+  color: var(--widget-header-title);
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editBtn {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.editBtn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.deleteBtn {
+  color: #ef4444;
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+}
+
+.deleteBtn:hover {
+  opacity: 0.9;
+}
+
+.createNewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--app-brand-accent, #ef4444);
+  background: transparent;
+  color: var(--widget-header-title);
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.createNewBtn:hover {
+  background: var(--app-brand-accent, rgba(239, 68, 68, 0.1));
 }

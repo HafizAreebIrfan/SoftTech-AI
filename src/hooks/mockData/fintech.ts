@@ -1,6 +1,4 @@
-import { FintechStock, FintechPortfolioItem } from "../../types/fintech";
-
-export const MOCK_STOCKS: FintechStock[] = [
+export const MOCK_STOCKS: any[] = [
   {
     ticker: "AAPL",
     name: "Apple Inc.",
@@ -94,7 +92,7 @@ export const MOCK_STOCKS: FintechStock[] = [
   }
 ];
 
-export const INITIAL_PORTFOLIO: FintechPortfolioItem[] = [
+export const INITIAL_PORTFOLIO: any[] = [
   {
     ticker: "AAPL",
     shares: 10,

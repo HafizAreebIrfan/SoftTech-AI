@@ -53,9 +53,9 @@ const authLayout = createRoute({
   getParentRoute: () => rootRoute,
   id: "_auth", // Prefix with underscore for pathless layout
   component: AuthLayout,
-  beforeLoad: () => {
+  beforeLoad: ({ location }) => {
     const { isAuthenticated } = useAuthStore.getState();
-    if (isAuthenticated) {
+    if (isAuthenticated && !location.pathname.startsWith("/signup")) {
       throw redirect({ to: "/dashboard" });
     }
   },

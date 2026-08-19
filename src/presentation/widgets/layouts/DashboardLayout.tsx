@@ -1,92 +1,141 @@
 import React from "react";
-import { WidgetBlock } from "../../../domain/entities/GenericWidget";
-import { MetricBlock } from "../components/MetricBlock";
-import { TableBlock } from "../components/TableBlock";
+import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
+import styles from "../../../styles/dashboardwidget.module.css";
+import { useThemeStore } from "../../../hooks";
+import { ChartsBlock, TableBlock } from "../components";
+import { SummaryBlock } from "../components/SummaryBlock";
+import { DetailBlock } from "../components/DetailBlock";
 import { CardsBlock } from "../components/CardsBlock";
-import { KeyValueBlock } from "../components/KeyValueBlock";
-import { ListBlock } from "../components/ListBlock";
-import { TimelineBlock } from "../components/TimelineBlock";
-import { GalleryBlock } from "../components/GalleryBlock";
-import { AlertBlock } from "../components/AlertBlock";
+import { AssetBlock } from "../components/AssetBlock";
 import { FormBlock } from "../components/FormBlock";
 
-interface LayoutProps {
-  title?: string;
-  subtitle?: string;
-  blocks: WidgetBlock[];
-}
-
-export const DashboardLayout: React.FC<LayoutProps> = ({
+export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
   title,
   subtitle,
-  blocks = [],
+  records,
+  fields,
+  collection,
+  pagination,
+  actions,
+  presentationPlan,
 }) => {
-  const metricBlocks = blocks.filter((b) => b.type === "metrics");
-  const otherBlocks = blocks.filter((b) => b.type !== "metrics");
+  const { colors } = useThemeStore();
+  const blocks = presentationPlan?.blocks ?? [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {(title || subtitle) && (
-        <header>
-          {title && (
-            <h2 style={{ margin: "0 0 0.25rem 0", fontSize: "1.25rem", fontWeight: 700 }}>
-              {title}
-            </h2>
-          )}
+    <section
+      className={styles.container}
+      style={{
+        color: colors.TextPrimary,
+      }}
+    >
+      {/* Header */}
+      <header className={styles.header}>
+        <div>
+          <h1 className={styles.title} style={{ color: colors.TextHeading }}>
+            {title || collection?.entity || "Dashboard"}
+          </h1>
+
           {subtitle && (
-            <p style={{ margin: 0, fontSize: "0.85rem", opacity: 0.7 }}>
+            <p
+              className={styles.subtitle}
+              style={{ color: colors.TextSecondary }}
+            >
               {subtitle}
             </p>
           )}
-        </header>
+        </div>
+      </header>
+
+      {/* Prompt Answer Summary Banner */}
+      {Boolean(collection?.summary || (collection as any)?.text) && (
+        <div
+          style={{
+            background: colors.WidgetCardBg,
+            border: `1px solid ${colors.WidgetCardBorder}`,
+            borderRadius: "10px",
+            padding: "12px 16px",
+            marginBottom: "12px",
+            fontSize: "13.5px",
+            lineHeight: "1.5",
+            color: colors.TextPrimary,
+          }}
+        >
+          ✨ {String(collection?.summary || (collection as any)?.text)}
+        </div>
       )}
 
-      {/* Top Metrics Row */}
-      {metricBlocks.map((b, idx) => (
-        <MetricBlock key={idx} metrics={b.metrics || []} title={b.title} />
-      ))}
+      <div className={styles.blockContainer}>
+        {blocks.map((block, index) => {
+          let content: React.ReactNode = null;
 
-      {/* Main Content Blocks */}
-      {otherBlocks.map((block, index) => renderBlock(block, index))}
-    </div>
+          switch (block.type) {
+            case "summary":
+              content = (
+                <SummaryBlock
+                  block={block}
+                  records={records}
+                  fields={fields}
+                  collection={collection}
+                />
+              );
+              break;
+
+            case "chart":
+              content = (
+                <ChartsBlock
+                  block={block}
+                  records={records}
+                  fields={fields}
+                  collection={collection}
+                />
+              );
+              break;
+
+            case "table":
+              content = (
+                <TableBlock block={block} records={records} fields={fields} />
+              );
+              break;
+
+            case "cards":
+              content = (
+                <CardsBlock block={block} records={records} fields={fields} />
+              );
+              break;
+
+            case "details":
+              content = (
+                <DetailBlock block={block} records={records} fields={fields} />
+              );
+              break;
+
+            case "assets":
+            case "asset":
+              content = (
+                <AssetBlock block={block} records={records} fields={fields} />
+              );
+              break;
+
+            case "filters":
+              content = (
+                <FormBlock block={block} fields={fields} actions={actions} />
+              );
+              break;
+
+            default:
+              content = null;
+          }
+
+          if (!content) return null;
+
+          return (
+            <div key={`block-${index}`} className={styles.blockWrapper}>
+              {content}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
-};
-
-const renderBlock = (block: WidgetBlock, index: number) => {
-  switch (block.type) {
-    case "table":
-      return (
-        <TableBlock
-          key={index}
-          columns={block.columns}
-          rows={block.rows}
-          tableHeaders={block.tableHeaders}
-          tableRows={block.tableRows}
-          title={block.title}
-          pagination={block.pagination}
-        />
-      );
-    case "cards":
-      return <CardsBlock key={index} cards={block.cards || []} title={block.title} />;
-    case "timeline":
-      return <TimelineBlock key={index} events={block.events || []} title={block.title} />;
-    case "gallery":
-      return <GalleryBlock key={index} images={block.images || []} title={block.title} />;
-    case "alert":
-      return <AlertBlock key={index} title={block.title} message={block.message} severity={block.severity} />;
-    case "form":
-      return (
-        <FormBlock
-          key={index}
-          formFields={(block.fields || block.formFields)!}
-          submitLabel={block.submitAction || "Submit"}
-        />
-      );
-    case "keyValue":
-      return <KeyValueBlock key={index} keyValueItems={block.keyValueItems || []} title={block.title} />;
-    case "list":
-      return <ListBlock key={index} listItems={block.listItems || []} title={block.title} />;
-    default:
-      return null;
-  }
 };

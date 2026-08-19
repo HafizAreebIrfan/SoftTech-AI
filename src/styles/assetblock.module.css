@@ -1,0 +1,96 @@
+.container {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.assetCard {
+  background-color: var(--widget-card-bg);
+  border: 1px solid var(--widget-card-border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.assetCard:hover {
+  background-color: var(--widget-card-hover);
+  border-color: var(--widget-card-border);
+}
+
+.mediaFrame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: var(--widget-container-bg);
+}
+
+/* Kind specific shapes */
+.kindAvatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid var(--widget-card-border);
+}
+
+.kindLogo {
+  width: 100%;
+  height: 48px;
+  border-radius: 6px;
+  padding: 4px;
+}
+
+.kindIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+}
+
+.kindImage,
+.kindThumbnail {
+  width: 100%;
+  height: 110px;
+  border-radius: 8px;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+}
+
+.imageCover {
+  object-fit: cover;
+}
+
+.imageContain {
+  object-fit: contain;
+}
+
+.assetLabel {
+  color: var(--widget-header-subtitle);
+  font-size: 0.775rem;
+  font-weight: 500;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+}

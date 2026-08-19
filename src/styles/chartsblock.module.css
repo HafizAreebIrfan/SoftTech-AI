@@ -1,0 +1,157 @@
+.container {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.card {
+  background-color: var(--widget-card-bg);
+  border: 1px solid var(--widget-card-border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  color: var(--widget-header-title);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.typeBadge {
+  font-size: 0.725rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: var(--widget-badge-bg);
+  color: var(--widget-badge-text);
+  border: 1px solid var(--widget-badge-border);
+}
+
+.chartContainer {
+  width: 100%;
+  height: 220px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.svgChart {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.gridLine {
+  stroke: var(--widget-chart-grid);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.axisLine {
+  stroke: var(--widget-card-border);
+  stroke-width: 1;
+}
+
+.axisText {
+  fill: var(--widget-header-subtitle);
+  font-size: 10px;
+  font-family: inherit;
+}
+
+.chartLine {
+  fill: none;
+  stroke: var(--widget-chart-primary, var(--app-brand-accent, var(--app-brand-indigo, #34D399)));
+  stroke-width: 3.25;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chartArea {
+  fill: var(--widget-chart-primary, var(--app-brand-accent, var(--app-brand-indigo, #34D399)));
+  opacity: 0.22;
+}
+
+.chartPoint {
+  fill: var(--widget-chart-primary, var(--app-brand-accent, var(--app-brand-indigo, #34D399)));
+  stroke: var(--widget-card-bg, #111715);
+  stroke-width: 2;
+  transition: transform 0.15s ease, r 0.15s ease;
+  cursor: pointer;
+}
+
+.chartPoint:hover {
+  r: 6;
+}
+
+.bar {
+  fill: var(--widget-chart-primary);
+  rx: 4;
+  ry: 4;
+  opacity: 0.92;
+  transition: opacity 0.15s ease, fill 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+
+.bar:hover {
+  opacity: 1;
+  fill: var(--widget-chart-secondary);
+  transform: translateY(-1px);
+}
+
+.pieSlice {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+
+.pieSlice:hover {
+  opacity: 0.88;
+}
+
+.legendList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 18px;
+  padding-top: 8px;
+  border-top: 1px solid var(--widget-card-border);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.775rem;
+  color: var(--widget-header-subtitle);
+}
+
+.legendColor {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 500px) {
+  .card {
+    padding: 12px 14px;
+  }
+
+  .chartContainer {
+    height: 180px;
+  }
+}
