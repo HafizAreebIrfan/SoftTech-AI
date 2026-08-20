@@ -31,6 +31,48 @@ export const normalizeApiResponseToWidget = (
 
   const pagination = extractPagination(data);
 
+  const entityName = apiSchema?.entity || collection?.entity || "";
+  const entityLower = String(entityName).toLowerCase();
+  const isCommercialEntity = /package|product|service|hotel|car|item|accommodation/.test(
+    entityLower,
+  );
+
+  const isInteractiveAction =
+    method.toUpperCase() !== "GET" ||
+    isCommercialEntity ||
+    audience === "user" ||
+    audience === "both" ||
+    Boolean(collection);
+
+  const defaultActions = isInteractiveAction
+    ? [
+        {
+          id: "view_details",
+          label: "View Details",
+          tool: apiName,
+          enabled: true,
+        },
+        ...(audience === "admin"
+          ? [
+              { id: "edit_item", label: "Edit", tool: apiName, enabled: true },
+              {
+                id: "delete_item",
+                label: "Delete",
+                tool: apiName,
+                enabled: true,
+              },
+            ]
+          : [
+              {
+                id: "select_item",
+                label: "Select Option",
+                tool: apiName,
+                enabled: true,
+              },
+            ]),
+      ]
+    : undefined;
+
   return {
     title: apiName || "API Result",
 
@@ -44,6 +86,8 @@ export const normalizeApiResponseToWidget = (
 
     ...(pagination ? { pagination } : {}),
 
+    ...(defaultActions ? { actions: defaultActions } : {}),
+
     ...(audience ? { audience } : {}),
 
     ...(platformType ? { platformtype: platformType } : {}),
@@ -52,10 +96,10 @@ export const normalizeApiResponseToWidget = (
       companyName,
       apiName,
       httpMethod: method.toUpperCase(),
-      isAction: method.toUpperCase() !== "GET",
+      isAction: isInteractiveAction,
       ...(industry ? { industry } : {}),
       ...(themeColor ? { themeColor } : {}),
-      ...(apiSchema?.entity ? { entity: apiSchema.entity } : {}),
+      ...(entityName ? { entity: entityName } : {}),
       generatedAt: new Date().toISOString(),
     },
   };

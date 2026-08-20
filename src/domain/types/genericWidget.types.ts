@@ -12,6 +12,7 @@ export type GenericWidgetResult = {
   collection?: CollectionResult;
   capabilities?: CapabilitiesResult;
   pagination?: PaginationResult;
+  actions?: Array<{ id: string; label: string; tool?: string; enabled?: boolean }>;
   metadata?: Record<string, JsonValue>;
   audience?: WidgetAudience;
   platformtype?: PlatformType;
