@@ -23,8 +23,9 @@ Return a JSON object matching this EXACT schema structure:
       "path": "dot_notation_path",
       "hidden": false,
       "primary": false,
+      "uiRole": "title | description | price | image | status | metric | null"
     }
-  ],
+  ]
 }
 
 DATA PATH RULES:
@@ -150,6 +151,17 @@ and:
   "key": "name",
   "path": "customer.name"
 }
+
+UI ROLE RULES:
+You must predict the primary visual role of a field for a generic user interface card. 
+1. Assign "title" to the main identifying name of the record (e.g., hotel name, package name, product name, city name).
+2. Assign "description" to a secondary string that summarizes the item (e.g., short summary, category, sub-title).
+3. Assign "price" to the primary cost or monetary amount.
+4. Assign "image" to the main display photo or thumbnail URL.
+5. Assign "status" to the primary state or availability field.
+6. Assign "metric" to the most important non-monetary numerical value (e.g., temperature for weather, rating for a hotel, stock price for finance).
+7. ONLY assign a uiRole if the field strongly matches the definition. If it does not, return null.
+8. NEVER assign the same uiRole (like "title" or "price") to more than one field in the same collection. Pick the most important one.
 
 FIELD RULES:
 1. Include every meaningful business field returned by the API.

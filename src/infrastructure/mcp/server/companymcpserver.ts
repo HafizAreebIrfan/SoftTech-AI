@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ICompany } from "../../../domain/types/company.types";
 import { registerGenericWidgetResources } from "../resources/GenericWidget/genericWidgetResource";
 import { getCompanyMcpInstructions } from "../ServerInstructions/companyserverinstructions";
-import { registerCompanyApiTools } from "../tools/DynamicDomain/registercompanyapitools";
+import { registerCompanyApiTools } from "../tools/RegisterCompanyTools/registercompanyapitools";
 
 export const createCompanyMcpServer = (company: ICompany) => {
   const server = new McpServer(

@@ -23,6 +23,7 @@ export type FieldSchema = {
   sortable?: boolean;
   searchable?: boolean;
   filterable?: boolean;
+  uiRole?: string;
 };
 
 export type CollectionMetric = {

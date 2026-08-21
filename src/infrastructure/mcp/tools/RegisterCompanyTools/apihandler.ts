@@ -1,0 +1,417 @@
+import { IApi } from "../../../../domain/types/company.types";
+import {
+  NormalizedAuthType,
+  IUserAuthRequiredNotice,
+} from "../../../../domain/types/oauthConnection.types";
+import {
+  getAccessToken,
+  getUserAccessToken,
+  invalidateToken,
+} from "../../../../application/services/oauth/OAuthTokenService";
+import { env } from "../../../../infrastructure/config/env";
+import { resolveMcpUserId } from "../../../../adapters/http/middlewares/mcpUserAuthMiddleware";
+
+const HTTP_METHODS_WITH_BODY = ["POST", "PUT", "PATCH"];
+
+export const createUserAuthRequiredNotice = (
+  companyId: string,
+  apiId: string,
+  connectUrl: string,
+): IUserAuthRequiredNotice => ({
+  isAuthRequired: true,
+  companyId,
+  apiId,
+  connectUrl,
+  message: "User authorization is required to access this API.",
+});
+
+export const isUserAuthRequiredNotice = (
+  error: any,
+): error is IUserAuthRequiredNotice => {
+  return error && typeof error === "object" && error.isAuthRequired === true;
+};
+
+export const normalizeAuthType = (
+  authType?: string,
+  flow?: string,
+): NormalizedAuthType => {
+  if (!authType) return "NONE";
+  const normalized = authType
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  if (
+    normalized === "oauthuser" ||
+    normalized === "useroauth" ||
+    normalized === "oauthcode" ||
+    normalized === "oauthpkce" ||
+    flow === "authorization_code"
+  ) {
+    return "OAUTH_USER";
+  }
+
+  if (normalized === "bearer" || normalized === "bearertoken") {
+    return "BEARER";
+  }
+
+  if (normalized === "apikey" || normalized === "api_key") {
+    return "API_KEY";
+  }
+
+  if (["oauth", "oauth2", "oauth20"].includes(normalized)) {
+    return "OAUTH";
+  }
+
+  return "NONE";
+};
+
+export const sanitizeResponseBody = (body: string): string => {
+  if (!body) return "";
+
+  return body
+    .replace(/"access_token"\s*:\s*"[^"]+"/gi, '"access_token":"[REDACTED]"')
+    .replace(/"client_secret"\s*:\s*"[^"]+"/gi, '"client_secret":"[REDACTED]"')
+    .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [REDACTED]");
+};
+
+export const callRegisteredApi = async (
+  companyId: string,
+  apiId: string,
+  api: IApi,
+  input: any,
+  req?: any,
+) => {
+  const url = buildApiUrl(api, input);
+  const method = (api.method || "GET").toUpperCase();
+
+  const headerResult = await buildHeaders(companyId, apiId, api, false, req);
+
+  if (isUserAuthRequiredNotice(headerResult)) {
+    return headerResult;
+  }
+
+  const headers = headerResult as Record<string, string>;
+
+  const options: RequestInit = {
+    method,
+    headers: { ...headers },
+  };
+
+  if (HTTP_METHODS_WITH_BODY.includes(method)) {
+    const bodyPayload = buildRequestBody(api, input);
+
+    if (Object.keys(bodyPayload).length > 0) {
+      (options.headers as Record<string, string>)["Content-Type"] =
+        "application/json";
+      options.body = JSON.stringify(bodyPayload);
+    }
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(url.toString(), options);
+  } catch (error: any) {
+    const networkError: any = new Error(
+      error?.message || `Unable to connect to ${api.name}.`,
+    );
+
+    networkError.status = undefined;
+    networkError.responseBody = undefined;
+
+    throw networkError;
+  }
+
+  const authType = normalizeAuthType(api.authType, (api.oauth as any)?.flow);
+
+  // Perform at most ONE token refresh retry on HTTP 401 for OAuth APIs
+  if (
+    response.status === 401 &&
+    (authType === "OAUTH" || authType === "OAUTH_USER")
+  ) {
+    if (authType === "OAUTH") {
+      invalidateToken(api.oauth?.tokenUrl, api.oauth?.clientId);
+    }
+
+    try {
+      const refreshedHeaderResult = await buildHeaders(
+        companyId,
+        apiId,
+        api,
+        true,
+        req,
+      );
+
+      if (isUserAuthRequiredNotice(refreshedHeaderResult)) {
+        return refreshedHeaderResult;
+      }
+
+      const refreshedHeaders = refreshedHeaderResult as Record<string, string>;
+
+      const retryOptions: RequestInit = {
+        ...options,
+        headers: { ...refreshedHeaders },
+      };
+
+      if (options.body) {
+        (retryOptions.headers as Record<string, string>)["Content-Type"] =
+          "application/json";
+        retryOptions.body = options.body;
+      }
+
+      response = await fetch(url.toString(), retryOptions);
+    } catch (error: any) {
+      const retryNetworkError: any = new Error(
+        error?.message || `Unable to connect to ${api.name}.`,
+      );
+
+      retryNetworkError.status = undefined;
+      retryNetworkError.responseBody = undefined;
+
+      throw retryNetworkError;
+    }
+  }
+
+  const responseText = await response.text();
+
+  if (!response.ok) {
+    const error: any = new Error(
+      `Registered API "${api.name}" failed with status ${response.status}`,
+    );
+
+    error.status = response.status;
+    error.responseBody = sanitizeResponseBody(responseText);
+
+    throw error;
+  }
+
+  if (!responseText.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    return responseText;
+  }
+};
+
+const buildApiUrl = (api: IApi, input: any): URL => {
+  const baseUrl = api.baseUrl.endsWith("/") ? api.baseUrl : `${api.baseUrl}/`;
+  let endpoint = decodeURIComponent((api.endpoint || "").replace(/^\//, ""));
+  const rawInput = typeof input === "object" && input !== null ? input : {};
+  const configuredParams = normalizeConfiguredParameters(api.params);
+
+  const inputParams =
+    rawInput.params && typeof rawInput.params === "object"
+      ? rawInput.params
+      : {};
+
+  const allInputValues: Record<string, any> = {
+    ...getStaticParameterValues(configuredParams),
+    ...inputParams,
+    ...rawInput,
+  };
+
+  for (const parameter of configuredParams) {
+    const key = cleanParameterKey(parameter.key);
+    if (!key) continue;
+
+    const value = resolveParameterValue(parameter, allInputValues);
+    if (value === undefined || value === null || value === "") continue;
+
+    const encodedValue = encodeURIComponent(String(value));
+    endpoint = endpoint
+      .replace(new RegExp(`\\{${escapeRegExp(key)}\\}`, "gi"), encodedValue)
+      .replace(new RegExp(`:${escapeRegExp(key)}\\b`, "gi"), encodedValue);
+  }
+
+  if (/{[^}]+}/.test(endpoint) || /:[a-zA-Z0-9_-]+/.test(endpoint)) {
+    throw new Error(`Missing required path parameter for ${api.name || "API"}`);
+  }
+
+  const url = new URL(endpoint, baseUrl);
+
+  for (const parameter of configuredParams) {
+    const key = cleanParameterKey(parameter.key);
+    if (!key) continue;
+
+    const isPathParameter = endpointContainsParameter(api.endpoint, key);
+    if (isPathParameter) continue;
+
+    const value = resolveParameterValue(parameter, allInputValues);
+    if (value === undefined || value === null || String(value).trim() === "")
+      continue;
+
+    url.searchParams.set(key, String(value));
+  }
+
+  return url;
+};
+
+const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
+  const rawInput = typeof input === "object" && input !== null ? input : {};
+  const inputParams =
+    rawInput.params && typeof rawInput.params === "object"
+      ? rawInput.params
+      : {};
+
+  const bodyFields = normalizeConfiguredParameters(api.body);
+
+  if (bodyFields.length > 0) {
+    const body: Record<string, any> = {};
+
+    for (const field of bodyFields) {
+      const key = cleanParameterKey(field.key);
+      if (!key) continue;
+
+      const value = resolveParameterValue(field, {
+        ...inputParams,
+        ...rawInput,
+      });
+
+      if (value !== undefined && value !== null) {
+        body[key] = value;
+      }
+    }
+    return body;
+  }
+  return {};
+};
+
+const normalizeConfiguredParameters = (params: any): any[] => {
+  if (!Array.isArray(params)) return [];
+
+  return params
+    .map((param) => {
+      if (!param) return null;
+      if (typeof param === "object" && param.key) return param;
+      if (typeof param === "string" && param.trim()) {
+        return {
+          key: param.trim(),
+          value: undefined,
+          isDynamic: true,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+};
+
+const getStaticParameterValues = (params: any[]): Record<string, any> => {
+  const result: Record<string, any> = {};
+  for (const param of params) {
+    const key = cleanParameterKey(param.key);
+    if (!key) continue;
+
+    if (
+      param.isDynamic === false &&
+      param.value !== undefined &&
+      param.value !== null
+    ) {
+      result[key] = param.value;
+    }
+  }
+  return result;
+};
+
+const resolveParameterValue = (
+  parameter: any,
+  inputValues: Record<string, any>,
+) => {
+  const key = cleanParameterKey(parameter.key);
+  if (!key) return undefined;
+
+  if (parameter.isDynamic !== false) {
+    if (inputValues[key] !== undefined && inputValues[key] !== null) {
+      return inputValues[key];
+    }
+    const originalKey = String(parameter.key || "").trim();
+    if (
+      inputValues[originalKey] !== undefined &&
+      inputValues[originalKey] !== null
+    ) {
+      return inputValues[originalKey];
+    }
+    return undefined;
+  }
+  return parameter.value;
+};
+
+const cleanParameterKey = (key: unknown): string => {
+  return String(key || "")
+    .trim()
+    .replace(/^\{|\}$/g, "")
+    .replace(/^:/, "")
+    .trim();
+};
+
+const endpointContainsParameter = (endpoint: string, key: string): boolean => {
+  return (
+    new RegExp(`\\{${escapeRegExp(key)}\\}`, "i").test(endpoint) ||
+    new RegExp(`:${escapeRegExp(key)}\\b`, "i").test(endpoint)
+  );
+};
+
+const buildHeaders = async (
+  companyId: string,
+  apiId: string,
+  api: IApi,
+  forceRefreshToken = false,
+  req?: any,
+): Promise<Record<string, string> | IUserAuthRequiredNotice> => {
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+  };
+
+  (api.headers ?? []).forEach((header: any) => {
+    if (typeof header === "string") {
+      const [key, ...rest] = header.split(":");
+      const value = rest.join(":").trim();
+      if (key?.trim() && value) {
+        headers[key.trim()] = value;
+      }
+      return;
+    }
+
+    if (typeof header === "object" && header !== null && header.key) {
+      headers[String(header.key).trim()] = String(header.value ?? "").trim();
+    }
+  });
+
+  const authType = normalizeAuthType(api.authType, (api.oauth as any)?.flow);
+
+  if (authType === "BEARER" && api.bearerToken) {
+    headers.Authorization = `Bearer ${api.bearerToken}`;
+  } else if (authType === "API_KEY" && api.apiKey) {
+    const authHeaderName = String(api.authHeader || "x-api-key").trim();
+    if (authHeaderName) {
+      headers[authHeaderName] = api.apiKey;
+    }
+  } else if (authType === "OAUTH") {
+    const token = await getAccessToken(api.oauth, forceRefreshToken, api.name);
+    headers.Authorization = `Bearer ${token}`;
+  } else if (authType === "OAUTH_USER") {
+    const userId = req ? resolveMcpUserId(req) : "anonymous_user";
+    const token = await getUserAccessToken({
+      companyId,
+      apiId,
+      userId,
+      oauth: api.oauth,
+      forceRefresh: forceRefreshToken,
+    });
+
+    if (!token) {
+      const connectUrl = `${env.OAUTH_CALLBACK_URL.replace("/callback", "/authorize")}?companyId=${encodeURIComponent(companyId)}&apiId=${encodeURIComponent(apiId)}`;
+      return createUserAuthRequiredNotice(companyId, apiId, connectUrl);
+    }
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+};
+
+const escapeRegExp = (value: string) => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};

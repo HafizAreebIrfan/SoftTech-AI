@@ -26,32 +26,102 @@ export const registerGenericWidgetResources = (
         r.text(),
       );
       const widgetHtml = `
-         <!DOCTYPE html>
-      <html lang="en">
-        <head>
-          <meta charset="utf-8" />
-          <title>Generic Widget</title>
-          <style>
-            ${CSS}
-            @keyframes pulseSkeleton { 0%, 100% { opacity: 0.8; } 50% { opacity: 0.25; } }
-            .skeleton-box { background: rgba(255, 255, 255, 0.08); animation: pulseSkeleton 1.5s ease-in-out infinite; border-radius: 12px; }
-          </style>
-        </head>
-        <body style="background: transparent; margin: 0; padding: 0;">
-          <div id="root">
-            <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
-              <div class="skeleton-box" style="height: 24px; width: 40%;"></div>
-              <div class="skeleton-box" style="height: 14px; width: 70%;"></div>
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 8px;">
-                <div class="skeleton-box" style="height: 80px;"></div>
-                <div class="skeleton-box" style="height: 80px;"></div>
-              </div>
-            </div>
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <title>Generic Widget</title>
+      <style>
+        ${CSS}
+        
+        /* Base reset */
+        body {
+          background: transparent;
+          margin: 0;
+          padding: 0;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* Modern Shimmer Animation */
+        @keyframes shimmer {
+          0% { background-position: -1000px 0; }
+          100% { background-position: 1000px 0; }
+        }
+
+        /* Light Mode (Default) */
+        .skeleton-box {
+          animation: shimmer 2.5s infinite linear;
+          background: linear-gradient(to right, #f1f5f9 4%, #e2e8f0 25%, #f1f5f9 36%);
+          background-size: 1000px 100%;
+          border-radius: 8px;
+        }
+
+        /* Dark Mode Support */
+        @media (prefers-color-scheme: dark) {
+          .skeleton-box {
+            background: linear-gradient(to right, rgba(255,255,255,0.05) 4%, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.05) 36%);
+            background-size: 1000px 100%;
+          }
+        }
+
+        .container {
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+        
+        .header-group {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 12px;
+        }
+
+        .list-group {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+      </style>
+    </head>
+    <body>
+      <div id="root">
+        <div class="container">
+          
+          <!-- Title & Subtitle Skeleton -->
+          <div class="header-group">
+            <div class="skeleton-box" style="height: 28px; width: 35%; border-radius: 6px;"></div>
+            <div class="skeleton-box" style="height: 16px; width: 60%; border-radius: 4px;"></div>
           </div>
-          <script type="module">${HTML}</script>
-        </body>
-      </html>
-        `;
+
+          <!-- Top Metrics / Cards Skeleton -->
+          <div class="metrics-grid">
+            <div class="skeleton-box" style="height: 90px;"></div>
+            <div class="skeleton-box" style="height: 90px;"></div>
+            <div class="skeleton-box" style="height: 90px;"></div>
+          </div>
+
+          <!-- List / Table Skeleton -->
+          <div class="list-group">
+            <div class="skeleton-box" style="height: 60px;"></div>
+            <div class="skeleton-box" style="height: 60px;"></div>
+            <div class="skeleton-box" style="height: 60px;"></div>
+          </div>
+
+        </div>
+      </div>
+      <script type="module">${HTML}</script>
+    </body>
+  </html>
+`;
 
       return {
         contents: [

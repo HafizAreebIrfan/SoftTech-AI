@@ -25,6 +25,7 @@ export interface FieldMetadata {
   sortable?: boolean;
   searchable?: boolean;
   filterable?: boolean;
+  uiRole?: string;
 }
 
 export interface ApiSchema {
