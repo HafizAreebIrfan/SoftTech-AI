@@ -5,7 +5,10 @@ import type { FormBlockProps } from "../../../../interfaces/mcp/formblock.interf
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 
 const validateField = (field: FieldSchema, value: unknown): string | null => {
-  if (field.primary && (value === undefined || value === null || value === "")) {
+  if (
+    field.primary &&
+    (value === undefined || value === null || value === "")
+  ) {
     return `${field.label} is required`;
   }
 
@@ -16,7 +19,12 @@ const validateField = (field: FieldSchema, value: unknown): string | null => {
     }
   }
 
-  if ((field.type === "number" || field.type === "currency") && value !== "" && value !== undefined && value !== null) {
+  if (
+    (field.type === "number" || field.type === "currency") &&
+    value !== "" &&
+    value !== undefined &&
+    value !== null
+  ) {
     if (typeof value === "number" && Number.isNaN(value)) {
       return "Must be a valid number";
     }
@@ -29,6 +37,7 @@ export const FormBlock: React.FC<FormBlockProps> = ({
   block,
   fields = [],
   actions = [],
+  initialData = {},
   onSubmit,
 }) => {
   const activeFields = useMemo(() => {
@@ -37,7 +46,9 @@ export const FormBlock: React.FC<FormBlockProps> = ({
     return available.filter((f) => !f.hidden);
   }, [block?.fields, fields]);
 
-  const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [formData, setFormData] =
+    useState<Record<string, unknown>>(initialData);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -78,7 +89,9 @@ export const FormBlock: React.FC<FormBlockProps> = ({
       }
       const primaryAction = actions[0];
       setSuccessMessage(
-        primaryAction ? `Action "${primaryAction.label}" executed successfully` : "Form submitted successfully",
+        primaryAction
+          ? `Action "${primaryAction.label}" executed successfully`
+          : "Form submitted successfully",
       );
     } catch {
       setErrors({ _form: "Submission failed" });

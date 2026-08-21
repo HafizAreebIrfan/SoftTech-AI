@@ -57,22 +57,10 @@ export const GenericWidgetRenderer: React.FC = () => {
     const actions = content.actions as any;
     const metadata = content.metadata as any;
 
-    const dataPath = collection?.dataPath;
-
-    let targetData: unknown = rawData;
-    if (dataPath) {
-      targetData = getValue(rawData, dataPath);
-    }
-
+    // Remove the dataPath extraction. The backend already flattens and unwraps the payload.
     let records: unknown[] = [];
-    if (Array.isArray(targetData)) {
-      records = targetData;
-    } else if (
-      targetData &&
-      typeof targetData === "object" &&
-      !Array.isArray(targetData)
-    ) {
-      records = [targetData];
+    if (Array.isArray(rawData)) {
+      records = rawData;
     } else if (
       rawData &&
       typeof rawData === "object" &&
@@ -138,10 +126,10 @@ export const GenericWidgetRenderer: React.FC = () => {
     /weather|forecast|temperature|climate/.test(entityName) ||
     Boolean(
       rawData &&
-        typeof rawData === "object" &&
-        ("current" in (rawData as object) ||
-          "location" in (rawData as object) ||
-          "forecast" in (rawData as object)),
+      typeof rawData === "object" &&
+      ("current" in (rawData as object) ||
+        "location" in (rawData as object) ||
+        "forecast" in (rawData as object)),
     );
 
   const normalizedLayout = presentationPlan.layout;

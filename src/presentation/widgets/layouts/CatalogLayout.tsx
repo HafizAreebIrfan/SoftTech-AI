@@ -3,6 +3,7 @@ import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.inte
 import { CardsBlock } from "../components/CardsBlock";
 import { useThemeStore } from "../../../hooks";
 import styles from "../../../styles/dashboardwidget.module.css";
+import { FormBlock } from "../components";
 
 export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   title,
@@ -14,6 +15,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
 }) => {
   const { colors } = useThemeStore();
   const blocks = presentationPlan?.blocks ?? [];
+  const filtersBlock = blocks.find((b) => b.type === "filters");
   const cardsBlock = blocks.find((b) => b.type === "cards");
 
   return (
@@ -24,19 +26,24 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
             {title || collection?.entity || "Catalog"}
           </h1>
           {subtitle && (
-            <p className={styles.subtitle} style={{ color: colors.TextSecondary }}>
+            <p
+              className={styles.subtitle}
+              style={{ color: colors.TextSecondary }}
+            >
               {subtitle}
             </p>
           )}
         </div>
       </header>
 
-      <CardsBlock
-        block={cardsBlock}
-        records={records}
-        fields={fields}
-      />
+      {filtersBlock && (
+        <div style={{ marginBottom: "16px" }}>
+          {/* Assuming you use FormBlock or a custom FilterBlock for this */}
+          <FormBlock block={filtersBlock} fields={fields} />
+        </div>
+      )}
+
+      <CardsBlock block={cardsBlock} records={records} fields={fields} />
     </section>
   );
 };
-

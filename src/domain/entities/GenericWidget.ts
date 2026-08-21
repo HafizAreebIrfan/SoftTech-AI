@@ -34,6 +34,7 @@ export interface FieldSchema {
   sortable?: boolean;
   searchable?: boolean;
   filterable?: boolean;
+  uiRole?: string;
 }
 
 export interface CollectionMetric {
@@ -125,6 +126,8 @@ export interface OpenAiGlobals {
   setWidgetState?: (
     state: Record<string, unknown> | McpToolResultPayload | null,
   ) => void;
+  callTool?: (toolName: string, args: Record<string, unknown>) => Promise<void>;
+  sendFollowUpMessage?: (message: { prompt: string }) => void;
 }
 
 export interface OpenAiSetGlobalsEventDetail {

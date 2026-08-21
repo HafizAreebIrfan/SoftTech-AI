@@ -1,4 +1,7 @@
-import type { FieldSchema, CollectionResult } from "../../domain/entities/GenericWidget";
+import type {
+  FieldSchema,
+  CollectionResult,
+} from "../../domain/entities/GenericWidget";
 import type { PresentationBlock } from "./widgetdecider.interface";
 
 export interface DetailFieldProps {
@@ -11,4 +14,5 @@ export interface DetailBlockProps {
   records?: unknown[];
   fields?: FieldSchema[];
   collection?: CollectionResult;
+  actions?: any[];
 }

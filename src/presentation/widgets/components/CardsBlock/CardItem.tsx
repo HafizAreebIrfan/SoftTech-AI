@@ -1,5 +1,5 @@
 import React from "react";
-import { getFieldValue, getValue } from "../../../../utils/schema/getValue";
+import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderImage } from "../../helper/RenderImage";
 import { renderStatus } from "../../helper/RenderStatus";
 import { renderCurrency } from "../../helper/RenderCurrency";
@@ -8,82 +8,32 @@ import styles from "../../../../styles/cardsblock.module.css";
 import type { CardItemProps } from "../../../../interfaces/mcp/cardsblock.interface";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 
-/**
- * Format a secondary field value based on its schema type.
- */
-const formatFieldValue = (val: unknown, field: FieldSchema): React.ReactNode => {
+const formatFieldValue = (
+  val: unknown,
+  field: FieldSchema,
+): React.ReactNode => {
   if (val === null || val === undefined || val === "") return "-";
-
-  if (field.type === "currency") {
-    return String(renderCurrency(val));
-  }
-
-  if (field.type === "date" || field.type === "datetime") {
+  if (field.type === "currency") return String(renderCurrency(val));
+  if (field.type === "date" || field.type === "datetime")
     return String(renderDate(val, field.type === "datetime"));
-  }
-
-  if (typeof val === "number") {
-    return val.toLocaleString();
-  }
-
-  if (typeof val === "boolean") {
-    return val ? "Yes" : "No";
-  }
-
+  if (typeof val === "number") return val.toLocaleString();
+  if (typeof val === "boolean") return val ? "Yes" : "No";
   return String(val);
 };
 
 export const CardItem: React.FC<CardItemProps> = ({
   record,
-  fieldMapping,
+  fields,
+  onSelect,
 }) => {
-  if (!record || typeof record !== "object") {
-    return null;
-  }
+  if (!record || typeof record !== "object") return null;
 
-  // Extract primary fields
-  const rawImage = fieldMapping.imageField
-    ? getFieldValue(record, fieldMapping.imageField)
-    : getValue(record, "image") ||
-      getValue(record, "thumbnail") ||
-      getValue(record, "photo") ||
-      getValue(record, "avatar") ||
-      getValue(record, "icon");
+  // 1. Instantly extract backend-mapped primary UI fields
+  const { $title, $description, $price, $status, $image, id, url, link } =
+    record as any;
 
-  const rawTitle = fieldMapping.titleField
-    ? getFieldValue(record, fieldMapping.titleField)
-    : getValue(record, "name") ||
-      getValue(record, "title") ||
-      getValue(record, "label") ||
-      "Item";
-
-  const rawSubtitle = fieldMapping.subtitleField
-    ? getFieldValue(record, fieldMapping.subtitleField)
-    : getValue(record, "subtitle") ||
-      getValue(record, "category") ||
-      getValue(record, "type") ||
-      getValue(record, "description");
-
-  const rawPrice = fieldMapping.priceField
-    ? getFieldValue(record, fieldMapping.priceField)
-    : getValue(record, "price") ||
-      getValue(record, "amount") ||
-      getValue(record, "cost");
-
-  const rawStatus = fieldMapping.statusField
-    ? getFieldValue(record, fieldMapping.statusField)
-    : getValue(record, "status") || getValue(record, "state");
-
-  const rawActionUrl =
-    getValue(record, "url") ||
-    getValue(record, "link") ||
-    getValue(record, "actionUrl") ||
-    getValue(record, "detailsUrl");
-
-  const titleStr = rawTitle !== undefined && rawTitle !== null ? String(rawTitle) : "Item";
-  const subtitleStr = rawSubtitle !== undefined && rawSubtitle !== null ? String(rawSubtitle) : undefined;
-  const actionUrlStr = typeof rawActionUrl === "string" && rawActionUrl.trim() ? rawActionUrl : undefined;
-
+  const titleStr = $title || "Item";
+  const actionUrlStr = url || link;
   const isClickable = Boolean(actionUrlStr);
 
   const CardContainerComponent = isClickable ? "a" : "div";
@@ -94,16 +44,51 @@ export const CardItem: React.FC<CardItemProps> = ({
         rel: "noopener noreferrer",
         className: styles.cardItem,
       }
-    : {
-        className: styles.cardItem,
-      };
+    : { className: styles.cardItem };
+
+  // 2. Identify secondary fields (Fields that were NOT used for primary UI mapping)
+  const primaryRoles = [
+    "title",
+    "description",
+    "price",
+    "image",
+    "status",
+    "metric",
+  ];
+  const secondaryFields = fields
+    .filter((f) => !f.hidden && !primaryRoles.includes(f.uiRole as string))
+    .slice(0, 3); // Max 3 secondary rows
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (actionUrlStr) return; // If it has a URL, let it open the link naturally
+    if (onSelect) {
+      e.preventDefault();
+      onSelect(record as Record<string, any>);
+    }
+  };
 
   return (
-    <CardContainerComponent {...containerProps}>
+    <CardContainerComponent
+      {...containerProps}
+      onClick={handleClick}
+      style={{ cursor: actionUrlStr || onSelect ? "pointer" : "default" }}
+    >
       {/* Asset / Image Area */}
-      {Boolean(rawImage) && (
-        <div className={styles.mediaWrapper}>
-          {renderImage(rawImage, titleStr)}
+      {Boolean($image) && (
+        <div
+          style={{
+            height: "160px",
+            width: "100%",
+            background: "var(--BackgroundSecondary)",
+            borderBottom: "1px solid var(--WidgetCardBorder)",
+            /* Add these to ensure your renderImage fits perfectly inside the card */
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          {renderImage($image, titleStr)}
         </div>
       )}
 
@@ -114,34 +99,28 @@ export const CardItem: React.FC<CardItemProps> = ({
             <h3 className={styles.title} title={titleStr}>
               {titleStr}
             </h3>
-            {subtitleStr && (
-              <span className={styles.subtitle} title={subtitleStr}>
-                {subtitleStr}
+            {$description && (
+              <span className={styles.subtitle} title={String($description)}>
+                {String($description)}
               </span>
             )}
           </div>
-
-          {Boolean(rawStatus) && (
-            <div className={styles.statusBadge}>
-              {renderStatus(rawStatus)}
-            </div>
+          {$status && (
+            <div className={styles.statusBadge}>{renderStatus($status)}</div>
           )}
         </div>
 
-        {/* Price / Currency Tag */}
-        {rawPrice !== undefined && rawPrice !== null && (
-          <div className={styles.priceTag}>
-            {renderCurrency(rawPrice)}
-          </div>
+        {/* Price Tag */}
+        {$price !== undefined && $price !== null && (
+          <div className={styles.priceTag}>{renderCurrency($price)}</div>
         )}
 
-        {/* Secondary Metadata List */}
-        {fieldMapping.secondaryFields.length > 0 && (
+        {/* Secondary Metadata List (e.g. Dimensions, Capacity, SKU) */}
+        {secondaryFields.length > 0 && (
           <div className={styles.metaList}>
-            {fieldMapping.secondaryFields.map((field) => {
+            {secondaryFields.map((field) => {
               const val = getFieldValue(record, field);
               if (val === null || val === undefined || val === "") return null;
-
               return (
                 <div key={field.key} className={styles.metaRow}>
                   <span className={styles.metaLabel}>{field.label}</span>
@@ -155,12 +134,9 @@ export const CardItem: React.FC<CardItemProps> = ({
         )}
       </div>
 
-      {/* Action Footer if explicitly provided */}
       {actionUrlStr && (
         <div className={styles.cardFooter}>
-          <span className={styles.actionButton}>
-            View Details &rarr;
-          </span>
+          <span className={styles.actionButton}>View Details &rarr;</span>
         </div>
       )}
     </CardContainerComponent>

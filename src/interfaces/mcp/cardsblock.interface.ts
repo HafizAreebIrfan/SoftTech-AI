@@ -13,7 +13,7 @@ export interface CardFieldMapping {
 export interface CardItemProps {
   record: unknown;
   fields: FieldSchema[];
-  fieldMapping: CardFieldMapping;
+  onSelect?: (record: Record<string, any>) => void;
   variant?: string;
 }
 

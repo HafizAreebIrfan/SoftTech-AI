@@ -82,8 +82,13 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
       return { initialType: "line" as ChartType, dataPoints: [] };
     }
 
+    // Try to find the explicit "metric" or "price", otherwise use the first currency/number
     const yField =
-      numericFields.find((f) => f.type === "currency") || numericFields[0];
+      numericFields.find(
+        (f) => f.uiRole === "metric" || f.uiRole === "price",
+      ) ||
+      numericFields.find((f) => f.type === "currency") ||
+      numericFields[0];
 
     // 2. Identify X-axis candidate
     const dateFields = activeFields.filter(
