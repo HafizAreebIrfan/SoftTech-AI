@@ -24,7 +24,7 @@ export interface IApi {
   bearerToken?: string;
   oauth?: IOAuth;
   platformType?: "web" | "mobile" | "both";
-  audience?: "customer" | "admin" | "both";
+  audience?: "customer" | "admin";
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
   apiSchema?: Record<string, unknown>;

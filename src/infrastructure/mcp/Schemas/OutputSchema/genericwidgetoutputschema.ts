@@ -174,7 +174,7 @@ export const genericWidgetOutputSchema = z.object({
   /**
    * Target audience for the widget.
    */
-  audience: z.enum(["admin", "user", "customer", "both"]).optional(),
+  audience: z.enum(["admin", "customer"]).optional(),
 
   /**
    * Target platform for the widget.

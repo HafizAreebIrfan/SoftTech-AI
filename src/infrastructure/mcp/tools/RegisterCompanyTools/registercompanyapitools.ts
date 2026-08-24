@@ -5,6 +5,7 @@ import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwid
 import { normalizeApiResponseToWidget } from "../DynamicDomain/genericwidgetnormalizer";
 import { translateApiError } from "../../errors/errorTranslator";
 import { buildCustomMcpInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
+import { formatCheckoutToolResult } from "../CheckoutHandle/index";
 
 // We will extract the HTTP and execution logic into this new file in the next step
 import {
@@ -108,6 +109,22 @@ export const registerCompanyApiTools = (
             );
           }
 
+          const currentPlatform =
+            req?.headers?.["x-platform-type"] ||
+            input?.platformType ||
+            api.platformType ||
+            "web";
+
+          const processedResponse = formatCheckoutToolResult({
+            response: rawResponse,
+            config: {
+              isCheckout: Boolean((api as any).isCheckout),
+              webCheckoutUrl: (api as any).webCheckoutUrl,
+              mobileDeepLinkUrl: (api as any).mobileDeepLinkUrl,
+            },
+            platformType: currentPlatform as any,
+          });
+
           // 2. Handle Successful Data Widget
           const effectiveAudience =
             api.audience || company.uiPreference?.audienceDefault || "customer";
@@ -115,7 +132,7 @@ export const registerCompanyApiTools = (
           const widgetContent = normalizeApiResponseToWidget(
             company.companyName,
             api.name || `API ${index + 1}`,
-            rawResponse,
+            processedResponse,
             company.uiPreference?.layout,
             company.industry,
             api.apiSchema as any,

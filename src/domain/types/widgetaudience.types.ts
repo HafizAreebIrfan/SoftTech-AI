@@ -1,1 +1,1 @@
-export type WidgetAudience = "admin" | "user" | "both";
+export type WidgetAudience = "admin" | "customer";

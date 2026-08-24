@@ -49,8 +49,7 @@ export const normalizeApiResponseToWidget = (
   const isInteractiveAction =
     method.toUpperCase() !== "GET" ||
     isCommercialEntity ||
-    audience === "user" ||
-    audience === "both" ||
+    audience === "customer" ||
     layout === "catalog" ||
     layout === "table" ||
     Boolean(collection);
@@ -256,10 +255,7 @@ const buildCollectionMetadata = (
   const isCommercial =
     /package|product|service|hotel|car|item|accommodation/.test(entityLower);
 
-  if (
-    !selectedLayout ||
-    (isCommercial && (audience === "user" || audience === "both"))
-  ) {
+  if (!selectedLayout || (isCommercial && audience === "customer")) {
     selectedLayout = audience === "admin" ? "table" : "catalog";
   }
 
