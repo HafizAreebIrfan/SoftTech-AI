@@ -16,7 +16,9 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
   fields,
   collection,
   pagination,
+  capabilities,
   actions,
+  audience,
   presentationPlan,
 }) => {
   const { colors } = useThemeStore();
@@ -94,19 +96,42 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
 
             case "table":
               content = (
-                <TableBlock block={block} records={records} fields={fields} />
+                <TableBlock
+                  block={block}
+                  records={records}
+                  fields={fields}
+                  pagination={pagination}
+                  capabilities={capabilities}
+                  actions={actions}
+                  audience={audience}
+                />
               );
               break;
 
             case "cards":
               content = (
-                <CardsBlock block={block} records={records} fields={fields} />
+                <CardsBlock
+                  block={block}
+                  records={records}
+                  fields={fields}
+                  collection={collection}
+                  capabilities={capabilities}
+                  actions={actions}
+                  audience={audience}
+                />
               );
               break;
 
             case "details":
               content = (
-                <DetailBlock block={block} records={records} fields={fields} />
+                <DetailBlock
+                  block={block}
+                  records={records}
+                  fields={fields}
+                  collection={collection}
+                  actions={actions}
+                  audience={audience}
+                />
               );
               break;
 

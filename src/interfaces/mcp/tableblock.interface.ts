@@ -3,6 +3,7 @@ import type {
   Pagination,
   Capabilities,
   WidgetAction,
+  WidgetAudience,
 } from "../../domain/entities/GenericWidget";
 import type { PresentationBlock } from "./widgetdecider.interface";
 
@@ -20,4 +21,5 @@ export interface TableBlockProps {
   capabilities?: Capabilities;
   actions?: WidgetAction[];
   title?: string;
+  audience?: WidgetAudience;
 }

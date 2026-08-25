@@ -5,6 +5,7 @@ import { DetailField } from "./DetailField";
 import styles from "../../../../styles/detailblock.module.css";
 import type { DetailBlockProps } from "../../../../interfaces/mcp/detailblock.interface";
 import { useThemeStore } from "../../../../hooks";
+import { classifyAction, getPermissions } from "../../helper/AudienceHelper";
 
 export const DetailBlock: React.FC<DetailBlockProps> = ({
   block,
@@ -12,6 +13,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   fields = [],
   collection,
   actions = [],
+  audience,
 }) => {
   const targetRecord = records.length > 0 ? (records[0] as any) : null;
 
@@ -57,8 +59,16 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     };
   }, [targetRecord, block?.fields, fields, collection?.entity]);
 
-  if (!targetRecord) return null;
   const { colors } = useThemeStore();
+
+  if (!targetRecord) return null;
+
+  // Hide mutating actions unless the audience may mutate (customers never can),
+  // so customer and admin surfaces never merge.
+  const permissions = getPermissions(audience, undefined, actions as any);
+  const visibleActions = (actions || []).filter(
+    (a: any) => classifyAction(a) !== "mutate" || permissions.canMutate,
+  );
 
   return (
     <section className={styles.container}>
@@ -131,7 +141,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             <DetailField key={field.key} field={field} record={targetRecord} />
           ))}
         </div>
-        {actions && actions.length > 0 && (
+        {visibleActions.length > 0 && (
           <div
             style={{
               padding: "16px 20px",
@@ -141,7 +151,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               background: "var(--BackgroundSecondary)",
             }}
           >
-            {actions.map((act: any) => (
+            {visibleActions.map((act: any) => (
               <button
                 key={act.id || act.tool}
                 type="button"
@@ -156,12 +166,20 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                   flex: 1,
                 }}
                 onClick={async () => {
-                  if ((window as any).openai?.callTool) {
-                    await (window as any).openai.callTool(act.tool, {
+                  const openai = (window as any).openai;
+                  // URL actions (e.g. checkout/purchase) open the link directly.
+                  const url =
+                    act.url || (act.type === "url" ? act.href : undefined);
+                  if (url) {
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    return;
+                  }
+                  if (openai?.callTool) {
+                    await openai.callTool(act.tool, {
                       id: targetRecord?.id || targetRecord?._id,
                     });
-                  } else if ((window as any).openai?.sendFollowUpMessage) {
-                    (window as any).openai.sendFollowUpMessage({
+                  } else if (openai?.sendFollowUpMessage) {
+                    openai.sendFollowUpMessage({
                       prompt: `Execute ${act.label} for ${targetRecord?.$title || "item"}`,
                     });
                   }

@@ -6,6 +6,7 @@ import {
   JsonValue,
   Pagination,
   WidgetAction,
+  WidgetAudience,
 } from "../../domain/entities/GenericWidget";
 import { PresentationPlan } from "./widgetdecider.interface";
 
@@ -27,5 +28,6 @@ export interface WidgetLayoutProps {
   capabilities?: Capabilities;
   pagination?: Pagination;
   actions?: WidgetAction[];
+  audience?: WidgetAudience;
   presentationPlan?: PresentationPlan;
 }

@@ -1,9 +1,9 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { CardItem } from "./CardItem";
 import styles from "../../../../styles/cardsblock.module.css";
 import type { CardsBlockProps } from "../../../../interfaces/mcp/cardsblock.interface";
-import { getFieldValue } from "../../../../utils";
-import { renderImage } from "../../helper/RenderImage";
+import { useMcpWidgetStore } from "../../../../infrastructure/store/mcpWidgetStore";
+import { findDetailTool } from "../../helper/AudienceHelper";
 
 export const CardsBlock: React.FC<CardsBlockProps> = ({
   block,
@@ -11,11 +11,12 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
   fields = [],
   maxItems,
   variant,
+  actions = [],
+  collection,
+  audience,
 }) => {
-  const [selectedRecord, setSelectedRecord] = useState<Record<
-    string,
-    any
-  > | null>(null);
+  const pushSubView = useMcpWidgetStore((state) => state.pushSubView);
+
   const displayRecords = useMemo(() => {
     const limit = maxItems || block?.maxItems;
     if (limit && limit > 0) {
@@ -28,7 +29,27 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
     return null;
   }
 
-  const activeVariant = variant || block?.variant;
+  const detailTool = findDetailTool(actions);
+
+  // Card tap → single-record detail (hybrid):
+  //  • if a get-by-id tool exists, fetch the full record from the backend
+  //    (the new tool result re-renders the widget as its detail layout);
+  //  • otherwise push an instant in-widget detail view built from this record.
+  const handleSelect = (record: Record<string, any>) => {
+    const openai = (window as any).openai;
+    const id = record.id ?? record._id;
+
+    if (detailTool?.tool && openai?.callTool && id !== undefined) {
+      openai.callTool(detailTool.tool, { id });
+      return;
+    }
+
+    pushSubView({
+      title: String(record.$title || collection?.entity || "Details"),
+      data: record,
+      blockType: "detail",
+    });
+  };
 
   return (
     <section className={styles.container}>
@@ -39,128 +60,12 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
             record={record}
             fields={fields}
             variant={variant || block?.variant}
-            onSelect={(rec) => setSelectedRecord(rec)}
+            actions={actions}
+            audience={audience}
+            onSelect={handleSelect}
           />
         ))}
       </div>
-      {/* Detail Modal on Card Click */}
-      {selectedRecord && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "var(--ModalBackdrop)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: "16px",
-          }}
-          onClick={() => setSelectedRecord(null)}
-        >
-          <div
-            style={{
-              background: "var(--Card)",
-              border: "1px solid var(--CardBorder)",
-              borderRadius: "14px",
-              padding: "24px",
-              maxWidth: "500px",
-              width: "100%",
-              maxHeight: "80vh",
-              overflowY: "auto",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: "16px",
-              }}
-            >
-              <div
-                style={{ display: "flex", gap: "12px", alignItems: "center" }}
-              >
-                {selectedRecord.$image && (
-                  <div
-                    style={{
-                      width: "48px",
-                      height: "48px",
-                      borderRadius: "6px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {renderImage(
-                      selectedRecord.$image,
-                      String(selectedRecord.$title || "Item"),
-                    )}
-                  </div>
-                )}
-                <h3 style={{ margin: 0, color: "var(--TextHeading)" }}>
-                  {selectedRecord.$title || "Details"}
-                </h3>
-              </div>
-              <button
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--TextSecondary)",
-                  cursor: "pointer",
-                  fontSize: "20px",
-                }}
-                onClick={() => setSelectedRecord(null)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "10px" }}
-            >
-              {fields
-                .filter((f) => !f.hidden)
-                .map((field) => {
-                  const val = getFieldValue(selectedRecord, field);
-                  if (val === null || val === undefined || val === "")
-                    return null;
-                  return (
-                    <div
-                      key={field.key}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        borderBottom: "1px solid var(--TableDivider)",
-                        paddingBottom: "6px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontWeight: 600,
-                          fontSize: "13px",
-                          color: "var(--TextSecondary)",
-                        }}
-                      >
-                        {field.label}:
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "13px",
-                          color: "var(--TextPrimary)",
-                          textAlign: "right",
-                          maxWidth: "65%",
-                        }}
-                      >
-                        {typeof val === "object"
-                          ? JSON.stringify(val)
-                          : String(val)}
-                      </span>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        </div>
-      )}
     </section>
   );
 };

@@ -4,6 +4,7 @@ import {
   PresentationPlan,
   BuildPresentationPlanOptions,
 } from "../../../../interfaces/mcp/widgetdecider.interface";
+import { capOn } from "../AudienceHelper";
 
 export const buildPresentationPlan = ({
   fields,
@@ -16,9 +17,11 @@ export const buildPresentationPlan = ({
 
   const blocks: PresentationBlock[] = [];
 
-  const hasFiltering = Boolean(capabilities?.canFilter);
-  const hasSorting = Boolean(capabilities?.canSort);
-  const hasPaginationCapability = Boolean(capabilities?.canPaginate);
+  // Capabilities: tolerate both the entity naming (canFilter/canSort/canPaginate)
+  // and the backend naming (filter/sort/pagination).
+  const hasFiltering = capOn(capabilities, "filter");
+  const hasSorting = capOn(capabilities, "sort");
+  const hasPaginationCapability = capOn(capabilities, "paginate", "pagination");
   const hasPagination =
     Boolean(pagination?.totalPages) || Boolean(collection?.totalPages);
 

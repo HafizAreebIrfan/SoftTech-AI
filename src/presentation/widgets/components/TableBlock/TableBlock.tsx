@@ -6,6 +6,7 @@ import styles from "../../../../styles/tableblock.module.css";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 import type { TableBlockProps } from "../../../../interfaces/mcp/tableblock.interface";
 import { FormBlock } from "../FormBlock";
+import { getPermissions, capOn } from "../../helper/AudienceHelper";
 
 export const TableBlock: React.FC<TableBlockProps> = ({
   block,
@@ -15,6 +16,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   capabilities,
   title,
   actions = [],
+  audience,
 }) => {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -50,12 +52,31 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   };
 
   const pageSize = pagination?.limit || 5;
-  const isCommercial = records.some((r: any) => r.$price !== undefined);
-  const canCreate = Boolean(capabilities?.canCreate || isCommercial);
-  const canUpdate = Boolean(capabilities?.canUpdate || isCommercial);
-  const canDelete = Boolean(capabilities?.canDelete || isCommercial);
-  const showActions =
-    canUpdate || canDelete || Boolean(capabilities?.canRead || true);
+
+  // Audience-gated CRUD: customers are read-only (view only), so admin controls
+  // never leak into a customer surface. Admin gets a verb when an action or a
+  // capability backs it.
+  const permissions = getPermissions(audience, capabilities, actions);
+  const hasVerb = (...verbs: string[]) =>
+    actions.some((a: any) =>
+      verbs.some(
+        (v) =>
+          a?.id === v ||
+          String(a?.tool || "")
+            .toLowerCase()
+            .includes(v),
+      ),
+    );
+  const canCreate =
+    permissions.canMutate &&
+    (hasVerb("create", "add") || capOn(capabilities, "create"));
+  const canUpdate =
+    permissions.canMutate &&
+    (hasVerb("update", "edit") || capOn(capabilities, "update"));
+  const canDelete =
+    permissions.canMutate &&
+    (hasVerb("delete", "remove") || capOn(capabilities, "delete"));
+  const showActions = true; // View is always available
 
   const activeFields = useMemo(() => {
     const available =
@@ -116,7 +137,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   }, [sortedRecords, currentPage, pageSize, pagination?.totalPages]);
 
   const handleHeaderClick = (field: FieldSchema) => {
-    if (!capabilities?.canSort && !field.sortable) return;
+    if (!capOn(capabilities, "sort") && !field.sortable) return;
     if (sortKey === field.key) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else {
       setSortKey(field.key);
@@ -244,7 +265,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
             <tr>
               {activeFields.map((field) => {
                 const isSortable = Boolean(
-                  capabilities?.canSort || field.sortable,
+                  capOn(capabilities, "sort") || field.sortable,
                 );
                 return (
                   <th

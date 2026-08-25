@@ -11,6 +11,9 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   records,
   fields,
   collection,
+  capabilities,
+  actions,
+  audience,
   presentationPlan,
 }) => {
   const { colors } = useThemeStore();
@@ -43,7 +46,15 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         </div>
       )}
 
-      <CardsBlock block={cardsBlock} records={records} fields={fields} />
+      <CardsBlock
+        block={cardsBlock}
+        records={records}
+        fields={fields}
+        collection={collection}
+        capabilities={capabilities}
+        actions={actions}
+        audience={audience}
+      />
     </section>
   );
 };

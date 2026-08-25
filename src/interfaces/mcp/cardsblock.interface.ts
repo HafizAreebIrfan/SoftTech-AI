@@ -1,4 +1,10 @@
-import type { FieldSchema } from "../../domain/entities/GenericWidget";
+import type {
+  FieldSchema,
+  WidgetAction,
+  WidgetAudience,
+  CollectionResult,
+  Capabilities,
+} from "../../domain/entities/GenericWidget";
 import type { PresentationBlock } from "./widgetdecider.interface";
 
 export interface CardFieldMapping {
@@ -15,6 +21,8 @@ export interface CardItemProps {
   fields: FieldSchema[];
   onSelect?: (record: Record<string, any>) => void;
   variant?: string;
+  actions?: WidgetAction[];
+  audience?: WidgetAudience;
 }
 
 export interface CardsBlockProps {
@@ -23,4 +31,8 @@ export interface CardsBlockProps {
   fields?: FieldSchema[];
   maxItems?: number;
   variant?: string;
+  actions?: WidgetAction[];
+  collection?: CollectionResult;
+  capabilities?: Capabilities;
+  audience?: WidgetAudience;
 }

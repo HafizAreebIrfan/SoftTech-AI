@@ -134,7 +134,7 @@ export const CardItem: React.FC<CardItemProps> = ({
         )}
       </div>
 
-      {actionUrlStr && (
+      {(actionUrlStr || onSelect) && (
         <div className={styles.cardFooter}>
           <span className={styles.actionButton}>View Details &rarr;</span>
         </div>

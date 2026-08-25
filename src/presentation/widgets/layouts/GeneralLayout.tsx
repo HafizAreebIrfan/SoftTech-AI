@@ -10,6 +10,8 @@ export const GeneralLayout: React.FC<WidgetLayoutProps> = ({
   records,
   fields,
   collection,
+  actions,
+  audience,
   presentationPlan,
 }) => {
   const { colors } = useThemeStore();
@@ -36,6 +38,8 @@ export const GeneralLayout: React.FC<WidgetLayoutProps> = ({
         records={records}
         fields={fields}
         collection={collection}
+        actions={actions}
+        audience={audience}
       />
     </section>
   );

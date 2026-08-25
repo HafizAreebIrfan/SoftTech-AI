@@ -8,6 +8,7 @@ import { GeneralLayout } from "../layouts/GeneralLayout";
 import { EmptyStateBlock } from "../components/EmptyStateBlock";
 import { WeatherBlock } from "../components/WeatherBlock/WeatherBlock";
 import { OptionPickerBlock } from "../components/OptionPickerBlock/OptionPickerBlock";
+import { DetailBlock } from "../components/DetailBlock";
 import { useMcpWidgetStore } from "../../../infrastructure/store/mcpWidgetStore";
 import { getValue } from "../../../utils";
 import type { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
@@ -137,6 +138,38 @@ export const GenericWidgetRenderer: React.FC = () => {
   const renderLayout = () => {
     const activeSubView = subViewHistory[subViewHistory.length - 1];
     if (activeSubView) {
+      // Card→detail: an in-widget single-record view built from the tapped
+      // record (used when no server-side detail tool exists). Reuses DetailBlock.
+      if (activeSubView.blockType === "detail") {
+        return (
+          <div>
+            <button
+              type="button"
+              onClick={() => popSubView()}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--WidgetCardBorder)",
+                borderRadius: "8px",
+                color: "var(--TextSecondary)",
+                cursor: "pointer",
+                padding: "6px 12px",
+                fontSize: "13px",
+                fontWeight: 600,
+                marginBottom: "12px",
+              }}
+            >
+              ← Back
+            </button>
+            <DetailBlock
+              records={[activeSubView.data]}
+              fields={fields}
+              collection={collection}
+              actions={content.actions}
+              audience={content.audience}
+            />
+          </div>
+        );
+      }
       return (
         <OptionPickerBlock
           title={activeSubView.title}
@@ -193,6 +226,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             capabilities={content.capabilities}
             pagination={content.pagination}
             actions={content.actions}
+            audience={content.audience}
             presentationPlan={presentationPlan}
           />
         );
@@ -209,6 +243,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             capabilities={content.capabilities}
             pagination={content.pagination}
             actions={content.actions}
+            audience={content.audience}
             presentationPlan={presentationPlan}
           />
         );
@@ -225,6 +260,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             capabilities={content.capabilities}
             pagination={content.pagination}
             actions={content.actions}
+            audience={content.audience}
             presentationPlan={presentationPlan}
           />
         );
@@ -242,6 +278,7 @@ export const GenericWidgetRenderer: React.FC = () => {
             capabilities={content.capabilities}
             pagination={content.pagination}
             actions={content.actions}
+            audience={content.audience}
             presentationPlan={presentationPlan}
           />
         );

@@ -1,6 +1,7 @@
 import type {
   FieldSchema,
   CollectionResult,
+  WidgetAudience,
 } from "../../domain/entities/GenericWidget";
 import type { PresentationBlock } from "./widgetdecider.interface";
 
@@ -15,4 +16,6 @@ export interface DetailBlockProps {
   fields?: FieldSchema[];
   collection?: CollectionResult;
   actions?: any[];
+  audience?: WidgetAudience;
+  onBack?: () => void;
 }
