@@ -58,16 +58,24 @@ export const GenericWidgetRenderer: React.FC = () => {
     const actions = content.actions as any;
     const metadata = content.metadata as any;
 
-    // Remove the dataPath extraction. The backend already flattens and unwraps the payload.
+    // Extract the record list generically:
+    //  • prefer the backend-declared collection.dataPath (e.g. "products");
+    //  • else the first array-valued property of the payload (list wrappers
+    //    like { products:[...], total, skip, limit });
+    //  • else treat the object itself as a single record (detail responses).
     let records: unknown[] = [];
     if (Array.isArray(rawData)) {
       records = rawData;
-    } else if (
-      rawData &&
-      typeof rawData === "object" &&
-      !Array.isArray(rawData)
-    ) {
-      records = [rawData];
+    } else if (rawData && typeof rawData === "object") {
+      const obj = rawData as Record<string, unknown>;
+      const dataPath = (collection?.dataPath as string | undefined) || undefined;
+      let list: unknown;
+      if (dataPath && Array.isArray(obj[dataPath])) {
+        list = obj[dataPath];
+      } else if (!dataPath) {
+        list = Object.values(obj).find((v) => Array.isArray(v));
+      }
+      records = Array.isArray(list) ? list : [obj];
     }
 
     const fields = collection?.fields || [];

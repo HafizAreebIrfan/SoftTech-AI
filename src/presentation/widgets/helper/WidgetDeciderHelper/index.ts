@@ -25,12 +25,11 @@ export const buildPresentationPlan = ({
   const hasPagination =
     Boolean(pagination?.totalPages) || Boolean(collection?.totalPages);
 
-  const hasPrices = fields.some((field) => field.type === "currency");
-  const hasStatus = fields.some((field) => field.type === "status");
-
   // 2. Map blocks directly based on the confirmed layout
   if (explicitLayout === "catalog") {
-    if (hasFiltering || hasPrices || hasStatus) {
+    // Only surface a filter UI when the company's API actually supports
+    // filtering — never merely because a price/status column is present.
+    if (hasFiltering) {
       blocks.push({ type: "filters" });
     }
     blocks.push({ type: "cards", fields });
@@ -55,7 +54,7 @@ export const buildPresentationPlan = ({
     blocks,
 
     showPagination: hasPagination || hasPaginationCapability,
-    showFilters: hasFiltering || hasPrices || hasStatus,
+    showFilters: hasFiltering,
     showSorting: hasSorting && finalLayout === "table",
 
     primaryFields: fields.filter((field) => field.primary),
