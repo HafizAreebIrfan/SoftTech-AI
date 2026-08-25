@@ -443,7 +443,7 @@ const SignupStep2: FC = () => {
                     Target Audience
                   </label>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
-                    {(["customer", "admin", "both"] as const).map((aud) => (
+                    {(["customer", "admin"] as const).map((aud) => (
                       <button
                         key={aud}
                         type="button"
@@ -456,16 +456,16 @@ const SignupStep2: FC = () => {
                           cursor: "pointer",
                           textTransform: "capitalize",
                           background:
-                            (api.audience || "both") === aud
+                            (api.audience || "customer") === aud
                               ? "rgba(59, 130, 246, 0.2)"
                               : colors.BackgroundSecondary,
                           border: `1px solid ${
-                            (api.audience || "both") === aud
+                            (api.audience || "customer") === aud
                               ? colors.CardActiveBorder
                               : colors.CardBorder
                           }`,
                           color:
-                            (api.audience || "both") === aud
+                            (api.audience || "customer") === aud
                               ? colors.TextHeading
                               : colors.TextBody,
                           transition: "all 0.15s ease",

@@ -5,7 +5,7 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 
-export type WidgetAudience = "admin" | "user" | "both";
+export type WidgetAudience = "admin" | "customer";
 
 export type PlatformType = "web" | "mobile" | "both";
 

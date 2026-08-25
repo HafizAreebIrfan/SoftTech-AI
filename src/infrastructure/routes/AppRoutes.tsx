@@ -17,6 +17,7 @@ import NotFound from "../../presentation/screens/public/NotFound";
 import ServiceUnavailable from "../../presentation/screens/public/ServiceUnavailable";
 import PublicLayout from "../../presentation/layouts/PublicLayout";
 import AuthLayout from "../../presentation/layouts/AuthLayout";
+import Checkout from "../../presentation/screens/public/DummyPages/checkoutdummy";
 import { useAuthStore } from "../store/authStore";
 
 // 1. Establish the absolute root route (renders an Outlet container)
@@ -112,6 +113,12 @@ const serviceUnavailableRoute = createRoute({
   component: ServiceUnavailable,
 });
 
+const checkoutDummy = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/checkout",
+  component: Checkout,
+});
+
 // 4. Assemble the unified route tree
 const routeTree = rootRoute.addChildren([
   publicLayout.addChildren([indexRoute]),
@@ -127,6 +134,7 @@ const routeTree = rootRoute.addChildren([
   dashboardRoute,
   notFoundRoute,
   serviceUnavailableRoute,
+  checkoutDummy,
 ]);
 
 // 5. Create the unified router

@@ -55,9 +55,9 @@ export interface SignupStore {
     | "list"
     | "cards";
   selectedThemeColor?: string;
-  selectedAudienceDefault?: "customer" | "admin" | "both";
+  selectedAudienceDefault?: "customer" | "admin";
   setSelectedThemeColor: (color: string) => void;
-  setSelectedAudienceDefault: (audience: "customer" | "admin" | "both") => void;
+  setSelectedAudienceDefault: (audience: "customer" | "admin") => void;
   triggerStepThreeAutoSave: () => void;
   apiTestStates: Record<
     string,

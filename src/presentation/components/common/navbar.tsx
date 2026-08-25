@@ -74,6 +74,10 @@ const Navbar: React.FC = () => {
               Start Building
             </Link>
 
+            <Link to="/checkout" className={styles.primaryBtn}>
+              Preview
+            </Link>
+
             <button
               id="menu-toggle"
               className={styles.menuBtn}
@@ -152,6 +156,13 @@ const Navbar: React.FC = () => {
             onClick={closeMobileMenu}
           >
             Start Building
+          </Link>
+          <Link
+            to="/checkout"
+            className={styles.mobilePrimaryBtn}
+            onClick={closeMobileMenu}
+          >
+            Preview
           </Link>
         </div>
       </div>

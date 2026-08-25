@@ -1,0 +1,445 @@
+.pageWrapper {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #050507;
+  color: #ecefef;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+.stripeContainer {
+  width: 100%;
+  max-width: 1080px;
+  min-height: 680px;
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  background-color: #121316;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  margin: 32px 16px;
+}
+
+/* Left Column */
+.leftColumn {
+  background-color: #0c0d10;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+}
+
+.brandHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.brandIcon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.brandName {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ecefef;
+}
+
+.priceOverview {
+  margin-bottom: 36px;
+}
+
+.overviewLabel {
+  font-size: 13px;
+  color: #94a39d;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.overviewAmount {
+  font-size: 38px;
+  font-weight: 700;
+  color: #ecefef;
+  letter-spacing: -0.5px;
+}
+
+.orderItemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px 0;
+  margin-bottom: 24px;
+}
+
+.orderItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.itemMain {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.itemAvatar {
+  width: 38px;
+  height: 38px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a39d;
+}
+
+.itemTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ecefef;
+  margin: 0;
+}
+
+.itemDesc {
+  font-size: 12px;
+  color: #94a39d;
+  margin: 2px 0 0 0;
+}
+
+.itemPrice {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ecefef;
+}
+
+.calculationBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: auto;
+}
+
+.calcRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #94a39d;
+}
+
+.calcRowTotal {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ecefef;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.leftFooter {
+  padding-top: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #687670;
+}
+
+.backButton {
+  background: none;
+  border: none;
+  color: #94a39d;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.backButton:hover {
+  color: #34d399;
+}
+
+/* Right Column */
+.rightColumn {
+  padding: 48px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sandboxBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background-color: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 8px;
+  font-size: 12px;
+  color: #f59e0b;
+  margin-bottom: 24px;
+}
+
+.sandboxDot {
+  width: 6px;
+  height: 6px;
+  background-color: #f59e0b;
+  border-radius: 50%;
+}
+
+.paymentForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.walletGroup {
+  width: 100%;
+}
+
+.walletButton {
+  width: 100%;
+  padding: 12px;
+  background-color: #ecefef;
+  color: #050507;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.walletButton:hover {
+  background-color: #ffffff;
+}
+
+.dividerRow {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  font-size: 12px;
+  color: #687670;
+}
+
+.dividerRow::before,
+.dividerRow::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dividerRow span {
+  padding: 0 12px;
+}
+
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sectionHeader {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ecefef;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: #94a39d;
+  font-weight: 500;
+}
+
+.inputField {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #050507;
+  border: 1px solid #2a3831;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #ecefef;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.inputField:focus {
+  border-color: #10b981;
+}
+
+.cardInputWrapper {
+  position: relative;
+}
+
+.cardBrandIcons {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 6px;
+}
+
+.brandPill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: #94a39d;
+}
+
+.multiFieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.primaryButton {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: opacity 0.2s;
+}
+
+.primaryButton:hover {
+  opacity: 0.92;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.securityFooter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #687670;
+  margin-top: 4px;
+}
+
+/* Success View */
+.successCard {
+  width: 100%;
+  max-width: 460px;
+  background-color: #121316;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 36px;
+  text-align: center;
+}
+
+.successIcon {
+  width: 60px;
+  height: 60px;
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+}
+
+.badgeSuccess {
+  display: inline-block;
+  padding: 4px 10px;
+  background-color: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #34d399;
+  margin-bottom: 8px;
+}
+
+.successTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ecefef;
+  margin: 0 0 4px 0;
+}
+
+.successSub {
+  font-size: 13px;
+  color: #94a39d;
+  margin: 0 0 24px 0;
+}
+
+.receiptSummary {
+  background-color: #050507;
+  border: 1px solid #2a3831;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.receiptRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #ecefef;
+}
+
+.receiptRow span:first-child {
+  color: #94a39d;
+}
+
+/* Responsive adjustments */
+@media (max-width: 860px) {
+  .stripeContainer {
+    grid-template-columns: 1fr;
+    margin: 16px 8px;
+  }
+
+  .leftColumn {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 32px 24px;
+  }
+
+  .rightColumn {
+    padding: 32px 24px;
+  }
+}

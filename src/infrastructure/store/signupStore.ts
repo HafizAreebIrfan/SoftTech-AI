@@ -329,7 +329,7 @@ export const useSignupStore = create<SignupStore>()(
           apiName: "Default API",
           apiEndpoint: "https://api.example.com/data",
           apiMethod: "GET",
-          audience: "user",
+          audience: "customer",
           apiAuthType: "No Auth",
           apiCredentials: "",
           apiQueryParams: "",
@@ -342,7 +342,7 @@ export const useSignupStore = create<SignupStore>()(
       ],
       selectedLayout: "auto",
       selectedThemeColor: "#6366f1",
-      selectedAudienceDefault: "both",
+      selectedAudienceDefault: "customer",
       apiTestStates: {},
       saveStatus: "idle",
       isStepTwoPending: false,
@@ -353,7 +353,7 @@ export const useSignupStore = create<SignupStore>()(
       },
 
       setSelectedAudienceDefault: (
-        selectedAudienceDefault: "customer" | "admin" | "both",
+        selectedAudienceDefault: "customer" | "admin",
       ) => {
         set({ selectedAudienceDefault });
         get().triggerStepThreeAutoSave();
@@ -464,7 +464,7 @@ export const useSignupStore = create<SignupStore>()(
           ],
           selectedLayout: "auto",
           selectedThemeColor: "#6366f1",
-          selectedAudienceDefault: "both",
+          selectedAudienceDefault: "customer",
           apiTestStates: {},
           saveStatus: "idle",
           isStepTwoPending: false,
@@ -976,7 +976,7 @@ export const useSignupStore = create<SignupStore>()(
                 testedonregister:
                   get().apiTestStates[api.id]?.status === "success",
                 platformType: api.platformType || "web",
-                audience: api.audience || "both",
+                audience: api.audience || "customer",
                 webCheckoutUrl:
                   api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
                 mobileDeepLink: api.mobileDeepLink || undefined,
@@ -1151,7 +1151,7 @@ export const useSignupStore = create<SignupStore>()(
               testedonregister:
                 get().apiTestStates[api.id]?.status === "success",
               platformType: api.platformType || "web",
-              audience: api.audience || "both",
+              audience: api.audience || "customer",
               webCheckoutUrl:
                 api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
               mobileDeepLink: api.mobileDeepLink || undefined,

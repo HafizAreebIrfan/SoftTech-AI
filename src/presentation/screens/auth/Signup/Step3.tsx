@@ -51,16 +51,15 @@ const SignupStep3: FC = () => {
       };
     }
 
-    const hasBoth = apisList.some((api) => api.audience === "both");
     const hasAdmin = apisList.some((api) => api.audience === "admin");
     const hasCustomer = apisList.some(
-      (api) => api.audience === "user" || !api.audience,
+      (api) => api.audience === "customer" || !api.audience,
     );
 
-    if (hasBoth || (hasAdmin && hasCustomer)) {
+    if (hasAdmin && hasCustomer) {
       return {
         hasAudienceTabs: true,
-        calculatedAudienceDefault: "both" as const,
+        calculatedAudienceDefault: "customer" as const,
       };
     }
 
@@ -79,11 +78,7 @@ const SignupStep3: FC = () => {
 
   const [activeAudienceTab, setActiveAudienceTab] = useState<
     "customer" | "admin"
-  >(
-    selectedAudienceDefault === "admin"
-      ? "admin"
-      : "customer",
-  );
+  >(selectedAudienceDefault === "admin" ? "admin" : "customer");
 
   useEffect(() => {
     if (setSelectedAudienceDefault) {
@@ -154,7 +149,7 @@ const SignupStep3: FC = () => {
         layout: selectedLayout || "auto",
         themeColor: selectedThemeColor || "#6366f1",
         audienceDefault:
-          selectedAudienceDefault || calculatedAudienceDefault || "both",
+          selectedAudienceDefault || calculatedAudienceDefault || "customer",
       },
     });
   };
