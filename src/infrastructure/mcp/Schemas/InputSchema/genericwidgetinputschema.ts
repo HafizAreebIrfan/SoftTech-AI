@@ -13,6 +13,17 @@ const createField = (param: ApiParam): z.ZodTypeAny => {
       field = z.boolean();
       break;
 
+    // Structured request-body fields: let the model pass a real object/array
+    // instead of being forced into a string (which then reached the API as a
+    // quoted JSON blob). Generic for any company's POST/PUT/PATCH body.
+    case "object":
+      field = z.record(z.string(), z.any());
+      break;
+
+    case "array":
+      field = z.array(z.any());
+      break;
+
     default:
       field = z.string();
   }
@@ -44,6 +55,16 @@ const createField = (param: ApiParam): z.ZodTypeAny => {
       " If the user omits this required detail, infer a highly probable default value from their prompt context instead of asking them for clarification.";
   }
 
+  // When a company configured a default, tell the model so it does not need to
+  // guess a value for this field.
+  if (
+    param.defaultValue !== undefined &&
+    param.defaultValue !== null &&
+    String(param.defaultValue) !== ""
+  ) {
+    smartDescription += ` If the user does not specify this, it defaults to "${param.defaultValue}".`;
+  }
+
   return field.describe(smartDescription);
 };
 
@@ -62,6 +83,17 @@ export const buildCustomMcpInputSchema = (
     .string()
     .optional()
     .describe("Summarize the user's main goal in 3 to 5 words.");
+
+  // Always accept an `id`: the widget's action buttons invoke get-by-id style
+  // tools (view / update / delete a single record) with `{ id }`. Optional and
+  // accepts string or number, so it never interferes with list/search calls.
+  // A company-registered param named `id` (below) overrides this default.
+  shape["id"] = z
+    .union([z.string(), z.number()])
+    .optional()
+    .describe(
+      "Identifier of a specific record to fetch, update, or delete. Leave empty for list or search requests.",
+    );
 
   // 2. Map the dynamic parameters with smart descriptions
   for (const param of params) {

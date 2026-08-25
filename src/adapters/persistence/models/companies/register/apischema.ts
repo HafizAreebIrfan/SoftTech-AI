@@ -32,7 +32,10 @@ export const ApiSchema = new mongoose.Schema(
     platformType: { type: String, default: "web" },
     audience: { type: String, default: "" },
 
+    isCheckout: { type: Boolean, default: false },
     webCheckoutUrl: { type: String },
+    mobileDeepLinkUrl: { type: String },
+    // Legacy field name kept so previously-saved APIs still resolve.
     mobileDeepLink: { type: String },
 
     apiSchema: { type: mongoose.Schema.Types.Mixed },

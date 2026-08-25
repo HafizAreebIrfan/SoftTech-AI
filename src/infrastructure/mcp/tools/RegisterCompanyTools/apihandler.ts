@@ -10,6 +10,12 @@ import {
 } from "../../../../application/services/oauth/OAuthTokenService";
 import { env } from "../../../../infrastructure/config/env";
 import { resolveMcpUserId } from "../../../../adapters/http/middlewares/mcpUserAuthMiddleware";
+import {
+  SearchRecoveryInfo,
+  isEmptyResult,
+  detectSearchParam,
+  buildRelaxedQueries,
+} from "./searchrecovery";
 
 const HTTP_METHODS_WITH_BODY = ["POST", "PUT", "PATCH"];
 
@@ -75,7 +81,99 @@ export const sanitizeResponseBody = (body: string): string => {
     .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [REDACTED]");
 };
 
+/**
+ * Public entry point. Executes the registered API and, for read-only (GET)
+ * searches that come back empty, transparently retries with progressively
+ * relaxed query terms (see searchrecovery.ts). Generic for every company and
+ * entity type — nothing here is product-specific.
+ *
+ * When `recovery` is supplied it is populated so the caller can tell the model
+ * what happened (exact hit, relaxed match, or genuinely empty).
+ */
 export const callRegisteredApi = async (
+  companyId: string,
+  apiId: string,
+  api: IApi,
+  input: any,
+  req?: any,
+  recovery?: SearchRecoveryInfo,
+) => {
+  const method = (api.method || "GET").toUpperCase();
+
+  // First attempt: exactly what the model asked for.
+  const firstResult = await executeApiCall(companyId, apiId, api, input, req);
+
+  // Only relax read-only searches. Auth notices, write ops, and non-empty
+  // results all pass straight through untouched.
+  if (
+    method !== "GET" ||
+    isUserAuthRequiredNotice(firstResult) ||
+    !isEmptyResult(firstResult)
+  ) {
+    return firstResult;
+  }
+
+  const search = detectSearchParam(api, input);
+  if (!search) {
+    // Empty, but there is no free-text query to loosen (e.g. a pure filter).
+    if (recovery) recovery.empty = true;
+    return firstResult;
+  }
+
+  for (const candidate of buildRelaxedQueries(search.value)) {
+    const relaxedResult = await executeApiCall(
+      companyId,
+      apiId,
+      api,
+      withSearchValue(input, search, candidate),
+      req,
+    );
+
+    if (isUserAuthRequiredNotice(relaxedResult)) return relaxedResult;
+
+    if (!isEmptyResult(relaxedResult)) {
+      if (recovery) {
+        recovery.recovered = true;
+        recovery.originalQuery = search.value;
+        recovery.effectiveQuery = candidate; // "" => query dropped, full list
+      }
+      return relaxedResult;
+    }
+  }
+
+  // Even dropping the query entirely returned nothing.
+  if (recovery) {
+    recovery.empty = true;
+    recovery.originalQuery = search.value;
+  }
+  return firstResult;
+};
+
+/**
+ * Returns a shallow copy of the tool input with the detected search parameter
+ * overridden. An empty string omits the parameter (buildApiUrl skips blank
+ * values), which asks the upstream API for the full list/catalog.
+ */
+const withSearchValue = (
+  input: any,
+  search: { key: string; inputName: string },
+  value: string,
+): any => {
+  const base = input && typeof input === "object" ? { ...input } : {};
+  base[search.inputName] = value;
+  base[search.key] = value;
+
+  if (base.params && typeof base.params === "object") {
+    base.params = {
+      ...base.params,
+      [search.inputName]: value,
+      [search.key]: value,
+    };
+  }
+  return base;
+};
+
+const executeApiCall = async (
   companyId: string,
   apiId: string,
   api: IApi,
@@ -227,6 +325,26 @@ const buildApiUrl = (api: IApi, input: any): URL => {
       .replace(new RegExp(`:${escapeRegExp(key)}\\b`, "gi"), encodedValue);
   }
 
+  // Widget fallback: the ChatGPT widget always invokes get-by-id style tools
+  // with `{ id }` (see the action buttons). If exactly one path placeholder is
+  // still unfilled and an id was supplied, use it — so a detail tool works no
+  // matter how the company named its path param (/x/{id}, /x/{productId},
+  // /x/:uuid). Skipped when a configured param already filled the id.
+  const fallbackId = allInputValues.id ?? allInputValues._id;
+  if (
+    fallbackId !== undefined &&
+    fallbackId !== null &&
+    String(fallbackId) !== ""
+  ) {
+    const remaining = endpoint.match(/\{[^}]+\}|:[a-zA-Z0-9_-]+/g) || [];
+    if (remaining.length === 1) {
+      endpoint = endpoint.replace(
+        /\{[^}]+\}|:[a-zA-Z0-9_-]+/,
+        encodeURIComponent(String(fallbackId)),
+      );
+    }
+  }
+
   if (/{[^}]+}/.test(endpoint) || /:[a-zA-Z0-9_-]+/.test(endpoint)) {
     throw new Error(`Missing required path parameter for ${api.name || "API"}`);
   }
@@ -266,10 +384,12 @@ const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
       const key = cleanParameterKey(field.key);
       if (!key) continue;
 
-      const value = resolveParameterValue(field, {
-        ...inputParams,
-        ...rawInput,
-      });
+      const value = coerceJsonValue(
+        resolveParameterValue(field, {
+          ...inputParams,
+          ...rawInput,
+        }),
+      );
 
       if (value !== undefined && value !== null) {
         body[key] = value;
@@ -278,6 +398,26 @@ const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
     return body;
   }
   return {};
+};
+
+/**
+ * Some models stringify structured body fields (objects/arrays) even when the
+ * input schema accepts them directly, which previously reached the upstream
+ * API as a quoted JSON blob. When a value is a string that clearly encodes
+ * JSON (starts with { or [), parse it so the API receives a real object/array.
+ * Non-JSON strings pass through untouched. Applied only to request-body values.
+ */
+const coerceJsonValue = (value: any): any => {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (trimmed === "") return value;
+  const first = trimmed[0];
+  if (first !== "{" && first !== "[") return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
 };
 
 const normalizeConfiguredParameters = (params: any): any[] => {
@@ -333,6 +473,16 @@ const resolveParameterValue = (
       inputValues[originalKey] !== null
     ) {
       return inputValues[originalKey];
+    }
+    // The model omitted this value: fall back to a configured default so
+    // company-set defaults (e.g. limit=10) actually reach the API. `value`
+    // stays an example only; `defaultValue` is the intentional fallback.
+    if (
+      parameter.defaultValue !== undefined &&
+      parameter.defaultValue !== null &&
+      String(parameter.defaultValue) !== ""
+    ) {
+      return parameter.defaultValue;
     }
     return undefined;
   }

@@ -1,5 +1,5 @@
 import { ApiSchema } from "../../schema_analyzer/interfaces";
-import { GenericWidgetResult } from "../../../../domain/types/genericWidget.types";
+import { GenericWidgetResult, WidgetAction } from "../../../../domain/types/genericWidget.types";
 import { JsonValue } from "../../../../domain/types/mcpjsonprimitive.types";
 import { CapabilitiesResult } from "../../../../domain/types/mcpcapabilities.types";
 import {
@@ -9,6 +9,19 @@ import {
 import { PaginationResult } from "../../../../domain/types/mcppagination.types";
 import { WidgetAudience } from "../../../../domain/types/widgetaudience.types";
 import { PlatformType } from "../../../../domain/types/widgetplatform.types";
+
+/**
+ * Registered MCP tool ids that back each CRUD action for an entity. Resolved
+ * once per company at tool-registration time and passed in so the widget's
+ * action buttons target real tools instead of display names. Any role may be
+ * absent when the company did not register a tool for it.
+ */
+export interface ActionToolLinks {
+  detail?: string;
+  create?: string;
+  update?: string;
+  delete?: string;
+}
 
 export const normalizeApiResponseToWidget = (
   companyName: string,
@@ -22,6 +35,7 @@ export const normalizeApiResponseToWidget = (
   platformType?: PlatformType,
   method = "GET",
   themeColor?: string,
+  actionTools?: ActionToolLinks,
 ): GenericWidgetResult => {
   const rawData = normalizeJsonValue(response);
 
@@ -34,7 +48,7 @@ export const normalizeApiResponseToWidget = (
   );
 
   // 1. Sanitize the payload: strip internal fields, apply schema, and flatten arrays
-  const data = sanitizeDataPayload(rawData, collection?.fields || []);
+  const data = sanitizeDataPayload(rawData, collection?.fields || [], apiSchema);
 
   const capabilities = buildCapabilities(apiParams, method);
   const pagination = extractPagination(data);
@@ -55,32 +69,7 @@ export const normalizeApiResponseToWidget = (
     Boolean(collection);
 
   const defaultActions = isInteractiveAction
-    ? [
-        {
-          id: "view_details",
-          label: "View Details",
-          tool: apiName,
-          enabled: true,
-        },
-        ...(audience === "admin"
-          ? [
-              { id: "edit_item", label: "Edit", tool: apiName, enabled: true },
-              {
-                id: "delete_item",
-                label: "Delete",
-                tool: apiName,
-                enabled: true,
-              },
-            ]
-          : [
-              {
-                id: "select_item",
-                label: "Select Option",
-                tool: apiName,
-                enabled: true,
-              },
-            ]),
-      ]
+    ? buildWidgetActions(actionTools, audience, isCommercialEntity)
     : undefined;
 
   return {
@@ -107,15 +96,82 @@ export const normalizeApiResponseToWidget = (
 };
 
 /**
+ * Builds the widget's action buttons. Every emitted action points at a REAL
+ * registered MCP tool id (resolved per entity at registration time and passed
+ * in via `actionTools`) — never a display name — and is only emitted when a
+ * tool actually backs it, so the widget's `callTool(action.tool, { id })`
+ * always resolves. When no sibling tool exists the action is omitted and the
+ * widget's own client-side preview modal still covers plain "view". The verb
+ * ids (create/update/delete) match what the table view looks for. Generic for
+ * every company and industry.
+ */
+const buildWidgetActions = (
+  actionTools: ActionToolLinks | undefined,
+  audience: WidgetAudience | undefined,
+  commercial: boolean,
+): WidgetAction[] | undefined => {
+  if (!actionTools) return undefined;
+
+  const actions: WidgetAction[] = [];
+
+  // Open / view one record -> the entity's get-by-id tool. Customers on a
+  // commercial catalog get a "Select" affordance; everyone else gets "View".
+  if (actionTools.detail) {
+    const isSelect = commercial && audience !== "admin";
+    actions.push({
+      id: isSelect ? "select_item" : "view_details",
+      label: isSelect ? "Select Option" : "View Details",
+      tool: actionTools.detail,
+      requiresItem: true,
+      enabled: true,
+    });
+  }
+
+  // Write actions only for admins, and only when a tool implements them.
+  if (audience === "admin") {
+    if (actionTools.create) {
+      actions.push({
+        id: "create",
+        label: "Create New",
+        tool: actionTools.create,
+        enabled: true,
+      });
+    }
+    if (actionTools.update) {
+      actions.push({
+        id: "update",
+        label: "Edit",
+        tool: actionTools.update,
+        requiresItem: true,
+        enabled: true,
+      });
+    }
+    if (actionTools.delete) {
+      actions.push({
+        id: "delete",
+        label: "Delete",
+        tool: actionTools.delete,
+        requiresItem: true,
+        requiresConfirmation: true,
+        enabled: true,
+      });
+    }
+  }
+
+  return actions.length > 0 ? actions : undefined;
+};
+
+/**
  * Strips internal database artifacts, enforces the schema, and flattens primitive arrays.
  */
 const sanitizeDataPayload = (
   data: JsonValue,
   fields: FieldSchema[],
+  apiSchema?: ApiSchema,
 ): JsonValue => {
-  const collectionData = findRecordCollection(data);
-  const recordsToProcess = collectionData
-    ? collectionData.records
+  const located = locateEntityRecords(data, apiSchema);
+  const recordsToProcess = located
+    ? located.records
     : Array.isArray(data)
       ? data.filter(isObject)
       : [];
@@ -139,8 +195,16 @@ const sanitizeDataPayload = (
     for (const [key, value] of Object.entries(record)) {
       if (isInternalField(key)) continue;
 
-      // Drop fields not in the Gemini schema
-      if (hasSchema && !allowedKeys.has(key) && key !== "_id" && key !== "id") {
+      // Drop fields not in the Gemini schema — but never strip reserved widget
+      // keys (checkout CTA `url`/`link` and pre-computed $-markers injected
+      // upstream), otherwise the checkout call-to-action vanishes here.
+      if (
+        hasSchema &&
+        !allowedKeys.has(key) &&
+        key !== "_id" &&
+        key !== "id" &&
+        !isReservedWidgetKey(key)
+      ) {
         continue;
       }
 
@@ -155,21 +219,14 @@ const sanitizeDataPayload = (
 
       cleanRecord[key] = finalValue;
 
+      // Pre-computed $-marker keys are already final; skip the re-mapping pass.
+      if (key.startsWith("$")) continue;
+
       // Map to standard UI keys using AI schema first, heuristics second
       const schemaField = fields.find((f) => f.key === key);
 
       if (schemaField?.uiRole) {
-        if (schemaField.uiRole === "title") cleanRecord.$title = finalValue;
-        else if (schemaField.uiRole === "description")
-          cleanRecord.$description = finalValue;
-        else if (schemaField.uiRole === "price")
-          cleanRecord.$price = finalValue;
-        else if (schemaField.uiRole === "image")
-          cleanRecord.$image = finalValue;
-        else if (schemaField.uiRole === "status")
-          cleanRecord.$status = finalValue;
-        else if (schemaField.uiRole === "metric")
-          cleanRecord.$metric = finalValue;
+        applySchemaUiRole(cleanRecord, schemaField.uiRole, finalValue);
       } else {
         const k = key.toLowerCase();
         if (!cleanRecord.$title && (k.includes("name") || k.includes("title")))
@@ -203,17 +260,70 @@ const sanitizeDataPayload = (
       }
     }
 
+    // Surface schema fields declared via nested dot-paths (e.g.
+    // "dimensions.width", "meta.qrCode") as flat keys so nested business data
+    // is not silently dropped. Sub-objects and arrays-of-objects are skipped;
+    // arrays of primitives are joined like the top-level pass above.
+    for (const field of fields) {
+      const rawPath = String(field.path || "");
+      if (!rawPath.includes(".")) continue; // top-level keys handled above
+
+      const nestedValue = resolveDotPath(record, rawPath);
+      if (nestedValue === undefined || nestedValue === null) continue;
+      if (isObject(nestedValue)) continue;
+
+      let flatValue: JsonValue = nestedValue;
+      if (Array.isArray(flatValue)) {
+        if (
+          flatValue.every((v) => typeof v === "string" || typeof v === "number")
+        ) {
+          flatValue = flatValue.join(", ");
+        } else {
+          continue;
+        }
+      }
+
+      if (!(field.key in cleanRecord)) {
+        cleanRecord[field.key] = flatValue;
+      }
+      if (field.uiRole) applySchemaUiRole(cleanRecord, field.uiRole, flatValue);
+    }
+
     return cleanRecord;
   });
 
-  if (collectionData?.key && isObject(data)) {
+  // A single-record response (e.g. GET /products/{id}) is rendered through the
+  // same one-item path so its $title/$price/$image markers apply correctly and
+  // its total reads as 1 instead of the size of some nested array.
+  if (located?.single) {
+    return cleanRecords;
+  }
+
+  if (located?.key && isObject(data)) {
     return {
       ...data,
-      [collectionData.key]: cleanRecords,
+      [located.key]: cleanRecords,
     };
   }
 
   return cleanRecords;
+};
+
+/**
+ * Maps a schema field's uiRole onto the standard $-prefixed UI keys the widget
+ * reads. Shared by the top-level and nested-path passes.
+ */
+const applySchemaUiRole = (
+  cleanRecord: Record<string, JsonValue>,
+  uiRole: string,
+  value: JsonValue,
+): void => {
+  if (uiRole === "title") cleanRecord.$title = value;
+  else if (uiRole === "description") cleanRecord.$description = value;
+  else if (uiRole === "price") cleanRecord.$price = value;
+  else if (uiRole === "image") cleanRecord.$image = value;
+  else if (uiRole === "status") cleanRecord.$status = value;
+  else if (uiRole === "metric") cleanRecord.$metric = value;
 };
 
 const normalizeJsonValue = (value: unknown): JsonValue => {
@@ -263,7 +373,7 @@ const buildCollectionMetadata = (
     result.layout = selectedLayout;
   }
 
-  const collectionData = findRecordCollection(data);
+  const collectionData = locateEntityRecords(data, apiSchema);
 
   if (collectionData) {
     const { key, records } = collectionData;
@@ -316,7 +426,7 @@ const buildCollectionMetadata = (
       value: String(result.total || rawRecords.length),
     });
 
-    if (numericFields.length > 0) {
+    if (numericFields.length > 0 && rawRecords.length > 1) {
       const primaryNumField = numericFields[0];
       let sum = 0;
       let validCount = 0;
@@ -432,10 +542,125 @@ const findRecordCollection = (
   return undefined;
 };
 
+/**
+ * Walks a dot-notation path (relative to one record) and returns the value at
+ * that path, or undefined if any segment is missing. Used to honor the AI
+ * analyzer's `dataPath` and nested field `path`s.
+ */
+const resolveDotPath = (
+  source: JsonValue,
+  path: string,
+): JsonValue | undefined => {
+  const segments = String(path || "")
+    .split(".")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (segments.length === 0) return source;
+
+  let current: JsonValue = source;
+  for (const segment of segments) {
+    if (isObject(current) && Object.prototype.hasOwnProperty.call(current, segment)) {
+      current = current[segment];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+};
+
+/**
+ * Decides whether a lone object is a single business record (e.g. GET
+ * /products/{id}) rather than a wrapper around a collection array. Uses the AI
+ * schema when available (its fields are direct keys of the record) and falls
+ * back to a light heuristic (a top-level id plus its own scalar fields).
+ */
+const looksLikeSingleRecord = (
+  obj: { [key: string]: JsonValue },
+  apiSchema?: ApiSchema,
+): boolean => {
+  const directFields = (apiSchema?.fields || []).filter(
+    (field) => !String(field.path || "").includes("."),
+  );
+  if (directFields.length > 0) {
+    const directHits = directFields.filter((field) =>
+      Object.prototype.hasOwnProperty.call(obj, field.key),
+    ).length;
+    if (directHits >= Math.min(2, directFields.length)) return true;
+  }
+
+  const hasId = "id" in obj || "_id" in obj;
+  const scalarCount = Object.values(obj).filter(
+    (value) => value === null || typeof value !== "object",
+  ).length;
+  return hasId && scalarCount >= 2;
+};
+
+/**
+ * Locates the business records in any response shape and reports whether it is
+ * a single record or a collection. Priority:
+ *   1. The AI analyzer's `dataPath` when it resolves.
+ *   2. A root array (collection).
+ *   3. A single record object (so nested arrays like `reviews` don't hijack it).
+ *   4. Legacy fallback: the first nested object-array.
+ * Generic for every company/entity — nothing here is product-specific.
+ */
+const locateEntityRecords = (
+  value: JsonValue,
+  apiSchema?: ApiSchema,
+):
+  | { key?: string; records: Record<string, JsonValue>[]; single: boolean }
+  | undefined => {
+  const dataPath = String(apiSchema?.dataPath || "").trim();
+
+  // (1) Trust the analyzer's dataPath when it points somewhere resolvable.
+  if (dataPath) {
+    const resolved = resolveDotPath(value, dataPath);
+    const key = dataPath.split(".").filter(Boolean).pop();
+
+    if (Array.isArray(resolved)) {
+      const records = resolved.filter(isObject);
+      return records.length > 0 ? { key, records, single: false } : undefined;
+    }
+    if (isObject(resolved)) {
+      return { key, records: [resolved], single: true };
+    }
+    // dataPath didn't resolve -> fall through to structural detection.
+  }
+
+  // (2) Root is already the collection array.
+  if (Array.isArray(value)) {
+    const records = value.filter(isObject);
+    return records.length > 0 ? { records, single: false } : undefined;
+  }
+
+  // (3)/(4) Root object: single record vs. wrapper around a collection.
+  if (isObject(value)) {
+    if (looksLikeSingleRecord(value, apiSchema)) {
+      return { records: [value], single: true };
+    }
+    const found = findRecordCollection(value);
+    if (found) {
+      return { key: found.key, records: found.records, single: false };
+    }
+  }
+
+  return undefined;
+};
+
 const buildFieldsFromApiSchema = (apiSchema?: ApiSchema): FieldSchema[] => {
   if (!apiSchema?.fields || apiSchema.fields.length === 0) return [];
+  const seenKeys = new Set<string>();
   return apiSchema.fields
     .filter((field) => !field.hidden)
+    .filter((field) => {
+      // Guard against the analyzer emitting two fields with the same key (e.g.
+      // a top-level and a nested path both keyed "price"), which renders
+      // duplicate columns and collides on React keys. First occurrence wins.
+      if (!field.key || seenKeys.has(field.key)) return false;
+      seenKeys.add(field.key);
+      return true;
+    })
     .map((field) => ({
       key: field.key,
       label: field.label,
@@ -604,6 +829,14 @@ const isInternalField = (key: string): boolean => {
     normalized === "updatedat"
   );
 };
+
+/**
+ * Keys the widget layer owns and must never be schema-filtered away: the
+ * checkout call-to-action (`url`/`link`) and the pre-computed $-prefixed UI
+ * markers injected before normalization. Generic for every company.
+ */
+const isReservedWidgetKey = (key: string): boolean =>
+  key.startsWith("$") || key === "url" || key === "link";
 
 const inferItemLabel = (entity: string): string => {
   const normalized = entity

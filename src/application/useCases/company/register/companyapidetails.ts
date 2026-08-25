@@ -79,8 +79,10 @@ const transformApiEntry = (api: any, index: number): any => {
     oauth,
     platformType: api.platformType || "web",
     audience: api.audience || "",
+    isCheckout: Boolean(api.isCheckout),
     webCheckoutUrl: api.webCheckoutUrl || api.checkoutTemplate || undefined,
-    mobileDeepLink: api.mobileDeepLink || undefined,
+    mobileDeepLinkUrl:
+      api.mobileDeepLinkUrl || api.mobileDeepLink || undefined,
     apiSchema: existingSchema,
     mcpToolName:
       api.mcpToolName || toToolName(api.name || api.apiName || "", index),

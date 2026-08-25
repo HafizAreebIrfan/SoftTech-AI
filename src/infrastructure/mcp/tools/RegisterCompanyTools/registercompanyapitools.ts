@@ -2,7 +2,10 @@ import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ICompany } from "../../../../domain/types/company.types";
 import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwidgetoutputschema";
-import { normalizeApiResponseToWidget } from "../DynamicDomain/genericwidgetnormalizer";
+import {
+  normalizeApiResponseToWidget,
+  ActionToolLinks,
+} from "../DynamicDomain/genericwidgetnormalizer";
 import { translateApiError } from "../../errors/errorTranslator";
 import { buildCustomMcpInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
 import { formatCheckoutToolResult } from "../CheckoutHandle/index";
@@ -13,6 +16,7 @@ import {
   isUserAuthRequiredNotice,
   sanitizeResponseBody,
 } from "./apihandler";
+import { SearchRecoveryInfo } from "./searchrecovery";
 
 export const registerCompanyApiTools = (
   server: McpServer,
@@ -21,12 +25,21 @@ export const registerCompanyApiTools = (
   const apis = company.apis ?? [];
   const companyId = String((company as any)._id || company.companyName || "");
 
+  // Resolve which registered tool implements each CRUD role per entity, so the
+  // widget's action buttons can target the real sibling tool (e.g. a list tool
+  // linking to its get-by-id tool) instead of the current tool's display name.
+  // Generic across companies: derived only from HTTP method + path shape +
+  // entity label, never from hardcoded entity/industry names.
+  const toolDirectory = buildEntityToolDirectory(apis);
+
   apis.forEach((api, index) => {
     const apiId = String((api as any)._id || api.name || `api_${index + 1}`);
     const toolName = toToolName(
       api.mcpToolName || api.name || `api_${index + 1}`,
       index,
     );
+
+    const actionTools = resolveActionTools(api, toolDirectory);
 
     const configuredInputFields = [
       ...(Array.isArray(api.params) ? api.params : []),
@@ -82,6 +95,7 @@ export const registerCompanyApiTools = (
       async (input: any, extra: any) => {
         try {
           const req = extra?.req;
+          const recovery: SearchRecoveryInfo = {};
 
           // Delegate the actual HTTP fetching to the Secondary Adapter
           const rawResponse = await callRegisteredApi(
@@ -90,6 +104,7 @@ export const registerCompanyApiTools = (
             api,
             input,
             req,
+            recovery,
           );
 
           // 1. Handle Auth Requirement Widget
@@ -120,7 +135,8 @@ export const registerCompanyApiTools = (
             config: {
               isCheckout: Boolean((api as any).isCheckout),
               webCheckoutUrl: (api as any).webCheckoutUrl,
-              mobileDeepLinkUrl: (api as any).mobileDeepLinkUrl,
+              mobileDeepLinkUrl:
+                (api as any).mobileDeepLinkUrl ?? (api as any).mobileDeepLink,
             },
             platformType: currentPlatform as any,
           });
@@ -141,7 +157,13 @@ export const registerCompanyApiTools = (
             api.platformType as any,
             method,
             company.uiPreference?.themeColor,
+            actionTools,
           );
+
+          // If the search was empty and we relaxed the query (or still found
+          // nothing), tell the model exactly what happened so it narrates the
+          // result honestly instead of reporting a plain success.
+          const summaryText = applyRecoveryMessaging(widgetContent, recovery);
 
           return buildMcpSuccessResult(
             widgetContent,
@@ -149,6 +171,7 @@ export const registerCompanyApiTools = (
             company,
             resourceUri,
             method,
+            summaryText,
           );
         } catch (error: any) {
           // 3. Handle Error Widget
@@ -271,6 +294,7 @@ const buildMcpSuccessResult = (
   company: ICompany,
   resourceUri?: string,
   method = "GET",
+  summaryText?: string,
 ) => {
   const metaObject: Record<string, any> = {
     ui: { resourceUri },
@@ -292,11 +316,43 @@ const buildMcpSuccessResult = (
     content: [
       {
         type: "text" as const,
-        text: `${widgetContent.title || apiName} rendered`, // Note: You can embed raw data here later if you want the LLM to read it clearly
+        text: summaryText || `${widgetContent.title || apiName} rendered`,
       },
     ],
     _meta: metaObject,
   };
+};
+
+/**
+ * Turns the deterministic search-recovery outcome into (a) a user-visible
+ * subtitle on the widget and (b) a summary string for the model. Returns
+ * undefined when the search behaved normally so the default text is used.
+ */
+const applyRecoveryMessaging = (
+  widgetContent: any,
+  recovery: SearchRecoveryInfo,
+): string | undefined => {
+  if (recovery.recovered) {
+    const hasTerm = Boolean(recovery.effectiveQuery?.trim());
+    const shown = hasTerm ? `"${recovery.effectiveQuery}"` : "the full catalog";
+
+    widgetContent.subtitle = hasTerm
+      ? `Closest matches for ${shown}`
+      : "Showing all available options";
+
+    return `No exact match was found for "${recovery.originalQuery}". Showing the closest available results (${shown}). Tell the user these are the nearest matches to their request rather than an exact match, and invite them to refine.`;
+  }
+
+  if (recovery.empty) {
+    widgetContent.subtitle = "No matching results";
+    const forPart = recovery.originalQuery
+      ? ` for "${recovery.originalQuery}"`
+      : "";
+
+    return `No results were found${forPart} even after automatically trying broader and alternative keywords. Tell the user nothing matched, offer to show all available options, and suggest a different search term. Do not claim the request succeeded.`;
+  }
+
+  return undefined;
 };
 
 const toToolName = (name: string, index: number) => {
@@ -306,3 +362,75 @@ const toToolName = (name: string, index: number) => {
     .replace(/^_+|_+$/g, "");
   return normalized ? normalized : `api_${index + 1}`;
 };
+
+const PATH_PARAM_RE = /\{[^}]+\}|:[a-zA-Z0-9_-]+/;
+
+const hasPathParam = (endpoint?: string): boolean =>
+  PATH_PARAM_RE.test(String(endpoint || ""));
+
+const firstPathSegment = (endpoint?: string): string => {
+  const clean = String(endpoint || "").split("?")[0];
+  for (const segment of clean.split("/")) {
+    const seg = segment.trim();
+    if (seg && !PATH_PARAM_RE.test(seg)) return seg.toLowerCase();
+  }
+  return "";
+};
+
+/**
+ * Normalizes an entity label so the list, get-by-id, update and delete tools
+ * for the same thing group under one key. Uses the AI schema's entity when
+ * present, otherwise the first static path segment. Crudely singularized so
+ * "products" and "product" collapse together.
+ */
+const entityKeyFor = (api: any): string => {
+  const fromSchema = String(api?.apiSchema?.entity || "")
+    .trim()
+    .toLowerCase();
+  const base = fromSchema || firstPathSegment(api?.endpoint);
+  return base.replace(/s$/, "");
+};
+
+/**
+ * Groups a company's APIs by entity and records the registered tool id that
+ * plays each CRUD role: GET + a path parameter => detail (get-by-id); POST =>
+ * create; PUT/PATCH => update; DELETE => delete. First match per role wins.
+ * Generic for every company and industry.
+ */
+const buildEntityToolDirectory = (
+  apis: any[],
+): Map<string, ActionToolLinks> => {
+  const directory = new Map<string, ActionToolLinks>();
+
+  apis.forEach((api, index) => {
+    const key = entityKeyFor(api);
+    if (!key) return;
+
+    const toolId = toToolName(
+      api.mcpToolName || api.name || `api_${index + 1}`,
+      index,
+    );
+    const method = String(api.method || "GET").toUpperCase();
+    const roles = directory.get(key) || {};
+
+    if (method === "GET") {
+      if (hasPathParam(api.endpoint) && !roles.detail) roles.detail = toolId;
+    } else if (method === "POST") {
+      if (!roles.create) roles.create = toolId;
+    } else if (method === "PUT" || method === "PATCH") {
+      if (!roles.update) roles.update = toolId;
+    } else if (method === "DELETE") {
+      if (!roles.delete) roles.delete = toolId;
+    }
+
+    directory.set(key, roles);
+  });
+
+  return directory;
+};
+
+/** The CRUD sibling tool ids that share this api's entity. */
+const resolveActionTools = (
+  api: any,
+  directory: Map<string, ActionToolLinks>,
+): ActionToolLinks => directory.get(entityKeyFor(api)) || {};
