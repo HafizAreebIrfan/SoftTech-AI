@@ -25,11 +25,13 @@ export const CardItem: React.FC<CardItemProps> = ({
   record,
   fields,
   onSelect,
+  actions,
+  audience,
 }) => {
   if (!record || typeof record !== "object") return null;
 
-  // 1. Instantly extract backend-mapped primary UI fields
-  const { $title, $description, $price, $status, $image, id, url, link } =
+  // 1. Extract backend-mapped primary UI fields
+  const { $title, $description, $price, $status, $metric, $image, id, url, link } =
     record as any;
 
   const titleStr = $title || "Item";
@@ -67,28 +69,41 @@ export const CardItem: React.FC<CardItemProps> = ({
     }
   };
 
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const openai = (window as any).openai;
+    const prompt = `Add 1 × ${titleStr} to my cart`;
+    if (openai?.sendFollowUpMessage) {
+      openai.sendFollowUpMessage({ prompt });
+    } else {
+      console.log(`[MCP Widget] sendFollowUpMessage: "${prompt}"`);
+    }
+  };
+
+  const canAddToCart = audience !== "admin" && $price !== undefined && $price !== null;
+
   return (
     <CardContainerComponent
       {...containerProps}
       onClick={handleClick}
       style={{ cursor: actionUrlStr || onSelect ? "pointer" : "default" }}
     >
-      {/* Asset / Image Area */}
+      {/* Asset / Image Area (Fills box with cover fit) */}
       {Boolean($image) && (
         <div
           style={{
             height: "160px",
             width: "100%",
-            background: "var(--BackgroundSecondary)",
-            borderBottom: "1px solid var(--WidgetCardBorder)",
-            /* Add these to ensure your renderImage fits perfectly inside the card */
+            background: "var(--BackgroundSecondary, #0f172a)",
+            borderBottom: "1px solid var(--WidgetCardBorder, rgba(255,255,255,0.08))",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             overflow: "hidden",
           }}
         >
-          {renderImage($image, titleStr)}
+          {renderImage($image, titleStr, "cover")}
         </div>
       )}
 
@@ -110,10 +125,29 @@ export const CardItem: React.FC<CardItemProps> = ({
           )}
         </div>
 
-        {/* Price Tag */}
-        {$price !== undefined && $price !== null && (
-          <div className={styles.priceTag}>{renderCurrency($price)}</div>
-        )}
+        {/* Price Tag & Rating Metric */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "4px 0" }}>
+          {$price !== undefined && $price !== null && (
+            <div className={styles.priceTag} style={{ color: "var(--widget-accent, #6366f1)", fontWeight: 800 }}>
+              {renderCurrency($price)}
+            </div>
+          )}
+
+          {$metric !== undefined && $metric !== null && (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#f59e0b",
+                background: "rgba(245, 158, 11, 0.12)",
+                padding: "2px 6px",
+                borderRadius: "4px",
+              }}
+            >
+              ⭐ {String($metric)}
+            </span>
+          )}
+        </div>
 
         {/* Secondary Metadata List (e.g. Dimensions, Capacity, SKU) */}
         {secondaryFields.length > 0 && (
@@ -134,11 +168,46 @@ export const CardItem: React.FC<CardItemProps> = ({
         )}
       </div>
 
-      {(actionUrlStr || onSelect) && (
-        <div className={styles.cardFooter}>
-          <span className={styles.actionButton}>View Details &rarr;</span>
-        </div>
-      )}
+      {/* Card Footer with Detail and Cart CTAs */}
+      <div
+        className={styles.cardFooter}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "8px",
+          borderTop: "1px solid var(--WidgetCardBorder, rgba(255,255,255,0.06))",
+          padding: "10px 14px",
+        }}
+      >
+        {(actionUrlStr || onSelect) && (
+          <span className={styles.actionButton} style={{ fontSize: "12px" }}>
+            View Details &rarr;
+          </span>
+        )}
+
+        {canAddToCart && (
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            style={{
+              background: "var(--widget-accent, #6366f1)",
+              color: "var(--widget-accent-contrast, #ffffff)",
+              border: "none",
+              borderRadius: "6px",
+              padding: "4px 10px",
+              fontSize: "11px",
+              fontWeight: 700,
+              cursor: "pointer",
+              marginLeft: "auto",
+              transition: "all 0.15s ease",
+            }}
+          >
+            + Cart
+          </button>
+        )}
+      </div>
     </CardContainerComponent>
   );
 };
+

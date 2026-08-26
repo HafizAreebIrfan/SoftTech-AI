@@ -5,11 +5,15 @@ import { RenderImageProps } from "../../../../interfaces/mcp/renderimageprops.in
 
 import { getWeatherConditionSvg } from "../../../../assets/icons/WeatherIcons";
 
-export const renderImage = (value: unknown, alt = "Image"): React.ReactNode => {
-  return <ImageField value={value} alt={alt} />;
+export const renderImage = (
+  value: unknown,
+  alt = "Image",
+  variant?: "cover" | "contain" | "avatar",
+): React.ReactNode => {
+  return <ImageField value={value} alt={alt} variant={variant} />;
 };
 
-const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
+const ImageField: React.FC<RenderImageProps> = ({ value, alt, variant }) => {
   const rawSrc = getRawImageUrl(value);
   const proxiedSrc = getProxiedImageUrl(value);
 
@@ -30,18 +34,33 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt }) => {
     return <ImageFallback alt={alt} />;
   }
 
+  const imageClass =
+    variant === "cover"
+      ? styles.imageCover
+      : variant === "contain"
+        ? styles.imageContain
+        : styles.image;
+
   return (
-    <div className={styles.imageWrapper}>
+    <div
+      className={styles.imageWrapper}
+      style={
+        variant === "cover" || variant === "contain"
+          ? { width: "100%", height: "100%" }
+          : undefined
+      }
+    >
       <img
         src={currentSrc}
         alt={alt}
-        className={styles.image}
+        className={imageClass}
         loading="lazy"
         onError={handleError}
       />
     </div>
   );
 };
+
 
 const ImageFallback: React.FC<{ alt?: string }> = ({ alt }) => {
   if (alt && /weather|rain|cloud|sun|clear|patchy|overcast|snow|drizzle|thunder/i.test(alt)) {

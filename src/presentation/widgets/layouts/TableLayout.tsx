@@ -13,6 +13,7 @@ export const TableLayout: React.FC<WidgetLayoutProps> = ({
   pagination,
   capabilities,
   actions,
+  audience,
   presentationPlan,
 }) => {
   const { colors } = useThemeStore();
@@ -41,8 +42,10 @@ export const TableLayout: React.FC<WidgetLayoutProps> = ({
         pagination={pagination}
         capabilities={capabilities}
         actions={actions}
+        audience={audience}
       />
     </section>
   );
 };
+
 

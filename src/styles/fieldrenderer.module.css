@@ -49,6 +49,24 @@
   max-width: 100%;
 }
 
+.imageCover {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  max-width: 100%;
+}
+
+.imageContain {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  max-width: 100%;
+}
+
+
 .imageFallback {
   display: flex;
   align-items: center;

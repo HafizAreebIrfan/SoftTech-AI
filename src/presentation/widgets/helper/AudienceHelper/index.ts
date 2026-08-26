@@ -14,6 +14,11 @@ import type {
 
 export type ActionRole = "mutate" | "view" | "commerce" | "other";
 
+const MUTATE_ID_RE = /^(create|add|new|update|edit|save|delete|remove)$/i;
+const VIEW_ID_RE = /^(view|detail|select|single|show|open|get|read)$/i;
+const COMMERCE_ID_RE =
+  /^(add_to_cart|checkout|proceed_checkout|buy|purchase|book|reserve|pay|subscribe)$/i;
+
 const MUTATE_RE = /(create|update|edit|delete|remove|add|save|new)/i;
 const VIEW_RE = /(view|detail|select|single|show|open|get|read)/i;
 const COMMERCE_RE =
@@ -26,13 +31,24 @@ const actionText = (action: unknown): string => {
 
 /** Classify an action by intent so the UI can place/gate it per audience. */
 export const classifyAction = (action: unknown): ActionRole => {
+  const a = (action || {}) as { id?: string; tool?: string };
+  const id = String(a.id || "").trim();
+
+  // (1) Trust the deterministic backend action id first
+  if (id) {
+    if (MUTATE_ID_RE.test(id)) return "mutate";
+    if (VIEW_ID_RE.test(id)) return "view";
+    if (COMMERCE_ID_RE.test(id)) return "commerce";
+  }
+
+  // (2) Fallback to searching tool name / id text
   const text = actionText(action);
-  // Commerce first: "order"/"book"/"reserve" are purchases, not mutations.
   if (COMMERCE_RE.test(text)) return "commerce";
   if (MUTATE_RE.test(text)) return "mutate";
   if (VIEW_RE.test(text)) return "view";
   return "other";
 };
+
 
 /** First action that fetches a single record (get-by-id) — powers card→detail. */
 export const findDetailTool = (

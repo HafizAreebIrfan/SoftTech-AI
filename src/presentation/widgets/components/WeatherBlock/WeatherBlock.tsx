@@ -41,9 +41,7 @@ export const WeatherBlock: React.FC<WeatherBlockProps> = ({
       ? current.temp_c
       : (rawForecast[0]?.day?.maxtemp_c ?? "--");
   const currentCondition =
-    current.condition?.text ||
-    rawForecast[0]?.day?.condition?.text ||
-    "Clear";
+    current.condition?.text || rawForecast[0]?.day?.condition?.text || "Clear";
   const currentIcon =
     current.condition?.icon || rawForecast[0]?.day?.condition?.icon;
 
@@ -82,7 +80,9 @@ export const WeatherBlock: React.FC<WeatherBlockProps> = ({
             </div>
             <div className={styles.conditionText}>{currentCondition}</div>
             {feelsLike !== undefined && (
-              <div style={{ fontSize: "12px", opacity: 0.75, marginTop: "2px" }}>
+              <div
+                style={{ fontSize: "12px", opacity: 0.75, marginTop: "2px" }}
+              >
                 Feels like {feelsLike}°C
               </div>
             )}
@@ -123,8 +123,8 @@ export const WeatherBlock: React.FC<WeatherBlockProps> = ({
         </div>
       </div>
 
-      {/* Forecast Strip */}
-      {Array.isArray(rawForecast) && rawForecast.length > 0 && (
+      {/* Forecast Strip (Only shown for multi-day forecasts) */}
+      {Array.isArray(rawForecast) && rawForecast.length > 1 && (
         <div className={styles.forecastContainer}>
           <h4 className={styles.forecastTitle}>Daily Forecast</h4>
 
@@ -166,6 +166,7 @@ export const WeatherBlock: React.FC<WeatherBlockProps> = ({
           </div>
         </div>
       )}
+
     </div>
   );
 };

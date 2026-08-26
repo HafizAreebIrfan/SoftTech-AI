@@ -16,7 +16,6 @@ import styles from "../../../styles/genericwidgetrenderer.module.css";
 import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
 
 export const GenericWidgetRenderer: React.FC = () => {
-  useApplyGlobalThemeVars();
   const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
 
@@ -33,7 +32,13 @@ export const GenericWidgetRenderer: React.FC = () => {
   const structuredContent =
     (toolResult as Record<string, unknown>)?.structuredContent ?? toolResult;
 
+  const themeColor =
+    (structuredContent as any)?.metadata?.themeColor ||
+    (structuredContent as any)?.themeColor;
+  useApplyGlobalThemeVars(themeColor);
+
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
+
     const content = structuredContent as Record<string, unknown>;
 
     if (!content || typeof content !== "object") {

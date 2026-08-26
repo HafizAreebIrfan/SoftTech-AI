@@ -1,6 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderImage } from "../../helper/RenderImage";
+import { renderCurrency } from "../../helper/RenderCurrency";
+import { renderStatus } from "../../helper/RenderStatus";
 import { DetailField } from "./DetailField";
 import styles from "../../../../styles/detailblock.module.css";
 import type { DetailBlockProps } from "../../../../interfaces/mcp/detailblock.interface";
@@ -16,46 +18,112 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   audience,
 }) => {
   const targetRecord = records.length > 0 ? (records[0] as any) : null;
+  const [selectedImgIdx, setSelectedImgIdx] = useState<number>(0);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [addedToast, setAddedToast] = useState<boolean>(false);
 
-  const { headerImage, title, subtitle, detailFields } = useMemo(() => {
+  const {
+    images,
+    title,
+    subtitle,
+    description,
+    price,
+    status,
+    metric,
+    detailFields,
+    arrayFields,
+  } = useMemo(() => {
     if (!targetRecord) {
       return {
-        headerImage: null,
+        images: [],
         title: null,
         subtitle: null,
+        description: null,
+        price: undefined,
+        status: null,
+        metric: null,
         detailFields: [],
+        arrayFields: [],
       };
     }
 
     const activeFields =
       block?.fields && block.fields.length > 0 ? block.fields : fields;
 
-    // Filter out internal fields and the ones we already use for the Header
-    const primaryRoles = ["title", "description", "image"];
+    // 1. Collect all images generically (from $image, image fields, and URL lists)
+    const collectedImages: string[] = [];
+    if (targetRecord.$image && typeof targetRecord.$image === "string") {
+      collectedImages.push(targetRecord.$image);
+    }
 
-    const detailFields = activeFields.filter((f) => {
+    activeFields.forEach((f) => {
+      const val = getFieldValue(targetRecord, f);
+      if (typeof val === "string" && val.trim()) {
+        // Handle comma-separated list of image URLs (e.g. from dummyjson)
+        if (val.includes(",") && val.includes("http")) {
+          const parts = val
+            .split(",")
+            .map((s) => s.trim())
+            .filter((s) => /^https?:\/\//i.test(s));
+          collectedImages.push(...parts);
+        } else if (f.type === "image" || /^https?:\/\/.*\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(val)) {
+          collectedImages.push(val.trim());
+        }
+      } else if (Array.isArray(val)) {
+        val.forEach((item) => {
+          if (typeof item === "string" && /^https?:\/\//i.test(item.trim())) {
+            collectedImages.push(item.trim());
+          }
+        });
+      }
+    });
+
+    const dedupedImages = Array.from(new Set(collectedImages));
+
+    // 2. Extract hero properties
+    const itemTitle = targetRecord.$title || collection?.entity || "Details";
+    const itemDesc = targetRecord.$description || null;
+    const itemPrice = targetRecord.$price;
+    const itemStatus = targetRecord.$status;
+    const itemMetric = targetRecord.$metric;
+
+    // 3. Filter scalar fields for specs (exclude fields shown in hero)
+    const primaryRoles = ["title", "description", "price", "image", "status", "metric"];
+    const detailFieldsList = activeFields.filter((f) => {
       if (f.hidden) return false;
-      if (f.type === "array" || f.type === "object" || f.type === "image")
-        return false;
+      if (f.type === "array" || f.type === "object" || f.type === "image") return false;
       if (primaryRoles.includes(f.uiRole as string)) return false;
 
       const key = f.key.toLowerCase();
-      // Keep your smart imperial duplicate filters!
+      // Filter out redundant imperial duplicates
       if (
         key.endsWith("_f") ||
         key.endsWith("_mph") ||
         key.endsWith("_in") ||
         key.endsWith("_miles")
-      )
+      ) {
         return false;
+      }
       return true;
     });
 
+    // 4. Extract array / collection fields (e.g. reviews, features)
+    const arrayFieldsList = activeFields.filter((f) => {
+      if (f.hidden) return false;
+      const val = getFieldValue(targetRecord, f);
+      return Array.isArray(val) && val.length > 0;
+    });
+
     return {
-      headerImage: targetRecord.$image || null,
-      title: targetRecord.$title || collection?.entity || "Details",
-      subtitle: targetRecord.$description || null,
-      detailFields,
+      images: dedupedImages,
+      title: itemTitle,
+      subtitle: itemDesc,
+      description: itemDesc,
+      price: itemPrice,
+      status: itemStatus,
+      metric: itemMetric,
+      detailFields: detailFieldsList,
+      arrayFields: arrayFieldsList,
     };
   }, [targetRecord, block?.fields, fields, collection?.entity]);
 
@@ -63,92 +131,392 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
   if (!targetRecord) return null;
 
-  // Hide mutating actions unless the audience may mutate (customers never can),
-  // so customer and admin surfaces never merge.
   const permissions = getPermissions(audience, undefined, actions as any);
   const visibleActions = (actions || []).filter(
     (a: any) => classifyAction(a) !== "mutate" || permissions.canMutate,
   );
+
+  const canAddToCart = audience !== "admin" && price !== undefined && price !== null;
+
+  const handleAddToCart = () => {
+    const openai = (window as any).openai;
+    const prompt = `Add ${quantity} × ${title} to my cart`;
+
+    if (openai?.sendFollowUpMessage) {
+      openai.sendFollowUpMessage({ prompt });
+    } else {
+      console.log(`[MCP Widget] sendFollowUpMessage: "${prompt}"`);
+    }
+
+    setAddedToast(true);
+    setTimeout(() => setAddedToast(false), 3000);
+  };
+
+  const activeMainImage = images[selectedImgIdx] || images[0] || null;
 
   return (
     <section className={styles.container}>
       <div
         className={styles.card}
         style={{
-          background: "var(--WidgetCardBg)",
-          border: "1px solid var(--WidgetCardBorder)",
-          borderRadius: "12px",
+          background: "var(--WidgetCardBg, rgba(22, 24, 38, 0.75))",
+          border: "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
+          borderRadius: "16px",
           overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0",
         }}
       >
-        {(headerImage || title || subtitle) && (
-          <header
-            className={styles.header}
-            style={{
-              padding: "20px",
-              borderBottom: "1px solid var(--TableDivider)",
-              background: "var(--BackgroundSecondary)",
-            }}
-          >
-            {headerImage && (
-              <div
-                className={styles.headerAvatar}
-                style={{
-                  width: "64px",
-                  height: "64px",
-                  borderRadius: "8px",
-                  overflow: "hidden",
-                }}
-              >
-                {renderImage(headerImage, title || "Detail Asset")}
-              </div>
-            )}
-
-            <div className={styles.headerTitleGroup}>
-              {title && (
-                <h2
-                  className={styles.title}
-                  style={{ color: "var(--WidgetHeaderTitle)", margin: 0 }}
-                >
-                  {title}
-                </h2>
-              )}
-              {subtitle && (
-                <p
-                  className={styles.subtitle}
-                  style={{
-                    color: "var(--WidgetHeaderSubtitle)",
-                    margin: "4px 0 0 0",
-                  }}
-                >
-                  {subtitle}
-                </p>
-              )}
-            </div>
-          </header>
-        )}
-
+        {/* Top Product / Record Header Container */}
         <div
-          className={styles.grid}
           style={{
             padding: "20px",
             display: "flex",
             flexDirection: "column",
-            gap: "12px",
+            gap: "20px",
+            background: "var(--BackgroundSecondary, rgba(15, 23, 42, 0.4))",
+            borderBottom: "1px solid var(--TableDivider, rgba(255, 255, 255, 0.08))",
           }}
         >
-          {detailFields.map((field) => (
-            <DetailField key={field.key} field={field} record={targetRecord} />
-          ))}
+          {/* Main Hero Gallery (if images present) */}
+          {images.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div
+                style={{
+                  width: "100%",
+                  height: "240px",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  background: "rgba(0,0,0,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {renderImage(activeMainImage, title || "Item Preview", "cover")}
+              </div>
+
+              {/* Multi-image thumbnail selector */}
+              {images.length > 1 && (
+                <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }}>
+                  {images.map((imgUrl, idx) => (
+                    <button
+                      key={`thumb-${idx}`}
+                      type="button"
+                      onClick={() => setSelectedImgIdx(idx)}
+                      style={{
+                        width: "56px",
+                        height: "56px",
+                        borderRadius: "8px",
+                        overflow: "hidden",
+                        border:
+                          selectedImgIdx === idx
+                            ? "2px solid var(--widget-accent, #6366f1)"
+                            : "1px solid rgba(255,255,255,0.12)",
+                        background: "rgba(0,0,0,0.3)",
+                        padding: 0,
+                        cursor: "pointer",
+                        flexShrink: 0,
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {renderImage(imgUrl, `Thumb ${idx + 1}`, "cover")}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Hero Meta Information */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "22px",
+                  fontWeight: 700,
+                  color: "var(--WidgetHeaderTitle, #f8fafc)",
+                  lineHeight: 1.3,
+                }}
+              >
+                {title}
+              </h2>
+              {status && <div>{renderStatus(status)}</div>}
+            </div>
+
+            {/* Price & Rating Row */}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+              {price !== undefined && price !== null && (
+                <span
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: 800,
+                    color: "var(--widget-accent, #6366f1)",
+                  }}
+                >
+                  {renderCurrency(price)}
+                </span>
+              )}
+
+              {metric !== undefined && metric !== null && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    background: "rgba(245, 158, 11, 0.15)",
+                    color: "#f59e0b",
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                  }}
+                >
+                  ⭐ {String(metric)}
+                </span>
+              )}
+            </div>
+
+            {/* Description */}
+            {description && (
+              <p
+                style={{
+                  margin: "6px 0 0 0",
+                  fontSize: "14px",
+                  lineHeight: 1.5,
+                  color: "var(--WidgetHeaderSubtitle, #94a3b8)",
+                }}
+              >
+                {description}
+              </p>
+            )}
+
+            {/* Add to Cart Stepper & CTA (Fix 6) */}
+            {canAddToCart && (
+              <div
+                style={{
+                  marginTop: "16px",
+                  display: "flex",
+                  gap: "12px",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                {/* Quantity Stepper */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#fff",
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    −
+                  </button>
+                  <span style={{ padding: "0 8px", fontSize: "14px", fontWeight: 600, minWidth: "24px", textAlign: "center" }}>
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(quantity + 1)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#fff",
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Add to Cart Button */}
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  style={{
+                    flex: 1,
+                    background: "var(--widget-accent, #6366f1)",
+                    color: "var(--widget-accent-contrast, #ffffff)",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "10px 20px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3)",
+                    transition: "all 0.15s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
+                  🛒 {addedToast ? "Added to Cart ✓" : "Add to Cart"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Specifications / Detail Fields */}
+        {detailFields.length > 0 && (
+          <div
+            className={styles.grid}
+            style={{
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+            }}
+          >
+            <h4
+              style={{
+                margin: "0 0 4px 0",
+                fontSize: "13px",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                color: "var(--app-text-secondary, #94a3b8)",
+              }}
+            >
+              Product Details & Specs
+            </h4>
+            {detailFields.map((field) => (
+              <DetailField key={field.key} field={field} record={targetRecord} />
+            ))}
+          </div>
+        )}
+
+        {/* Collections / Array Data (e.g. Reviews, Specs Lists) */}
+        {arrayFields.length > 0 && (
+          <div
+            style={{
+              padding: "0 20px 20px 20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            {arrayFields.map((field) => {
+              const rawArray = getFieldValue(targetRecord, field);
+              if (!Array.isArray(rawArray) || rawArray.length === 0) return null;
+
+              const isObjectArray = rawArray.every((item) => item && typeof item === "object");
+
+              return (
+                <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <h4
+                    style={{
+                      margin: 0,
+                      fontSize: "13px",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--app-text-secondary, #94a3b8)",
+                    }}
+                  >
+                    {field.label} ({rawArray.length})
+                  </h4>
+
+                  {isObjectArray ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {rawArray.slice(0, 5).map((objItem: any, idx: number) => {
+                        const reviewRating = objItem.rating || objItem.score || objItem.stars;
+                        const reviewComment = objItem.comment || objItem.review || objItem.text || objItem.message;
+                        const reviewerName = objItem.reviewerName || objItem.user || objItem.author || objItem.name;
+                        const reviewDate = objItem.date || objItem.createdAt;
+
+                        return (
+                          <div
+                            key={`arr-item-${idx}`}
+                            style={{
+                              background: "rgba(255,255,255,0.03)",
+                              border: "1px solid rgba(255,255,255,0.06)",
+                              borderRadius: "8px",
+                              padding: "10px 12px",
+                              fontSize: "13px",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "4px",
+                            }}
+                          >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontWeight: 600, color: "var(--app-text-heading, #fff)" }}>
+                                {reviewerName || `Item #${idx + 1}`}
+                              </span>
+                              {reviewRating !== undefined && (
+                                <span style={{ color: "#f59e0b", fontSize: "12px", fontWeight: 700 }}>
+                                  ⭐ {reviewRating}
+                                </span>
+                              )}
+                            </div>
+                            {reviewComment && (
+                              <p style={{ margin: 0, color: "var(--app-text-secondary, #94a3b8)", fontSize: "12px", lineHeight: 1.4 }}>
+                                &ldquo;{reviewComment}&rdquo;
+                              </p>
+                            )}
+                            {reviewDate && (
+                              <span style={{ fontSize: "11px", color: "#64748b", alignSelf: "flex-end" }}>
+                                {String(reviewDate).slice(0, 10)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      {rawArray.map((tag: any, idx: number) => (
+                        <span
+                          key={`tag-${idx}`}
+                          style={{
+                            background: "rgba(255,255,255,0.06)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            fontSize: "12px",
+                            color: "var(--app-text-secondary, #cbd5e1)",
+                          }}
+                        >
+                          {String(tag)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Visible Actions Footer (Admin mutations / Custom actions) */}
         {visibleActions.length > 0 && (
           <div
             style={{
               padding: "16px 20px",
               display: "flex",
               gap: "10px",
-              borderTop: "1px solid var(--TableDivider)",
-              background: "var(--BackgroundSecondary)",
+              borderTop: "1px solid var(--TableDivider, rgba(255,255,255,0.08))",
+              background: "var(--BackgroundSecondary, rgba(15, 23, 42, 0.4))",
             }}
           >
             {visibleActions.map((act: any) => (
@@ -156,20 +524,19 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 key={act.id || act.tool}
                 type="button"
                 style={{
-                  background: colors.BrandIndigo,
-                  color: colors.TextHeading,
+                  background: "var(--widget-accent, #6366f1)",
+                  color: "var(--widget-accent-contrast, #ffffff)",
                   border: "none",
                   borderRadius: "8px",
-                  padding: "8px 16px",
+                  padding: "10px 16px",
                   fontWeight: "600",
                   cursor: "pointer",
                   flex: 1,
+                  transition: "all 0.15s ease",
                 }}
                 onClick={async () => {
                   const openai = (window as any).openai;
-                  // URL actions (e.g. checkout/purchase) open the link directly.
-                  const url =
-                    act.url || (act.type === "url" ? act.href : undefined);
+                  const url = act.url || (act.type === "url" ? act.href : undefined);
                   if (url) {
                     window.open(url, "_blank", "noopener,noreferrer");
                     return;
@@ -194,3 +561,4 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     </section>
   );
 };
+
