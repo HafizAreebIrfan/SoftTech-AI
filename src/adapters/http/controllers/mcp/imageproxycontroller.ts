@@ -2,8 +2,6 @@ import type { Request, Response } from "express";
 import dns from "node:dns/promises";
 import net from "node:net";
 
-const ALLOWED_IMAGE_HOSTS = new Set(["cdn.weatherapi.com"]);
-
 const isPrivateIPv4 = (ip: string): boolean => {
   const parts = ip.split(".").map(Number);
 
@@ -61,10 +59,6 @@ const validateImageUrl = async (rawUrl: string): Promise<URL> => {
 
   const hostname = parsedUrl.hostname.toLowerCase();
 
-  if (!ALLOWED_IMAGE_HOSTS.has(hostname)) {
-    throw new Error("Image host is not allowed");
-  }
-
   const addresses = await dns.lookup(hostname, {
     all: true,
   });
@@ -87,9 +81,8 @@ export const imageProxyController = async (
   res: Response,
 ): Promise<void> => {
   /*
-   * The ChatGPT sandbox is a different origin.
-   * This endpoint is intentionally public because it only proxies
-   * approved public image hosts.
+   * The ChatGPT sandbox is a different origin and enforces COEP: require-corp.
+   * Cross-Origin-Resource-Policy: cross-origin is required so the iframe can display images.
    */
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -98,11 +91,13 @@ export const imageProxyController = async (
     "Access-Control-Expose-Headers",
     "Content-Type, Content-Length",
   );
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
 
   if (req.method === "OPTIONS") {
     res.status(204).end();
     return;
   }
+
 
   const rawUrl = String(req.query.url ?? "").trim();
 
