@@ -115,9 +115,23 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         return false;
       if (primaryRoles.includes(f.uiRole as string)) return false;
 
-      // Suppress bare ID fields without uiRole
       const keyLower = f.key.toLowerCase();
       const labelLower = (f.label || "").toLowerCase();
+
+      // Suppress status (already in hero) and audit timestamps
+      if (
+        f.type === "status" ||
+        keyLower.includes("status") ||
+        keyLower === "createdat" ||
+        keyLower === "updatedat" ||
+        keyLower === "created_at" ||
+        keyLower === "updated_at" ||
+        keyLower === "__v"
+      ) {
+        return false;
+      }
+
+      // Suppress bare ID fields without uiRole
       if (
         (keyLower === "id" || keyLower === "_id" || labelLower === "id") &&
         !f.uiRole
@@ -403,7 +417,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     style={{
                       fontSize: "24px",
                       fontWeight: 800,
-                      color: "var(--widget-accent, #6366f1)",
+                      color: "var(--app-text-heading, #ffffff)",
                     }}
                   >
                     {renderCurrency(effectivePrice)}

@@ -168,17 +168,21 @@ export const GenericWidgetRenderer: React.FC = () => {
       ("list" in (rawData as object) && "coord" in (rawData as object)),
     );
 
+  const normalizedLayout = presentationPlan.layout;
+
   const isCart =
-    /cart|carts|basket|checkout/.test(entityName) ||
+    (normalizedLayout as string) === "cart" ||
     collection?.dataPath === "carts" ||
+    (Boolean(collection?.entity && /^carts?$/i.test(collection.entity)) &&
+      normalizedLayout !== "catalog" &&
+      normalizedLayout !== "dashboard" &&
+      normalizedLayout !== "table") ||
     Boolean(
       rawData &&
       typeof rawData === "object" &&
-      ("carts" in (rawData as object) ||
-        ("products" in (rawData as object) && "total" in (rawData as object))),
+      "carts" in (rawData as object) &&
+      Array.isArray((rawData as any).carts),
     );
-
-  const normalizedLayout = presentationPlan.layout;
 
   const renderLayout = () => {
     const activeSubView = subViewHistory[subViewHistory.length - 1];

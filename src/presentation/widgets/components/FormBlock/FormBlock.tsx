@@ -43,7 +43,25 @@ export const FormBlock: React.FC<FormBlockProps> = ({
   const activeFields = useMemo(() => {
     const available =
       block?.fields && block.fields.length > 0 ? block.fields : fields;
-    return available.filter((f) => !f.hidden);
+
+    const systemKeys = [
+      "createdat",
+      "updatedat",
+      "created_at",
+      "updated_at",
+      "__v",
+      "_id",
+      "id",
+    ];
+
+    return available.filter((f) => {
+      if (f.hidden) return false;
+      const keyLower = f.key.toLowerCase();
+      if (systemKeys.includes(keyLower) && !f.primary) {
+        return false;
+      }
+      return true;
+    });
   }, [block?.fields, fields]);
 
   const [formData, setFormData] =

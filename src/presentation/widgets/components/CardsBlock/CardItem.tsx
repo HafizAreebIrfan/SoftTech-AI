@@ -233,7 +233,7 @@ export const CardItem: React.FC<CardItemProps> = ({
           {/* Price Tag & Rating Metric */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "4px 0" }}>
             {effectivePrice !== undefined && effectivePrice !== null && (
-              <div className={styles.priceTag} style={{ color: "var(--widget-accent, #6366f1)", fontWeight: 800 }}>
+              <div className={styles.priceTag} style={{ color: "var(--app-text-heading, #ffffff)", fontWeight: 800 }}>
                 {renderCurrency(effectivePrice)}
               </div>
             )}

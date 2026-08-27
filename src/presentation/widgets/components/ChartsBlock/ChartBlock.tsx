@@ -122,7 +122,15 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
 
       let formattedX = "";
       if (xField && (xField.type === "date" || xField.type === "datetime")) {
-        formattedX = String(renderDate(rawXVal, xField.type === "datetime"));
+        const dateObj = new Date(rawXVal as string | number | Date);
+        if (!isNaN(dateObj.getTime())) {
+          formattedX = dateObj.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+        } else {
+          formattedX = String(renderDate(rawXVal, false));
+        }
       } else {
         formattedX =
           rawXVal !== undefined && rawXVal !== null
@@ -147,11 +155,26 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
       };
     }
 
-    // 4. Infer chart type
+    // 4. Infer chart type (Respecting user request if bar/pie was specified)
     let type: ChartType = "line";
-    if (block?.variant === "bar" || block?.variant === "categorical") {
+    const promptContext = String(
+      (window as any).openai?.widgetState?.inferred_intent ||
+        (window as any).openai?.widgetState?.user_raw_prompt ||
+        "",
+    ).toLowerCase();
+
+    if (
+      promptContext.includes("bar") ||
+      block?.variant === "bar" ||
+      block?.variant === "categorical" ||
+      (collection as any)?.chartType === "bar"
+    ) {
       type = "bar";
-    } else if (block?.variant === "pie" || block?.variant === "donut") {
+    } else if (
+      promptContext.includes("pie") ||
+      block?.variant === "pie" ||
+      block?.variant === "donut"
+    ) {
       type = "pie";
     } else if (block?.variant === "scatter") {
       type = "scatter";

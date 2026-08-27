@@ -11,6 +11,54 @@ export const FormField: React.FC<FormFieldProps> = ({
   const inputId = `form-field-${field.key}`;
 
   const renderInput = () => {
+    const fieldOptions = (field as any).options as string[] | undefined;
+    const isStatus =
+      field.type === "status" ||
+      field.uiRole === "status" ||
+      /status$/i.test(field.key);
+
+    if (fieldOptions && Array.isArray(fieldOptions) && fieldOptions.length > 0) {
+      return (
+        <select
+          id={inputId}
+          className={`${styles.input} ${error ? styles.inputError : ""}`}
+          value={value ? String(value) : ""}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">Select {field.label}...</option>
+          {fieldOptions.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (isStatus) {
+      const defaultStatusOptions = [
+        "Active",
+        "Pending",
+        "Inactive",
+        "Completed",
+        "Cancelled",
+      ];
+      return (
+        <select
+          id={inputId}
+          className={`${styles.input} ${error ? styles.inputError : ""}`}
+          value={value ? String(value) : "Active"}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {defaultStatusOptions.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
     switch (field.type) {
       case "boolean":
         return (
@@ -38,8 +86,37 @@ export const FormField: React.FC<FormFieldProps> = ({
           />
         );
 
-      case "number":
       case "currency":
+        return (
+          <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
+            <span
+              style={{
+                position: "absolute",
+                left: "12px",
+                color: "var(--app-text-secondary, #94a3b8)",
+                fontWeight: 700,
+                fontSize: "14px",
+                pointerEvents: "none",
+              }}
+            >
+              $
+            </span>
+            <input
+              id={inputId}
+              type="text"
+              className={`${styles.input} ${error ? styles.inputError : ""}`}
+              style={{ paddingLeft: "26px" }}
+              value={value !== undefined && value !== null ? String(value).replace(/^\$/, "") : ""}
+              placeholder="0.00"
+              onChange={(e) => {
+                const val = e.target.value;
+                onChange(val ? `$${val.replace(/^\$/, "")}` : "");
+              }}
+            />
+          </div>
+        );
+
+      case "number":
         return (
           <input
             id={inputId}

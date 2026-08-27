@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { TableRow } from "./TableRow";
 import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderImage } from "../../helper/RenderImage";
@@ -24,7 +24,23 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Modals state (Initialize from window.openai.widgetState if it exists)
+  // Modals & local state
+  const [localRecords, setLocalRecords] = useState<any[]>(records);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [deletingRecord, setDeletingRecord] = useState<Record<
+    string,
+    any
+  > | null>(null);
+
+  useEffect(() => {
+    setLocalRecords(records);
+  }, [records]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const [selectedRecord, setSelectedRecord] = useState<Record<
     string,
     any
@@ -54,9 +70,6 @@ export const TableBlock: React.FC<TableBlockProps> = ({
 
   const pageSize = pagination?.limit || 5;
 
-  // Audience-gated CRUD: customers are read-only (view only), so admin controls
-  // never leak into a customer surface. Admin gets a verb when an action or a
-  // capability backs it.
   const permissions = getPermissions(audience, capabilities, actions);
   const hasVerb = (...verbs: string[]) =>
     actions.some((a: any) =>
@@ -77,17 +90,35 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   const canDelete =
     permissions.canMutate &&
     (hasVerb("delete", "remove") || capOn(capabilities, "delete"));
-  const showActions = true; // View is always available
+  const showActions = true;
 
+  // Suppress system audit fields (createdAt, updatedAt, __v, _id) from table view
   const activeFields = useMemo(() => {
     const available =
       block?.fields && block.fields.length > 0 ? block.fields : fields;
-    return available.filter((f) => !f.hidden);
+
+    const systemKeys = [
+      "createdat",
+      "updatedat",
+      "created_at",
+      "updated_at",
+      "__v",
+      "_id",
+    ];
+
+    return available.filter((f) => {
+      if (f.hidden) return false;
+      const keyLower = f.key.toLowerCase();
+      if (systemKeys.includes(keyLower) && !f.primary) {
+        return false;
+      }
+      return true;
+    });
   }, [block?.fields, fields]);
 
   // Searching & Filtering Logic
   const filteredRecords = useMemo(() => {
-    let list = records;
+    let list = localRecords;
 
     // Defensive customer filtering: drop inactive / pending / draft records for customer audience
     if (audience === "customer") {
@@ -127,9 +158,9 @@ export const TableBlock: React.FC<TableBlockProps> = ({
           .includes(term),
       );
     });
-  }, [records, searchTerm, audience]);
+  }, [localRecords, searchTerm, audience]);
 
-  // Sorting Logic (Unchanged)
+  // Sorting Logic
   const sortedRecords = useMemo(() => {
     if (!sortKey) return filteredRecords;
     const sortField = activeFields.find((f) => f.key === sortKey);
@@ -169,56 +200,84 @@ export const TableBlock: React.FC<TableBlockProps> = ({
 
   const handleHeaderClick = (field: FieldSchema) => {
     if (!capOn(capabilities, "sort") && !field.sortable) return;
-    if (sortKey === field.key) setSortDir(sortDir === "asc" ? "desc" : "asc");
-    else {
+    if (sortKey === field.key) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
       setSortKey(field.key);
       setSortDir("asc");
     }
   };
 
-  // 2. Action Handlers utilizing callTool
   const getToolName = (actionType: "create" | "update" | "delete") => {
     const action = actions.find(
       (a: any) => a.id === actionType || String(a.tool).includes(actionType),
     );
-    return action?.tool || `${actionType}_item`; // Fallback to a generic tool name
+    return action?.tool || `${actionType}_item`;
   };
 
-  const handleDelete = async (record: Record<string, any>) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete ${record.$title || "this item"}?`,
-      )
-    ) {
-      const toolName = getToolName("delete");
+  const handleDelete = (record: Record<string, any>) => {
+    // Open in-widget delete confirmation dialog
+    setDeletingRecord(record);
+  };
 
-      if ((window as any).openai?.callTool) {
-        // Run silently in background. The UI will auto-update when the backend responds.
-        await (window as any).openai.callTool(toolName, {
-          id: record.id || record._id,
-        });
-      } else if ((window as any).openai?.sendFollowUpMessage) {
-        (window as any).openai.sendFollowUpMessage({
-          prompt: `Delete item with ID: ${record.id || record._id}`,
-        });
-      }
+  const handleConfirmDelete = async () => {
+    if (!deletingRecord) return;
+    const id = deletingRecord.id ?? deletingRecord._id;
+    const title =
+      deletingRecord.$title ||
+      deletingRecord.packagename ||
+      deletingRecord.username ||
+      "Item";
+
+    // Optimistic local deletion
+    setLocalRecords((prev) =>
+      prev.filter((r) => r.id !== id && r._id !== id),
+    );
+    showToast(`✓ "${title}" deleted successfully`);
+
+    const toolName = getToolName("delete");
+    if ((window as any).openai?.callTool) {
+      await (window as any).openai.callTool(toolName, { id });
+    } else if ((window as any).openai?.sendFollowUpMessage) {
+      (window as any).openai.sendFollowUpMessage({
+        prompt: `Delete item with ID: ${id}`,
+      });
     }
+    setDeletingRecord(null);
   };
 
   const handleSaveForm = async (formData: Record<string, any>) => {
     const isEdit = Boolean(editingRecord);
     const toolName = getToolName(isEdit ? "update" : "create");
+    const id = editingRecord?.id || editingRecord?._id || formData.id;
 
-    // Merge the ID if we are updating an existing record
-    const payload = isEdit
-      ? { id: editingRecord?.id || editingRecord?._id, ...formData }
-      : formData;
+    if (isEdit) {
+      // Optimistic local update
+      setLocalRecords((prev) =>
+        prev.map((rec) =>
+          (rec.id && rec.id === id) || (rec._id && rec._id === id)
+            ? { ...rec, ...formData }
+            : rec,
+        ),
+      );
+      showToast(
+        `✓ ${formData.packagename || formData.$title || "Item"} updated successfully`,
+      );
+    } else {
+      // Optimistic local creation
+      const newRec = { ...formData, id: `temp-${Date.now()}` };
+      setLocalRecords((prev) => [newRec, ...prev]);
+      showToast(
+        `✓ ${formData.packagename || formData.$title || "New item"} created successfully`,
+      );
+    }
+
+    const payload = isEdit ? { id, ...formData } : formData;
+    updateModalState(null, null, false);
 
     if ((window as any).openai?.callTool) {
-      updateModalState(null, null, false); // Close modal
       await (window as any).openai.callTool(toolName, payload);
     } else if ((window as any).openai?.sendFollowUpMessage) {
-      updateModalState(null, null, false);
       (window as any).openai.sendFollowUpMessage({
         prompt: `${isEdit ? "Update" : "Create"} item with data: ${JSON.stringify(payload)}`,
       });
@@ -230,6 +289,13 @@ export const TableBlock: React.FC<TableBlockProps> = ({
 
   return (
     <section className={styles.container}>
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div className={styles.toastBanner}>
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       <div
         style={{
           display: "flex",
@@ -275,7 +341,6 @@ export const TableBlock: React.FC<TableBlockProps> = ({
             type="button"
             className={styles.createNewBtn}
             onClick={() => updateModalState(null, null, true)}
-            style={{ background: "var(--BrandIndigo)", color: "#fff" }}
           >
             ⊕ Create New
           </button>
@@ -490,7 +555,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
         title={
           isCreating
             ? "Create New Item"
-            : `Edit ${editingRecord?.$title || "Item"}`
+            : `Edit ${editingRecord?.$title || editingRecord?.packagename || "Item"}`
         }
       >
         <FormBlock
@@ -498,6 +563,57 @@ export const TableBlock: React.FC<TableBlockProps> = ({
           initialData={editingRecord || {}}
           onSubmit={handleSaveForm}
         />
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(deletingRecord)}
+        onClose={() => setDeletingRecord(null)}
+        title="Confirm Deletion"
+      >
+        {deletingRecord && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.5, color: "var(--app-text-primary, #f8fafc)" }}>
+              Are you sure you want to delete{" "}
+              <strong>
+                "{deletingRecord.$title || deletingRecord.packagename || deletingRecord.username || "this item"}"
+              </strong>
+              ? This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                type="button"
+                onClick={() => setDeletingRecord(null)}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--widget-card-border, rgba(255,255,255,0.15))",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  color: "var(--app-text-secondary, #94a3b8)",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                style={{
+                  background: "#ef4444",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 16px",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                🗑️ Delete Record
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </section>
   );

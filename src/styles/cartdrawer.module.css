@@ -175,9 +175,10 @@
 .itemTier {
   font-size: 11px;
   font-weight: 600;
-  color: var(--widget-accent, #818cf8);
-  background: rgba(99, 102, 241, 0.12);
-  padding: 1px 6px;
+  color: var(--app-text-heading, #ffffff);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 2px 6px;
   border-radius: 4px;
   width: fit-content;
 }
@@ -282,7 +283,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
