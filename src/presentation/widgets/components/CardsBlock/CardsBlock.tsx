@@ -18,12 +18,43 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
   const pushSubView = useMcpWidgetStore((state) => state.pushSubView);
 
   const displayRecords = useMemo(() => {
+    let list = records;
+
+    // Defensive customer filtering: drop inactive / pending / draft records for customer audience
+    if (audience === "customer") {
+      list = list.filter((rec: any) => {
+        if (!rec || typeof rec !== "object") return true;
+        const statusVal = String(
+          rec.$status ||
+            rec.status ||
+            rec.packagestatus ||
+            rec.orderstatus ||
+            rec.availabilityStatus ||
+            "",
+        )
+          .toLowerCase()
+          .trim();
+
+        if (
+          statusVal === "pending" ||
+          statusVal === "inactive" ||
+          statusVal === "draft" ||
+          statusVal === "test" ||
+          statusVal === "archived"
+        ) {
+          return false;
+        }
+        return true;
+      });
+    }
+
     const limit = maxItems || block?.maxItems;
     if (limit && limit > 0) {
-      return records.slice(0, limit);
+      return list.slice(0, limit);
     }
-    return records;
-  }, [records, maxItems, block?.maxItems]);
+    return list;
+  }, [records, maxItems, block?.maxItems, audience]);
+
 
   if (!displayRecords || displayRecords.length === 0) {
     return null;

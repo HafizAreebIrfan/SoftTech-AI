@@ -1,14 +1,18 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { useMcpToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import { useApplyGlobalThemeVars } from "../../../infrastructure/store/themeStore";
+import { useCartStore } from "../../../infrastructure/store/cartStore";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import { CatalogLayout } from "../layouts/CatalogLayout";
 import { TableLayout } from "../layouts/TableLayout";
 import { GeneralLayout } from "../layouts/GeneralLayout";
+import { CartLayout } from "../layouts/CartLayout";
 import { EmptyStateBlock } from "../components/EmptyStateBlock";
 import { WeatherBlock } from "../components/WeatherBlock/WeatherBlock";
+import { AQIBlock } from "../components/AQIBlock";
 import { OptionPickerBlock } from "../components/OptionPickerBlock/OptionPickerBlock";
 import { DetailBlock } from "../components/DetailBlock";
+import { CartDrawer } from "../components/CartDrawer";
 import { useMcpWidgetStore } from "../../../infrastructure/store/mcpWidgetStore";
 import { getValue } from "../../../utils";
 import type { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
@@ -37,7 +41,15 @@ export const GenericWidgetRenderer: React.FC = () => {
     (structuredContent as any)?.themeColor;
   useApplyGlobalThemeVars(themeColor);
 
+  const companyName = (structuredContent as any)?.metadata?.companyName;
+  useEffect(() => {
+    if (companyName) {
+      useCartStore.getState().setCompanyName(companyName);
+    }
+  }, [companyName]);
+
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
+
 
     const content = structuredContent as Record<string, unknown>;
 
@@ -136,14 +148,34 @@ export const GenericWidgetRenderer: React.FC = () => {
   const entityName = String(
     collection?.entity || content.metadata?.apiName || content.title || "",
   ).toLowerCase();
+
   const isWeather =
-    /weather|forecast|temperature|climate/.test(entityName) ||
+    /weather|forecast|temperature|climate/.test(entityName) &&
+    !/air_pollution|aqi/.test(entityName) ||
     Boolean(
       rawData &&
       typeof rawData === "object" &&
       ("current" in (rawData as object) ||
-        "location" in (rawData as object) ||
-        "forecast" in (rawData as object)),
+        "forecast" in (rawData as object)) &&
+      !("coord" in (rawData as object) && "list" in (rawData as object)),
+    );
+
+  const isAQI =
+    /air_pollution|aqi|air_quality|pollution/.test(entityName) ||
+    Boolean(
+      rawData &&
+      typeof rawData === "object" &&
+      ("list" in (rawData as object) && "coord" in (rawData as object)),
+    );
+
+  const isCart =
+    /cart|carts|basket|checkout/.test(entityName) ||
+    collection?.dataPath === "carts" ||
+    Boolean(
+      rawData &&
+      typeof rawData === "object" &&
+      ("carts" in (rawData as object) ||
+        ("products" in (rawData as object) && "total" in (rawData as object))),
     );
 
   const normalizedLayout = presentationPlan.layout;
@@ -151,8 +183,6 @@ export const GenericWidgetRenderer: React.FC = () => {
   const renderLayout = () => {
     const activeSubView = subViewHistory[subViewHistory.length - 1];
     if (activeSubView) {
-      // Card→detail: an in-widget single-record view built from the tapped
-      // record (used when no server-side detail tool exists). Reuses DetailBlock.
       if (activeSubView.blockType === "detail") {
         return (
           <div>
@@ -215,6 +245,17 @@ export const GenericWidgetRenderer: React.FC = () => {
       );
     }
 
+    if (isAQI) {
+      return (
+        <AQIBlock
+          title={content.title}
+          subtitle={content.subtitle}
+          data={rawData}
+          records={records}
+        />
+      );
+    }
+
     if (isWeather) {
       return (
         <WeatherBlock
@@ -222,6 +263,22 @@ export const GenericWidgetRenderer: React.FC = () => {
           records={records}
           title={content.title}
           subtitle={content.subtitle}
+        />
+      );
+    }
+
+    if (isCart) {
+      return (
+        <CartLayout
+          title={content.title}
+          subtitle={content.subtitle}
+          data={rawData}
+          records={records}
+          fields={fields}
+          collection={collection}
+          actions={content.actions}
+          audience={content.audience}
+          presentationPlan={presentationPlan}
         />
       );
     }
@@ -298,5 +355,11 @@ export const GenericWidgetRenderer: React.FC = () => {
     }
   };
 
-  return <div className={styles.container}>{renderLayout()}</div>;
+  return (
+    <div className={styles.container}>
+      <CartDrawer />
+      {renderLayout()}
+    </div>
+  );
 };
+

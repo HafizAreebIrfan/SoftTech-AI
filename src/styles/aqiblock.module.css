@@ -1,0 +1,140 @@
+.container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.heroCard {
+  background: var(--widget-card-bg, rgba(15, 23, 42, 0.75));
+  border: 1px solid var(--widget-card-border, rgba(255, 255, 255, 0.08));
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--app-text-heading, #ffffff);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.gaugeSection {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+
+.aqiBadge {
+  width: 68px;
+  height: 68px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.aqiNumber {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.aqiLabelSmall {
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.statusInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statusName {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.statusDescription {
+  margin: 0;
+  font-size: 13px;
+  color: var(--app-text-secondary, #94a3b8);
+  line-height: 1.4;
+}
+
+.pollutantsTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.pollutantsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.pollutantChip {
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pollutantName {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.pollutantValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--app-text-heading, #ffffff);
+}
+
+.pollutantUnit {
+  font-size: 10px;
+  color: #64748b;
+}

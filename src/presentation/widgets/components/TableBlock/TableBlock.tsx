@@ -6,6 +6,7 @@ import styles from "../../../../styles/tableblock.module.css";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 import type { TableBlockProps } from "../../../../interfaces/mcp/tableblock.interface";
 import { FormBlock } from "../FormBlock";
+import { Modal } from "../Modal";
 import { getPermissions, capOn } from "../../helper/AudienceHelper";
 
 export const TableBlock: React.FC<TableBlockProps> = ({
@@ -84,11 +85,41 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     return available.filter((f) => !f.hidden);
   }, [block?.fields, fields]);
 
-  // Search & Filter Logic (Unchanged)
+  // Searching & Filtering Logic
   const filteredRecords = useMemo(() => {
-    if (!searchTerm.trim()) return records;
+    let list = records;
+
+    // Defensive customer filtering: drop inactive / pending / draft records for customer audience
+    if (audience === "customer") {
+      list = list.filter((rec: any) => {
+        if (!rec || typeof rec !== "object") return true;
+        const statusVal = String(
+          rec.$status ||
+            rec.status ||
+            rec.packagestatus ||
+            rec.orderstatus ||
+            rec.availabilityStatus ||
+            "",
+        )
+          .toLowerCase()
+          .trim();
+
+        if (
+          statusVal === "pending" ||
+          statusVal === "inactive" ||
+          statusVal === "draft" ||
+          statusVal === "test" ||
+          statusVal === "archived"
+        ) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    if (!searchTerm) return list;
     const term = searchTerm.toLowerCase().trim();
-    return records.filter((rec) => {
+    return list.filter((rec) => {
       if (!rec || typeof rec !== "object") return false;
       return Object.values(rec as Record<string, unknown>).some((val) =>
         String(val ?? "")
@@ -96,7 +127,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
           .includes(term),
       );
     });
-  }, [records, searchTerm]);
+  }, [records, searchTerm, audience]);
 
   // Sorting Logic (Unchanged)
   const sortedRecords = useMemo(() => {
@@ -349,104 +380,62 @@ export const TableBlock: React.FC<TableBlockProps> = ({
         </div>
       )}
 
-      {/* Record View Modal */}
-      {selectedRecord && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "var(--ModalBackdrop)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: "16px",
-          }}
-          onClick={() => updateModalState(null, null, false)}
-        >
-          <div
-            style={{
-              background: "var(--Card)",
-              border: "1px solid var(--CardBorder)",
-              borderRadius: "14px",
-              padding: "24px",
-              maxWidth: "500px",
-              width: "100%",
-              maxHeight: "80vh",
-              overflowY: "auto",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+      {/* Detail Modal */}
+      <Modal
+        isOpen={Boolean(selectedRecord)}
+        onClose={() => updateModalState(null, null, false)}
+        title={selectedRecord?.$title || "Item Details"}
+      >
+        {selectedRecord && (
+          <div>
             <div
               style={{
                 display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                marginBottom: "20px",
+                alignItems: "center",
+                gap: "16px",
+                marginBottom: "16px",
               }}
             >
-              <div
-                style={{ display: "flex", gap: "16px", alignItems: "center" }}
-              >
-                {selectedRecord.$image && (
-                  <div
-                    style={{
-                      width: "64px",
-                      height: "64px",
-                      borderRadius: "8px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {renderImage(
-                      selectedRecord.$image,
-                      String(selectedRecord.$title || "Item"),
-                    )}
-                  </div>
-                )}
-                <div>
-                  <h3
-                    style={{
-                      margin: 0,
-                      fontSize: "20px",
-                      color: "var(--TextHeading)",
-                    }}
-                  >
-                    {String(selectedRecord.$title || "Item Details")}
-                  </h3>
-                  {selectedRecord.$description && (
-                    <p
-                      style={{
-                        margin: "4px 0 0 0",
-                        fontSize: "14px",
-                        color: "var(--TextSecondary)",
-                      }}
-                    >
-                      {String(selectedRecord.$description)}
-                    </p>
+              {selectedRecord.$image && (
+                <div
+                  style={{
+                    width: "60px",
+                    height: "60px",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                    flexShrink: 0,
+                  }}
+                >
+                  {renderImage(
+                    selectedRecord.$image,
+                    selectedRecord.$title || "Item",
+                    "cover",
                   )}
                 </div>
+              )}
+              <div>
+                <h4 style={{ margin: 0, color: "var(--TextHeading)" }}>
+                  {selectedRecord.$title || "Details"}
+                </h4>
+                {selectedRecord.$description && (
+                  <p
+                    style={{
+                      margin: "4px 0 0 0",
+                      fontSize: "13px",
+                      color: "var(--TextSecondary)",
+                    }}
+                  >
+                    {selectedRecord.$description}
+                  </p>
+                )}
               </div>
-              <button
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--TextSecondary)",
-                  cursor: "pointer",
-                  fontSize: "24px",
-                  padding: "0 8px",
-                }}
-                onClick={() => updateModalState(null, null, false)}
-              >
-                ✕
-              </button>
             </div>
 
             <div
               style={{
                 display: "flex",
                 flexDirection: "column",
-                gap: "12px",
+                gap: "8px",
                 borderTop: "1px solid var(--TableDivider)",
                 paddingTop: "16px",
               }}
@@ -491,73 +480,25 @@ export const TableBlock: React.FC<TableBlockProps> = ({
               })}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Create / Edit Form Modal */}
-      {(isCreating || editingRecord) && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            backgroundColor: "var(--ModalBackdrop)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: "16px",
-          }}
-          onClick={() => updateModalState(null, null, false)}
-        >
-          <div
-            style={{
-              background: "var(--Card)",
-              border: "1px solid var(--CardBorder)",
-              borderRadius: "14px",
-              padding: "24px",
-              maxWidth: "500px",
-              width: "100%",
-              maxHeight: "80vh",
-              overflowY: "auto",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "16px",
-              }}
-            >
-              <h3 style={{ margin: 0, color: "var(--TextHeading)" }}>
-                {isCreating
-                  ? "Create New Item"
-                  : `Edit ${editingRecord?.$title || "Item"}`}
-              </h3>
-              <button
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--TextSecondary)",
-                  cursor: "pointer",
-                  fontSize: "24px",
-                }}
-                onClick={() => updateModalState(null, null, false)}
-              >
-                ✕
-              </button>
-            </div>
-
-            <FormBlock
-              fields={activeFields}
-              initialData={editingRecord || {}}
-              onSubmit={handleSaveForm}
-            />
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={Boolean(isCreating || editingRecord)}
+        onClose={() => updateModalState(null, null, false)}
+        title={
+          isCreating
+            ? "Create New Item"
+            : `Edit ${editingRecord?.$title || "Item"}`
+        }
+      >
+        <FormBlock
+          fields={activeFields}
+          initialData={editingRecord || {}}
+          onSubmit={handleSaveForm}
+        />
+      </Modal>
     </section>
   );
 };

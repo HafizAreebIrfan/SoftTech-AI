@@ -3,6 +3,9 @@ import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderImage } from "../../helper/RenderImage";
 import { renderCurrency } from "../../helper/RenderCurrency";
 import { renderStatus } from "../../helper/RenderStatus";
+import { extractTieredPrices } from "../../helper/TieredPriceHelper/tieredPriceHelper";
+import { useCartStore } from "../../../../infrastructure/store/cartStore";
+import { ImageLightbox } from "../ImageLightbox";
 import { DetailField } from "./DetailField";
 import styles from "../../../../styles/detailblock.module.css";
 import type { DetailBlockProps } from "../../../../interfaces/mcp/detailblock.interface";
@@ -19,8 +22,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 }) => {
   const targetRecord = records.length > 0 ? (records[0] as any) : null;
   const [selectedImgIdx, setSelectedImgIdx] = useState<number>(0);
+  const [selectedTierIdx, setSelectedTierIdx] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [addedToast, setAddedToast] = useState<boolean>(false);
+  const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
 
   const {
     images,
@@ -32,6 +37,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     metric,
     detailFields,
     arrayFields,
+    tieredResult,
   } = useMemo(() => {
     if (!targetRecord) {
       return {
@@ -44,6 +50,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         metric: null,
         detailFields: [],
         arrayFields: [],
+        tieredResult: { hasTiers: false, options: [] },
       };
     }
 
@@ -66,7 +73,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             .map((s) => s.trim())
             .filter((s) => /^https?:\/\//i.test(s));
           collectedImages.push(...parts);
-        } else if (f.type === "image" || /^https?:\/\/.*\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(val)) {
+        } else if (
+          f.type === "image" ||
+          /^https?:\/\/.*\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(val)
+        ) {
           collectedImages.push(val.trim());
         }
       } else if (Array.isArray(val)) {
@@ -80,34 +90,54 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
     const dedupedImages = Array.from(new Set(collectedImages));
 
-    // 2. Extract hero properties
+    // 2. Extract tiered pricing options
+    const tiers = extractTieredPrices(targetRecord, activeFields);
+
+    // 3. Extract hero properties
     const itemTitle = targetRecord.$title || collection?.entity || "Details";
     const itemDesc = targetRecord.$description || null;
     const itemPrice = targetRecord.$price;
     const itemStatus = targetRecord.$status;
     const itemMetric = targetRecord.$metric;
 
-    // 3. Filter scalar fields for specs (exclude fields shown in hero)
-    const primaryRoles = ["title", "description", "price", "image", "status", "metric"];
+    // 4. Filter scalar fields for specs (exclude fields shown in hero or bare ID)
+    const primaryRoles = [
+      "title",
+      "description",
+      "price",
+      "image",
+      "status",
+      "metric",
+    ];
     const detailFieldsList = activeFields.filter((f) => {
       if (f.hidden) return false;
-      if (f.type === "array" || f.type === "object" || f.type === "image") return false;
+      if (f.type === "array" || f.type === "object" || f.type === "image")
+        return false;
       if (primaryRoles.includes(f.uiRole as string)) return false;
 
-      const key = f.key.toLowerCase();
+      // Suppress bare ID fields without uiRole
+      const keyLower = f.key.toLowerCase();
+      const labelLower = (f.label || "").toLowerCase();
+      if (
+        (keyLower === "id" || keyLower === "_id" || labelLower === "id") &&
+        !f.uiRole
+      ) {
+        return false;
+      }
+
       // Filter out redundant imperial duplicates
       if (
-        key.endsWith("_f") ||
-        key.endsWith("_mph") ||
-        key.endsWith("_in") ||
-        key.endsWith("_miles")
+        keyLower.endsWith("_f") ||
+        keyLower.endsWith("_mph") ||
+        keyLower.endsWith("_in") ||
+        keyLower.endsWith("_miles")
       ) {
         return false;
       }
       return true;
     });
 
-    // 4. Extract array / collection fields (e.g. reviews, features)
+    // 5. Extract array / collection fields (e.g. reviews, features)
     const arrayFieldsList = activeFields.filter((f) => {
       if (f.hidden) return false;
       const val = getFieldValue(targetRecord, f);
@@ -124,6 +154,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       metric: itemMetric,
       detailFields: detailFieldsList,
       arrayFields: arrayFieldsList,
+      tieredResult: tiers,
     };
   }, [targetRecord, block?.fields, fields, collection?.entity]);
 
@@ -136,16 +167,38 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     (a: any) => classifyAction(a) !== "mutate" || permissions.canMutate,
   );
 
-  const canAddToCart = audience !== "admin" && price !== undefined && price !== null;
+  const activeTier = tieredResult.hasTiers
+    ? tieredResult.options[selectedTierIdx]
+    : null;
+  const effectivePrice = activeTier ? activeTier.price : price;
+
+  const canAddToCart =
+    audience !== "admin" &&
+    effectivePrice !== undefined &&
+    effectivePrice !== null;
 
   const handleAddToCart = () => {
+    const addItem = useCartStore.getState().addItem;
+    const openCart = useCartStore.getState().openCart;
+
+    addItem(
+      {
+        id: targetRecord.id || targetRecord._id || title,
+        title: title || "Product",
+        price: effectivePrice ?? 0,
+        image: images[0] || null,
+        tier: activeTier ? activeTier.label : undefined,
+      },
+      quantity,
+    );
+    openCart();
+
     const openai = (window as any).openai;
-    const prompt = `Add ${quantity} × ${title} to my cart`;
+    const tierSuffix = activeTier ? ` (${activeTier.label})` : "";
+    const prompt = `Add ${quantity} × ${title}${tierSuffix} to my cart`;
 
     if (openai?.sendFollowUpMessage) {
       openai.sendFollowUpMessage({ prompt });
-    } else {
-      console.log(`[MCP Widget] sendFollowUpMessage: "${prompt}"`);
     }
 
     setAddedToast(true);
@@ -155,229 +208,335 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const activeMainImage = images[selectedImgIdx] || images[0] || null;
 
   return (
-    <section className={styles.container}>
-      <div
-        className={styles.card}
-        style={{
-          background: "var(--WidgetCardBg, rgba(22, 24, 38, 0.75))",
-          border: "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
-          borderRadius: "16px",
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0",
-        }}
-      >
-        {/* Top Product / Record Header Container */}
+    <>
+      <section className={styles.container}>
         <div
+          className={styles.card}
           style={{
-            padding: "20px",
+            background: "var(--WidgetCardBg, rgba(22, 24, 38, 0.75))",
+            border:
+              "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
+            borderRadius: "16px",
+            overflow: "hidden",
             display: "flex",
             flexDirection: "column",
-            gap: "20px",
-            background: "var(--BackgroundSecondary, rgba(15, 23, 42, 0.4))",
-            borderBottom: "1px solid var(--TableDivider, rgba(255, 255, 255, 0.08))",
+            gap: "0",
           }}
         >
-          {/* Main Hero Gallery (if images present) */}
-          {images.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {/* Top Product / Record Header Container */}
+          <div
+            style={{
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              background: "var(--BackgroundSecondary, rgba(15, 23, 42, 0.4))",
+              borderBottom:
+                "1px solid var(--TableDivider, rgba(255, 255, 255, 0.08))",
+            }}
+          >
+            {/* Main Hero Gallery (if images present) */}
+            {images.length > 0 && (
               <div
                 style={{
-                  width: "100%",
-                  height: "240px",
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  background: "rgba(0,0,0,0.2)",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {renderImage(activeMainImage, title || "Item Preview", "cover")}
-              </div>
-
-              {/* Multi-image thumbnail selector */}
-              {images.length > 1 && (
-                <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }}>
-                  {images.map((imgUrl, idx) => (
-                    <button
-                      key={`thumb-${idx}`}
-                      type="button"
-                      onClick={() => setSelectedImgIdx(idx)}
-                      style={{
-                        width: "56px",
-                        height: "56px",
-                        borderRadius: "8px",
-                        overflow: "hidden",
-                        border:
-                          selectedImgIdx === idx
-                            ? "2px solid var(--widget-accent, #6366f1)"
-                            : "1px solid rgba(255,255,255,0.12)",
-                        background: "rgba(0,0,0,0.3)",
-                        padding: 0,
-                        cursor: "pointer",
-                        flexShrink: 0,
-                        transition: "all 0.15s ease",
-                      }}
-                    >
-                      {renderImage(imgUrl, `Thumb ${idx + 1}`, "cover")}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Hero Meta Information */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "22px",
-                  fontWeight: 700,
-                  color: "var(--WidgetHeaderTitle, #f8fafc)",
-                  lineHeight: 1.3,
-                }}
-              >
-                {title}
-              </h2>
-              {status && <div>{renderStatus(status)}</div>}
-            </div>
-
-            {/* Price & Rating Row */}
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-              {price !== undefined && price !== null && (
-                <span
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: 800,
-                    color: "var(--widget-accent, #6366f1)",
-                  }}
-                >
-                  {renderCurrency(price)}
-                </span>
-              )}
-
-              {metric !== undefined && metric !== null && (
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    background: "rgba(245, 158, 11, 0.15)",
-                    color: "#f59e0b",
-                    padding: "4px 8px",
-                    borderRadius: "6px",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                  }}
-                >
-                  ⭐ {String(metric)}
-                </span>
-              )}
-            </div>
-
-            {/* Description */}
-            {description && (
-              <p
-                style={{
-                  margin: "6px 0 0 0",
-                  fontSize: "14px",
-                  lineHeight: 1.5,
-                  color: "var(--WidgetHeaderSubtitle, #94a3b8)",
-                }}
-              >
-                {description}
-              </p>
-            )}
-
-            {/* Add to Cart Stepper & CTA (Fix 6) */}
-            {canAddToCart && (
-              <div
-                style={{
-                  marginTop: "16px",
-                  display: "flex",
+                  flexDirection: "column",
                   gap: "12px",
-                  alignItems: "center",
-                  flexWrap: "wrap",
                 }}
               >
-                {/* Quantity Stepper */}
                 <div
+                  onClick={() => setLightboxOpen(true)}
+                  title="Click to view full image"
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: "8px",
+                    width: "100%",
+                    height: "240px",
+                    borderRadius: "12px",
                     overflow: "hidden",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "#fff",
-                      padding: "8px 12px",
-                      cursor: "pointer",
-                      fontSize: "16px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    −
-                  </button>
-                  <span style={{ padding: "0 8px", fontSize: "14px", fontWeight: 600, minWidth: "24px", textAlign: "center" }}>
-                    {quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity(quantity + 1)}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "#fff",
-                      padding: "8px 12px",
-                      cursor: "pointer",
-                      fontSize: "16px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
-
-                {/* Add to Cart Button */}
-                <button
-                  type="button"
-                  onClick={handleAddToCart}
-                  style={{
-                    flex: 1,
-                    background: "var(--widget-accent, #6366f1)",
-                    color: "var(--widget-accent-contrast, #ffffff)",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "10px 20px",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3)",
-                    transition: "all 0.15s ease",
+                    background: "rgba(0,0,0,0.2)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "6px",
+                    cursor: "zoom-in",
+                    position: "relative",
                   }}
                 >
-                  🛒 {addedToast ? "Added to Cart ✓" : "Add to Cart"}
-                </button>
+                  {renderImage(
+                    activeMainImage,
+                    title || "Item Preview",
+                    "cover",
+                  )}
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "10px",
+                      right: "10px",
+                      background: "rgba(0,0,0,0.5)",
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      color: "#fff",
+                    }}
+                  >
+                    🔍 Zoom
+                  </span>
+                </div>
+
+                {/* Multi-image thumbnail selector */}
+                {images.length > 1 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      overflowX: "auto",
+                      paddingBottom: "4px",
+                    }}
+                  >
+                    {images.map((imgUrl, idx) => (
+                      <button
+                        key={`thumb-${idx}`}
+                        type="button"
+                        onClick={() => setSelectedImgIdx(idx)}
+                        style={{
+                          width: "56px",
+                          height: "56px",
+                          borderRadius: "8px",
+                          overflow: "hidden",
+                          border:
+                            selectedImgIdx === idx
+                              ? "2px solid var(--widget-accent, #6366f1)"
+                              : "1px solid rgba(255,255,255,0.12)",
+                          background: "rgba(0,0,0,0.3)",
+                          padding: 0,
+                          cursor: "pointer",
+                          flexShrink: 0,
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {renderImage(imgUrl, `Thumb ${idx + 1}`, "cover")}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
+
+            {/* Hero Meta Information */}
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "12px",
+                }}
+              >
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: "22px",
+                    fontWeight: 700,
+                    color: "var(--WidgetHeaderTitle, #f8fafc)",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {title}
+                </h2>
+                {status && <div>{renderStatus(status)}</div>}
+              </div>
+
+              {/* Tiered Option Selector */}
+              {tieredResult.hasTiers && (
+                <div style={{ margin: "6px 0" }}>
+                  <label
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "var(--app-text-secondary, #94a3b8)",
+                      display: "block",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    Select Option / Tier:
+                  </label>
+                  <select
+                    value={selectedTierIdx}
+                    onChange={(e) => setSelectedTierIdx(Number(e.target.value))}
+                    style={{
+                      width: "100%",
+                      maxWidth: "320px",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      borderRadius: "8px",
+                      color: "#f8fafc",
+                      padding: "8px 12px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {tieredResult.options.map((opt) => (
+                      <option
+                        key={`tier-${opt.index}`}
+                        value={opt.index}
+                        style={{ background: "#0f172a", color: "#f8fafc" }}
+                      >
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Price & Rating Row */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                }}
+              >
+                {effectivePrice !== undefined && effectivePrice !== null && (
+                  <span
+                    style={{
+                      fontSize: "24px",
+                      fontWeight: 800,
+                      color: "var(--widget-accent, #6366f1)",
+                    }}
+                  >
+                    {renderCurrency(effectivePrice)}
+                  </span>
+                )}
+
+                {metric !== undefined && metric !== null && (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      background: "rgba(245, 158, 11, 0.15)",
+                      color: "#f59e0b",
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    ⭐ {String(metric)}
+                  </span>
+                )}
+              </div>
+
+              {/* Description */}
+              {description && !tieredResult.hasTiers && (
+                <p
+                  style={{
+                    margin: "6px 0 0 0",
+                    fontSize: "14px",
+                    lineHeight: 1.5,
+                    color: "var(--WidgetHeaderSubtitle, #94a3b8)",
+                  }}
+                >
+                  {description}
+                </p>
+              )}
+
+              {/* Add to Cart Stepper & CTA */}
+              {canAddToCart && (
+                <div
+                  style={{
+                    marginTop: "16px",
+                    display: "flex",
+                    gap: "12px",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {/* Quantity Stepper */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "#fff",
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      −
+                    </button>
+                    <span
+                      style={{
+                        padding: "0 8px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        minWidth: "24px",
+                        textAlign: "center",
+                      }}
+                    >
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(quantity + 1)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "#fff",
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Add to Cart Button */}
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    style={{
+                      flex: 1,
+                      background: "var(--widget-accent, #6366f1)",
+                      color: "var(--widget-accent-contrast, #ffffff)",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "10px 20px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3)",
+                      transition: "all 0.15s ease",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    🛒 {addedToast ? "Added to Cart ✓" : "Add to Cart"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+
 
         {/* Specifications / Detail Fields */}
         {detailFields.length > 0 && (
@@ -557,8 +716,19 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             ))}
           </div>
         )}
-      </div>
-    </section>
+        </div>
+
+        {/* Full-Screen Image Lightbox */}
+        <ImageLightbox
+          src={activeMainImage}
+          alt={title || "Preview"}
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+        />
+      </section>
+    </>
   );
 };
+
+
 

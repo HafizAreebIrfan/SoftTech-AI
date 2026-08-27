@@ -1,0 +1,233 @@
+import React, { useMemo } from "react";
+import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
+import { renderImage } from "../helper/RenderImage";
+import { renderCurrency } from "../helper/RenderCurrency";
+import styles from "../../../styles/cartlayout.module.css";
+
+interface CartLineItem {
+  id: string | number;
+  title: string;
+  price: number;
+  quantity: number;
+  total: number;
+  discountPercentage?: number;
+  discountedTotal?: number;
+  thumbnail?: string;
+}
+
+export const CartLayout: React.FC<WidgetLayoutProps> = ({
+  title = "Shopping Cart",
+  subtitle,
+  data,
+  records = [],
+  actions = [],
+}) => {
+  const { lineItems, cartSummary } = useMemo(() => {
+    const rawData = (data || {}) as Record<string, any>;
+    let targetCart: Record<string, any> = {};
+
+    if (Array.isArray(rawData.carts) && rawData.carts.length > 0) {
+      targetCart = rawData.carts[0];
+    } else if (rawData.products && Array.isArray(rawData.products)) {
+      targetCart = rawData;
+    } else if (records.length > 0 && typeof records[0] === "object") {
+      targetCart = records[0] as Record<string, any>;
+    }
+
+    const rawProducts: any[] =
+      targetCart.products ||
+      (Array.isArray(rawData.products) ? rawData.products : []) ||
+      [];
+
+    const items: CartLineItem[] = rawProducts.map((p, idx) => ({
+      id: p.id ?? idx,
+      title: p.title || p.$title || `Product #${idx + 1}`,
+      price: Number(p.price || p.$price || 0),
+      quantity: Number(p.quantity || 1),
+      total: Number(p.total || p.price * (p.quantity || 1) || 0),
+      discountPercentage: p.discountPercentage,
+      discountedTotal: p.discountedTotal,
+      thumbnail: p.thumbnail || p.$image || p.image,
+    }));
+
+    const totalAmount =
+      Number(targetCart.total || rawData.total) ||
+      items.reduce((acc, i) => acc + (i.total || i.price * i.quantity), 0);
+
+    const discountedTotal =
+      Number(targetCart.discountedTotal || rawData.discountedTotal) ||
+      items.reduce(
+        (acc, i) =>
+          acc + (i.discountedTotal || i.total || i.price * i.quantity),
+        0,
+      );
+
+    const totalQuantity =
+      Number(targetCart.totalQuantity || rawData.totalQuantity) ||
+      items.reduce((acc, i) => acc + i.quantity, 0);
+
+    return {
+      lineItems: items,
+      cartSummary: {
+        totalAmount,
+        discountedTotal,
+        totalQuantity,
+        userId: targetCart.userId || rawData.userId,
+        cartId: targetCart.id || rawData.id,
+      },
+    };
+  }, [data, records]);
+
+  const handleCheckout = () => {
+    const openai = (window as any).openai;
+    const firstItem = lineItems[0];
+
+    const checkoutParams = new URLSearchParams({
+      title:
+        lineItems.length === 1
+          ? firstItem?.title || "Item"
+          : `${lineItems.length} Products`,
+      price: (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2),
+      qty: String(cartSummary.totalQuantity),
+      image: firstItem?.thumbnail || "",
+    });
+
+    const checkoutUrl = `/checkout?${checkoutParams.toString()}`;
+
+    // Also check if an explicit checkout action tool or url is present
+    const checkoutAction: any = actions.find(
+      (a: any) =>
+        /checkout|buy|pay|purchase/i.test(a?.id || "") ||
+        /checkout|buy|pay|purchase/i.test(a?.tool || ""),
+    );
+
+    if (checkoutAction?.url || checkoutAction?.href) {
+      window.open(checkoutAction.url || checkoutAction.href, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    if (openai?.sendFollowUpMessage) {
+      openai.sendFollowUpMessage({
+        prompt: `Proceed to checkout for cart (Total: $${(cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2)})`,
+      });
+    }
+
+    try {
+      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      window.location.href = checkoutUrl;
+    }
+  };
+
+  return (
+    <section className={styles.container}>
+      {/* Header */}
+      <header className={styles.header}>
+        <div>
+          <h1 className={styles.title}>
+            {title === "Get Cart" || !title ? "Shopping Cart" : title}
+          </h1>
+          {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
+        </div>
+        {cartSummary.totalQuantity > 0 && (
+          <span className={styles.badge}>
+            {cartSummary.totalQuantity} Item
+            {cartSummary.totalQuantity === 1 ? "" : "s"}
+          </span>
+        )}
+      </header>
+
+      {/* Cart Content Grid */}
+      <div className={styles.cartGrid}>
+        {/* Left Column: Products List */}
+        <div className={styles.itemsCard}>
+          <h3 className={styles.sectionTitle}>
+            Cart Items ({lineItems.length})
+          </h3>
+
+          <div className={styles.itemsList}>
+            {lineItems.length === 0 ? (
+              <p style={{ color: "var(--app-text-secondary)", margin: "20px 0" }}>
+                No items found in this cart.
+              </p>
+            ) : (
+              lineItems.map((item) => (
+                <div key={item.id} className={styles.itemRow}>
+                  {item.thumbnail && (
+                    <div className={styles.itemImage}>
+                      {renderImage(item.thumbnail, item.title, "cover")}
+                    </div>
+                  )}
+
+                  <div className={styles.itemInfo}>
+                    <span className={styles.itemTitle}>{item.title}</span>
+                    <div className={styles.itemMeta}>
+                      <span>Qty: {item.quantity}</span>
+                      {item.discountPercentage ? (
+                        <span style={{ color: "#10b981", fontWeight: 600 }}>
+                          -{item.discountPercentage}%
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className={styles.itemPriceGroup}>
+                    <span className={styles.itemTotal}>
+                      {renderCurrency(item.discountedTotal || item.total)}
+                    </span>
+                    {item.quantity > 1 && (
+                      <span className={styles.itemUnitPrice}>
+                        {renderCurrency(item.price)} each
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Order Summary */}
+        <div className={styles.summaryCard}>
+          <h3 className={styles.sectionTitle}>Order Summary</h3>
+
+          <div className={styles.summaryRows}>
+            <div className={styles.summaryRow}>
+              <span>Items Total ({cartSummary.totalQuantity})</span>
+              <span>{renderCurrency(cartSummary.totalAmount)}</span>
+            </div>
+
+            {cartSummary.discountedTotal < cartSummary.totalAmount && (
+              <div className={styles.summaryRow} style={{ color: "#10b981" }}>
+                <span>Discounts Applied</span>
+                <span>
+                  -
+                  {renderCurrency(
+                    cartSummary.totalAmount - cartSummary.discountedTotal,
+                  )}
+                </span>
+              </div>
+            )}
+
+            <div className={styles.summaryRowTotal}>
+              <span>Total</span>
+              <span className={styles.totalAmount}>
+                {renderCurrency(
+                  cartSummary.discountedTotal || cartSummary.totalAmount,
+                )}
+              </span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className={styles.checkoutButton}
+            onClick={handleCheckout}
+          >
+            <span>💳 Proceed to Checkout</span>
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+};
