@@ -48,7 +48,10 @@ export const normalizeApiResponseToWidget = (
   );
 
   // 1. Sanitize the payload: strip internal fields, apply schema, and flatten arrays
-  const data = sanitizeDataPayload(rawData, collection?.fields || [], apiSchema);
+  let data = sanitizeDataPayload(rawData, collection?.fields || [], apiSchema);
+  if (data === undefined) {
+    data = rawData ?? null;
+  }
 
   const capabilities = buildCapabilities(apiParams, method);
   const pagination = extractPagination(data);
@@ -327,7 +330,7 @@ const applySchemaUiRole = (
 };
 
 const normalizeJsonValue = (value: unknown): JsonValue => {
-  if (value === null) return null;
+  if (value === undefined || value === null) return null;
   if (
     typeof value === "string" ||
     typeof value === "number" ||

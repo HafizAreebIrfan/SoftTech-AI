@@ -238,6 +238,10 @@ const buildAuthWidget = (
 ) => ({
   title: `${api.name || "API"} Connection Required`,
   subtitle: `Account authorization is required to access ${company.companyName}.`,
+  data: {
+    status: "Account Not Connected",
+    connectUrl,
+  },
   layout: company.uiPreference?.layout ?? "dashboard",
   industry: company.industry ?? "general",
   blocks: [
@@ -267,6 +271,11 @@ const buildErrorWidget = (
 ) => ({
   title: api.name || "Service Notice",
   subtitle: translation.userMessage,
+  data: {
+    status: "Service Notice",
+    message: translation.userMessage,
+    actionSuggestion: translation.actionSuggestion,
+  },
   layout: company.uiPreference?.layout ?? "dashboard",
   industry: company.industry ?? "general",
   blocks: [

@@ -95,6 +95,11 @@ export const buildCustomMcpInputSchema = (
       "Identifier of a specific record to fetch, update, or delete. Leave empty for list or search requests.",
     );
 
+  shape["_id"] = z
+    .union([z.string(), z.number()])
+    .optional()
+    .describe("Alternative identifier (e.g. MongoDB _id) of a specific record.");
+
   // 2. Map the dynamic parameters with smart descriptions
   for (const param of params) {
     if (!param?.isDynamic) continue;

@@ -9,6 +9,7 @@ const primitiveSchema = z.union([
   z.number(),
   z.boolean(),
   z.null(),
+  z.undefined(),
 ]);
 
 /**
@@ -19,6 +20,7 @@ const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
     primitiveSchema,
     z.array(jsonValueSchema),
     z.record(z.string(), jsonValueSchema),
+    z.any(),
   ]),
 );
 
@@ -149,7 +151,7 @@ export const genericWidgetOutputSchema = z.object({
    *
    * This is the important part.
    */
-  data: jsonValueSchema,
+  data: z.any().optional(),
 
   /**
    * Information about what the data represents.
@@ -167,9 +169,14 @@ export const genericWidgetOutputSchema = z.object({
   pagination: paginationSchema.optional(),
 
   /**
+   * Actions supported by the widget.
+   */
+  actions: z.array(z.any()).optional(),
+
+  /**
    * Additional non-UI metadata.
    */
-  metadata: z.record(z.string(), jsonValueSchema).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 
   /**
    * Target audience for the widget.
