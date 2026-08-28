@@ -151,8 +151,8 @@
 }
 
 .categoryPill {
-  background: var(--widget-badge-bg, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--widget-badge-border, rgba(255, 255, 255, 0.1));
+  background: var(--widget-badge-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid transparent;
   color: var(--app-text-secondary, #94a3b8);
   padding: 5px 12px;
   border-radius: 999px;
@@ -164,7 +164,7 @@
 }
 
 .categoryPill:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
 }
 

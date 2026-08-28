@@ -174,14 +174,14 @@ export const GenericWidgetRenderer: React.FC = () => {
     (normalizedLayout as string) === "cart" ||
     collection?.dataPath === "carts" ||
     (Boolean(collection?.entity && /^carts?$/i.test(collection.entity)) &&
-      normalizedLayout !== "catalog" &&
-      normalizedLayout !== "dashboard" &&
-      normalizedLayout !== "table") ||
+      collection?.entity !== "products") ||
+    collection?.itemLabel === "cart" ||
     Boolean(
       rawData &&
-      typeof rawData === "object" &&
-      "carts" in (rawData as object) &&
-      Array.isArray((rawData as any).carts),
+        typeof rawData === "object" &&
+        ("carts" in (rawData as object) ||
+          ("userId" in (rawData as object) &&
+            "totalProducts" in (rawData as object))),
     );
 
   const renderLayout = () => {

@@ -78,21 +78,18 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
     };
   }, [data, records]);
 
+  const [checkoutComplete, setCheckoutComplete] = React.useState(false);
+
   const handleCheckout = () => {
-    const openai = (window as any).openai;
     const firstItem = lineItems[0];
 
-    const checkoutParams = new URLSearchParams({
-      title:
-        lineItems.length === 1
-          ? firstItem?.title || "Item"
-          : `${lineItems.length} Products`,
-      price: (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2),
-      qty: String(cartSummary.totalQuantity),
-      image: firstItem?.thumbnail || "",
-    });
-
-    const checkoutUrl = `/checkout?${checkoutParams.toString()}`;
+    const metadata = (window as any).__WIDGET_METADATA__ || {};
+    const externalBase =
+      metadata.webCheckoutUrl ||
+      metadata.websiteURL ||
+      metadata.website ||
+      metadata.domain ||
+      "";
 
     // Also check if an explicit checkout action tool or url is present
     const checkoutAction: any = actions.find(
@@ -101,22 +98,48 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
         /checkout|buy|pay|purchase/i.test(a?.tool || ""),
     );
 
+    let targetUrl = "";
     if (checkoutAction?.url || checkoutAction?.href) {
-      window.open(checkoutAction.url || checkoutAction.href, "_blank", "noopener,noreferrer");
-      return;
-    }
-
-    if (openai?.sendFollowUpMessage) {
-      openai.sendFollowUpMessage({
-        prompt: `Proceed to checkout for cart (Total: $${(cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2)})`,
+      targetUrl = checkoutAction.url || checkoutAction.href;
+    } else if (
+      externalBase &&
+      typeof externalBase === "string" &&
+      externalBase.startsWith("http")
+    ) {
+      try {
+        const parsed = new URL(externalBase);
+        parsed.pathname = parsed.pathname.replace(/\/$/, "") + "/checkout";
+        parsed.searchParams.set("qty", String(cartSummary.totalQuantity));
+        parsed.searchParams.set(
+          "total",
+          (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2),
+        );
+        targetUrl = parsed.toString();
+      } catch {
+        targetUrl = `${externalBase}/checkout`;
+      }
+    } else {
+      const checkoutParams = new URLSearchParams({
+        title:
+          lineItems.length === 1
+            ? firstItem?.title || "Item"
+            : `${lineItems.length} Products`,
+        price: (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(
+          2,
+        ),
+        qty: String(cartSummary.totalQuantity),
+        image: firstItem?.thumbnail || "",
       });
+      targetUrl = `/checkout?${checkoutParams.toString()}`;
     }
 
     try {
-      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+      window.open(targetUrl, "_blank", "noopener,noreferrer");
     } catch {
-      window.location.href = checkoutUrl;
+      // Ignore if blocked
     }
+
+    setCheckoutComplete(true);
   };
 
   return (

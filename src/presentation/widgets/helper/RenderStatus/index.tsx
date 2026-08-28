@@ -9,15 +9,25 @@ export const renderStatus = (value: unknown): React.ReactNode => {
   let statusClass = styles.statusDefault;
 
   if (
-    ["completed", "complete", "approved", "active", "success", "paid"].includes(
-      normalized,
-    )
+    [
+      "completed",
+      "complete",
+      "approved",
+      "active",
+      "success",
+      "paid",
+      "in stock",
+      "instock",
+      "available",
+    ].includes(normalized)
   ) {
     statusClass = styles.statusSuccess;
   }
 
   if (
-    ["pending", "processing", "in_progress", "waiting"].includes(normalized)
+    ["pending", "processing", "in_progress", "waiting", "low stock"].includes(
+      normalized,
+    )
   ) {
     statusClass = styles.statusPending;
   }
@@ -30,6 +40,9 @@ export const renderStatus = (value: unknown): React.ReactNode => {
       "failed",
       "error",
       "inactive",
+      "out of stock",
+      "outofstock",
+      "sold out",
     ].includes(normalized)
   ) {
     statusClass = styles.statusError;

@@ -32,32 +32,55 @@ export const CartDrawer: React.FC = () => {
   const totalCount = getTotalCount();
   const subtotal = getSubtotal();
 
+  const [isCheckingOut, setIsCheckingOut] = React.useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = React.useState(false);
+
   const handleCheckout = () => {
-    const openai = (window as any).openai;
+    setIsCheckingOut(true);
     const firstItem = items[0];
 
-    // Build checkout url for local/hosted checkout page
-    const checkoutParams = new URLSearchParams({
-      title: items.length === 1 ? firstItem.title : `${items.length} Cart Items`,
-      price: subtotal.toFixed(2),
-      qty: String(totalCount),
-      image: firstItem?.image || "",
-    });
+    // Try finding external checkout URL from metadata if available
+    const metadata = (window as any).__WIDGET_METADATA__ || {};
+    const externalBase =
+      metadata.webCheckoutUrl ||
+      metadata.websiteURL ||
+      metadata.website ||
+      metadata.domain ||
+      "";
 
-    const checkoutUrl = `/checkout?${checkoutParams.toString()}`;
-
-    if (openai?.sendFollowUpMessage) {
-      openai.sendFollowUpMessage({
-        prompt: `Proceed to checkout for ${totalCount} items in my cart (Total: $${subtotal.toFixed(2)})`,
+    let targetUrl = "";
+    if (
+      externalBase &&
+      typeof externalBase === "string" &&
+      externalBase.startsWith("http")
+    ) {
+      try {
+        const parsed = new URL(externalBase);
+        parsed.pathname = parsed.pathname.replace(/\/$/, "") + "/checkout";
+        parsed.searchParams.set("qty", String(totalCount));
+        parsed.searchParams.set("total", subtotal.toFixed(2));
+        targetUrl = parsed.toString();
+      } catch {
+        targetUrl = `${externalBase}/checkout`;
+      }
+    } else {
+      const checkoutParams = new URLSearchParams({
+        title: items.length === 1 ? firstItem?.title || "Item" : `${items.length} Cart Items`,
+        price: subtotal.toFixed(2),
+        qty: String(totalCount),
+        image: firstItem?.image || "",
       });
+      targetUrl = `/checkout?${checkoutParams.toString()}`;
     }
 
     try {
-      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+      window.open(targetUrl, "_blank", "noopener,noreferrer");
     } catch {
-      // Fallback navigation
-      window.location.href = checkoutUrl;
+      // In case popup is blocked
     }
+
+    setCheckoutSuccess(true);
+    setIsCheckingOut(false);
   };
 
   return (
@@ -89,7 +112,29 @@ export const CartDrawer: React.FC = () => {
 
         {/* Content */}
         <div className={styles.content}>
-          {items.length === 0 ? (
+          {checkoutSuccess ? (
+            <div className={styles.emptyContainer} style={{ padding: "32px 16px" }}>
+              <div className={styles.emptyIcon} style={{ fontSize: "40px" }}>🎉</div>
+              <h4 className={styles.emptyTitle} style={{ color: "#10b981", fontSize: "18px" }}>
+                Checkout Ready!
+              </h4>
+              <p className={styles.emptyText}>
+                Your order for {totalCount} items ({renderCurrency(subtotal)}) is ready. Complete your purchase on the merchant page.
+              </p>
+              <button
+                type="button"
+                className={styles.checkoutBtn}
+                style={{ marginTop: "16px", width: "auto", padding: "8px 24px" }}
+                onClick={() => {
+                  clearCart();
+                  setCheckoutSuccess(false);
+                  closeCart();
+                }}
+              >
+                Continue Shopping
+              </button>
+            </div>
+          ) : items.length === 0 ? (
             <div className={styles.emptyContainer}>
               <div className={styles.emptyIcon}>🛍️</div>
               <h4 className={styles.emptyTitle}>Your cart is empty</h4>

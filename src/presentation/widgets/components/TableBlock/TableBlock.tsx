@@ -236,12 +236,17 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     showToast(`✓ "${title}" deleted successfully`);
 
     const toolName = getToolName("delete");
-    if ((window as any).openai?.callTool) {
-      await (window as any).openai.callTool(toolName, { id });
-    } else if ((window as any).openai?.sendFollowUpMessage) {
-      (window as any).openai.sendFollowUpMessage({
-        prompt: `Delete item with ID: ${id}`,
-      });
+    try {
+      if ((window as any).openai?.callTool) {
+        await (window as any).openai.callTool(toolName, { id, _id: id });
+      } else if ((window as any).openai?.sendFollowUpMessage) {
+        (window as any).openai.sendFollowUpMessage({
+          prompt: `Delete item with ID: ${id}`,
+        });
+      }
+    } catch (err: any) {
+      console.error("[TableBlock] Delete error:", err);
+      showToast(`⚠️ Server error: ${err?.message || "Delete failed"}`);
     }
     setDeletingRecord(null);
   };
@@ -272,15 +277,20 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       );
     }
 
-    const payload = isEdit ? { id, ...formData } : formData;
+    const payload = isEdit ? { id, _id: id, ...formData } : formData;
     updateModalState(null, null, false);
 
-    if ((window as any).openai?.callTool) {
-      await (window as any).openai.callTool(toolName, payload);
-    } else if ((window as any).openai?.sendFollowUpMessage) {
-      (window as any).openai.sendFollowUpMessage({
-        prompt: `${isEdit ? "Update" : "Create"} item with data: ${JSON.stringify(payload)}`,
-      });
+    try {
+      if ((window as any).openai?.callTool) {
+        await (window as any).openai.callTool(toolName, payload);
+      } else if ((window as any).openai?.sendFollowUpMessage) {
+        (window as any).openai.sendFollowUpMessage({
+          prompt: `${isEdit ? "Update" : "Create"} item with data: ${JSON.stringify(payload)}`,
+        });
+      }
+    } catch (err: any) {
+      console.error("[TableBlock] Save error:", err);
+      showToast(`⚠️ Server error: ${err?.message || "Update failed"}`);
     }
   };
 

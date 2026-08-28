@@ -97,14 +97,8 @@
 }
 
 .statusBadge {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  line-height: 1;
-  background-color: var(--widget-badge-bg);
-  color: var(--widget-badge-text);
-  border: 1px solid var(--widget-badge-border);
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
 }
 

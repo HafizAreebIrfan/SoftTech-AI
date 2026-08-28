@@ -116,16 +116,25 @@ export const CardItem: React.FC<CardItemProps> = ({
       1,
     );
     openCart();
-
-    const openai = (window as any).openai;
-    const tierSuffix = activeTier ? ` (${activeTier.label})` : "";
-    const prompt = `Add 1 × ${titleStr}${tierSuffix} to my cart`;
-    if (openai?.sendFollowUpMessage) {
-      openai.sendFollowUpMessage({ prompt });
-    }
   };
 
-  const canAddToCart = audience !== "admin" && effectivePrice !== undefined && effectivePrice !== null;
+  const statusStr = String(
+    $status ||
+      (record as any).availabilityStatus ||
+      (record as any).status ||
+      "",
+  ).toLowerCase();
+
+  const isOutOfStock =
+    (record as any).stock === 0 ||
+    statusStr.includes("out of stock") ||
+    statusStr.includes("sold out") ||
+    statusStr === "inactive";
+
+  const canAddToCart =
+    audience !== "admin" &&
+    effectivePrice !== undefined &&
+    effectivePrice !== null;
 
   return (
     <>
@@ -291,7 +300,29 @@ export const CardItem: React.FC<CardItemProps> = ({
             </span>
           )}
 
-          {canAddToCart && (
+          {isOutOfStock ? (
+            <button
+              type="button"
+              disabled
+              style={{
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "6px",
+                padding: "6px 12px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--app-text-secondary, #64748b)",
+                cursor: "not-allowed",
+                marginLeft: "auto",
+                opacity: 0.6,
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              Out of Stock
+            </button>
+          ) : canAddToCart ? (
             <button
               type="button"
               onClick={handleAddToCart}
@@ -313,7 +344,7 @@ export const CardItem: React.FC<CardItemProps> = ({
             >
               <span>🛒</span> + Cart
             </button>
-          )}
+          ) : null}
         </div>
       </CardContainerComponent>
 
