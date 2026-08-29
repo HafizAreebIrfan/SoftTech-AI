@@ -145,6 +145,9 @@ export const registerCompanyApiTools = (
           const effectiveAudience =
             api.audience || company.uiPreference?.audienceDefault || "customer";
 
+          const userRawPrompt = input?.user_raw_prompt;
+          const inferredIntent = input?.inferred_intent;
+
           const widgetContent = normalizeApiResponseToWidget(
             company.companyName,
             api.name || `API ${index + 1}`,
@@ -158,6 +161,8 @@ export const registerCompanyApiTools = (
             method,
             company.uiPreference?.themeColor,
             actionTools,
+            userRawPrompt,
+            inferredIntent,
           );
 
           // If the search was empty and we relaxed the query (or still found

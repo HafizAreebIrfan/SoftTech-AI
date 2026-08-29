@@ -36,6 +36,8 @@ export const normalizeApiResponseToWidget = (
   method = "GET",
   themeColor?: string,
   actionTools?: ActionToolLinks,
+  userRawPrompt?: string,
+  inferredIntent?: string,
 ): GenericWidgetResult => {
   const rawData = normalizeJsonValue(response);
 
@@ -93,6 +95,8 @@ export const normalizeApiResponseToWidget = (
       ...(industry ? { industry } : {}),
       ...(themeColor ? { themeColor } : {}),
       ...(entityName ? { entity: entityName } : {}),
+      ...(userRawPrompt ? { user_raw_prompt: userRawPrompt } : {}),
+      ...(inferredIntent ? { inferred_intent: inferredIntent } : {}),
       generatedAt: new Date().toISOString(),
     },
   };
