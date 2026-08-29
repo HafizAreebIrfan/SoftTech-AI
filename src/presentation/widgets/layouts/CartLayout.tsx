@@ -162,7 +162,7 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
 
   const handleCheckout = () => {
     try {
-      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+      window.open(checkoutUrl, "_blank");
     } catch {
       // Ignore if blocked
     }

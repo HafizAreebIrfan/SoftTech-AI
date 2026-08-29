@@ -151,14 +151,24 @@ export interface McpSubView {
   blockType?: string;
 }
 
+export interface CheckoutSuccessPayload {
+  transactionRef: string;
+  amount: number;
+  email?: string;
+  items?: { name: string; qty: number; price: number }[];
+}
+
 export interface McpWidgetState {
   toolResult: McpToolResultPayload | null;
   subViewHistory: McpSubView[];
+  checkoutSuccess: CheckoutSuccessPayload | null;
   setToolResult: (payload: McpToolResultPayload | null) => void;
   resetToolResult: () => void;
   pushSubView: (view: McpSubView) => void;
   popSubView: () => void;
   clearSubViews: () => void;
+  setCheckoutSuccess: (payload: CheckoutSuccessPayload | null) => void;
+  clearCheckoutSuccess: () => void;
 }
 
 export interface WidgetAction {

@@ -84,7 +84,7 @@ export const CartDrawer: React.FC = () => {
   const handleCheckout = () => {
     setIsCheckingOut(true);
     try {
-      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+      window.open(checkoutUrl, "_blank");
     } catch {
       // In case popup is blocked
     }

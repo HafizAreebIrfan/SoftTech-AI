@@ -135,7 +135,27 @@ const Checkout: React.FC = () => {
   };
 
   const handleReturnToChat = () => {
-    window.location.href = "https://chatgpt.com";
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(
+        {
+          type: "checkout-success",
+          payload: {
+            transactionRef,
+            amount: finalTotal,
+            email,
+            items: items.map((item) => ({
+              name: item.title,
+              qty: item.quantity,
+              price: item.price,
+            })),
+          },
+        },
+        "*",
+      );
+      window.close();
+    } else {
+      window.location.href = "https://chatgpt.com";
+    }
   };
 
   if (isSuccess) {
