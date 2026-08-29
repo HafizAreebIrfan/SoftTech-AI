@@ -17,7 +17,7 @@ import {
   buildRelaxedQueries,
 } from "./searchrecovery";
 
-const HTTP_METHODS_WITH_BODY = ["POST", "PUT", "PATCH"];
+const HTTP_METHODS_WITH_BODY = ["POST", "PUT", "PATCH", "DELETE"];
 
 export const createUserAuthRequiredNotice = (
   companyId: string,
@@ -330,7 +330,12 @@ const buildApiUrl = (api: IApi, input: any): URL => {
   // still unfilled and an id was supplied, use it — so a detail tool works no
   // matter how the company named its path param (/x/{id}, /x/{productId},
   // /x/:uuid). Skipped when a configured param already filled the id.
-  const fallbackId = allInputValues.id ?? allInputValues._id;
+  const fallbackId =
+    allInputValues.id ??
+    allInputValues._id ??
+    allInputValues.packageId ??
+    allInputValues.productId ??
+    allInputValues.itemId;
   if (
     fallbackId !== undefined &&
     fallbackId !== null &&
@@ -397,7 +402,22 @@ const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
     }
     return body;
   }
-  return {};
+
+  // Fallback: If no body fields were explicitly configured, pass through the clean input data
+  const systemKeys = [
+    "user_raw_prompt",
+    "inferred_intent",
+    "platformtype",
+    "platformType",
+    "params",
+  ];
+  const fallbackBody: Record<string, any> = {};
+  for (const [k, v] of Object.entries(rawInput)) {
+    if (!systemKeys.includes(k) && v !== undefined && v !== null) {
+      fallbackBody[k] = coerceJsonValue(v);
+    }
+  }
+  return fallbackBody;
 };
 
 /**
@@ -474,6 +494,27 @@ const resolveParameterValue = (
     ) {
       return inputValues[originalKey];
     }
+
+    // ID alias fallback: if parameter key is an ID field, check common ID properties
+    if (
+      key.toLowerCase().endsWith("id") ||
+      key.toLowerCase() === "id" ||
+      key.toLowerCase() === "_id"
+    ) {
+      const idAlias =
+        inputValues.id ??
+        inputValues._id ??
+        inputValues.packageId ??
+        inputValues.package_id ??
+        inputValues.productId ??
+        inputValues.product_id ??
+        inputValues.itemId ??
+        inputValues.item_id;
+      if (idAlias !== undefined && idAlias !== null) {
+        return idAlias;
+      }
+    }
+
     // The model omitted this value: fall back to a configured default so
     // company-set defaults (e.g. limit=10) actually reach the API. `value`
     // stays an example only; `defaultValue` is the intentional fallback.
