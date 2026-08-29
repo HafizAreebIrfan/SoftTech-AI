@@ -120,8 +120,20 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   const filteredRecords = useMemo(() => {
     let list = localRecords;
 
-    // Defensive customer filtering: drop inactive / pending / draft records for customer audience
-    if (audience === "customer") {
+    const promptContext = String(
+      (window as any).__WIDGET_METADATA__?.user_raw_prompt ||
+        (window as any).__WIDGET_DATA__?.user_raw_prompt ||
+        (window as any).__WIDGET_METADATA__?.inferred_intent ||
+        (window as any).__WIDGET_DATA__?.inferred_intent ||
+        "",
+    ).toLowerCase();
+
+    const isExplicitActiveFilter =
+      /\bactive\b/i.test(promptContext) &&
+      !/\b(all|pending|draft|inactive)\b/i.test(promptContext);
+
+    // Defensive customer filtering OR explicit active prompt filter
+    if (audience === "customer" || isExplicitActiveFilter) {
       list = list.filter((rec: any) => {
         if (!rec || typeof rec !== "object") return true;
         const statusVal = String(
@@ -134,6 +146,17 @@ export const TableBlock: React.FC<TableBlockProps> = ({
         )
           .toLowerCase()
           .trim();
+
+        if (isExplicitActiveFilter) {
+          return (
+            statusVal === "active" ||
+            statusVal === "available" ||
+            statusVal === "in stock" ||
+            statusVal === "instock" ||
+            statusVal === "success" ||
+            statusVal === "completed"
+          );
+        }
 
         if (
           statusVal === "pending" ||
@@ -178,16 +201,12 @@ export const TableBlock: React.FC<TableBlockProps> = ({
           ? (Number(valA) || 0) - (Number(valB) || 0)
           : (Number(valB) || 0) - (Number(valA) || 0);
       }
-      return String(valA).toLowerCase() < String(valB).toLowerCase()
-        ? sortDir === "asc"
-          ? -1
-          : 1
-        : sortDir === "asc"
-          ? 1
-          : -1;
+      return sortDir === "asc"
+        ? String(valA).localeCompare(String(valB))
+        : String(valB).localeCompare(String(valA));
     });
     return sorted;
-  }, [filteredRecords, activeFields, sortKey, sortDir]);
+  }, [filteredRecords, sortKey, sortDir, activeFields]);
 
   const totalItems = pagination?.total ?? sortedRecords.length;
   const totalPages =
@@ -236,9 +255,17 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     showToast(`✓ "${title}" deleted successfully`);
 
     const toolName = getToolName("delete");
+    const payload = {
+      id,
+      _id: id,
+      packageId: id,
+      productId: id,
+      itemId: id,
+      ...deletingRecord,
+    };
     try {
       if ((window as any).openai?.callTool) {
-        await (window as any).openai.callTool(toolName, { id, _id: id });
+        await (window as any).openai.callTool(toolName, payload);
       } else if ((window as any).openai?.sendFollowUpMessage) {
         (window as any).openai.sendFollowUpMessage({
           prompt: `Delete item with ID: ${id}`,
@@ -277,7 +304,16 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       );
     }
 
-    const payload = isEdit ? { id, _id: id, ...formData } : formData;
+    const payload = isEdit
+      ? {
+          id,
+          _id: id,
+          packageId: id,
+          productId: id,
+          ...editingRecord,
+          ...formData,
+        }
+      : { ...formData };
     updateModalState(null, null, false);
 
     try {

@@ -80,9 +80,33 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
 
   const [checkoutComplete, setCheckoutComplete] = React.useState(false);
 
-  const handleCheckout = () => {
-    const firstItem = lineItems[0];
+  const checkoutUrl = useMemo(() => {
+    // 1. Direct url from data or actions
+    const rawData = data as any;
+    if (
+      rawData?.url &&
+      typeof rawData.url === "string" &&
+      rawData.url.startsWith("http")
+    ) {
+      return rawData.url;
+    }
+    if (
+      rawData?.link &&
+      typeof rawData.link === "string" &&
+      rawData.link.startsWith("http")
+    ) {
+      return rawData.link;
+    }
+    const checkoutAction: any = actions.find(
+      (a: any) =>
+        /checkout|buy|pay|purchase/i.test(a?.id || "") ||
+        /checkout|buy|pay|purchase/i.test(a?.tool || ""),
+    );
+    if (checkoutAction?.url || checkoutAction?.href) {
+      return checkoutAction.url || checkoutAction.href;
+    }
 
+    // 2. Company metadata domain / webCheckoutUrl
     const metadata = (window as any).__WIDGET_METADATA__ || {};
     const externalBase =
       metadata.webCheckoutUrl ||
@@ -91,17 +115,7 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
       metadata.domain ||
       "";
 
-    // Also check if an explicit checkout action tool or url is present
-    const checkoutAction: any = actions.find(
-      (a: any) =>
-        /checkout|buy|pay|purchase/i.test(a?.id || "") ||
-        /checkout|buy|pay|purchase/i.test(a?.tool || ""),
-    );
-
-    let targetUrl = "";
-    if (checkoutAction?.url || checkoutAction?.href) {
-      targetUrl = checkoutAction.url || checkoutAction.href;
-    } else if (
+    if (
       externalBase &&
       typeof externalBase === "string" &&
       externalBase.startsWith("http")
@@ -114,31 +128,32 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
           "total",
           (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2),
         );
-        targetUrl = parsed.toString();
+        return parsed.toString();
       } catch {
-        targetUrl = `${externalBase}/checkout`;
+        return `${externalBase}/checkout`;
       }
-    } else {
-      const checkoutParams = new URLSearchParams({
-        title:
-          lineItems.length === 1
-            ? firstItem?.title || "Item"
-            : `${lineItems.length} Products`,
-        price: (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(
-          2,
-        ),
-        qty: String(cartSummary.totalQuantity),
-        image: firstItem?.thumbnail || "",
-      });
-      targetUrl = `/checkout?${checkoutParams.toString()}`;
     }
 
+    // 3. Render fallback checkout URL
+    const firstItem = lineItems[0];
+    const checkoutParams = new URLSearchParams({
+      title:
+        lineItems.length === 1
+          ? firstItem?.title || "Item"
+          : `${lineItems.length} Products`,
+      price: (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2),
+      qty: String(cartSummary.totalQuantity),
+      image: firstItem?.thumbnail || "",
+    });
+    return `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
+  }, [data, actions, cartSummary, lineItems]);
+
+  const handleCheckout = () => {
     try {
-      window.open(targetUrl, "_blank", "noopener,noreferrer");
+      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
     } catch {
       // Ignore if blocked
     }
-
     setCheckoutComplete(true);
   };
 
@@ -242,13 +257,21 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
+          <a
+            href={checkoutUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className={styles.checkoutButton}
             onClick={handleCheckout}
+            style={{
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
           >
             <span>💳 Proceed to Checkout</span>
-          </button>
+          </a>
         </div>
       </div>
     </section>

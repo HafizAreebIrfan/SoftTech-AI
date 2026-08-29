@@ -16,6 +16,9 @@ export const CartDrawer: React.FC = () => {
     getTotalCount,
   } = useCartStore();
 
+  const [isCheckingOut, setIsCheckingOut] = React.useState(false);
+  const [checkoutSuccess, setCheckoutSuccess] = React.useState(false);
+
   // Close on ESC key press
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -27,61 +30,58 @@ export const CartDrawer: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, closeCart]);
 
-  if (!isOpen) return null;
-
   const totalCount = getTotalCount();
   const subtotal = getSubtotal();
 
-  const [isCheckingOut, setIsCheckingOut] = React.useState(false);
-  const [checkoutSuccess, setCheckoutSuccess] = React.useState(false);
+  const metadata = (window as any).__WIDGET_METADATA__ || {};
+  const externalBase =
+    metadata.webCheckoutUrl ||
+    metadata.websiteURL ||
+    metadata.website ||
+    metadata.domain ||
+    "";
+
+  let checkoutUrl = "";
+  if (
+    externalBase &&
+    typeof externalBase === "string" &&
+    externalBase.startsWith("http")
+  ) {
+    try {
+      const parsed = new URL(externalBase);
+      parsed.pathname = parsed.pathname.replace(/\/$/, "") + "/checkout";
+      parsed.searchParams.set("qty", String(totalCount));
+      parsed.searchParams.set("total", subtotal.toFixed(2));
+      checkoutUrl = parsed.toString();
+    } catch {
+      checkoutUrl = `${externalBase}/checkout`;
+    }
+  } else {
+    const firstItem = items[0];
+    const checkoutParams = new URLSearchParams({
+      title:
+        items.length === 1
+          ? firstItem?.title || "Item"
+          : `${items.length} Cart Items`,
+      price: subtotal.toFixed(2),
+      qty: String(totalCount),
+      image: firstItem?.image || "",
+    });
+    checkoutUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
+  }
 
   const handleCheckout = () => {
     setIsCheckingOut(true);
-    const firstItem = items[0];
-
-    // Try finding external checkout URL from metadata if available
-    const metadata = (window as any).__WIDGET_METADATA__ || {};
-    const externalBase =
-      metadata.webCheckoutUrl ||
-      metadata.websiteURL ||
-      metadata.website ||
-      metadata.domain ||
-      "";
-
-    let targetUrl = "";
-    if (
-      externalBase &&
-      typeof externalBase === "string" &&
-      externalBase.startsWith("http")
-    ) {
-      try {
-        const parsed = new URL(externalBase);
-        parsed.pathname = parsed.pathname.replace(/\/$/, "") + "/checkout";
-        parsed.searchParams.set("qty", String(totalCount));
-        parsed.searchParams.set("total", subtotal.toFixed(2));
-        targetUrl = parsed.toString();
-      } catch {
-        targetUrl = `${externalBase}/checkout`;
-      }
-    } else {
-      const checkoutParams = new URLSearchParams({
-        title: items.length === 1 ? firstItem?.title || "Item" : `${items.length} Cart Items`,
-        price: subtotal.toFixed(2),
-        qty: String(totalCount),
-        image: firstItem?.image || "",
-      });
-      targetUrl = `/checkout?${checkoutParams.toString()}`;
-    }
-
     try {
-      window.open(targetUrl, "_blank", "noopener,noreferrer");
+      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
     } catch {
       // In case popup is blocked
     }
-
     setCheckoutSuccess(true);
     setIsCheckingOut(false);
   };
+
+  if (!isOpen) return null;
 
   return (
     <>
