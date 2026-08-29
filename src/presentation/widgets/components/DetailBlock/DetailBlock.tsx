@@ -3,6 +3,7 @@ import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderImage } from "../../helper/RenderImage";
 import { renderCurrency } from "../../helper/RenderCurrency";
 import { renderStatus } from "../../helper/RenderStatus";
+import { callMcpTool } from "../../../../utils/mcpBridge";
 import { extractTieredPrices } from "../../helper/TieredPriceHelper/tieredPriceHelper";
 import { useCartStore } from "../../../../infrastructure/store/cartStore";
 import { ImageLightbox } from "../ImageLightbox";
@@ -263,7 +264,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                   title="Click to view full image"
                   style={{
                     width: "100%",
-                    height: "240px",
+                    height: "360px",
                     borderRadius: "12px",
                     overflow: "hidden",
                     background: "rgba(0,0,0,0.2)",
@@ -274,11 +275,13 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     position: "relative",
                   }}
                 >
-                  {renderImage(
-                    activeMainImage,
-                    title || "Item Preview",
-                    "cover",
-                  )}
+                    <span style={{ pointerEvents: "none", display: "flex", width: "100%", height: "100%" }}>
+                      {renderImage(
+                        activeMainImage,
+                        title || "Item Preview",
+                        "cover",
+                      )}
+                    </span>
                   <span
                     style={{
                       position: "absolute",
@@ -326,7 +329,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                           transition: "all 0.15s ease",
                         }}
                       >
-                        {renderImage(imgUrl, `Thumb ${idx + 1}`, "cover")}
+                          <span style={{ pointerEvents: "none", display: "flex", width: "100%", height: "100%" }}>
+                            {renderImage(imgUrl, `Thumb ${idx + 1}`, "cover")}
+                          </span>
                       </button>
                     ))}
                   </div>
@@ -708,20 +713,17 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                   transition: "all 0.15s ease",
                 }}
                 onClick={async () => {
-                  const openai = (window as any).openai;
                   const url = act.url || (act.type === "url" ? act.href : undefined);
                   if (url) {
                     window.open(url, "_blank", "noopener,noreferrer");
                     return;
                   }
-                  if (openai?.callTool) {
-                    await openai.callTool(act.tool, {
+                  try {
+                    await callMcpTool(act.tool, {
                       id: targetRecord?.id || targetRecord?._id,
                     });
-                  } else if (openai?.sendFollowUpMessage) {
-                    openai.sendFollowUpMessage({
-                      prompt: `Execute ${act.label} for ${targetRecord?.$title || "item"}`,
-                    });
+                  } catch (err: any) {
+                    console.error("[DetailBlock] Action error:", err);
                   }
                 }}
               >
@@ -738,6 +740,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           alt={title || "Preview"}
           isOpen={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
+          images={images}
+          currentIndex={selectedImgIdx}
+          onNavigate={(idx) => setSelectedImgIdx(idx)}
         />
       </section>
     </>

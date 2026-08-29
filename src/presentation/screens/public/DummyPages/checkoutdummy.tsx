@@ -135,13 +135,21 @@ const Checkout: React.FC = () => {
   };
 
   const handleReturnToChat = () => {
-    const returnUrl = localStorage.getItem("softtech_return_url");
-    localStorage.removeItem("softtech_return_url");
-    if (returnUrl && returnUrl.startsWith("http")) {
-      window.location.href = returnUrl;
-    } else {
-      window.location.href = "https://chatgpt.com";
+    // Try to send a follow-up message back to ChatGPT, then close the tab
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.postMessage(
+          { jsonrpc: "2.0", method: "ui/message", params: { prompt: "Checkout completed successfully. Show the updated state." } },
+          "*",
+        );
+        window.close();
+        return;
+      }
+    } catch {
+      // Cross-origin — fall through
     }
+    // Fallback: navigate to ChatGPT
+    window.location.href = "https://chatgpt.com";
   };
 
   if (isSuccess) {

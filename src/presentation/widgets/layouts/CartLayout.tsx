@@ -2,7 +2,6 @@ import React, { useMemo } from "react";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { renderImage } from "../helper/RenderImage";
 import { renderCurrency } from "../helper/RenderCurrency";
-import { useCartStore } from "../../../infrastructure/store/cartStore";
 import styles from "../../../styles/cartlayout.module.css";
 
 interface CartLineItem {
@@ -163,21 +162,11 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
 
   const handleCheckout = () => {
     try {
-      const conversationUrl = window.top?.location.href || document.referrer || window.location.href;
-      localStorage.setItem("softtech_return_url", conversationUrl);
+      window.open(checkoutUrl, "_blank");
     } catch {
-      // Cross-origin fallback
+      // Popup blocked
     }
-    useCartStore.getState().clearCart();
-    try {
-      if (window.top) {
-        window.top.location.href = checkoutUrl;
-      } else {
-        window.location.href = checkoutUrl;
-      }
-    } catch {
-      window.location.href = checkoutUrl;
-    }
+    setCheckoutComplete(true);
   };
 
   return (

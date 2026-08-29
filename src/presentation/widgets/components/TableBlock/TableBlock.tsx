@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { TableRow } from "./TableRow";
 import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderImage } from "../../helper/RenderImage";
+import { callMcpTool } from "../../../../utils/mcpBridge";
 import styles from "../../../../styles/tableblock.module.css";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 import type { TableBlockProps } from "../../../../interfaces/mcp/tableblock.interface";
@@ -264,13 +265,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       ...deletingRecord,
     };
     try {
-      if ((window as any).openai?.callTool) {
-        await (window as any).openai.callTool(toolName, payload);
-      } else if ((window as any).openai?.sendFollowUpMessage) {
-        (window as any).openai.sendFollowUpMessage({
-          prompt: `Delete item with ID: ${id}`,
-        });
-      }
+      await callMcpTool(toolName, payload);
     } catch (err: any) {
       console.error("[TableBlock] Delete error:", err);
       showToast(`⚠️ Server error: ${err?.message || "Delete failed"}`);
@@ -317,13 +312,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     updateModalState(null, null, false);
 
     try {
-      if ((window as any).openai?.callTool) {
-        await (window as any).openai.callTool(toolName, payload);
-      } else if ((window as any).openai?.sendFollowUpMessage) {
-        (window as any).openai.sendFollowUpMessage({
-          prompt: `${isEdit ? "Update" : "Create"} item with data: ${JSON.stringify(payload)}`,
-        });
-      }
+      await callMcpTool(toolName, payload);
     } catch (err: any) {
       console.error("[TableBlock] Save error:", err);
       showToast(`⚠️ Server error: ${err?.message || "Update failed"}`);

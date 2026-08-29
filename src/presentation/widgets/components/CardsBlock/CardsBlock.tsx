@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { CardItem } from "./CardItem";
+import { callMcpTool } from "../../../../utils/mcpBridge";
 import styles from "../../../../styles/cardsblock.module.css";
 import type { CardsBlockProps } from "../../../../interfaces/mcp/cardsblock.interface";
 import { useMcpWidgetStore } from "../../../../infrastructure/store/mcpWidgetStore";
@@ -66,12 +67,20 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
   //  • if a get-by-id tool exists, fetch the full record from the backend
   //    (the new tool result re-renders the widget as its detail layout);
   //  • otherwise push an instant in-widget detail view built from this record.
-  const handleSelect = (record: Record<string, any>) => {
-    const openai = (window as any).openai;
+  const handleSelect = async (record: Record<string, any>) => {
     const id = record.id ?? record._id;
 
-    if (detailTool?.tool && openai?.callTool && id !== undefined) {
-      openai.callTool(detailTool.tool, { id });
+    if (detailTool?.tool && id !== undefined) {
+      try {
+        await callMcpTool(detailTool.tool, { id });
+      } catch (err) {
+        console.error("[CardsBlock] Detail tool error:", err);
+        pushSubView({
+          title: String(record.$title || collection?.entity || "Details"),
+          data: record,
+          blockType: "detail",
+        });
+      }
       return;
     }
 

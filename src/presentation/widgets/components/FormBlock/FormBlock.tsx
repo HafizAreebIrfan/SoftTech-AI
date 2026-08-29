@@ -5,28 +5,81 @@ import type { FormBlockProps } from "../../../../interfaces/mcp/formblock.interf
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 
 const validateField = (field: FieldSchema, value: unknown): string | null => {
-  if (
-    field.primary &&
-    (value === undefined || value === null || value === "")
-  ) {
+  const isEmpty =
+    value === undefined || value === null || value === "";
+
+  if (field.primary && isEmpty) {
     return `${field.label} is required`;
   }
 
-  if (field.type === "email" && value && typeof value === "string") {
+  if (isEmpty) return null;
+
+  if (field.type === "email" && typeof value === "string") {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(value)) {
       return "Invalid email address format";
     }
   }
 
-  if (
-    (field.type === "number" || field.type === "currency") &&
-    value !== "" &&
-    value !== undefined &&
-    value !== null
-  ) {
-    if (typeof value === "number" && Number.isNaN(value)) {
+  if (field.type === "phone" && typeof value === "string") {
+    const phoneRegex = /^\+?[\d\s\-().]{7,20}$/;
+    if (!phoneRegex.test(value)) {
+      return "Invalid phone number format";
+    }
+  }
+
+  if (field.type === "url" && typeof value === "string") {
+    try {
+      new URL(value);
+    } catch {
+      return "Invalid URL format (e.g. https://example.com)";
+    }
+  }
+
+  if (field.type === "number" && typeof value === "string") {
+    const num = Number(value);
+    if (Number.isNaN(num)) {
       return "Must be a valid number";
+    }
+    if (!Number.isFinite(num)) {
+      return "Must be a finite number";
+    }
+  }
+
+  if (field.type === "currency" && typeof value === "string") {
+    const num = Number(value);
+    if (Number.isNaN(num)) {
+      return "Must be a valid price";
+    }
+    if (num < 0) {
+      return "Price cannot be negative";
+    }
+  }
+
+  if (field.type === "latitude" && typeof value === "string") {
+    const num = Number(value);
+    if (Number.isNaN(num) || num < -90 || num > 90) {
+      return "Must be between -90 and 90";
+    }
+  }
+
+  if (field.type === "longitude" && typeof value === "string") {
+    const num = Number(value);
+    if (Number.isNaN(num) || num < -180 || num > 180) {
+      return "Must be between -180 and 180";
+    }
+  }
+
+  if (field.type === "date" && typeof value === "string") {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(value) || Number.isNaN(Date.parse(value))) {
+      return "Invalid date format (YYYY-MM-DD)";
+    }
+  }
+
+  if (field.type === "datetime" && typeof value === "string") {
+    if (Number.isNaN(Date.parse(value))) {
+      return "Invalid date/time value";
     }
   }
 
