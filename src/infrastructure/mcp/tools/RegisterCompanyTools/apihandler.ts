@@ -403,7 +403,14 @@ const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
     return body;
   }
 
-  // Fallback: If no body fields were explicitly configured, pass through the clean input data
+  // Fallback: If no body fields were explicitly configured, pass through the clean input data.
+  // For DELETE requests, skip the body entirely unless the API explicitly expects one —
+  // most REST DELETE endpoints only need the ID in the URL path.
+  const method = (api.method || "GET").toUpperCase();
+  if (method === "DELETE") {
+    return {};
+  }
+
   const systemKeys = [
     "user_raw_prompt",
     "inferred_intent",
