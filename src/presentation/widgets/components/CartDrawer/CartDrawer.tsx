@@ -84,12 +84,21 @@ export const CartDrawer: React.FC = () => {
   const handleCheckout = () => {
     setIsCheckingOut(true);
     try {
-      window.open(checkoutUrl, "_blank");
+      const conversationUrl = window.top?.location.href || document.referrer || window.location.href;
+      localStorage.setItem("softtech_return_url", conversationUrl);
     } catch {
-      // In case popup is blocked
+      // Cross-origin fallback
     }
-    setCheckoutSuccess(true);
-    setIsCheckingOut(false);
+    clearCart();
+    try {
+      if (window.top) {
+        window.top.location.href = checkoutUrl;
+      } else {
+        window.location.href = checkoutUrl;
+      }
+    } catch {
+      window.location.href = checkoutUrl;
+    }
   };
 
   if (!isOpen) return null;

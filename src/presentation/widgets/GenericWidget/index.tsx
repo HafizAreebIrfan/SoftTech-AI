@@ -22,8 +22,6 @@ import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
 export const GenericWidgetRenderer: React.FC = () => {
   const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
-  const checkoutSuccess = useMcpWidgetStore((state) => state.checkoutSuccess);
-  const clearCheckoutSuccess = useMcpWidgetStore((state) => state.clearCheckoutSuccess);
 
   let toolResult: unknown = null;
   let hasLoadError = false;
@@ -374,56 +372,6 @@ export const GenericWidgetRenderer: React.FC = () => {
   return (
     <div className={styles.container}>
       <CartDrawer />
-      {checkoutSuccess && (
-        <div
-          style={{
-            background: "rgba(16, 185, 129, 0.1)",
-            border: "1px solid rgba(16, 185, 129, 0.3)",
-            borderRadius: "10px",
-            padding: "14px 16px",
-            marginBottom: "16px",
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: "12px",
-          }}
-        >
-          <div>
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: "14px",
-                color: "#10b981",
-                marginBottom: "4px",
-              }}
-            >
-              Payment Successful
-            </div>
-            <div style={{ fontSize: "13px", color: "var(--app-text-secondary, #94a3b8)" }}>
-              Transaction {checkoutSuccess.transactionRef} — $
-              {checkoutSuccess.amount.toFixed(2)} processed.
-              {checkoutSuccess.email && ` Receipt sent to ${checkoutSuccess.email}.`}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={clearCheckoutSuccess}
-            style={{
-              background: "none",
-              border: "none",
-              color: "var(--app-text-secondary, #94a3b8)",
-              cursor: "pointer",
-              fontSize: "16px",
-              padding: "0",
-              lineHeight: 1,
-              flexShrink: 0,
-            }}
-            aria-label="Dismiss"
-          >
-            ✕
-          </button>
-        </div>
-      )}
       {renderLayout()}
     </div>
   );

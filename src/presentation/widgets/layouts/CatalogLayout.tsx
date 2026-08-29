@@ -88,7 +88,36 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     );
   }, [fields]);
 
-  // 4. Defensive customer filtering & Search + Category Filter
+  // 4. Prompt-based keyword extraction for auto-filtering
+  const promptKeywords = useMemo(() => {
+    const raw = String(
+      (window as any).__WIDGET_METADATA__?.user_raw_prompt ||
+        (window as any).__WIDGET_DATA__?.user_raw_prompt ||
+        (window as any).__WIDGET_METADATA__?.inferred_intent ||
+        (window as any).__WIDGET_DATA__?.inferred_intent ||
+        "",
+    ).toLowerCase();
+
+    if (!raw) return [];
+
+    const fillers = new Set([
+      "show", "me", "some", "all", "the", "a", "an", "and", "or", "but",
+      "in", "on", "at", "to", "for", "of", "with", "by", "from", "is",
+      "are", "was", "were", "be", "been", "being", "have", "has", "had",
+      "do", "does", "did", "will", "would", "could", "should", "may",
+      "might", "can", "shall", "please", "i", "want", "need", "like",
+      "get", "find", "search", "look", "list", "display", "see",
+      "products", "items", "available", "options", "that", "this",
+    ]);
+
+    return raw
+      .replace(/[@#]/g, "")
+      .split(/[\s,;.!?]+/)
+      .map((w) => w.trim())
+      .filter((w) => w.length > 2 && !fillers.has(w));
+  }, []);
+
+  // 5. Defensive customer filtering & Search + Category Filter
   const filteredRecords = useMemo(() => {
     let list = records;
 
@@ -117,6 +146,21 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
           return false;
         }
         return true;
+      });
+    }
+
+    // Prompt-based keyword filtering: pre-filter results based on user query
+    if (promptKeywords.length > 0) {
+      list = list.filter((rec: any) => {
+        if (!rec || typeof rec !== "object") return false;
+        const searchText = [
+          rec.title, rec.$title, rec.name, rec.description, rec.$description,
+          rec.category, rec.type, rec.tags, rec.brand, rec.industry,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return promptKeywords.some((kw) => searchText.includes(kw));
       });
     }
 
@@ -176,6 +220,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   }, [
     records,
     audience,
+    promptKeywords,
     selectedCategory,
     categoryField,
     searchTerm,
@@ -299,8 +344,12 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         />
       ) : (
         <div className={styles.noResults}>
-          <p>No products match your current filters.</p>
-          {(searchTerm || selectedCategory !== "All") && (
+          <p>
+            {promptKeywords.length > 0
+              ? `No products found matching "${promptKeywords.join(" ")}".`
+              : "No products match your current filters."}
+          </p>
+          {(searchTerm || selectedCategory !== "All" || promptKeywords.length > 0) && (
             <button
               type="button"
               onClick={() => {

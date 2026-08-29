@@ -5,7 +5,6 @@ import { useApp } from "@modelcontextprotocol/ext-apps/react";
 import {
   McpToolResultPayload,
   McpWidgetState,
-  CheckoutSuccessPayload,
 } from "../../domain/entities/GenericWidget";
 
 export const TOOL_RESULT_NOTIFICATION = "ui/notifications/tool-result";
@@ -106,7 +105,6 @@ const getInitialToolResult = (): McpToolResultPayload | null => {
 export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
   toolResult: getInitialToolResult(),
   subViewHistory: [],
-  checkoutSuccess: null,
 
   setToolResult: (payload) => {
     if (!payload) {
@@ -146,14 +144,6 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
     });
   },
 
-  setCheckoutSuccess: (payload) => {
-    set({ checkoutSuccess: payload });
-  },
-
-  clearCheckoutSuccess: () => {
-    set({ checkoutSuccess: null });
-  },
-
   pushSubView: (view) => {
     set((state) => ({
       subViewHistory: [...state.subViewHistory, view],
@@ -174,7 +164,6 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
 export const useMcpToolResult = () => {
   const toolResult = useMcpWidgetStore((state) => state.toolResult);
   const setToolResult = useMcpWidgetStore((state) => state.setToolResult);
-  const setCheckoutSuccess = useMcpWidgetStore((state) => state.setCheckoutSuccess);
 
   useApp({
     appInfo: {
@@ -205,12 +194,6 @@ export const useMcpToolResult = () => {
         return;
       }
 
-      if (message.type === "checkout-success") {
-        console.log("[MCP Widget] Checkout success received:", message.payload);
-        setCheckoutSuccess(message.payload);
-        return;
-      }
-
       if (
         message.jsonrpc !== "2.0" ||
         message.method !== TOOL_RESULT_NOTIFICATION
@@ -238,7 +221,7 @@ export const useMcpToolResult = () => {
     return () => {
       window.removeEventListener("message", handleMessage);
     };
-  }, [setToolResult, setCheckoutSuccess]);
+  }, [setToolResult]);
 
   return toolResult;
 };
