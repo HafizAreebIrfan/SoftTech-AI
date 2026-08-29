@@ -56,13 +56,24 @@ export const CartDrawer: React.FC = () => {
     } catch {
       checkoutUrl = `${externalBase}/checkout`;
     }
+  } else if (items.length > 1) {
+    const itemsJson = JSON.stringify(
+      items.map((item) => ({
+        name: item.title,
+        price: parseNumericPrice(item.price),
+        qty: item.quantity,
+        image: item.image || "",
+      })),
+    );
+    const checkoutParams = new URLSearchParams({
+      items: itemsJson,
+      total: subtotal.toFixed(2),
+    });
+    checkoutUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
   } else {
     const firstItem = items[0];
     const checkoutParams = new URLSearchParams({
-      title:
-        items.length === 1
-          ? firstItem?.title || "Item"
-          : `${items.length} Cart Items`,
+      title: firstItem?.title || "Item",
       price: subtotal.toFixed(2),
       qty: String(totalCount),
       image: firstItem?.image || "",

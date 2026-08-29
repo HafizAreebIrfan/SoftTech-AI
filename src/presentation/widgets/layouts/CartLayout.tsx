@@ -135,12 +135,24 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
     }
 
     // 3. Render fallback checkout URL
+    if (lineItems.length > 1) {
+      const itemsJson = JSON.stringify(
+        lineItems.map((item) => ({
+          name: item.title,
+          price: item.discountedTotal || item.total || item.price,
+          qty: item.quantity,
+          image: item.thumbnail || "",
+        })),
+      );
+      const checkoutParams = new URLSearchParams({
+        items: itemsJson,
+        total: (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2),
+      });
+      return `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
+    }
     const firstItem = lineItems[0];
     const checkoutParams = new URLSearchParams({
-      title:
-        lineItems.length === 1
-          ? firstItem?.title || "Item"
-          : `${lineItems.length} Products`,
+      title: firstItem?.title || "Item",
       price: (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2),
       qty: String(cartSummary.totalQuantity),
       image: firstItem?.thumbnail || "",

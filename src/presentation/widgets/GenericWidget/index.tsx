@@ -48,6 +48,16 @@ export const GenericWidgetRenderer: React.FC = () => {
     }
   }, [companyName]);
 
+  useEffect(() => {
+    const metadata = (structuredContent as any)?.metadata;
+    if (metadata) {
+      (window as any).__WIDGET_METADATA__ = {
+        ...((window as any).__WIDGET_METADATA__ || {}),
+        ...metadata,
+      };
+    }
+  }, [structuredContent]);
+
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
 
 

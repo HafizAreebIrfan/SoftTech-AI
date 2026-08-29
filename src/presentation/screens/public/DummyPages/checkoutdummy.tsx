@@ -7,6 +7,7 @@ interface LineItem {
   description?: string;
   price: number;
   quantity: number;
+  image?: string;
 }
 
 const Checkout: React.FC = () => {
@@ -51,6 +52,7 @@ const Checkout: React.FC = () => {
             description: item.description || item.desc || "",
             price: parseFloat(item.price || item.amount || item.rate || 0),
             quantity: parseInt(item.quantity || item.qty || 1, 10),
+            image: item.image || item.thumbnail || item.img || undefined,
           }));
           setItems(formattedItems);
           return; // Exit early if JSON successfully mapped
@@ -76,6 +78,7 @@ const Checkout: React.FC = () => {
       params.get("rate");
     const rawQty = params.get("quantity") || params.get("qty") || "1";
     const rawDesc = params.get("description") || params.get("desc");
+    const rawImage = params.get("image") || params.get("thumbnail") || params.get("img");
 
     if (rawTitle && rawPrice) {
       setItems([
@@ -85,6 +88,7 @@ const Checkout: React.FC = () => {
           description: rawDesc || "Details provided via chat session",
           price: parseFloat(rawPrice),
           quantity: Math.max(1, parseInt(rawQty, 10) || 1),
+          image: rawImage || undefined,
         },
       ]);
     } else if (rawPrice) {
@@ -95,6 +99,7 @@ const Checkout: React.FC = () => {
           description: "Custom payment amount",
           price: parseFloat(rawPrice),
           quantity: 1,
+          image: rawImage || undefined,
         },
       ]);
     } else {
@@ -210,19 +215,41 @@ const Checkout: React.FC = () => {
               <div key={item.id} className={styles.orderItem}>
                 <div className={styles.itemMain}>
                   <div className={styles.itemAvatar}>
-                    {/* Generic ticket/receipt icon instead of a shopping bag */}
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.75"
-                    >
-                      <rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
-                      <path d="M4 8h16" />
-                      <path d="M4 16h16" />
-                    </svg>
+                    {item.image ? (
+                      <img
+                        src={item.image}
+                        alt={item.title}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          borderRadius: "6px",
+                        }}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                          const parent = target.parentElement;
+                          if (parent) {
+                            const fallback = document.createElement("div");
+                            fallback.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="4" y="4" width="16" height="16" rx="2" ry="2" /><path d="M4 8h16" /><path d="M4 16h16" /></svg>`;
+                            parent.appendChild(fallback);
+                          }
+                        }}
+                      />
+                    ) : (
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                      >
+                        <rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
+                        <path d="M4 8h16" />
+                        <path d="M4 16h16" />
+                      </svg>
+                    )}
                   </div>
                   <div>
                     <h3 className={styles.itemTitle}>{item.title}</h3>
