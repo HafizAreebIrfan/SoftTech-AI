@@ -71,10 +71,13 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
     const id = record.id ?? record._id;
 
     if (detailTool?.tool && id !== undefined) {
+      console.log(`[CardsBlock] Card selected → calling detail tool "${detailTool.tool}" for id=${id}`);
       try {
-        await callMcpTool(detailTool.tool, { id });
+        const result = await callMcpTool(detailTool.tool, { id });
+        console.log(`[CardsBlock] ✓ Detail tool "${detailTool.tool}" succeeded:`, result);
       } catch (err) {
-        console.error("[CardsBlock] Detail tool error:", err);
+        console.error(`[CardsBlock] ✗ Detail tool "${detailTool.tool}" failed:`, err);
+        console.log(`[CardsBlock] Falling back to in-widget detail view`);
         pushSubView({
           title: String(record.$title || collection?.entity || "Details"),
           data: record,
@@ -84,6 +87,7 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
       return;
     }
 
+    console.log(`[CardsBlock] Card selected → no detail tool, using in-widget view for "${record.$title || record.id}"`);
     pushSubView({
       title: String(record.$title || collection?.entity || "Details"),
       data: record,

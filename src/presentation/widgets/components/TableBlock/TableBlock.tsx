@@ -249,6 +249,8 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       deletingRecord.username ||
       "Item";
 
+    console.log(`[TableBlock] DELETE initiated for "${title}" (id=${id})`);
+
     // Optimistic local deletion
     setLocalRecords((prev) =>
       prev.filter((r) => r.id !== id && r._id !== id),
@@ -264,10 +266,12 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       itemId: id,
       ...deletingRecord,
     };
+    console.log(`[TableBlock] → Calling MCP tool "${toolName}" for delete:`, payload);
     try {
-      await callMcpTool(toolName, payload);
+      const result = await callMcpTool(toolName, payload);
+      console.log(`[TableBlock] ✓ Delete tool "${toolName}" succeeded:`, result);
     } catch (err: any) {
-      console.error("[TableBlock] Delete error:", err);
+      console.error(`[TableBlock] ✗ Delete tool "${toolName}" failed:`, err);
       showToast(`⚠️ Server error: ${err?.message || "Delete failed"}`);
     }
     setDeletingRecord(null);
@@ -275,8 +279,11 @@ export const TableBlock: React.FC<TableBlockProps> = ({
 
   const handleSaveForm = async (formData: Record<string, any>) => {
     const isEdit = Boolean(editingRecord);
+    const actionType = isEdit ? "UPDATE" : "CREATE";
     const toolName = getToolName(isEdit ? "update" : "create");
     const id = editingRecord?.id || editingRecord?._id || formData.id;
+
+    console.log(`[TableBlock] ${actionType} initiated for "${formData.packagename || formData.$title || "Item"}"`);
 
     if (isEdit) {
       // Optimistic local update
@@ -311,10 +318,12 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       : { ...formData };
     updateModalState(null, null, false);
 
+    console.log(`[TableBlock] → Calling MCP tool "${toolName}" for ${actionType}:`, payload);
     try {
-      await callMcpTool(toolName, payload);
+      const result = await callMcpTool(toolName, payload);
+      console.log(`[TableBlock] ✓ ${actionType} tool "${toolName}" succeeded:`, result);
     } catch (err: any) {
-      console.error("[TableBlock] Save error:", err);
+      console.error(`[TableBlock] ✗ ${actionType} tool "${toolName}" failed:`, err);
       showToast(`⚠️ Server error: ${err?.message || "Update failed"}`);
     }
   };

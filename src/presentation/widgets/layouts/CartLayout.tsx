@@ -1,7 +1,13 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { renderImage } from "../helper/RenderImage";
 import { renderCurrency } from "../helper/RenderCurrency";
+import {
+  appendChatUrlToCheckout,
+  markCheckoutPending,
+  clearCheckoutPending,
+  monitorCheckoutWindow,
+} from "../../../utils/checkoutHelper";
 import styles from "../../../styles/cartlayout.module.css";
 
 interface CartLineItem {
@@ -79,6 +85,7 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
   }, [data, records]);
 
   const [checkoutComplete, setCheckoutComplete] = React.useState(false);
+  const [pendingCheckout, setPendingCheckout] = React.useState(false);
 
   const checkoutUrl = useMemo(() => {
     // 1. Direct url from data or actions
@@ -160,14 +167,42 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
     return `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
   }, [data, actions, cartSummary, lineItems]);
 
+  const finalCheckoutUrl = appendChatUrlToCheckout(checkoutUrl);
+
   const handleCheckout = () => {
+    markCheckoutPending();
+    setPendingCheckout(true);
+
+    let checkoutWindow: Window | null = null;
     try {
-      window.open(checkoutUrl, "_blank");
+      checkoutWindow = window.open(finalCheckoutUrl, "_blank");
     } catch {
       // Popup blocked
     }
-    setCheckoutComplete(true);
+
+    const cleanup = monitorCheckoutWindow(checkoutWindow, {
+      onSuccess: () => {
+        console.log("[CartLayout] Checkout completed (postMessage success)");
+        setPendingCheckout(false);
+        setCheckoutComplete(true);
+      },
+      onClosed: () => {
+        console.log("[CartLayout] Checkout window closed");
+        setPendingCheckout(false);
+        setCheckoutComplete(true);
+      },
+    });
+
+    (window as any).__checkoutCleanup = cleanup;
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      const cleanup = (window as any).__checkoutCleanup;
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, []);
 
   return (
     <section className={styles.container}>
@@ -270,7 +305,7 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
           </div>
 
           <a
-            href={checkoutUrl}
+            href={finalCheckoutUrl}
             target="_blank"
             rel="noopener noreferrer"
             className={styles.checkoutButton}

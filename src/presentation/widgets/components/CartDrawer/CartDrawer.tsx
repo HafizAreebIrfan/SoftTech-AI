@@ -2,6 +2,12 @@ import React, { useEffect } from "react";
 import { useCartStore, parseNumericPrice } from "../../../../infrastructure/store/cartStore";
 import { renderImage } from "../../helper/RenderImage";
 import { renderCurrency } from "../../helper/RenderCurrency";
+import {
+  appendChatUrlToCheckout,
+  markCheckoutPending,
+  clearCheckoutPending,
+  monitorCheckoutWindow,
+} from "../../../../utils/checkoutHelper";
 import styles from "../../../../styles/cartdrawer.module.css";
 
 export const CartDrawer: React.FC = () => {
@@ -18,6 +24,7 @@ export const CartDrawer: React.FC = () => {
 
   const [isCheckingOut, setIsCheckingOut] = React.useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = React.useState(false);
+  const [pendingCheckout, setPendingCheckout] = React.useState(false);
 
   // Close on ESC key press
   useEffect(() => {
@@ -41,7 +48,7 @@ export const CartDrawer: React.FC = () => {
     metadata.domain ||
     "";
 
-  let checkoutUrl = "";
+  let rawCheckoutUrl = "";
   if (
     externalBase &&
     typeof externalBase === "string" &&
@@ -52,9 +59,9 @@ export const CartDrawer: React.FC = () => {
       parsed.pathname = parsed.pathname.replace(/\/$/, "") + "/checkout";
       parsed.searchParams.set("qty", String(totalCount));
       parsed.searchParams.set("total", subtotal.toFixed(2));
-      checkoutUrl = parsed.toString();
+      rawCheckoutUrl = parsed.toString();
     } catch {
-      checkoutUrl = `${externalBase}/checkout`;
+      rawCheckoutUrl = `${externalBase}/checkout`;
     }
   } else if (items.length > 1) {
     const itemsJson = JSON.stringify(
@@ -69,7 +76,7 @@ export const CartDrawer: React.FC = () => {
       items: itemsJson,
       total: subtotal.toFixed(2),
     });
-    checkoutUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
+    rawCheckoutUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
   } else {
     const firstItem = items[0];
     const checkoutParams = new URLSearchParams({
@@ -78,19 +85,53 @@ export const CartDrawer: React.FC = () => {
       qty: String(totalCount),
       image: firstItem?.image || "",
     });
-    checkoutUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
+    rawCheckoutUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
   }
+
+  const checkoutUrl = appendChatUrlToCheckout(rawCheckoutUrl);
 
   const handleCheckout = () => {
     setIsCheckingOut(true);
+    markCheckoutPending();
+    setPendingCheckout(true);
+
+    let checkoutWindow: Window | null = null;
     try {
-      window.open(checkoutUrl, "_blank");
+      checkoutWindow = window.open(checkoutUrl, "_blank");
     } catch {
-      // Popup blocked — user can navigate manually
+      // Popup blocked
     }
-    setCheckoutSuccess(true);
+
+    // Monitor the checkout window for closure
+    const cleanup = monitorCheckoutWindow(checkoutWindow, {
+      onSuccess: () => {
+        // Checkout page sent success postMessage
+        console.log("[CartDrawer] Checkout completed (postMessage success)");
+        clearCart();
+        setPendingCheckout(false);
+        setCheckoutSuccess(true);
+      },
+      onClosed: () => {
+        // Checkout window was closed or navigated away
+        console.log("[CartDrawer] Checkout window closed");
+        clearCart();
+        setPendingCheckout(false);
+        setCheckoutSuccess(true);
+      },
+    });
+
+    // Store cleanup for later
+    (window as any).__checkoutCleanup = cleanup;
     setIsCheckingOut(false);
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      const cleanup = (window as any).__checkoutCleanup;
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -127,23 +168,57 @@ export const CartDrawer: React.FC = () => {
             <div className={styles.emptyContainer} style={{ padding: "32px 16px" }}>
               <div className={styles.emptyIcon} style={{ fontSize: "40px" }}>🎉</div>
               <h4 className={styles.emptyTitle} style={{ color: "#10b981", fontSize: "18px" }}>
-                Checkout Ready!
+                Order Confirmed!
               </h4>
               <p className={styles.emptyText}>
-                Your order for {totalCount} items ({renderCurrency(subtotal)}) is ready. Complete your purchase on the merchant page.
+                Your purchase was successful. Your cart has been cleared.
               </p>
               <button
                 type="button"
                 className={styles.checkoutBtn}
                 style={{ marginTop: "16px", width: "auto", padding: "8px 24px" }}
                 onClick={() => {
-                  clearCart();
                   setCheckoutSuccess(false);
                   closeCart();
                 }}
               >
                 Continue Shopping
               </button>
+            </div>
+          ) : pendingCheckout ? (
+            <div className={styles.emptyContainer} style={{ padding: "32px 16px" }}>
+              <div className={styles.emptyIcon} style={{ fontSize: "40px" }}>⏳</div>
+              <h4 className={styles.emptyTitle} style={{ color: "#f59e0b", fontSize: "16px" }}>
+                Waiting for Checkout...
+              </h4>
+              <p className={styles.emptyText}>
+                Complete your purchase in the checkout tab. This drawer will update automatically when you return.
+              </p>
+              <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+                <button
+                  type="button"
+                  className={styles.checkoutBtn}
+                  style={{ flex: 1, padding: "8px 16px" }}
+                  onClick={() => {
+                    window.open(checkoutUrl, "_blank");
+                  }}
+                >
+                  Reopen Checkout
+                </button>
+                <button
+                  type="button"
+                  className={styles.clearCartBtn}
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    clearCheckoutPending();
+                    setPendingCheckout(false);
+                    clearCart();
+                    closeCart();
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           ) : items.length === 0 ? (
             <div className={styles.emptyContainer}>
@@ -219,7 +294,7 @@ export const CartDrawer: React.FC = () => {
         </div>
 
         {/* Footer */}
-        {items.length > 0 && (
+        {items.length > 0 && !pendingCheckout && !checkoutSuccess && (
           <footer className={styles.footer}>
             <div className={styles.summaryRow}>
               <span className={styles.summaryLabel}>Subtotal</span>

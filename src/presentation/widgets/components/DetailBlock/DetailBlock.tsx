@@ -715,15 +715,18 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 onClick={async () => {
                   const url = act.url || (act.type === "url" ? act.href : undefined);
                   if (url) {
+                    console.log(`[DetailBlock] Opening URL action "${act.label}":`, url);
                     window.open(url, "_blank", "noopener,noreferrer");
                     return;
                   }
+                  console.log(`[DetailBlock] Action "${act.label}" → calling MCP tool "${act.tool}" for record id=${targetRecord?.id || targetRecord?._id}`);
                   try {
-                    await callMcpTool(act.tool, {
+                    const result = await callMcpTool(act.tool, {
                       id: targetRecord?.id || targetRecord?._id,
                     });
+                    console.log(`[DetailBlock] ✓ Tool "${act.tool}" succeeded:`, result);
                   } catch (err: any) {
-                    console.error("[DetailBlock] Action error:", err);
+                    console.error(`[DetailBlock] ✗ Tool "${act.tool}" failed:`, err);
                   }
                 }}
               >
