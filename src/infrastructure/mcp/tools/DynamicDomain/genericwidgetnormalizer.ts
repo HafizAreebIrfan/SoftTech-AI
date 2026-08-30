@@ -38,6 +38,7 @@ export const normalizeApiResponseToWidget = (
   actionTools?: ActionToolLinks,
   userRawPrompt?: string,
   inferredIntent?: string,
+  webCheckoutUrl?: string,
 ): GenericWidgetResult => {
   const rawData = normalizeJsonValue(response);
 
@@ -97,6 +98,7 @@ export const normalizeApiResponseToWidget = (
       ...(entityName ? { entity: entityName } : {}),
       ...(userRawPrompt ? { user_raw_prompt: userRawPrompt } : {}),
       ...(inferredIntent ? { inferred_intent: inferredIntent } : {}),
+      ...(webCheckoutUrl ? { webCheckoutUrl } : {}),
       generatedAt: new Date().toISOString(),
     },
   };

@@ -163,6 +163,7 @@ export const registerCompanyApiTools = (
             actionTools,
             userRawPrompt,
             inferredIntent,
+            (api as any).webCheckoutUrl,
           );
 
           // If the search was empty and we relaxed the query (or still found
