@@ -117,7 +117,7 @@ export const isEmptyResult = (response: any): boolean => {
  * Toggles a word between singular and plural using light, language-agnostic
  * heuristics. Returns "" when no sensible variant exists.
  */
-const toggleNumber = (word: string): string => {
+export const toggleNumber = (word: string): string => {
   const value = word.trim();
   if (value.length < 3) return "";
   const lower = value.toLowerCase();

@@ -15,6 +15,7 @@ import {
   isEmptyResult,
   detectSearchParam,
   buildRelaxedQueries,
+  toggleNumber,
 } from "./searchrecovery";
 
 const HTTP_METHODS_WITH_BODY = ["POST", "PUT", "PATCH", "DELETE"];
@@ -111,6 +112,19 @@ export const callRegisteredApi = async (
     !isEmptyResult(firstResult)
   ) {
     return firstResult;
+  }
+
+  // Step 2: Try singular/plural variants of path parameter values.
+  // Many APIs use singular endpoints (/api/vehicle) but the model sends
+  // plural values (/api/vehicles). Try toggling path param values between
+  // singular and plural before falling back to query relaxation.
+  const singularResult = await trySingularPathParams(api, input, companyId, apiId, req);
+  if (singularResult !== undefined) {
+    if (recovery) {
+      recovery.recovered = true;
+      recovery.effectiveQuery = "(singular/plural path variant)";
+    }
+    return singularResult;
   }
 
   const search = detectSearchParam(api, input);
@@ -286,6 +300,17 @@ const executeApiCall = async (
   );
 
   if (!response.ok) {
+    // For GET requests, a 404 means "no results found" — not a fatal error.
+    // Return null so search recovery and cross-tool fallback can handle it
+    // gracefully instead of showing an error widget to the user.
+    const method = (api.method || "GET").toUpperCase();
+    if (response.status === 404 && method === "GET") {
+      console.log(
+        `[API Handler] GET ${url.toString()} returned 404 — treating as empty result`,
+      );
+      return null;
+    }
+
     const error: any = new Error(
       `Registered API "${api.name}" failed with status ${response.status}`,
     );
@@ -383,6 +408,68 @@ const buildApiUrl = (api: IApi, input: any): URL => {
   }
 
   return url;
+};
+
+/**
+ * When a GET request returns empty, try toggling path parameter values between
+ * singular and plural forms. Many APIs use singular endpoints (/api/vehicle)
+ * but the model sends plural values (/api/vehicles). This bridges that gap
+ * without requiring the user to configure every endpoint perfectly.
+ */
+const trySingularPathParams = async (
+  api: IApi,
+  input: any,
+  companyId: string,
+  apiId: string,
+  req?: any,
+): Promise<any | undefined> => {
+  const endpoint = String(api.endpoint || "");
+  const pathParamRegex = /\{([^}]+)\}|:([a-zA-Z0-9_-]+)/g;
+  const rawInput = typeof input === "object" && input !== null ? input : {};
+  const inputParams =
+    rawInput.params && typeof rawInput.params === "object"
+      ? rawInput.params
+      : {};
+  const allInputValues: Record<string, any> = {
+    ...inputParams,
+    ...rawInput,
+  };
+
+  let match;
+  while ((match = pathParamRegex.exec(endpoint)) !== null) {
+    const paramKey = match[1] || match[2];
+    if (!paramKey) continue;
+
+    const currentValue = allInputValues[paramKey];
+    if (typeof currentValue !== "string" || !currentValue.trim()) continue;
+
+    const singular = toggleNumber(currentValue);
+    if (!singular || singular === currentValue) continue;
+
+    console.log(
+      `[API Handler] Trying singular form: ${paramKey}="${currentValue}" → "${singular}"`,
+    );
+
+    const modifiedInput = { ...rawInput, [paramKey]: singular };
+    if (inputParams && typeof inputParams === "object") {
+      modifiedInput.params = { ...inputParams, [paramKey]: singular };
+    }
+
+    try {
+      const result = await executeApiCall(companyId, apiId, api, modifiedInput, req);
+      if (isUserAuthRequiredNotice(result)) return result;
+      if (!isEmptyResult(result)) {
+        console.log(
+          `[API Handler] Singular form "${singular}" returned results`,
+        );
+        return result;
+      }
+    } catch {
+      // Singular form also failed — continue to next param or give up
+    }
+  }
+
+  return undefined;
 };
 
 const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
