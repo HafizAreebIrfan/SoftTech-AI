@@ -206,6 +206,11 @@ const executeApiCall = async (
     }
   }
 
+  console.log(
+    `[API Handler] ${method} ${url.toString()}`,
+    options.body ? `body=${options.body}` : "(no body)",
+  );
+
   let response: Response;
 
   try {
@@ -272,6 +277,13 @@ const executeApiCall = async (
   }
 
   const responseText = await response.text();
+
+  console.log(
+    `[API Handler] ← ${response.status} ${url.toString()}`,
+    responseText.length > 500
+      ? responseText.substring(0, 500) + "..."
+      : responseText,
+  );
 
   if (!response.ok) {
     const error: any = new Error(
@@ -411,18 +423,34 @@ const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
     return {};
   }
 
-  const systemKeys = [
+  // Keys that must never appear in the request body:
+  //  - System/internal keys managed by the MCP bridge
+  //  - $-prefixed widget UI markers (e.g. $title, $price) are for display only
+  //  - ID fields belong in the URL path, not in the body — sending them in the
+  //    body can confuse REST APIs that derive the resource identity from the URL
+  const excludedKeys = new Set([
     "user_raw_prompt",
     "inferred_intent",
     "platformtype",
     "platformType",
     "params",
-  ];
+    "id",
+    "_id",
+    "packageId",
+    "package_id",
+    "productId",
+    "product_id",
+    "itemId",
+    "item_id",
+  ]);
+
   const fallbackBody: Record<string, any> = {};
   for (const [k, v] of Object.entries(rawInput)) {
-    if (!systemKeys.includes(k) && v !== undefined && v !== null) {
-      fallbackBody[k] = coerceJsonValue(v);
-    }
+    if (v === undefined || v === null) continue;
+    if (excludedKeys.has(k)) continue;
+    // Strip $-prefixed widget UI markers
+    if (k.startsWith("$")) continue;
+    fallbackBody[k] = coerceJsonValue(v);
   }
   return fallbackBody;
 };
