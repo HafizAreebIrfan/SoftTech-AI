@@ -251,11 +251,9 @@ export const TableBlock: React.FC<TableBlockProps> = ({
 
     console.log(`[TableBlock] DELETE initiated for "${title}" (id=${id})`);
 
-    // Optimistic local deletion
-    setLocalRecords((prev) =>
-      prev.filter((r) => r.id !== id && r._id !== id),
-    );
-    showToast(`✓ "${title}" deleted successfully`);
+    // Show pending state — don't mutate records yet
+    showToast(`⏳ Deleting "${title}"...`);
+    setDeletingRecord(null);
 
     const toolName = getToolName("delete");
     const payload = {
@@ -270,11 +268,16 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     try {
       const result = await callMcpTool(toolName, payload);
       console.log(`[TableBlock] ✓ Delete tool "${toolName}" succeeded:`, result);
+      // Commit: remove from local state only after success
+      setLocalRecords((prev) =>
+        prev.filter((r) => r.id !== id && r._id !== id),
+      );
+      showToast(`✓ "${title}" deleted successfully`);
     } catch (err: any) {
       console.error(`[TableBlock] ✗ Delete tool "${toolName}" failed:`, err);
-      showToast(`⚠️ Server error: ${err?.message || "Delete failed"}`);
+      showToast(`⚠️ Delete failed: ${err?.message || "Server error"}`);
+      // No rollback needed — we didn't mutate state
     }
-    setDeletingRecord(null);
   };
 
   const handleSaveForm = async (formData: Record<string, any>) => {
@@ -282,29 +285,13 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     const actionType = isEdit ? "UPDATE" : "CREATE";
     const toolName = getToolName(isEdit ? "update" : "create");
     const id = editingRecord?.id || editingRecord?._id || formData.id;
+    const displayName = formData.packagename || formData.$title || "Item";
 
-    console.log(`[TableBlock] ${actionType} initiated for "${formData.packagename || formData.$title || "Item"}"`);
+    console.log(`[TableBlock] ${actionType} initiated for "${displayName}"`);
 
-    if (isEdit) {
-      // Optimistic local update
-      setLocalRecords((prev) =>
-        prev.map((rec) =>
-          (rec.id && rec.id === id) || (rec._id && rec._id === id)
-            ? { ...rec, ...formData }
-            : rec,
-        ),
-      );
-      showToast(
-        `✓ ${formData.packagename || formData.$title || "Item"} updated successfully`,
-      );
-    } else {
-      // Optimistic local creation
-      const newRec = { ...formData, id: `temp-${Date.now()}` };
-      setLocalRecords((prev) => [newRec, ...prev]);
-      showToast(
-        `✓ ${formData.packagename || formData.$title || "New item"} created successfully`,
-      );
-    }
+    // Show pending state — don't mutate records yet
+    showToast(`⏳ ${actionType === "UPDATE" ? "Updating" : "Creating"} "${displayName}"...`);
+    updateModalState(null, null, false);
 
     const payload = isEdit
       ? {
@@ -316,15 +303,32 @@ export const TableBlock: React.FC<TableBlockProps> = ({
           ...formData,
         }
       : { ...formData };
-    updateModalState(null, null, false);
 
     console.log(`[TableBlock] → Calling MCP tool "${toolName}" for ${actionType}:`, payload);
     try {
       const result = await callMcpTool(toolName, payload);
       console.log(`[TableBlock] ✓ ${actionType} tool "${toolName}" succeeded:`, result);
+      // Commit: update local state only after success
+      if (isEdit) {
+        setLocalRecords((prev) =>
+          prev.map((rec) =>
+            (rec.id && rec.id === id) || (rec._id && rec._id === id)
+              ? { ...rec, ...formData }
+              : rec,
+          ),
+        );
+        showToast(`✓ "${displayName}" updated successfully`);
+      } else {
+        const createdRec =
+          result && typeof result === "object" && (result as any).id
+            ? { ...formData, ...(result as any) }
+            : { ...formData, id: `temp-${Date.now()}` };
+        setLocalRecords((prev) => [createdRec, ...prev]);
+        showToast(`✓ "${displayName}" created successfully`);
+      }
     } catch (err: any) {
       console.error(`[TableBlock] ✗ ${actionType} tool "${toolName}" failed:`, err);
-      showToast(`⚠️ Server error: ${err?.message || "Update failed"}`);
+      showToast(`⚠️ ${actionType} failed: ${err?.message || "Server error"}`);
     }
   };
 

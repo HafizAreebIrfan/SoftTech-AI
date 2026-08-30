@@ -22,6 +22,8 @@ import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
 export const GenericWidgetRenderer: React.FC = () => {
   const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
+  const viewFullCart = useCartStore((state) => state.viewFullCart);
+  const setViewFullCart = useCartStore((state) => state.setViewFullCart);
 
   let toolResult: unknown = null;
   let hasLoadError = false;
@@ -372,7 +374,39 @@ export const GenericWidgetRenderer: React.FC = () => {
   return (
     <div className={styles.container}>
       <CartDrawer />
-      {renderLayout()}
+      {viewFullCart ? (
+        <div>
+          <button
+            type="button"
+            onClick={() => setViewFullCart(false)}
+            style={{
+              background: "transparent",
+              border: "1px solid var(--WidgetCardBorder)",
+              borderRadius: "8px",
+              color: "var(--TextSecondary)",
+              cursor: "pointer",
+              padding: "6px 12px",
+              fontSize: "13px",
+              fontWeight: 600,
+              marginBottom: "12px",
+            }}
+          >
+            ← Back
+          </button>
+          <CartLayout
+            title={content.title}
+            subtitle={content.subtitle}
+            data={rawData}
+            records={records}
+            fields={fields}
+            collection={collection}
+            actions={content.actions}
+            audience={content.audience}
+          />
+        </div>
+      ) : (
+        renderLayout()
+      )}
     </div>
   );
 };

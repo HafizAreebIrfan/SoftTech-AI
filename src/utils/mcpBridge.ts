@@ -1,47 +1,12 @@
-let nextRequestId = 1;
-const pendingRequests = new Map<
-  number,
-  { resolve: (value: unknown) => void; reject: (reason: unknown) => void }
->();
-
-if (typeof window !== "undefined") {
-  window.addEventListener(
-    "message",
-    (event: MessageEvent) => {
-      const message = event.data;
-      if (!message || message.jsonrpc !== "2.0") return;
-      if (message.id === undefined) return;
-
-      const pending = pendingRequests.get(message.id);
-      if (!pending) return;
-
-      pendingRequests.delete(message.id);
-      if (message.error) {
-        console.error(
-          `[MCP Bridge] ← Response ERROR for request #${message.id}:`,
-          message.error,
-        );
-        pending.reject(message.error);
-      } else {
-        console.log(
-          `[MCP Bridge] ← Response OK for request #${message.id}:`,
-          message.result,
-        );
-        pending.resolve(message.result);
-      }
-    },
-    { passive: true },
-  );
-}
-
 /**
- * Call an MCP tool using the standard JSON-RPC `tools/call` method over
- * postMessage, as documented at
- * https://developers.openai.com/plugins/build/chatgpt-ui
+ * MCP Bridge — calls tools via the OpenAI Apps SDK.
  *
- * Falls back to `window.openai.callTool` (ChatGPT compatibility alias)
- * and then to `sendFollowUpMessage` as a last resort.
+ * Priority order (based on verified working path):
+ *   1. window.openai.callTool  — the documented, working Apps SDK method
+ *   2. sendFollowUpMessage     — asks the model to run the tool (non-deterministic)
+ *   3. postMessage JSON-RPC    — last resort, not answered by ChatGPT sandbox
  */
+
 export async function callMcpTool(
   toolName: string,
   args: Record<string, unknown>,
@@ -51,102 +16,94 @@ export async function callMcpTool(
     JSON.parse(JSON.stringify(args)),
   );
 
-  // 1. Try standard MCP Apps JSON-RPC bridge first
-  if (typeof window !== "undefined" && window.parent) {
+  const openai =
+    typeof window !== "undefined" ? (window as any).openai : undefined;
+
+  // 1. Try the documented Apps SDK callTool first — this actually works
+  if (openai?.callTool) {
+    console.log(
+      `[MCP Bridge] → Calling window.openai.callTool("${toolName}")`,
+    );
     try {
-      const id = nextRequestId++;
+      const result = await openai.callTool(toolName, args);
       console.log(
-        `[MCP Bridge] → Sending tools/call request #${id} for "${toolName}"`,
-      );
-
-      const result = await new Promise<unknown>((resolve, reject) => {
-        pendingRequests.set(id, { resolve, reject });
-        window.parent.postMessage(
-          {
-            jsonrpc: "2.0",
-            id,
-            method: "tools/call",
-            params: { name: toolName, arguments: args },
-          },
-          "*",
-        );
-        // Timeout after 15s
-        setTimeout(() => {
-          if (pendingRequests.has(id)) {
-            pendingRequests.delete(id);
-            const err = new Error(`Tool call "${toolName}" timed out`);
-            console.error(`[MCP Bridge] ✗ Request #${id} timed out after 15s`);
-            reject(err);
-          }
-        }, 15000);
-      });
-
-      console.log(
-        `[MCP Bridge] ✓ Tool "${toolName}" succeeded:`,
+        `[MCP Bridge] ✓ callTool succeeded for "${toolName}":`,
         result,
       );
       return result;
     } catch (err) {
       console.warn(
-        `[MCP Bridge] ✗ tools/call failed for "${toolName}":`,
+        `[MCP Bridge] ✗ callTool failed for "${toolName}":`,
         err,
       );
       // Fall through to next method
     }
   }
 
-  // 2. Try ChatGPT compatibility alias
-  const openai = typeof window !== "undefined" ? (window as any).openai : undefined;
-  if (openai?.callTool) {
-    console.log(
-      `[MCP Bridge] → Falling back to window.openai.callTool for "${toolName}"`,
-    );
-    try {
-      const result = await openai.callTool(toolName, args);
-      console.log(
-        `[MCP Bridge] ✓ openai.callTool succeeded for "${toolName}":`,
-        result,
-      );
-      return result;
-    } catch (err) {
-      console.warn(
-        `[MCP Bridge] ✗ openai.callTool failed for "${toolName}":`,
-        err,
-      );
-    }
-  }
-
-  // 3. Last resort: send follow-up message
-  console.log(
-    `[MCP Bridge] → Falling back to sendFollowUpMessage for "${toolName}"`,
-  );
+  // 2. Ask the model to execute the tool (non-deterministic, no result)
   if (openai?.sendFollowUpMessage) {
-    openai.sendFollowUpMessage({
-      prompt: `Execute tool "${toolName}" with arguments: ${JSON.stringify(args)}`,
-    });
+    const prompt = `Execute tool "${toolName}" with arguments: ${JSON.stringify(args)}`;
+    console.log(
+      `[MCP Bridge] → Falling back to sendFollowUpMessage for "${toolName}"`,
+    );
+    openai.sendFollowUpMessage({ prompt });
     console.log(
       `[MCP Bridge] ✓ Follow-up message sent for "${toolName}" (no direct result expected)`,
     );
     return null;
   }
 
-  const errorMsg =
-    `[MCP Bridge] No available method to call tool "${toolName}". ` +
-    `window.openai is ${typeof openai}.`;
-  console.error(`[MCP Bridge] ✗ ${errorMsg}`);
-  throw new Error(errorMsg);
+  // 3. Last resort: postMessage JSON-RPC (ChatGPT may not answer)
+  console.warn(
+    `[MCP Bridge] → Last resort: postMessage tools/call for "${toolName}"`,
+  );
+  try {
+    const id = Date.now();
+    const result = await new Promise<unknown>((resolve, reject) => {
+      const handler = (event: MessageEvent) => {
+        const msg = event.data;
+        if (msg?.jsonrpc === "2.0" && msg.id === id) {
+          window.removeEventListener("message", handler);
+          if (msg.error) reject(msg.error);
+          else resolve(msg.result);
+        }
+      };
+      window.addEventListener("message", handler);
+      window.parent?.postMessage(
+        {
+          jsonrpc: "2.0",
+          id,
+          method: "tools/call",
+          params: { name: toolName, arguments: args },
+        },
+        "*",
+      );
+      setTimeout(() => {
+        window.removeEventListener("message", handler);
+        reject(new Error(`Tool call "${toolName}" timed out`));
+      }, 10000);
+    });
+    console.log(`[MCP Bridge] ✓ postMessage succeeded for "${toolName}":`, result);
+    return result;
+  } catch (err) {
+    console.error(`[MCP Bridge] ✗ All methods failed for "${toolName}":`, err);
+    throw new Error(
+      `[MCP Bridge] No available method to call tool "${toolName}". ` +
+        `window.openai is ${typeof openai}.`,
+    );
+  }
 }
 
 /**
  * Send a follow-up message to ChatGPT via the MCP Apps bridge.
  */
 export function sendFollowUpMessage(prompt: string): void {
-  const openai = typeof window !== "undefined" ? (window as any).openai : undefined;
+  const openai =
+    typeof window !== "undefined" ? (window as any).openai : undefined;
   if (openai?.sendFollowUpMessage) {
     console.log(`[MCP Bridge] → sendFollowUpMessage:`, prompt);
     openai.sendFollowUpMessage({ prompt });
   } else {
-    // Fallback: post JSON-RPC message
     console.log(`[MCP Bridge] → postMessage ui/message:`, prompt);
     window.parent?.postMessage(
       { jsonrpc: "2.0", method: "ui/message", params: { prompt } },

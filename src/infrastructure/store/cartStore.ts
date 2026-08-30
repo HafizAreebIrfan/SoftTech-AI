@@ -13,6 +13,7 @@ export interface CartItemData {
 export interface CartStore {
   items: CartItemData[];
   isOpen: boolean;
+  viewFullCart: boolean;
   companyName?: string;
   setCompanyName: (name: string) => void;
   addItem: (item: Omit<CartItemData, "quantity">, quantity?: number) => void;
@@ -22,6 +23,7 @@ export interface CartStore {
   openCart: () => void;
   closeCart: () => void;
   toggleCart: () => void;
+  setViewFullCart: (v: boolean) => void;
   getTotalCount: () => number;
   getSubtotal: () => number;
 }
@@ -66,6 +68,7 @@ const saveCartToStorage = (items: CartItemData[], companyName?: string) => {
 export const useCartStore = create<CartStore>((set, get) => ({
   items: loadCartFromStorage(),
   isOpen: false,
+  viewFullCart: false,
   companyName: undefined,
 
   setCompanyName: (name: string) => {
@@ -121,12 +124,13 @@ export const useCartStore = create<CartStore>((set, get) => ({
 
   clearCart: () => {
     saveCartToStorage([], get().companyName);
-    set({ items: [] });
+    set({ items: [], viewFullCart: false });
   },
 
   openCart: () => set({ isOpen: true }),
   closeCart: () => set({ isOpen: false }),
   toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
+  setViewFullCart: (v) => set({ viewFullCart: v }),
 
   getTotalCount: () => {
     return get().items.reduce((acc, item) => acc + (item.quantity || 1), 0);

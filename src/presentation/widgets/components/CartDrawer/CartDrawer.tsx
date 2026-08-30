@@ -20,6 +20,7 @@ export const CartDrawer: React.FC = () => {
     clearCart,
     getSubtotal,
     getTotalCount,
+    setViewFullCart,
   } = useCartStore();
 
   const [isCheckingOut, setIsCheckingOut] = React.useState(false);
@@ -307,6 +308,18 @@ export const CartDrawer: React.FC = () => {
               onClick={handleCheckout}
             >
               <span>💳 Proceed to Checkout</span>
+            </button>
+
+            <button
+              type="button"
+              className={styles.clearCartBtn}
+              style={{ background: "var(--widget-cta-bg, rgba(99,102,241,0.15))", color: "var(--widget-cta-text, #818cf8)" }}
+              onClick={() => {
+                setViewFullCart(true);
+                closeCart();
+              }}
+            >
+              📋 View Full Cart
             </button>
 
             <button
