@@ -46,7 +46,17 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
       if (e.key === "ArrowRight") goToNext();
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+
+    // Scroll to top and lock body scroll so the fixed backdrop covers
+    // the current viewport (avoids issues when iframe is scrolled).
+    const prevOverflow = document.body.style.overflow;
+    window.scrollTo(0, 0);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [isOpen, onClose, goToPrev, goToNext]);
 
   const handleTouchStart = (e: React.TouchEvent) => {

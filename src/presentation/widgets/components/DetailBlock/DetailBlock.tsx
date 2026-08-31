@@ -89,6 +89,24 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       }
     });
 
+    // Second pass: scan ALL string values in the record for image URLs.
+    // This catches images in fields that don't have type: "image" annotation
+    // and in the sub-view path where collection schema may not be detailed.
+    if (collectedImages.length === 0) {
+      for (const [key, val] of Object.entries(targetRecord)) {
+        if (key.startsWith("$")) continue;
+        if (typeof val === "string" && /^https?:\/\/.*\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(val.trim())) {
+          collectedImages.push(val.trim());
+        } else if (Array.isArray(val)) {
+          val.forEach((item) => {
+            if (typeof item === "string" && /^https?:\/\/.*\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(item.trim())) {
+              collectedImages.push(item.trim());
+            }
+          });
+        }
+      }
+    }
+
     const dedupedImages = Array.from(new Set(collectedImages));
 
     // 2. Extract tiered pricing options

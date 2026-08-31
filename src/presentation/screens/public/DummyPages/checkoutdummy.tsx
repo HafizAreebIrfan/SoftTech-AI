@@ -13,6 +13,7 @@ interface LineItem {
 const Checkout: React.FC = () => {
   const [items, setItems] = useState<LineItem[]>([]);
   const [sessionId, setSessionId] = useState<string>("REQ-0000");
+  const [chatUrl, setChatUrl] = useState<string | null>(null);
 
   const [email, setEmail] = useState<string>("alex.morgan@example.com");
   const [cardholderName, setCardholderName] = useState<string>("Alex Morgan");
@@ -38,6 +39,10 @@ const Checkout: React.FC = () => {
       params.get("invoiceId") ||
       params.get("bookingId");
     if (rawSession) setSessionId(rawSession);
+
+    // Read the ChatGPT conversation URL for return navigation
+    const rawChatUrl = params.get("chat_url");
+    if (rawChatUrl) setChatUrl(rawChatUrl);
 
     // 1. Try parsing a robust JSON array (allows multi-item checkout for any industry)
     // Example URL: ?items=[{"name":"Pro Plan","price":99,"qty":1},{"name":"Setup Fee","price":50,"qty":1}]
@@ -148,8 +153,8 @@ const Checkout: React.FC = () => {
     } catch {
       // Cross-origin — fall through
     }
-    // Fallback: navigate to ChatGPT
-    window.location.href = "https://chatgpt.com";
+    // Fallback: navigate to the original ChatGPT conversation, or homepage
+    window.location.href = chatUrl || "https://chatgpt.com";
   };
 
   if (isSuccess) {

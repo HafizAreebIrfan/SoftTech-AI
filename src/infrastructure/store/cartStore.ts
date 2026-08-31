@@ -101,7 +101,7 @@ export const useCartStore = create<CartStore>((set, get) => ({
     }
 
     saveCartToStorage(updated, get().companyName);
-    set({ items: updated, isOpen: true });
+    set({ items: updated, viewFullCart: true });
   },
 
   removeItem: (id) => {
@@ -127,9 +127,9 @@ export const useCartStore = create<CartStore>((set, get) => ({
     set({ items: [], viewFullCart: false });
   },
 
-  openCart: () => set({ isOpen: true }),
-  closeCart: () => set({ isOpen: false }),
-  toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
+  openCart: () => set({ viewFullCart: true }),
+  closeCart: () => set({ isOpen: false, viewFullCart: false }),
+  toggleCart: () => set((state) => ({ viewFullCart: !state.viewFullCart })),
   setViewFullCart: (v) => set({ viewFullCart: v }),
 
   getTotalCount: () => {

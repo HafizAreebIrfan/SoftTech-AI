@@ -12,7 +12,6 @@ import { WeatherBlock } from "../components/WeatherBlock/WeatherBlock";
 import { AQIBlock } from "../components/AQIBlock";
 import { OptionPickerBlock } from "../components/OptionPickerBlock/OptionPickerBlock";
 import { DetailBlock } from "../components/DetailBlock";
-import { CartDrawer } from "../components/CartDrawer";
 import { useMcpWidgetStore } from "../../../infrastructure/store/mcpWidgetStore";
 import { getValue } from "../../../utils";
 import type { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
@@ -373,7 +372,6 @@ export const GenericWidgetRenderer: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <CartDrawer />
       {viewFullCart ? (
         <div>
           <button
