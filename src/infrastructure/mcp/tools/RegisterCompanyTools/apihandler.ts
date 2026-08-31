@@ -460,8 +460,14 @@ const buildApiUrl = (api: IApi, input: any): URL => {
     const key = cleanParameterKey(parameter.key);
     if (!key) continue;
 
-    const value = resolveParameterValue(parameter, allInputValues);
+    let value = resolveParameterValue(parameter, allInputValues);
     if (value === undefined || value === null || value === "") continue;
+
+    // If this is a path parameter and contains spaces, format as slug
+    const isPath = endpointContainsParameter(endpointTemplate, key);
+    if (isPath && typeof value === "string" && /\s/.test(value)) {
+      value = value.trim().replace(/['"]/g, "").replace(/\s+/g, "-");
+    }
 
     const encodedValue = encodeURIComponent(String(value));
     endpoint = endpoint
@@ -483,7 +489,10 @@ const buildApiUrl = (api: IApi, input: any): URL => {
     allInputValues._id ??
     allInputValues.packageId ??
     allInputValues.productId ??
-    allInputValues.itemId;
+    allInputValues.itemId ??
+    allInputValues.categoryname ??
+    allInputValues.category ??
+    allInputValues.slug;
   if (
     fallbackId !== undefined &&
     fallbackId !== null &&
@@ -491,9 +500,13 @@ const buildApiUrl = (api: IApi, input: any): URL => {
   ) {
     const remaining = endpoint.match(/\{[^}]+\}|:[a-zA-Z0-9_-]+/g) || [];
     if (remaining.length === 1) {
+      let slugVal = String(fallbackId).trim();
+      if (/\s/.test(slugVal)) {
+        slugVal = slugVal.replace(/['"]/g, "").replace(/\s+/g, "-");
+      }
       endpoint = endpoint.replace(
         /\{[^}]+\}|:[a-zA-Z0-9_-]+/,
-        encodeURIComponent(String(fallbackId)),
+        encodeURIComponent(slugVal),
       );
     }
   }
@@ -523,9 +536,9 @@ const buildApiUrl = (api: IApi, input: any): URL => {
 
 /**
  * When a GET request returns empty, try toggling path parameter values between
- * singular and plural forms. Many APIs use singular endpoints (/api/vehicle)
- * but the model sends plural values (/api/vehicles). This bridges that gap
- * without requiring the user to configure every endpoint perfectly.
+ * singular and plural forms, or hyphenated slug variants. Many APIs use singular
+ * endpoints (/api/vehicle) or hyphenated categories (/category/womens-bags)
+ * while the model sends spaces or variations (/category/women bags).
  */
 const trySingularPathParams = async (
   api: IApi,
@@ -534,11 +547,6 @@ const trySingularPathParams = async (
   apiId: string,
   req?: any,
 ): Promise<any | undefined> => {
-  // Decode so {id}-style path placeholders (stored percent-encoded as %7Bid%7D)
-  // are matchable by pathParamRegex below — mirrors buildApiUrl so the same
-  // path-param keys are discovered. Guarded: fall back to the raw value on a
-  // malformed escape. Used only to find param keys, never to build a URL, so
-  // this cannot change request construction. Generic — no company/entity names.
   let endpoint: string;
   try {
     endpoint = decodeURIComponent(String(api.endpoint || ""));
@@ -561,32 +569,60 @@ const trySingularPathParams = async (
     const paramKey = match[1] || match[2];
     if (!paramKey) continue;
 
-    const currentValue = allInputValues[paramKey];
-    if (typeof currentValue !== "string" || !currentValue.trim()) continue;
+    const rawVal =
+      allInputValues[paramKey] ??
+      allInputValues[cleanParameterKey(paramKey)] ??
+      (paramKey.toLowerCase().includes("category") || paramKey.toLowerCase() === "slug"
+        ? allInputValues.category ??
+          allInputValues.categoryname ??
+          allInputValues.categoryName ??
+          allInputValues.slug ??
+          allInputValues.id
+        : allInputValues.id);
 
-    const singular = toggleNumber(currentValue);
-    if (!singular || singular === currentValue) continue;
+    if (rawVal === undefined || rawVal === null || String(rawVal).trim() === "") continue;
 
-    console.log(
-      `[API Handler] Trying singular form: ${paramKey}="${currentValue}" → "${singular}"`,
-    );
+    const strVal = String(rawVal).trim();
+    const candidates = new Set<string>();
 
-    const modifiedInput = { ...rawInput, [paramKey]: singular };
-    if (inputParams && typeof inputParams === "object") {
-      modifiedInput.params = { ...inputParams, [paramKey]: singular };
+    const slugified = strVal.toLowerCase().replace(/['"]/g, "").replace(/\s+/g, "-");
+    if (slugified !== strVal) candidates.add(slugified);
+
+    if (slugified.includes("women-")) candidates.add(slugified.replace("women-", "womens-"));
+    if (slugified.includes("womens-")) candidates.add(slugified.replace("womens-", "women-"));
+    if (slugified.includes("men-")) candidates.add(slugified.replace("men-", "mens-"));
+    if (slugified.includes("mens-")) candidates.add(slugified.replace("mens-", "men-"));
+
+    const singular = toggleNumber(strVal);
+    if (singular && singular !== strVal) {
+      candidates.add(singular);
+      candidates.add(singular.toLowerCase().replace(/['"]/g, "").replace(/\s+/g, "-"));
     }
 
-    try {
-      const result = await executeApiCall(companyId, apiId, api, modifiedInput, req);
-      if (isUserAuthRequiredNotice(result)) return result;
-      if (!isEmptyResult(result)) {
-        console.log(
-          `[API Handler] Singular form "${singular}" returned results`,
-        );
-        return result;
+    for (const candidate of candidates) {
+      if (!candidate || candidate === strVal) continue;
+
+      console.log(
+        `[API Handler] Trying path parameter variant: ${paramKey}="${strVal}" → "${candidate}"`,
+      );
+
+      const modifiedInput = { ...rawInput, [paramKey]: candidate };
+      if (inputParams && typeof inputParams === "object") {
+        modifiedInput.params = { ...inputParams, [paramKey]: candidate };
       }
-    } catch {
-      // Singular form also failed — continue to next param or give up
+
+      try {
+        const result = await executeApiCall(companyId, apiId, api, modifiedInput, req);
+        if (isUserAuthRequiredNotice(result)) return result;
+        if (!isEmptyResult(result)) {
+          console.log(
+            `[API Handler] Path variant "${candidate}" returned results`,
+          );
+          return result;
+        }
+      } catch {
+        // Variant failed — continue
+      }
     }
   }
 
@@ -727,15 +763,56 @@ const resolveParameterValue = (
   if (!key) return undefined;
 
   if (parameter.isDynamic !== false) {
-    if (inputValues[key] !== undefined && inputValues[key] !== null) {
+    if (
+      inputValues[key] !== undefined &&
+      inputValues[key] !== null &&
+      String(inputValues[key]).trim() !== ""
+    ) {
       return inputValues[key];
     }
     const originalKey = String(parameter.key || "").trim();
     if (
       inputValues[originalKey] !== undefined &&
-      inputValues[originalKey] !== null
+      inputValues[originalKey] !== null &&
+      String(inputValues[originalKey]).trim() !== ""
     ) {
       return inputValues[originalKey];
+    }
+
+    // Normalized key lookup (e.g. category_name matches categoryname and categoryName)
+    const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, "");
+    for (const [k, v] of Object.entries(inputValues)) {
+      if (
+        v !== undefined &&
+        v !== null &&
+        String(v).trim() !== "" &&
+        k.toLowerCase().replace(/[^a-z0-9]/g, "") === normKey
+      ) {
+        return v;
+      }
+    }
+
+    // Category alias fallback: if parameter key is a category/slug field, check common category properties
+    if (
+      key.toLowerCase().includes("category") ||
+      key.toLowerCase() === "slug" ||
+      key.toLowerCase() === "genre"
+    ) {
+      const categoryAlias =
+        inputValues.categoryname ??
+        inputValues.categoryName ??
+        inputValues.category_name ??
+        inputValues.category ??
+        inputValues.slug ??
+        inputValues.name ??
+        inputValues.title;
+      if (
+        categoryAlias !== undefined &&
+        categoryAlias !== null &&
+        String(categoryAlias).trim() !== ""
+      ) {
+        return categoryAlias;
+      }
     }
 
     // ID alias fallback: if parameter key is an ID field, check common ID properties
@@ -753,7 +830,7 @@ const resolveParameterValue = (
         inputValues.product_id ??
         inputValues.itemId ??
         inputValues.item_id;
-      if (idAlias !== undefined && idAlias !== null) {
+      if (idAlias !== undefined && idAlias !== null && String(idAlias).trim() !== "") {
         return idAlias;
       }
     }
