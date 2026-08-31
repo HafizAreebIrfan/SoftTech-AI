@@ -184,6 +184,7 @@
 
 .checkoutButton {
   width: 100%;
+  box-sizing: border-box;
   background: var(--widget-accent, #6366f1);
   color: var(--widget-accent-contrast, #ffffff);
   border: none;

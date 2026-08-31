@@ -37,31 +37,23 @@ export async function addToCartAndSync({
   actions = [],
   recordId,
 }: AddToCartOptions): Promise<void> {
-  // 1. Local cart is always updated (badge count + fallback overlay).
+  // 1. Local cart is always updated (drives badge count and persistent localStorage).
   useCartStore.getState().addItem(item, quantity);
 
-  // 2. Prefer the company's registered cart/order tool, rendered in place.
+  // 2. If the company registered a cart/order tool, sync server state in the background.
   const cartAction = findCartAction(actions);
   if (cartAction?.tool) {
     try {
-      const raw = await callMcpTool(cartAction.tool, {
+      await callMcpTool(cartAction.tool, {
         id: recordId ?? item.id,
+        productId: recordId ?? item.id,
         quantity,
       });
-      const payload = extractToolResult(raw);
-      if (payload) {
-        // The tool's result IS the cart → render it in the same widget.
-        useMcpWidgetStore.getState().setToolResult(payload);
-        return;
-      }
     } catch (err) {
       console.warn(
-        "[cartFlow] cart/order tool call failed, using local cart:",
+        "[cartFlow] cart/order background tool sync:",
         err,
       );
     }
   }
-
-  // 3. No usable tool result → open the local cart overlay (Zustand items).
-  useCartStore.getState().setViewFullCart(true);
 }

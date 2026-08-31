@@ -25,8 +25,34 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Storage key for persistent state
+  const storageKey = useMemo(() => {
+    const meta = (window as any).__WIDGET_METADATA__ || {};
+    const company = (meta.companyName || "global").toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const entity = ((block as any)?.entity || meta.entity || title || "records").toLowerCase().replace(/[^a-z0-9]/g, "_");
+    return `softtech_records_${company}_${entity}`;
+  }, [title]);
+
   // Modals & local state
-  const [localRecords, setLocalRecords] = useState<any[]>(records);
+  const [localRecords, setLocalRecords] = useState<any[]>(() => {
+    try {
+      const fromWidgetState = (window as any).openai?.widgetState?.records;
+      if (Array.isArray(fromWidgetState) && fromWidgetState.length > 0) {
+        return fromWidgetState;
+      }
+      const meta = (window as any).__WIDGET_METADATA__ || {};
+      const company = (meta.companyName || "global").toLowerCase().replace(/[^a-z0-9]/g, "_");
+      const entity = ((block as any)?.entity || meta.entity || title || "records").toLowerCase().replace(/[^a-z0-9]/g, "_");
+      const key = `softtech_records_${company}_${entity}`;
+      const cached = localStorage.getItem(key);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return records;
+  });
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [deletingRecord, setDeletingRecord] = useState<Record<
     string,
@@ -34,8 +60,39 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   > | null>(null);
 
   useEffect(() => {
+    try {
+      const fromWidgetState = (window as any).openai?.widgetState?.records;
+      if (Array.isArray(fromWidgetState) && fromWidgetState.length > 0) {
+        setLocalRecords(fromWidgetState);
+        return;
+      }
+      const cached = localStorage.getItem(storageKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setLocalRecords(parsed);
+          return;
+        }
+      }
+    } catch {}
     setLocalRecords(records);
-  }, [records]);
+  }, [records, storageKey]);
+
+  const commitRecords = (updater: (prev: any[]) => any[]) => {
+    setLocalRecords((prev) => {
+      const next = updater(prev);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(next));
+      } catch {}
+      if ((window as any).openai?.setWidgetState) {
+        (window as any).openai.setWidgetState({
+          ...((window as any).openai.widgetState || {}),
+          records: next,
+        });
+      }
+      return next;
+    });
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -269,7 +326,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       const result = await callMcpTool(toolName, payload);
       console.log(`[TableBlock] ✓ Delete tool "${toolName}" succeeded:`, result);
       // Commit: remove from local state only after success
-      setLocalRecords((prev) =>
+      commitRecords((prev) =>
         prev.filter((r) => r.id !== id && r._id !== id),
       );
       showToast(`✓ "${title}" deleted successfully`);
@@ -310,7 +367,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       console.log(`[TableBlock] ✓ ${actionType} tool "${toolName}" succeeded:`, result);
       // Commit: update local state only after success
       if (isEdit) {
-        setLocalRecords((prev) =>
+        commitRecords((prev) =>
           prev.map((rec) =>
             (rec.id && rec.id === id) || (rec._id && rec._id === id)
               ? { ...rec, ...formData }
@@ -323,7 +380,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
           result && typeof result === "object" && (result as any).id
             ? { ...formData, ...(result as any) }
             : { ...formData, id: `temp-${Date.now()}` };
-        setLocalRecords((prev) => [createdRec, ...prev]);
+        commitRecords((prev) => [createdRec, ...prev]);
         showToast(`✓ "${displayName}" created successfully`);
       }
     } catch (err: any) {

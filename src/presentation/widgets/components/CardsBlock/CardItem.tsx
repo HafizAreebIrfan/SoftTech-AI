@@ -90,10 +90,14 @@ export const CardItem: React.FC<CardItemProps> = ({
     }
   };
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const [addedToast, setAddedToast] = useState(false);
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    addToCartAndSync({
+    setAddedToast(true);
+    setTimeout(() => setAddedToast(false), 2200);
+    await addToCartAndSync({
       item: {
         id: id || (record as any)._id || titleStr,
         title: titleStr,
@@ -297,7 +301,9 @@ export const CardItem: React.FC<CardItemProps> = ({
               type="button"
               onClick={handleAddToCart}
               style={{
-                background: "var(--widget-accent, #6366f1)",
+                background: addedToast
+                  ? "#10b981"
+                  : "var(--widget-accent, #6366f1)",
                 color: "var(--widget-accent-contrast, #ffffff)",
                 border: "none",
                 borderRadius: "6px",
@@ -306,13 +312,21 @@ export const CardItem: React.FC<CardItemProps> = ({
                 fontWeight: 700,
                 cursor: "pointer",
                 marginLeft: "auto",
-                transition: "all 0.15s ease",
+                transition: "all 0.2s ease",
                 display: "flex",
                 alignItems: "center",
                 gap: "4px",
               }}
             >
-              <span>🛒</span> + Cart
+              {addedToast ? (
+                <>
+                  <span>✓</span> Added
+                </>
+              ) : (
+                <>
+                  <span>🛒</span> + Cart
+                </>
+              )}
             </button>
           ) : null}
         </div>
