@@ -11,9 +11,23 @@ export const buildPresentationPlan = ({
   collection,
   capabilities,
   pagination,
+  records = [],
+  audience,
 }: BuildPresentationPlanOptions): PresentationPlan => {
-  // 1. Trust the backend's explicit layout choice. Default to 'general'.
-  const explicitLayout = (collection?.layout || "general").toLowerCase();
+  // 1. Resolve explicit layout or infer based on collection size & audience
+  let explicitLayout = (collection?.layout || "auto").toLowerCase();
+
+  if (explicitLayout === "auto" || explicitLayout === "general") {
+    if (records.length > 1) {
+      if (audience === "admin") {
+        explicitLayout = "table";
+      } else {
+        explicitLayout = "catalog";
+      }
+    } else {
+      explicitLayout = "general";
+    }
+  }
 
   const blocks: PresentationBlock[] = [];
 
@@ -37,7 +51,7 @@ export const buildPresentationPlan = ({
     blocks.push({ type: "table", fields });
   } else if (explicitLayout === "dashboard") {
     blocks.push({ type: "summary", fields });
-    blocks.push({ type: "chart" }); // You can add variants later if needed
+    blocks.push({ type: "chart" });
     blocks.push({ type: "table", fields });
   } else {
     blocks.push({ type: "details", fields });

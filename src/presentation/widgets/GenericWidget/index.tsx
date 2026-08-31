@@ -50,19 +50,15 @@ export const GenericWidgetRenderer: React.FC = () => {
     }
   }, [companyName]);
 
-  useEffect(() => {
-    const metadata = (structuredContent as any)?.metadata;
-    if (metadata) {
-      (window as any).__WIDGET_METADATA__ = {
-        ...((window as any).__WIDGET_METADATA__ || {}),
-        ...metadata,
-      };
-    }
-  }, [structuredContent]);
+  const metadata = (structuredContent as any)?.metadata;
+  if (metadata && typeof window !== "undefined") {
+    (window as any).__WIDGET_METADATA__ = {
+      ...((window as any).__WIDGET_METADATA__ || {}),
+      ...metadata,
+    };
+  }
 
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
-
-
     const content = structuredContent as Record<string, unknown>;
 
     if (!content || typeof content !== "object") {
@@ -85,16 +81,16 @@ export const GenericWidgetRenderer: React.FC = () => {
     const capabilities = content.capabilities as any;
     const pagination = content.pagination as any;
     const actions = content.actions as any;
-    const metadata = content.metadata as any;
+    const meta = content.metadata as any;
 
     // Extract the record list generically:
     //  • prefer the backend-declared collection.dataPath (e.g. "products");
     //  • else the first array-valued property of the payload (list wrappers
     //    like { products:[...], total, skip, limit });
     //  • else treat the object itself as a single record (detail responses).
-    let records: unknown[] = [];
+    let rawList: unknown[] = [];
     if (Array.isArray(rawData)) {
-      records = rawData;
+      rawList = rawData;
     } else if (rawData && typeof rawData === "object") {
       const obj = rawData as Record<string, unknown>;
       const dataPath = (collection?.dataPath as string | undefined) || undefined;
@@ -104,8 +100,22 @@ export const GenericWidgetRenderer: React.FC = () => {
       } else if (!dataPath) {
         list = Object.values(obj).find((v) => Array.isArray(v));
       }
-      records = Array.isArray(list) ? list : [obj];
+      rawList = Array.isArray(list) ? list : [obj];
     }
+
+    // Map primitives (e.g. array of category names ["beauty", "fragrances", ...]) into objects
+    const primaryKey = collection?.fields?.[0]?.key || collection?.itemLabel || "category";
+    const records = rawList.map((item, idx) => {
+      if (typeof item === "object" && item !== null) {
+        return item;
+      }
+      return {
+        [primaryKey]: item,
+        $title: String(item),
+        id: idx + 1,
+        _id: String(idx + 1),
+      };
+    });
 
     const fields = collection?.fields || [];
 
@@ -117,8 +127,8 @@ export const GenericWidgetRenderer: React.FC = () => {
         capabilities,
         pagination,
         actions,
-        metadata,
-        audience: (content.audience || metadata?.audience) as any,
+        metadata: meta,
+        audience: (content.audience || meta?.audience) as any,
       },
       collection,
       fields,
@@ -446,9 +456,10 @@ export const GenericWidgetRenderer: React.FC = () => {
             </div>
           ) : (
             <CartLayout
-              title={content.title}
+              title={content.title || "Shopping Cart"}
               subtitle={content.subtitle}
-              data={buildCartDataFromItems(cartItems)}
+              data={buildCartDataFromItems(cartItems) as any}
+              records={records}
               fields={fields}
               collection={collection}
               actions={content.actions}

@@ -33,6 +33,11 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     return `softtech_records_${company}_${entity}`;
   }, [title]);
 
+  const entityKey = useMemo(() => {
+    const meta = (window as any).__WIDGET_METADATA__ || {};
+    return ((block as any)?.entity || meta.entity || title || "records").toLowerCase().replace(/[^a-z0-9]/g, "_");
+  }, [title]);
+
   // Modals & local state
   const [localRecords, setLocalRecords] = useState<any[]>(() => {
     try {
@@ -44,7 +49,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       const company = (meta.companyName || "global").toLowerCase().replace(/[^a-z0-9]/g, "_");
       const entity = ((block as any)?.entity || meta.entity || title || "records").toLowerCase().replace(/[^a-z0-9]/g, "_");
       const key = `softtech_records_${company}_${entity}`;
-      const cached = localStorage.getItem(key);
+      const cached = localStorage.getItem(key) || localStorage.getItem(`softtech_records_${entity}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -66,7 +71,9 @@ export const TableBlock: React.FC<TableBlockProps> = ({
         setLocalRecords(fromWidgetState);
         return;
       }
-      const cached = localStorage.getItem(storageKey);
+      const cached =
+        localStorage.getItem(storageKey) ||
+        localStorage.getItem(`softtech_records_${entityKey}`);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -76,13 +83,14 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       }
     } catch {}
     setLocalRecords(records);
-  }, [records, storageKey]);
+  }, [records, storageKey, entityKey]);
 
   const commitRecords = (updater: (prev: any[]) => any[]) => {
     setLocalRecords((prev) => {
       const next = updater(prev);
       try {
         localStorage.setItem(storageKey, JSON.stringify(next));
+        localStorage.setItem(`softtech_records_${entityKey}`, JSON.stringify(next));
       } catch {}
       if ((window as any).openai?.setWidgetState) {
         (window as any).openai.setWidgetState({

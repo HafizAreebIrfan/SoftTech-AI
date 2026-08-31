@@ -30,6 +30,7 @@
     "react-svg": "^17.2.4",
     "react-tabs": "^6.1.0",
     "react-toastify": "^11.1.0",
+    "recharts": "^3.10.1",
     "socket.io-client": "^4.8.1",
     "tailwindcss": "^4.3.0",
     "tsconfig": "^7.0.0",
