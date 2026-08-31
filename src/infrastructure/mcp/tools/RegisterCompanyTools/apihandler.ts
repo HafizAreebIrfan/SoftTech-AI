@@ -530,7 +530,17 @@ const trySingularPathParams = async (
   apiId: string,
   req?: any,
 ): Promise<any | undefined> => {
-  const endpoint = String(api.endpoint || "");
+  // Decode so {id}-style path placeholders (stored percent-encoded as %7Bid%7D)
+  // are matchable by pathParamRegex below — mirrors buildApiUrl so the same
+  // path-param keys are discovered. Guarded: fall back to the raw value on a
+  // malformed escape. Used only to find param keys, never to build a URL, so
+  // this cannot change request construction. Generic — no company/entity names.
+  let endpoint: string;
+  try {
+    endpoint = decodeURIComponent(String(api.endpoint || ""));
+  } catch {
+    endpoint = String(api.endpoint || "");
+  }
   const pathParamRegex = /\{([^}]+)\}|:([a-zA-Z0-9_-]+)/g;
   const rawInput = typeof input === "object" && input !== null ? input : {};
   const inputParams =
