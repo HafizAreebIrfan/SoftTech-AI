@@ -466,7 +466,11 @@ const buildApiUrl = (api: IApi, input: any): URL => {
     const encodedValue = encodeURIComponent(String(value));
     endpoint = endpoint
       .replace(new RegExp(`\\{${escapeRegExp(key)}\\}`, "gi"), encodedValue)
-      .replace(new RegExp(`:${escapeRegExp(key)}\\b`, "gi"), encodedValue);
+      .replace(new RegExp(`:${escapeRegExp(key)}\\b`, "gi"), encodedValue)
+      .replace(
+        new RegExp(`(^|/)${escapeRegExp(key)}(/|$)`, "gi"),
+        (_, p1, p2) => `${p1}${encodedValue}${p2}`,
+      );
   }
 
   // Widget fallback: the ChatGPT widget always invokes get-by-id style tools
@@ -795,7 +799,8 @@ const cleanParameterKey = (key: unknown): string => {
 const endpointContainsParameter = (endpoint: string, key: string): boolean => {
   return (
     new RegExp(`\\{${escapeRegExp(key)}\\}`, "i").test(endpoint) ||
-    new RegExp(`:${escapeRegExp(key)}\\b`, "i").test(endpoint)
+    new RegExp(`:${escapeRegExp(key)}\\b`, "i").test(endpoint) ||
+    new RegExp(`(^|/)${escapeRegExp(key)}(/|$)`, "i").test(endpoint)
   );
 };
 
