@@ -434,7 +434,14 @@ const executeApiCall = async (
 
 const buildApiUrl = (api: IApi, input: any): URL => {
   const baseUrl = api.baseUrl.endsWith("/") ? api.baseUrl : `${api.baseUrl}/`;
-  let endpoint = decodeURIComponent((api.endpoint || "").replace(/^\//, ""));
+  // Decode once so path placeholders like {id} (stored percent-encoded as
+  // %7Bid%7D) are matchable both for substitution below AND for the
+  // path-vs-query classification further down (endpointContainsParameter).
+  // Generic — applies to any param name / any company.
+  const endpointTemplate = decodeURIComponent(
+    (api.endpoint || "").replace(/^\//, ""),
+  );
+  let endpoint = endpointTemplate;
   const rawInput = typeof input === "object" && input !== null ? input : {};
   const configuredParams = normalizeConfiguredParameters(api.params);
 
@@ -497,7 +504,7 @@ const buildApiUrl = (api: IApi, input: any): URL => {
     const key = cleanParameterKey(parameter.key);
     if (!key) continue;
 
-    const isPathParameter = endpointContainsParameter(api.endpoint, key);
+    const isPathParameter = endpointContainsParameter(endpointTemplate, key);
     if (isPathParameter) continue;
 
     const value = resolveParameterValue(parameter, allInputValues);
