@@ -1,17 +1,25 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderImage } from "../../helper/RenderImage";
 import { renderCurrency } from "../../helper/RenderCurrency";
 import { renderStatus } from "../../helper/RenderStatus";
-import { callMcpTool } from "../../../../utils/mcpBridge";
+import { callMcpTool, requestDisplayMode } from "../../../../utils/mcpBridge";
+import { addToCartAndSync } from "../../../../utils/cartFlow";
 import { extractTieredPrices } from "../../helper/TieredPriceHelper/tieredPriceHelper";
-import { useCartStore } from "../../../../infrastructure/store/cartStore";
-import { ImageLightbox } from "../ImageLightbox";
+import { findCartAction } from "../../../../infrastructure/store/cartStore";
 import { DetailField } from "./DetailField";
 import styles from "../../../../styles/detailblock.module.css";
+import pd from "../../../../styles/productdetail.module.css";
 import type { DetailBlockProps } from "../../../../interfaces/mcp/detailblock.interface";
-import { useThemeStore } from "../../../../hooks";
 import { classifyAction, getPermissions } from "../../helper/AudienceHelper";
+
+const sectionTitleStyle: React.CSSProperties = {
+  margin: "0 0 8px 0",
+  fontSize: "13px",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  color: "var(--app-text-secondary, #94a3b8)",
+};
 
 export const DetailBlock: React.FC<DetailBlockProps> = ({
   block,
@@ -26,7 +34,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const [selectedTierIdx, setSelectedTierIdx] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [addedToast, setAddedToast] = useState<boolean>(false);
-  const [lightboxOpen, setLightboxOpen] = useState<boolean>(false);
+  const [imgExpanded, setImgExpanded] = useState<boolean>(false);
 
   const {
     images,
@@ -191,13 +199,28 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     };
   }, [targetRecord, block?.fields, fields, collection?.entity]);
 
-  const { colors } = useThemeStore();
+  // A "rich product" (has a gallery) opens as a true-fullscreen product page via
+  // the Apps SDK; inline is restored when the detail closes. Feature-detected —
+  // a no-op where the host lacks requestDisplayMode, so the same layout simply
+  // renders inline. Generic: the gate is data-driven (image count), never names.
+  useEffect(() => {
+    if (images.length === 0) return;
+    requestDisplayMode("fullscreen");
+    return () => {
+      requestDisplayMode("inline");
+    };
+  }, [images.length]);
 
   if (!targetRecord) return null;
 
   const permissions = getPermissions(audience, undefined, actions as any);
+  const cartAction = findCartAction(actions as any);
+  // Show mutations only to admins, and drop the detected cart/order tool from
+  // the button row (it is already surfaced as the Add-to-Cart CTA).
   const visibleActions = (actions || []).filter(
-    (a: any) => classifyAction(a) !== "mutate" || permissions.canMutate,
+    (a: any) =>
+      (classifyAction(a) !== "mutate" || permissions.canMutate) &&
+      a !== cartAction,
   );
 
   const activeTier = tieredResult.hasTiers
@@ -211,11 +234,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     effectivePrice !== null;
 
   const handleAddToCart = () => {
-    const addItem = useCartStore.getState().addItem;
-    const openCart = useCartStore.getState().openCart;
-
-    addItem(
-      {
+    addToCartAndSync({
+      item: {
         id: targetRecord.id || targetRecord._id || title,
         title: title || "Product",
         price: effectivePrice ?? 0,
@@ -223,83 +243,79 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         tier: activeTier ? activeTier.label : undefined,
       },
       quantity,
-    );
-    openCart();
-
-    const openai = (window as any).openai;
-    const tierSuffix = activeTier ? ` (${activeTier.label})` : "";
-    const prompt = `Add ${quantity} × ${title}${tierSuffix} to my cart`;
-
-    if (openai?.sendFollowUpMessage) {
-      openai.sendFollowUpMessage({ prompt });
-    }
+      actions,
+      recordId: targetRecord.id || targetRecord._id,
+    });
 
     setAddedToast(true);
     setTimeout(() => setAddedToast(false), 3000);
   };
 
   const activeMainImage = images[selectedImgIdx] || images[0] || null;
+  const hasGallery = images.length > 0;
 
   return (
-    <>
-      <section className={styles.container}>
+    <section
+      className={`${styles.container} ${hasGallery ? pd.pageWide : ""}`}
+    >
+      <div
+        className={styles.card}
+        style={{
+          background: "var(--WidgetCardBg, rgba(22, 24, 38, 0.75))",
+          border: "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
+          borderRadius: "16px",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0",
+        }}
+      >
+        {/* Hero: gallery + about (left) / buy box (right). Two columns when a
+            gallery exists AND the viewport is wide (fullscreen); one column
+            otherwise (inline, or a non-product record such as an order). */}
         <div
-          className={styles.card}
-          style={{
-            background: "var(--WidgetCardBg, rgba(22, 24, 38, 0.75))",
-            border:
-              "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
-            borderRadius: "16px",
-            overflow: "hidden",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0",
-          }}
+          className={`${pd.heroGrid} ${hasGallery ? pd.heroGridTwoCol : ""}`}
         >
-          {/* Top Product / Record Header Container */}
-          <div
-            style={{
-              padding: "20px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "20px",
-              background: "var(--BackgroundSecondary, rgba(15, 23, 42, 0.4))",
-              borderBottom:
-                "1px solid var(--TableDivider, rgba(255, 255, 255, 0.08))",
-            }}
-          >
-            {/* Main Hero Gallery (if images present) */}
-            {images.length > 0 && (
+          {/* LEFT COLUMN — gallery + description */}
+          <div className={pd.leftCol}>
+            {hasGallery && (
               <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px",
-                }}
+                style={{ display: "flex", flexDirection: "column", gap: "12px" }}
               >
+                {/* Main image — inline expand (no fixed overlay, iframe-safe) */}
                 <div
-                  onClick={() => setLightboxOpen(true)}
-                  title="Click to view full image"
+                  onClick={() => setImgExpanded((v) => !v)}
+                  title={imgExpanded ? "Click to shrink" : "Click to enlarge"}
                   style={{
                     width: "100%",
-                    height: "360px",
+                    height: imgExpanded ? "560px" : "360px",
                     borderRadius: "12px",
                     overflow: "hidden",
-                    background: "rgba(0,0,0,0.2)",
+                    background: imgExpanded
+                      ? "rgba(0,0,0,0.6)"
+                      : "rgba(0,0,0,0.2)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    cursor: "zoom-in",
+                    cursor: imgExpanded ? "zoom-out" : "zoom-in",
                     position: "relative",
+                    transition: "height 0.2s ease",
                   }}
                 >
-                    <span style={{ pointerEvents: "none", display: "flex", width: "100%", height: "100%" }}>
-                      {renderImage(
-                        activeMainImage,
-                        title || "Item Preview",
-                        "cover",
-                      )}
-                    </span>
+                  <span
+                    style={{
+                      pointerEvents: "none",
+                      display: "flex",
+                      width: "100%",
+                      height: "100%",
+                    }}
+                  >
+                    {renderImage(
+                      activeMainImage,
+                      title || "Item Preview",
+                      imgExpanded ? "contain" : "cover",
+                    )}
+                  </span>
                   <span
                     style={{
                       position: "absolute",
@@ -312,11 +328,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                       color: "#fff",
                     }}
                   >
-                    🔍 Zoom
+                    {imgExpanded ? "🔍 Close" : "🔍 Zoom"}
                   </span>
                 </div>
 
-                {/* Multi-image thumbnail selector */}
+                {/* Thumbnail selector — switches the main image (Fix #1) */}
                 {images.length > 1 && (
                   <div
                     style={{
@@ -330,10 +346,13 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                       <button
                         key={`thumb-${idx}`}
                         type="button"
-                        onClick={() => setSelectedImgIdx(idx)}
+                        onClick={() => {
+                          setSelectedImgIdx(idx);
+                          setImgExpanded(false);
+                        }}
                         style={{
-                          width: "56px",
-                          height: "56px",
+                          width: "64px",
+                          height: "64px",
                           borderRadius: "8px",
                           overflow: "hidden",
                           border:
@@ -347,9 +366,16 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                           transition: "all 0.15s ease",
                         }}
                       >
-                          <span style={{ pointerEvents: "none", display: "flex", width: "100%", height: "100%" }}>
-                            {renderImage(imgUrl, `Thumb ${idx + 1}`, "cover")}
-                          </span>
+                        <span
+                          style={{
+                            pointerEvents: "none",
+                            display: "flex",
+                            width: "100%",
+                            height: "100%",
+                          }}
+                        >
+                          {renderImage(imgUrl, `Thumb ${idx + 1}`, "cover")}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -357,225 +383,295 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               </div>
             )}
 
-            {/* Hero Meta Information */}
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: "12px",
-                }}
-              >
-                <h2
-                  style={{
-                    margin: 0,
-                    fontSize: "22px",
-                    fontWeight: 700,
-                    color: "var(--WidgetHeaderTitle, #f8fafc)",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {title}
-                </h2>
-                {status && <div>{renderStatus(status)}</div>}
-              </div>
-
-              {/* Tiered Option Selector */}
-              {tieredResult.hasTiers && (
-                <div style={{ margin: "6px 0" }}>
-                  <label
-                    style={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: "var(--app-text-secondary, #94a3b8)",
-                      display: "block",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    Select Option / Tier:
-                  </label>
-                  <select
-                    value={selectedTierIdx}
-                    onChange={(e) => setSelectedTierIdx(Number(e.target.value))}
-                    style={{
-                      width: "100%",
-                      maxWidth: "320px",
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.15)",
-                      borderRadius: "8px",
-                      color: "#f8fafc",
-                      padding: "8px 12px",
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {tieredResult.options.map((opt) => (
-                      <option
-                        key={`tier-${opt.index}`}
-                        value={opt.index}
-                        style={{ background: "#0f172a", color: "#f8fafc" }}
-                      >
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* Price & Rating Row */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  flexWrap: "wrap",
-                }}
-              >
-                {effectivePrice !== undefined && effectivePrice !== null && (
-                  <span
-                    style={{
-                      fontSize: "24px",
-                      fontWeight: 800,
-                      color: "var(--app-text-heading, #ffffff)",
-                    }}
-                  >
-                    {renderCurrency(effectivePrice)}
-                  </span>
-                )}
-
-                {metric !== undefined && metric !== null && (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      background: "rgba(245, 158, 11, 0.15)",
-                      color: "#f59e0b",
-                      padding: "4px 8px",
-                      borderRadius: "6px",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    ⭐ {String(metric)}
-                  </span>
-                )}
-              </div>
-
-              {/* Description */}
-              {description && !tieredResult.hasTiers && (
+            {/* About / Description */}
+            {description && (
+              <div>
+                <h4 style={sectionTitleStyle}>About</h4>
                 <p
                   style={{
-                    margin: "6px 0 0 0",
+                    margin: 0,
                     fontSize: "14px",
-                    lineHeight: 1.5,
-                    color: "var(--WidgetHeaderSubtitle, #94a3b8)",
+                    lineHeight: 1.6,
+                    color: "var(--WidgetHeaderSubtitle, #cbd5e1)",
                   }}
                 >
                   {description}
                 </p>
-              )}
+              </div>
+            )}
+          </div>
 
-              {/* Add to Cart Stepper & CTA */}
-              {canAddToCart && (
-                <div
+          {/* RIGHT COLUMN — buy box (title, status, price, tier, cart, actions) */}
+          <aside
+            className={hasGallery ? pd.buyBoxSticky : undefined}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "14px",
+              background: "var(--WidgetCardBg, rgba(22, 24, 38, 0.6))",
+              border:
+                "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
+              borderRadius: "14px",
+              padding: "18px",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: "12px",
+              }}
+            >
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "22px",
+                  fontWeight: 700,
+                  color: "var(--WidgetHeaderTitle, #f8fafc)",
+                  lineHeight: 1.3,
+                }}
+              >
+                {title}
+              </h2>
+              {status && <div>{renderStatus(status)}</div>}
+            </div>
+
+            {/* Price & rating */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                flexWrap: "wrap",
+              }}
+            >
+              {effectivePrice !== undefined && effectivePrice !== null && (
+                <span
                   style={{
-                    marginTop: "16px",
-                    display: "flex",
-                    gap: "12px",
-                    alignItems: "center",
-                    flexWrap: "wrap",
+                    fontSize: "26px",
+                    fontWeight: 800,
+                    color: "var(--app-text-heading, #ffffff)",
                   }}
                 >
-                  {/* Quantity Stepper */}
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      borderRadius: "8px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#fff",
-                        padding: "8px 12px",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      −
-                    </button>
-                    <span
-                      style={{
-                        padding: "0 8px",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        minWidth: "24px",
-                        textAlign: "center",
-                      }}
-                    >
-                      {quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(quantity + 1)}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#fff",
-                        padding: "8px 12px",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
+                  {renderCurrency(effectivePrice)}
+                </span>
+              )}
 
-                  {/* Add to Cart Button */}
+              {metric !== undefined && metric !== null && (
+                <span
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    background: "rgba(245, 158, 11, 0.15)",
+                    color: "#f59e0b",
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                  }}
+                >
+                  ⭐ {String(metric)}
+                </span>
+              )}
+            </div>
+
+            {/* Tiered option selector */}
+            {tieredResult.hasTiers && (
+              <div>
+                <label
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--app-text-secondary, #94a3b8)",
+                    display: "block",
+                    marginBottom: "4px",
+                  }}
+                >
+                  Select Option / Tier:
+                </label>
+                <select
+                  value={selectedTierIdx}
+                  onChange={(e) => setSelectedTierIdx(Number(e.target.value))}
+                  style={{
+                    width: "100%",
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.15)",
+                    borderRadius: "8px",
+                    color: "#f8fafc",
+                    padding: "8px 12px",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {tieredResult.options.map((opt) => (
+                    <option
+                      key={`tier-${opt.index}`}
+                      value={opt.index}
+                      style={{ background: "#0f172a", color: "#f8fafc" }}
+                    >
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Quantity stepper & Add to Cart */}
+            {canAddToCart && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: "8px",
+                    overflow: "hidden",
+                  }}
+                >
                   <button
                     type="button"
-                    onClick={handleAddToCart}
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     style={{
-                      flex: 1,
+                      background: "transparent",
+                      border: "none",
+                      color: "#fff",
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    −
+                  </button>
+                  <span
+                    style={{
+                      padding: "0 8px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      minWidth: "24px",
+                      textAlign: "center",
+                    }}
+                  >
+                    {quantity}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(quantity + 1)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#fff",
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      fontSize: "16px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  style={{
+                    flex: 1,
+                    minWidth: "140px",
+                    background: "var(--widget-accent, #6366f1)",
+                    color: "var(--widget-accent-contrast, #ffffff)",
+                    border: "none",
+                    borderRadius: "8px",
+                    padding: "12px 20px",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3)",
+                    transition: "all 0.15s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
+                  🛒 {addedToast ? "Added to Cart ✓" : "Add to Cart"}
+                </button>
+              </div>
+            )}
+
+            {/* Visible actions (admin mutations / custom / URL actions) */}
+            {visibleActions.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                }}
+              >
+                {visibleActions.map((act: any) => (
+                  <button
+                    key={act.id || act.tool}
+                    type="button"
+                    style={{
+                      width: "100%",
                       background: "var(--widget-accent, #6366f1)",
                       color: "var(--widget-accent-contrast, #ffffff)",
                       border: "none",
                       borderRadius: "8px",
-                      padding: "10px 20px",
-                      fontSize: "14px",
-                      fontWeight: 700,
+                      padding: "10px 16px",
+                      fontWeight: "600",
                       cursor: "pointer",
-                      boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3)",
                       transition: "all 0.15s ease",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
+                    }}
+                    onClick={async () => {
+                      const url =
+                        act.url || (act.type === "url" ? act.href : undefined);
+                      if (url) {
+                        console.log(
+                          `[DetailBlock] Opening URL action "${act.label}":`,
+                          url,
+                        );
+                        window.open(url, "_blank", "noopener,noreferrer");
+                        return;
+                      }
+                      console.log(
+                        `[DetailBlock] Action "${act.label}" → calling MCP tool "${act.tool}" for record id=${targetRecord?.id || targetRecord?._id}`,
+                      );
+                      try {
+                        const result = await callMcpTool(act.tool, {
+                          id: targetRecord?.id || targetRecord?._id,
+                        });
+                        console.log(
+                          `[DetailBlock] ✓ Tool "${act.tool}" succeeded:`,
+                          result,
+                        );
+                      } catch (err: any) {
+                        console.error(
+                          `[DetailBlock] ✗ Tool "${act.tool}" failed:`,
+                          err,
+                        );
+                      }
                     }}
                   >
-                    🛒 {addedToast ? "Added to Cart ✓" : "Add to Cart"}
+                    {act.label}
                   </button>
-                </div>
-              )}
-            </div>
-          </div>
+                ))}
+              </div>
+            )}
+          </aside>
+        </div>
 
-
-        {/* Specifications / Detail Fields */}
+        {/* Specifications / Detail Fields (full width) */}
         {detailFields.length > 0 && (
           <div
             className={styles.grid}
@@ -584,19 +680,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               display: "flex",
               flexDirection: "column",
               gap: "10px",
+              borderTop: "1px solid var(--TableDivider, rgba(255,255,255,0.08))",
             }}
           >
-            <h4
-              style={{
-                margin: "0 0 4px 0",
-                fontSize: "13px",
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                color: "var(--app-text-secondary, #94a3b8)",
-              }}
-            >
-              Product Details & Specs
-            </h4>
+            <h4 style={sectionTitleStyle}>Product Details &amp; Specs</h4>
             {detailFields.map((field) => (
               <DetailField key={field.key} field={field} record={targetRecord} />
             ))}
@@ -617,28 +704,40 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               const rawArray = getFieldValue(targetRecord, field);
               if (!Array.isArray(rawArray) || rawArray.length === 0) return null;
 
-              const isObjectArray = rawArray.every((item) => item && typeof item === "object");
+              const isObjectArray = rawArray.every(
+                (item) => item && typeof item === "object",
+              );
 
               return (
-                <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <h4
-                    style={{
-                      margin: 0,
-                      fontSize: "13px",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      color: "var(--app-text-secondary, #94a3b8)",
-                    }}
-                  >
+                <div
+                  key={field.key}
+                  style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+                >
+                  <h4 style={{ ...sectionTitleStyle, marginBottom: 0 }}>
                     {field.label} ({rawArray.length})
                   </h4>
 
                   {isObjectArray ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }}
+                    >
                       {rawArray.slice(0, 5).map((objItem: any, idx: number) => {
-                        const reviewRating = objItem.rating || objItem.score || objItem.stars;
-                        const reviewComment = objItem.comment || objItem.review || objItem.text || objItem.message;
-                        const reviewerName = objItem.reviewerName || objItem.user || objItem.author || objItem.name;
+                        const reviewRating =
+                          objItem.rating || objItem.score || objItem.stars;
+                        const reviewComment =
+                          objItem.comment ||
+                          objItem.review ||
+                          objItem.text ||
+                          objItem.message;
+                        const reviewerName =
+                          objItem.reviewerName ||
+                          objItem.user ||
+                          objItem.author ||
+                          objItem.name;
                         const reviewDate = objItem.date || objItem.createdAt;
 
                         return (
@@ -655,23 +754,53 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                               gap: "4px",
                             }}
                           >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontWeight: 600, color: "var(--app-text-heading, #fff)" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  color: "var(--app-text-heading, #fff)",
+                                }}
+                              >
                                 {reviewerName || `Item #${idx + 1}`}
                               </span>
                               {reviewRating !== undefined && (
-                                <span style={{ color: "#f59e0b", fontSize: "12px", fontWeight: 700 }}>
+                                <span
+                                  style={{
+                                    color: "#f59e0b",
+                                    fontSize: "12px",
+                                    fontWeight: 700,
+                                  }}
+                                >
                                   ⭐ {reviewRating}
                                 </span>
                               )}
                             </div>
                             {reviewComment && (
-                              <p style={{ margin: 0, color: "var(--app-text-secondary, #94a3b8)", fontSize: "12px", lineHeight: 1.4 }}>
+                              <p
+                                style={{
+                                  margin: 0,
+                                  color: "var(--app-text-secondary, #94a3b8)",
+                                  fontSize: "12px",
+                                  lineHeight: 1.4,
+                                }}
+                              >
                                 &ldquo;{reviewComment}&rdquo;
                               </p>
                             )}
                             {reviewDate && (
-                              <span style={{ fontSize: "11px", color: "#64748b", alignSelf: "flex-end" }}>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  color: "#64748b",
+                                  alignSelf: "flex-end",
+                                }}
+                              >
                                 {String(reviewDate).slice(0, 10)}
                               </span>
                             )}
@@ -680,7 +809,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                       })}
                     </div>
                   ) : (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    <div
+                      style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}
+                    >
                       {rawArray.map((tag: any, idx: number) => (
                         <span
                           key={`tag-${idx}`}
@@ -703,72 +834,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             })}
           </div>
         )}
-
-        {/* Visible Actions Footer (Admin mutations / Custom actions) */}
-        {visibleActions.length > 0 && (
-          <div
-            style={{
-              padding: "16px 20px",
-              display: "flex",
-              gap: "10px",
-              borderTop: "1px solid var(--TableDivider, rgba(255,255,255,0.08))",
-              background: "var(--BackgroundSecondary, rgba(15, 23, 42, 0.4))",
-            }}
-          >
-            {visibleActions.map((act: any) => (
-              <button
-                key={act.id || act.tool}
-                type="button"
-                style={{
-                  background: "var(--widget-accent, #6366f1)",
-                  color: "var(--widget-accent-contrast, #ffffff)",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "10px 16px",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  flex: 1,
-                  transition: "all 0.15s ease",
-                }}
-                onClick={async () => {
-                  const url = act.url || (act.type === "url" ? act.href : undefined);
-                  if (url) {
-                    console.log(`[DetailBlock] Opening URL action "${act.label}":`, url);
-                    window.open(url, "_blank", "noopener,noreferrer");
-                    return;
-                  }
-                  console.log(`[DetailBlock] Action "${act.label}" → calling MCP tool "${act.tool}" for record id=${targetRecord?.id || targetRecord?._id}`);
-                  try {
-                    const result = await callMcpTool(act.tool, {
-                      id: targetRecord?.id || targetRecord?._id,
-                    });
-                    console.log(`[DetailBlock] ✓ Tool "${act.tool}" succeeded:`, result);
-                  } catch (err: any) {
-                    console.error(`[DetailBlock] ✗ Tool "${act.tool}" failed:`, err);
-                  }
-                }}
-              >
-                {act.label}
-              </button>
-            ))}
-          </div>
-        )}
-        </div>
-
-        {/* Full-Screen Image Lightbox */}
-        <ImageLightbox
-          src={activeMainImage}
-          alt={title || "Preview"}
-          isOpen={lightboxOpen}
-          onClose={() => setLightboxOpen(false)}
-          images={images}
-          currentIndex={selectedImgIdx}
-          onNavigate={(idx) => setSelectedImgIdx(idx)}
-        />
-      </section>
-    </>
+      </div>
+    </section>
   );
 };
-
-
-

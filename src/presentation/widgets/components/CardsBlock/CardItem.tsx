@@ -5,8 +5,7 @@ import { renderStatus } from "../../helper/RenderStatus";
 import { renderCurrency } from "../../helper/RenderCurrency";
 import { renderDate } from "../../helper/RenderDate";
 import { extractTieredPrices } from "../../helper/TieredPriceHelper/tieredPriceHelper";
-import { useCartStore } from "../../../../infrastructure/store/cartStore";
-import { ImageLightbox } from "../ImageLightbox";
+import { addToCartAndSync } from "../../../../utils/cartFlow";
 import styles from "../../../../styles/cardsblock.module.css";
 import type { CardItemProps } from "../../../../interfaces/mcp/cardsblock.interface";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
@@ -33,7 +32,6 @@ export const CardItem: React.FC<CardItemProps> = ({
 }) => {
   if (!record || typeof record !== "object") return null;
 
-  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedTierIdx, setSelectedTierIdx] = useState(0);
 
   // 1. Extract backend-mapped primary UI fields
@@ -92,30 +90,21 @@ export const CardItem: React.FC<CardItemProps> = ({
     }
   };
 
-  const handleImageClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setLightboxOpen(true);
-  };
-
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-
-    const addItem = useCartStore.getState().addItem;
-    const openCart = useCartStore.getState().openCart;
-
-    addItem(
-      {
+    addToCartAndSync({
+      item: {
         id: id || (record as any)._id || titleStr,
         title: titleStr,
         price: effectivePrice ?? 0,
         image: $image || null,
         tier: activeTier ? activeTier.label : undefined,
       },
-      1,
-    );
-    openCart();
+      quantity: 1,
+      actions,
+      recordId: id || (record as any)._id,
+    });
   };
 
   const statusStr = String(
@@ -137,47 +126,28 @@ export const CardItem: React.FC<CardItemProps> = ({
     effectivePrice !== null;
 
   return (
-    <>
-      <CardContainerComponent
-        {...containerProps}
-        onClick={handleClick}
-        style={{ cursor: actionUrlStr || onSelect ? "pointer" : "default" }}
-      >
-        {/* Asset / Image Area (Clickable to Zoom) */}
-        {Boolean($image) && (
-          <div
-            onClick={handleImageClick}
-            title="Click to view full image"
-            style={{
-              height: "160px",
-              width: "100%",
-              background: "var(--BackgroundSecondary, #0f172a)",
-              borderBottom: "1px solid var(--WidgetCardBorder, rgba(255,255,255,0.08))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              overflow: "hidden",
-              cursor: "zoom-in",
-              position: "relative",
-            }}
-          >
-            {renderImage($image, titleStr, "cover")}
-            <span
-              style={{
-                position: "absolute",
-                top: "8px",
-                right: "8px",
-                background: "rgba(0,0,0,0.5)",
-                padding: "3px 6px",
-                borderRadius: "4px",
-                fontSize: "11px",
-                color: "#fff",
-              }}
-            >
-              🔍
-            </span>
-          </div>
-        )}
+    <CardContainerComponent
+      {...containerProps}
+      onClick={handleClick}
+      style={{ cursor: actionUrlStr || onSelect ? "pointer" : "default" }}
+    >
+      {/* Asset / Image Area — tapping the card (incl. image) opens the detail */}
+      {Boolean($image) && (
+        <div
+          style={{
+            height: "160px",
+            width: "100%",
+            background: "var(--BackgroundSecondary, #0f172a)",
+            borderBottom: "1px solid var(--WidgetCardBorder, rgba(255,255,255,0.08))",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          {renderImage($image, titleStr, "cover")}
+        </div>
+      )}
 
         <div className={styles.contentBody}>
           {/* Header & Status */}
@@ -347,15 +317,6 @@ export const CardItem: React.FC<CardItemProps> = ({
           ) : null}
         </div>
       </CardContainerComponent>
-
-      {/* Full-Screen Image Lightbox */}
-      <ImageLightbox
-        src={$image}
-        alt={titleStr}
-        isOpen={lightboxOpen}
-        onClose={() => setLightboxOpen(false)}
-      />
-    </>
   );
 };
 

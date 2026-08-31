@@ -39,7 +39,9 @@ const isMcpToolResultPayload = (
   return true;
 };
 
-const extractToolResult = (value: unknown): McpToolResultPayload | null => {
+export const extractToolResult = (
+  value: unknown,
+): McpToolResultPayload | null => {
   if (!isMcpToolResultPayload(value)) {
     return null;
   }

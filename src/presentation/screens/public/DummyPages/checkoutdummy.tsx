@@ -40,9 +40,38 @@ const Checkout: React.FC = () => {
       params.get("bookingId");
     if (rawSession) setSessionId(rawSession);
 
-    // Read the ChatGPT conversation URL for return navigation
-    const rawChatUrl = params.get("chat_url");
-    if (rawChatUrl) setChatUrl(rawChatUrl);
+    // Read the conversation/return URL for "Return to Conversation". The
+    // platform appends the real conversation URL as `redirectURl=<encoded url>`;
+    // accept common aliases/casings, safe-decode (only if still percent-encoded,
+    // to avoid corrupting an already-decoded URL), and accept only http(s).
+    // Param-name based — generic, never company-specific.
+    const RETURN_URL_PARAMS = [
+      "redirectURl",
+      "redirectUrl",
+      "redirect_url",
+      "redirecturl",
+      "returnUrl",
+      "return_url",
+      "returnurl",
+      "chatUrl",
+      "chat_url",
+    ];
+    for (const name of RETURN_URL_PARAMS) {
+      const raw = params.get(name);
+      if (!raw) continue;
+      let candidate = raw;
+      if (/%[0-9a-fA-F]{2}/.test(candidate)) {
+        try {
+          candidate = decodeURIComponent(candidate);
+        } catch {
+          candidate = raw; // malformed escape — use the value as-is
+        }
+      }
+      if (/^https?:\/\//i.test(candidate)) {
+        setChatUrl(candidate);
+        break;
+      }
+    }
 
     // 1. Try parsing a robust JSON array (allows multi-item checkout for any industry)
     // Example URL: ?items=[{"name":"Pro Plan","price":99,"qty":1},{"name":"Setup Fee","price":50,"qty":1}]

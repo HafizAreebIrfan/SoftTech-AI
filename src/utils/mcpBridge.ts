@@ -111,3 +111,31 @@ export function sendFollowUpMessage(prompt: string): void {
     );
   }
 }
+
+export type WidgetDisplayMode = "inline" | "fullscreen" | "pip";
+
+/**
+ * Ask the host to change the widget display mode (Apps SDK). The host decides
+ * whether to grant it; feature-detected so it's a no-op on hosts that lack it
+ * (the widget simply stays inline). Generic — no company-specific logic.
+ */
+export async function requestDisplayMode(
+  mode: WidgetDisplayMode,
+): Promise<boolean> {
+  const openai =
+    typeof window !== "undefined" ? (window as any).openai : undefined;
+  if (!openai?.requestDisplayMode) {
+    return false;
+  }
+  try {
+    const result = await openai.requestDisplayMode({ mode });
+    const granted = result?.mode ?? mode;
+    console.log(
+      `[MCP Bridge] → requestDisplayMode("${mode}") → granted "${granted}"`,
+    );
+    return granted === mode;
+  } catch (err) {
+    console.warn(`[MCP Bridge] ✗ requestDisplayMode("${mode}") failed:`, err);
+    return false;
+  }
+}

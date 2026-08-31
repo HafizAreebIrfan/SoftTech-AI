@@ -1,0 +1,38 @@
+/*
+ * Fullscreen single-product page (generic, Booking-style — not a copy).
+ * Two-column hero (gallery | buy box) on wide viewports (true fullscreen),
+ * collapsing to a single column when narrow (inline mode). Only the
+ * media-query-dependent rules live here; everything else stays inline to match
+ * the surrounding component style. Nothing keys off company/entity names.
+ */
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  padding: 20px;
+}
+
+.leftCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0; /* prevent wide images from blowing out the grid track */
+}
+
+@media (min-width: 760px) {
+  .heroGridTwoCol {
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 360px);
+    align-items: start;
+  }
+
+  .buyBoxSticky {
+    position: sticky;
+    top: 12px;
+  }
+
+  .pageWide {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+}

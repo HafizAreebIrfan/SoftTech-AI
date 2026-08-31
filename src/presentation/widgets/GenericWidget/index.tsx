@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect } from "react";
 import { useMcpToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import { useApplyGlobalThemeVars } from "../../../infrastructure/store/themeStore";
-import { useCartStore } from "../../../infrastructure/store/cartStore";
+import { useCartStore, buildCartDataFromItems } from "../../../infrastructure/store/cartStore";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import { CatalogLayout } from "../layouts/CatalogLayout";
 import { TableLayout } from "../layouts/TableLayout";
@@ -23,6 +23,7 @@ export const GenericWidgetRenderer: React.FC = () => {
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
   const viewFullCart = useCartStore((state) => state.viewFullCart);
   const setViewFullCart = useCartStore((state) => state.setViewFullCart);
+  const cartItems = useCartStore((state) => state.items);
 
   let toolResult: unknown = null;
   let hasLoadError = false;
@@ -391,16 +392,69 @@ export const GenericWidgetRenderer: React.FC = () => {
           >
             ← Back
           </button>
-          <CartLayout
-            title={content.title}
-            subtitle={content.subtitle}
-            data={rawData}
-            records={records}
-            fields={fields}
-            collection={collection}
-            actions={content.actions}
-            audience={content.audience}
-          />
+          {cartItems.length === 0 ? (
+            /* Empty cart → local page only, NO tool call. */
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                gap: "14px",
+                padding: "48px 24px",
+                color: "var(--TextSecondary, #94a3b8)",
+              }}
+            >
+              <div style={{ fontSize: "44px" }}>🛒</div>
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: "18px",
+                  fontWeight: 700,
+                  color: "var(--WidgetHeaderTitle, #f8fafc)",
+                }}
+              >
+                Your cart is empty
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "14px",
+                  maxWidth: "320px",
+                  lineHeight: 1.5,
+                }}
+              >
+                Browse the catalog and add items to your cart to see them here.
+              </p>
+              <button
+                type="button"
+                onClick={() => setViewFullCart(false)}
+                style={{
+                  background: "var(--widget-accent, #6366f1)",
+                  color: "var(--widget-accent-contrast, #ffffff)",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Browse products
+              </button>
+            </div>
+          ) : (
+            <CartLayout
+              title={content.title}
+              subtitle={content.subtitle}
+              data={buildCartDataFromItems(cartItems)}
+              fields={fields}
+              collection={collection}
+              actions={content.actions}
+              audience={content.audience}
+            />
+          )}
         </div>
       ) : (
         renderLayout()

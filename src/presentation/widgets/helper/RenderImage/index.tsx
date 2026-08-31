@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styles from "../../../../styles/fieldrenderer.module.css";
 import { getProxiedImageUrl, getRawImageUrl } from "./getproxiedimageurl";
 import { RenderImageProps } from "../../../../interfaces/mcp/renderimageprops.interface";
@@ -21,6 +21,14 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt, variant }) => {
     proxiedSrc || rawSrc,
   );
   const [hasError, setHasError] = useState(false);
+
+  // Re-seed when the source changes (e.g. a gallery thumbnail switches the
+  // main image). useState only seeds once, so without this the <img> keeps
+  // the original source. Generic — applies to every company's images.
+  useEffect(() => {
+    setCurrentSrc(proxiedSrc || rawSrc);
+    setHasError(false);
+  }, [proxiedSrc, rawSrc]);
 
   const handleError = () => {
     if (currentSrc === proxiedSrc && rawSrc && rawSrc !== proxiedSrc) {

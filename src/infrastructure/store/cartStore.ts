@@ -101,7 +101,12 @@ export const useCartStore = create<CartStore>((set, get) => ({
     }
 
     saveCartToStorage(updated, get().companyName);
-    set({ items: updated, viewFullCart: true });
+    // Do NOT auto-open the cart here. Whether the cart opens is decided by the
+    // caller (addToCartAndSync): if the company has a registered cart/order
+    // tool we render the tool's result in the same widget; otherwise we open
+    // the local cart overlay. Keeping the side-effect here caused the cart to
+    // pop with the wrong (catalog) data.
+    set({ items: updated });
   },
 
   removeItem: (id) => {
@@ -143,3 +148,67 @@ export const useCartStore = create<CartStore>((set, get) => ({
     }, 0);
   },
 }));
+
+/* ------------------------------------------------------------------ *
+ * Cart-tool detection + cart-data mapping (generic, verb-based).
+ * ------------------------------------------------------------------ */
+
+/**
+ * Detect the company's "add to cart / create order / book / reserve" tool from
+ * its registered actions. Purely verb-based (no company/entity/industry names),
+ * mirroring the existing action classifier. Excludes list/detail reads,
+ * destructive mutations, and the separate checkout/payment step, so adding an
+ * item never fires the wrong tool. Requires a `tool` (URL-only buttons skipped).
+ */
+const CART_ADD_RE =
+  /(add.?to.?cart|add.?to.?bag|add.?item|create.?order|place.?order|new.?order|create.?booking|make.?booking|book|reserve|buy|purchase|subscribe|order)/i;
+const CART_EXCLUDE_RE =
+  /(get|list|view|show|detail|search|fetch|read|all|cancel|delete|remove|update|edit|refund|return|checkout|proceed|\bpay\b|payment)/i;
+
+export const findCartAction = <T extends { id?: string; tool?: string }>(
+  actions: T[] = [],
+): T | undefined =>
+  actions.find((a) => {
+    if (!a || !a.tool) return false;
+    const text = `${a.id ?? ""} ${a.tool ?? ""}`.toLowerCase();
+    if (CART_EXCLUDE_RE.test(text)) return false;
+    return CART_ADD_RE.test(text);
+  });
+
+/** Shape consumed by CartLayout (`data.products` / `total` / `totalQuantity`). */
+export interface CartData {
+  products: Array<{
+    id: string | number;
+    title: string;
+    price: number;
+    quantity: number;
+    total: number;
+    thumbnail?: string | null;
+  }>;
+  total: number;
+  totalQuantity: number;
+  totalProducts: number;
+}
+
+/** Map the local Zustand cart items into CartLayout's expected `data` shape. */
+export const buildCartDataFromItems = (items: CartItemData[]): CartData => {
+  const products = items.map((item) => {
+    const price = parseNumericPrice(item.price);
+    const quantity = item.quantity || 1;
+    return {
+      id: item.id,
+      title: item.title,
+      price,
+      quantity,
+      total: price * quantity,
+      thumbnail: item.image ?? null,
+    };
+  });
+
+  return {
+    products,
+    total: products.reduce((acc, p) => acc + p.total, 0),
+    totalQuantity: products.reduce((acc, p) => acc + p.quantity, 0),
+    totalProducts: products.length,
+  };
+};
