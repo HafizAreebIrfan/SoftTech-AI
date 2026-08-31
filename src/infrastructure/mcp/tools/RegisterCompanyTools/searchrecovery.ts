@@ -37,6 +37,28 @@ const SEARCH_PARAM_KEYS = new Set([
   "s",
 ]);
 
+// Parameter names that represent filters/categories. When a filter-only API
+// returns empty, we try dropping the filter or promoting it to a search query.
+const FILTER_PARAM_KEYS = new Set([
+  "category",
+  "type",
+  "status",
+  "filter",
+  "tag",
+  "tags",
+  "brand",
+  "brandname",
+  "categoryid",
+  "category_id",
+  "categoryname",
+  "category_name",
+  "genre",
+  "department",
+  "section",
+  "group",
+  "grouping",
+]);
+
 // Filler words that carry no search signal on their own.
 const STOPWORDS = new Set([
   "for",
@@ -220,4 +242,49 @@ export const detectSearchParam = (
   }
 
   return null;
+};
+
+/**
+ * Detects filter/category parameters in the input. Returns an array of
+ * detected filter params with their keys, input names, and current values.
+ * Used when a filter-only API returns empty — we try dropping the filter
+ * or promoting the filter value to a search query.
+ */
+export const detectFilterParams = (
+  api: IApi,
+  input: any,
+): Array<{ key: string; inputName: string; value: string }> => {
+  const flat: Record<string, any> = {
+    ...(input && typeof input === "object" && input.params &&
+    typeof input.params === "object"
+      ? input.params
+      : {}),
+    ...(input && typeof input === "object" ? input : {}),
+  };
+
+  const params = Array.isArray(api.params) ? api.params : [];
+  const filters: Array<{ key: string; inputName: string; value: string }> = [];
+
+  for (const param of params) {
+    if (!param || param.isDynamic === false) continue;
+
+    const key = String(param.key || "")
+      .replace(/^\{|\}$/g, "")
+      .trim();
+    if (!key) continue;
+
+    const inputName = String(param.inputName || key).trim();
+
+    const isFilterField =
+      FILTER_PARAM_KEYS.has(key.toLowerCase()) ||
+      FILTER_PARAM_KEYS.has(inputName.toLowerCase());
+    if (!isFilterField) continue;
+
+    const raw = flat[inputName] ?? flat[key];
+    if (typeof raw === "string" && raw.trim()) {
+      filters.push({ key, inputName, value: raw.trim() });
+    }
+  }
+
+  return filters;
 };

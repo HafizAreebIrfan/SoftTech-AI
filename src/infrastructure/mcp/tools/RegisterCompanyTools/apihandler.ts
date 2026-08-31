@@ -14,6 +14,7 @@ import {
   SearchRecoveryInfo,
   isEmptyResult,
   detectSearchParam,
+  detectFilterParams,
   buildRelaxedQueries,
   toggleNumber,
 } from "./searchrecovery";
@@ -127,7 +128,82 @@ export const callRegisteredApi = async (
     return singularResult;
   }
 
+  // Step 3: Try dropping filter/category params when a filter-only API
+  // returns empty. E.g. category="vehicles" returns nothing → try without
+  // the category filter to get the full catalog. Also tries singular form
+  // of the filter value (vehicles → vehicle) and promoting the filter value
+  // to a search query if the API has a search param.
+  const filters = detectFilterParams(api, input);
   const search = detectSearchParam(api, input);
+  if (filters.length > 0) {
+    for (const filter of filters) {
+      // 3a: Try singular form of the filter value
+      const singular = toggleNumber(filter.value);
+      if (singular && singular !== filter.value) {
+        console.log(
+          `[API Handler] Trying singular filter: ${filter.key}="${filter.value}" → "${singular}"`,
+        );
+        const singularResult = await executeApiCall(
+          companyId,
+          apiId,
+          api,
+          withFilterValue(input, filter, singular),
+          req,
+        );
+        if (isUserAuthRequiredNotice(singularResult)) return singularResult;
+        if (!isEmptyResult(singularResult)) {
+          if (recovery) {
+            recovery.recovered = true;
+            recovery.effectiveQuery = `(singular filter: ${filter.key}=${singular})`;
+          }
+          return singularResult;
+        }
+      }
+
+      // 3b: Drop the filter entirely → return full catalog
+      console.log(
+        `[API Handler] Dropping filter: ${filter.key}="${filter.value}" → (empty)`,
+      );
+      const dropResult = await executeApiCall(
+        companyId,
+        apiId,
+        api,
+        withFilterValue(input, filter, ""),
+        req,
+      );
+      if (isUserAuthRequiredNotice(dropResult)) return dropResult;
+      if (!isEmptyResult(dropResult)) {
+        if (recovery) {
+          recovery.recovered = true;
+          recovery.effectiveQuery = `(dropped filter: ${filter.key})`;
+        }
+        return dropResult;
+      }
+
+      // 3c: If API also has a search param, promote filter value to search query
+      if (search) {
+        console.log(
+          `[API Handler] Promoting filter value to search: ${search.key}="${filter.value}"`,
+        );
+        const promotedResult = await executeApiCall(
+          companyId,
+          apiId,
+          api,
+          withSearchValue(input, search, filter.value),
+          req,
+        );
+        if (isUserAuthRequiredNotice(promotedResult)) return promotedResult;
+        if (!isEmptyResult(promotedResult)) {
+          if (recovery) {
+            recovery.recovered = true;
+            recovery.effectiveQuery = `(promoted filter to search: ${search.key}=${filter.value})`;
+          }
+          return promotedResult;
+        }
+      }
+    }
+  }
+
   if (!search) {
     // Empty, but there is no free-text query to loosen (e.g. a pure filter).
     if (recovery) recovery.empty = true;
@@ -182,6 +258,30 @@ const withSearchValue = (
       ...base.params,
       [search.inputName]: value,
       [search.key]: value,
+    };
+  }
+  return base;
+};
+
+/**
+ * Returns a shallow copy of the tool input with the detected filter parameter
+ * overridden. An empty string omits the parameter (buildApiUrl skips blank
+ * values), which asks the upstream API for the full list without the filter.
+ */
+const withFilterValue = (
+  input: any,
+  filter: { key: string; inputName: string },
+  value: string,
+): any => {
+  const base = input && typeof input === "object" ? { ...input } : {};
+  base[filter.inputName] = value;
+  base[filter.key] = value;
+
+  if (base.params && typeof base.params === "object") {
+    base.params = {
+      ...base.params,
+      [filter.inputName]: value,
+      [filter.key]: value,
     };
   }
   return base;
@@ -640,16 +740,31 @@ const resolveParameterValue = (
     // The model omitted this value: fall back to a configured default so
     // company-set defaults (e.g. limit=10) actually reach the API. `value`
     // stays an example only; `defaultValue` is the intentional fallback.
+    // Skip when defaultValue equals the key name itself (e.g. id="id") —
+    // that's a placeholder from registration, not a real value.
     if (
       parameter.defaultValue !== undefined &&
       parameter.defaultValue !== null &&
-      String(parameter.defaultValue) !== ""
+      String(parameter.defaultValue) !== "" &&
+      String(parameter.defaultValue).toLowerCase() !== key.toLowerCase()
     ) {
       return parameter.defaultValue;
     }
     return undefined;
   }
-  return parameter.value;
+
+  // Static parameter: return configured value, but skip when the value is
+  // just the key name itself (e.g. key="id", value="id") — that's a
+  // placeholder the user entered during registration, not a real API value.
+  if (
+    parameter.value !== undefined &&
+    parameter.value !== null &&
+    String(parameter.value) !== "" &&
+    String(parameter.value).toLowerCase() !== key.toLowerCase()
+  ) {
+    return parameter.value;
+  }
+  return undefined;
 };
 
 const cleanParameterKey = (key: unknown): string => {
