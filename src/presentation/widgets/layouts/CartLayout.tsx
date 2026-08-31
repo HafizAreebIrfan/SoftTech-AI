@@ -2,6 +2,8 @@ import React, { useMemo, useEffect } from "react";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { renderImage } from "../helper/RenderImage";
 import { renderCurrency } from "../helper/RenderCurrency";
+import { useCartStore, parseNumericPrice } from "../../../infrastructure/store/cartStore";
+import { callMcpTool } from "../../../utils/mcpBridge";
 import {
   appendChatUrlToCheckout,
   markCheckoutPending,
@@ -28,6 +30,11 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
   records = [],
   actions = [],
 }) => {
+  const zustandItems = useCartStore((state) => state.items);
+  const removeItem = useCartStore((state) => state.removeItem);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const clearCart = useCartStore((state) => state.clearCart);
+
   const { lineItems, cartSummary } = useMemo(() => {
     const rawData = (data || {}) as Record<string, any>;
     let targetCart: Record<string, any> = {};
@@ -45,16 +52,33 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
       (Array.isArray(rawData.products) ? rawData.products : []) ||
       [];
 
-    const items: CartLineItem[] = rawProducts.map((p, idx) => ({
-      id: p.id ?? idx,
-      title: p.title || p.$title || `Product #${idx + 1}`,
-      price: Number(p.price || p.$price || 0),
-      quantity: Number(p.quantity || 1),
-      total: Number(p.total || p.price * (p.quantity || 1) || 0),
-      discountPercentage: p.discountPercentage,
-      discountedTotal: p.discountedTotal,
-      thumbnail: p.thumbnail || p.$image || p.image,
-    }));
+    let items: CartLineItem[] = [];
+
+    if (rawProducts.length > 0) {
+      items = rawProducts.map((p, idx) => ({
+        id: p.id ?? idx,
+        title: p.title || p.$title || `Product #${idx + 1}`,
+        price: Number(p.price || p.$price || 0),
+        quantity: Number(p.quantity || 1),
+        total: Number(p.total || p.price * (p.quantity || 1) || 0),
+        discountPercentage: p.discountPercentage,
+        discountedTotal: p.discountedTotal,
+        thumbnail: p.thumbnail || p.$image || p.image,
+      }));
+    } else if (zustandItems.length > 0) {
+      items = zustandItems.map((zi) => {
+        const priceNum = parseNumericPrice(zi.price);
+        const qty = zi.quantity || 1;
+        return {
+          id: zi.id,
+          title: zi.title,
+          price: priceNum,
+          quantity: qty,
+          total: priceNum * qty,
+          thumbnail: zi.image || undefined,
+        };
+      });
+    }
 
     const totalAmount =
       Number(targetCart.total || rawData.total) ||
@@ -82,7 +106,56 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
         cartId: targetCart.id || rawData.id,
       },
     };
-  }, [data, records]);
+  }, [data, records, zustandItems]);
+
+  const handleUpdateQty = async (id: string | number, newQty: number) => {
+    if (newQty <= 0) {
+      handleRemove(id);
+      return;
+    }
+    updateQuantity(id, newQty);
+
+    const updateTool = actions.find((a: any) =>
+      /update.*cart|edit.*cart|cart.*quantity/i.test(a?.id || a?.tool || a?.label || ""),
+    )?.tool;
+    if (updateTool) {
+      try {
+        await callMcpTool(updateTool, { id, productId: id, quantity: newQty });
+      } catch (err) {
+        console.warn("[CartLayout] Update cart tool call:", err);
+      }
+    }
+  };
+
+  const handleRemove = async (id: string | number) => {
+    removeItem(id);
+
+    const deleteTool = actions.find((a: any) =>
+      /delete.*cart|remove.*cart|cart.*delete/i.test(a?.id || a?.tool || a?.label || ""),
+    )?.tool;
+    if (deleteTool) {
+      try {
+        await callMcpTool(deleteTool, { id, productId: id });
+      } catch (err) {
+        console.warn("[CartLayout] Remove cart item tool call:", err);
+      }
+    }
+  };
+
+  const handleClear = async () => {
+    clearCart();
+
+    const clearTool = actions.find((a: any) =>
+      /clear.*cart|empty.*cart/i.test(a?.id || a?.tool || a?.label || ""),
+    )?.tool;
+    if (clearTool) {
+      try {
+        await callMcpTool(clearTool, {});
+      } catch (err) {
+        console.warn("[CartLayout] Clear cart tool call:", err);
+      }
+    }
+  };
 
   const [checkoutComplete, setCheckoutComplete] = React.useState(false);
   const [pendingCheckout, setPendingCheckout] = React.useState(false);
@@ -214,12 +287,24 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
           </h1>
           {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
         </div>
-        {cartSummary.totalQuantity > 0 && (
-          <span className={styles.badge}>
-            {cartSummary.totalQuantity} Item
-            {cartSummary.totalQuantity === 1 ? "" : "s"}
-          </span>
-        )}
+        <div className={styles.headerActions}>
+          {cartSummary.totalQuantity > 0 && (
+            <span className={styles.badge}>
+              {cartSummary.totalQuantity} Item
+              {cartSummary.totalQuantity === 1 ? "" : "s"}
+            </span>
+          )}
+          {lineItems.length > 0 && (
+            <button
+              type="button"
+              className={styles.clearCartBtn}
+              onClick={handleClear}
+              title="Clear all items from cart"
+            >
+              🗑️ Clear Cart
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Cart Content Grid */}
@@ -247,7 +332,7 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
                   <div className={styles.itemInfo}>
                     <span className={styles.itemTitle}>{item.title}</span>
                     <div className={styles.itemMeta}>
-                      <span>Qty: {item.quantity}</span>
+                      <span>{renderCurrency(item.price)} each</span>
                       {item.discountPercentage ? (
                         <span style={{ color: "#10b981", fontWeight: 600 }}>
                           -{item.discountPercentage}%
@@ -256,16 +341,41 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
                     </div>
                   </div>
 
+                  <div className={styles.stepper}>
+                    <button
+                      type="button"
+                      className={styles.stepperBtn}
+                      onClick={() => handleUpdateQty(item.id, item.quantity - 1)}
+                      aria-label="Decrease quantity"
+                    >
+                      −
+                    </button>
+                    <span className={styles.stepperQty}>{item.quantity}</span>
+                    <button
+                      type="button"
+                      className={styles.stepperBtn}
+                      onClick={() => handleUpdateQty(item.id, item.quantity + 1)}
+                      aria-label="Increase quantity"
+                    >
+                      +
+                    </button>
+                  </div>
+
                   <div className={styles.itemPriceGroup}>
                     <span className={styles.itemTotal}>
                       {renderCurrency(item.discountedTotal || item.total)}
                     </span>
-                    {item.quantity > 1 && (
-                      <span className={styles.itemUnitPrice}>
-                        {renderCurrency(item.price)} each
-                      </span>
-                    )}
                   </div>
+
+                  <button
+                    type="button"
+                    className={styles.deleteBtn}
+                    onClick={() => handleRemove(item.id)}
+                    aria-label={`Remove ${item.title}`}
+                    title="Remove item"
+                  >
+                    🗑️
+                  </button>
                 </div>
               ))
             )}

@@ -43,20 +43,44 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
           : Number(pt.value).toLocaleString(),
       }));
 
+      const promptContext = String(
+        (window as any).__WIDGET_METADATA__?.user_raw_prompt ||
+          (window as any).__WIDGET_DATA__?.user_raw_prompt ||
+          (window as any).__WIDGET_METADATA__?.inferred_intent ||
+          (window as any).__WIDGET_DATA__?.inferred_intent ||
+          (window as any).openai?.widgetState?.inferred_intent ||
+          (window as any).openai?.widgetState?.user_raw_prompt ||
+          "",
+      ).toLowerCase();
+
       const rawType = String(
         bChart.type || block?.variant || "line",
       ).toLowerCase();
-      const validTypes: ChartType[] = ["line", "bar", "pie", "scatter"];
-      let cType: ChartType = validTypes.includes(rawType as ChartType)
-        ? (rawType as ChartType)
-        : "line";
+
+      let cType: ChartType = "line";
 
       if (
+        rawType.includes("bar") ||
+        promptContext.includes("bar") ||
+        promptContext.includes("column") ||
+        chartTitle.includes("bar")
+      ) {
+        cType = "bar";
+      } else if (
         rawType.includes("pie") ||
         rawType.includes("donut") ||
+        promptContext.includes("pie") ||
+        promptContext.includes("donut") ||
         chartTitle.includes("pie")
       ) {
         cType = "pie";
+      } else if (
+        rawType.includes("scatter") ||
+        promptContext.includes("scatter")
+      ) {
+        cType = "scatter";
+      } else if (["line", "bar", "pie", "scatter"].includes(rawType)) {
+        cType = rawType as ChartType;
       }
 
       return {
@@ -158,7 +182,11 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
     // 4. Infer chart type (Respecting user request if bar/pie was specified)
     let type: ChartType = "line";
     const promptContext = String(
-      (window as any).openai?.widgetState?.inferred_intent ||
+      (window as any).__WIDGET_METADATA__?.user_raw_prompt ||
+        (window as any).__WIDGET_DATA__?.user_raw_prompt ||
+        (window as any).__WIDGET_METADATA__?.inferred_intent ||
+        (window as any).__WIDGET_DATA__?.inferred_intent ||
+        (window as any).openai?.widgetState?.inferred_intent ||
         (window as any).openai?.widgetState?.user_raw_prompt ||
         "",
     ).toLowerCase();

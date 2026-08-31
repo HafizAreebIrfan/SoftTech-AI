@@ -1,5 +1,5 @@
 .container {
-  padding: 1.25rem;
+  padding: 1.25rem 1.25rem 100px 1.25rem;
   background: var(--app-bg-primary, #0f1015);
   color: var(--app-text-primary, #ffffff);
   border-radius: 16px;
