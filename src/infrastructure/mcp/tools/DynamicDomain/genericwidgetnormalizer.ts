@@ -48,6 +48,8 @@ export const normalizeApiResponseToWidget = (
     layout,
     apiSchema,
     audience,
+    userRawPrompt,
+    inferredIntent,
   );
 
   // 1. Sanitize the payload: strip internal fields, apply schema, and flatten arrays
@@ -360,6 +362,8 @@ const buildCollectionMetadata = (
   layout?: string,
   apiSchema?: ApiSchema,
   audience?: WidgetAudience,
+  userRawPrompt?: string,
+  inferredIntent?: string,
 ): CollectionResult | undefined => {
   const entity = apiSchema?.entity || inferEntityName(apiName, data);
   if (!entity) return undefined;
@@ -471,6 +475,17 @@ const buildCollectionMetadata = (
 
     if (computedMetrics.length > 0) result.metrics = computedMetrics;
 
+    const promptText = `${userRawPrompt || ""} ${inferredIntent || ""}`.toLowerCase();
+    let requestedChartType: "line" | "bar" | "pie" | "area" = "line";
+    if (/\b(bar|column|histogram)\b/i.test(promptText)) {
+      requestedChartType = "bar";
+    } else if (/\b(pie|doughnut|donut)\b/i.test(promptText)) {
+      requestedChartType = "pie";
+    } else if (/\b(area)\b/i.test(promptText)) {
+      requestedChartType = "area";
+    }
+
+    // 1. Time-series chart (date + numeric field)
     if (numericFields.length > 0 && dateFields.length > 0) {
       const primaryNumField = numericFields[0];
       const primaryDateField = dateFields[0];
@@ -505,11 +520,55 @@ const buildCollectionMetadata = (
         }));
         result.charts = [
           {
-            type: "line",
-            title: `${primaryNumField.label || "Sales"} Trend`,
+            type: requestedChartType,
+            title: `${primaryNumField.label || "Trend"}`,
             data: chartData,
           },
         ];
+      }
+    }
+
+    // 2. Categorical chart (e.g. pie or bar chart by status, type, category, brand)
+    if (!result.charts && numericFields.length > 0 && rawRecords.length > 1) {
+      const primaryNumField = numericFields[0];
+      const catField = fields.find(
+        (f) =>
+          f.key !== primaryNumField.key &&
+          (f.type === "text" || f.type === "status") &&
+          !isInternalField(f.key) &&
+          !f.primary,
+      );
+
+      if (catField) {
+        const categoryGroups: Record<string, number> = {};
+        rawRecords.forEach((rec) => {
+          const catVal = String(rec[catField.key] || "Other").trim();
+          const numVal = Number(rec[primaryNumField.key] || 1);
+          if (catVal) {
+            categoryGroups[catVal] =
+              (categoryGroups[catVal] || 0) + (isNaN(numVal) ? 1 : numVal);
+          }
+        });
+
+        const chartData = Object.entries(categoryGroups).map(
+          ([label, value]) => ({
+            label,
+            value: Math.round(value * 100) / 100,
+          }),
+        );
+
+        if (chartData.length >= 2) {
+          result.charts = [
+            {
+              type:
+                requestedChartType === "line"
+                  ? "bar"
+                  : requestedChartType,
+              title: `${primaryNumField.label || toLabel(catField.key)} by ${catField.label || toLabel(catField.key)}`,
+              data: chartData,
+            },
+          ];
+        }
       }
     }
 
