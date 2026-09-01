@@ -511,6 +511,19 @@ const buildApiUrl = (api: IApi, input: any): URL => {
     }
   }
 
+  // Category fallback: If endpoint is a category path and the parameter value is "all", "all-categories",
+  // or was omitted/empty, rewrite the endpoint to strip /category/ or /categories/ so it returns all records!
+  if (
+    /(^|\/)categor(?:y|ies)\/(?:all|all-categories|\{\w+\}|:\w+)?$/i.test(
+      endpoint,
+    )
+  ) {
+    endpoint = endpoint.replace(
+      /\/?categor(?:y|ies)\/(?:all|all-categories|\{\w+\}|:\w+)?$/i,
+      "",
+    );
+  }
+
   if (/{[^}]+}/.test(endpoint) || /:[a-zA-Z0-9_-]+/.test(endpoint)) {
     throw new Error(`Missing required path parameter for ${api.name || "API"}`);
   }

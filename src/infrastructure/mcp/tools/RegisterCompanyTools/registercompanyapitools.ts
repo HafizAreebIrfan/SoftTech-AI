@@ -538,6 +538,10 @@ const buildEntityToolDirectory = (
               .trim() ||
             "categoryname";
         }
+      } else {
+        if (!roles.listTool) {
+          roles.listTool = toolId;
+        }
       }
     } else if (method === "POST") {
       if (!roles.create) roles.create = toolId;

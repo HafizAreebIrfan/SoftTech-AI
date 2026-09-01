@@ -17,6 +17,7 @@ import { PlatformType } from "../../../../domain/types/widgetplatform.types";
  * absent when the company did not register a tool for it.
  */
 export interface ActionToolLinks {
+  listTool?: string;
   detail?: string;
   create?: string;
   update?: string;
@@ -119,6 +120,7 @@ export const normalizeApiResponseToWidget = (
           name: "Category",
           param: paramKey,
           tool: actionTools.categoryTool,
+          listTool: actionTools.listTool,
           optionsTool: actionTools.optionsTool,
           selected: selectedVal !== "" ? selectedVal : undefined,
         },
