@@ -6,11 +6,11 @@ const createField = (param: ApiParam): z.ZodTypeAny => {
 
   switch (param.type) {
     case "number":
-      field = z.number();
+      field = z.union([z.number(), z.string()]);
       break;
 
     case "boolean":
-      field = z.boolean();
+      field = z.union([z.boolean(), z.string()]);
       break;
 
     // Structured request-body fields: let the model pass a real object/array
@@ -25,7 +25,7 @@ const createField = (param: ApiParam): z.ZodTypeAny => {
       break;
 
     default:
-      field = z.string();
+      field = z.union([z.string(), z.number()]);
   }
 
   const normalizedKey = String(
