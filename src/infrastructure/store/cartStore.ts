@@ -8,6 +8,7 @@ export interface CartItemData {
   quantity: number;
   tier?: string;
   specs?: Record<string, unknown>;
+  options?: Record<string, string | number>;
 }
 
 export interface CartStore {

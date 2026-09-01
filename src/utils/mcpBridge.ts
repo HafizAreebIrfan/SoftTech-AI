@@ -1,3 +1,8 @@
+import {
+  useMcpWidgetStore,
+  extractToolResult,
+} from "../infrastructure/store/mcpWidgetStore";
+
 /**
  * MCP Bridge — calls tools via the OpenAI Apps SDK.
  *
@@ -155,9 +160,9 @@ export function getToolInput(): Record<string, any> | undefined {
 export function applyReQueryResult(result: unknown): boolean {
   if (!result) return false;
   try {
-    const store = (window as any).__MCP_WIDGET_STORE__;
-    if (store?.getState?.()?.setToolResult) {
-      store.getState().setToolResult(result);
+    const payload = extractToolResult(result) || (result as any);
+    if (payload) {
+      useMcpWidgetStore.getState().setToolResult(payload);
       return true;
     }
   } catch (err) {

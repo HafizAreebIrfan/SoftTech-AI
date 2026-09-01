@@ -48,6 +48,7 @@ export async function addToCartAndSync({
         id: recordId ?? item.id,
         productId: recordId ?? item.id,
         quantity,
+        ...(item.options ? { options: item.options } : {}),
       });
     } catch (err) {
       console.warn(

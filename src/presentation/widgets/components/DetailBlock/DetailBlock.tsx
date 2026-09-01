@@ -46,6 +46,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     metric,
     detailFields,
     arrayFields,
+    optionGroups,
     tieredResult,
   } = useMemo(() => {
     if (!targetRecord) {
@@ -59,6 +60,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         metric: null,
         detailFields: [],
         arrayFields: [],
+        optionGroups: [],
         tieredResult: { hasTiers: false, options: [] },
       };
     }

@@ -163,6 +163,10 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
   },
 }));
 
+if (typeof window !== "undefined") {
+  (window as any).__MCP_WIDGET_STORE__ = useMcpWidgetStore;
+}
+
 export const useMcpToolResult = () => {
   const toolResult = useMcpWidgetStore((state) => state.toolResult);
   const setToolResult = useMcpWidgetStore((state) => state.setToolResult);

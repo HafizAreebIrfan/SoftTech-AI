@@ -3,7 +3,7 @@ import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.inte
 import { CardsBlock } from "../components/CardsBlock";
 import { useCartStore, parseNumericPrice } from "../../../infrastructure/store/cartStore";
 import { getFieldValue } from "../../../utils/schema/getValue";
-import { callMcpTool, applyReQueryResult } from "../../../utils/mcpBridge";
+import { callMcpTool, applyReQueryResult, getToolInput } from "../../../utils/mcpBridge";
 import { extractToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import styles from "../../../styles/cataloglayout.module.css";
 import { FormBlock } from "../components";
@@ -151,13 +151,6 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     };
   }, [categoryFacet?.optionsTool]);
 
-  // Sync initial category from facet or appliedQuery
-  React.useEffect(() => {
-    if (categoryFacet?.selected) {
-      setSelectedCategory(String(categoryFacet.selected));
-    }
-  }, [categoryFacet?.selected]);
-
   const handleCategorySelect = async (cat: string) => {
     setSelectedCategory(cat);
     if (categoryFacet?.tool && categoryFacet.optionsTool) {
@@ -172,14 +165,97 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     }
   };
 
-  // Reset filters when the tool data / entity changes
+  // Detect applied sort from backend collection.appliedQuery, toolInput, or prompt (#C)
+  const detectedInitialSort = useMemo(() => {
+    const applied = collection?.appliedQuery || {};
+    const toolInput = getToolInput() || {};
+    const prompt = String(
+      (window as any).__WIDGET_METADATA__?.user_raw_prompt ||
+        (window as any).__WIDGET_DATA__?.user_raw_prompt ||
+        applied.user_raw_prompt ||
+        "",
+    ).toLowerCase();
+
+    const sortBy = String(
+      applied.sortBy ||
+        applied.sort ||
+        toolInput.sortBy ||
+        toolInput.sort ||
+        "",
+    ).toLowerCase();
+    const order = String(
+      applied.order ||
+        applied.orderBy ||
+        applied.direction ||
+        toolInput.order ||
+        toolInput.direction ||
+        "",
+    ).toLowerCase();
+
+    // 1. Check applied / toolInput parameters
+    if (sortBy.includes("price") || sortBy === "price") {
+      if (
+        order.includes("desc") ||
+        order === "high" ||
+        order.includes("high_to_low")
+      )
+        return "price_desc";
+      return "price_asc";
+    }
+    if (
+      sortBy.includes("rating") ||
+      sortBy === "rating" ||
+      sortBy.includes("score")
+    ) {
+      return "rating_desc";
+    }
+    if (sortBy.includes("name") || sortBy.includes("title")) {
+      return "name_asc";
+    }
+
+    // 2. Check user raw prompt for explicit sort intents
+    if (
+      /price.*(low|asc|cheap|least)/i.test(prompt) ||
+      /cheapest/i.test(prompt) ||
+      /lowest price/i.test(prompt) ||
+      /low to high/i.test(prompt)
+    ) {
+      return "price_asc";
+    }
+    if (
+      /price.*(high|desc|expensive|most)/i.test(prompt) ||
+      /highest price/i.test(prompt) ||
+      /most expensive/i.test(prompt) ||
+      /high to low/i.test(prompt)
+    ) {
+      return "price_desc";
+    }
+    if (
+      /rating|rated|top rated|best rated|highest rated|stars/i.test(prompt)
+    ) {
+      return "rating_desc";
+    }
+    if (/alphabetical|name\s*(a.*z|asc)/i.test(prompt)) {
+      return "name_asc";
+    }
+
+    return "default";
+  }, [collection?.appliedQuery, title]);
+
+  // Reset/sync filters when the tool data / entity / sort changes
   React.useEffect(() => {
-    if (!categoryFacet?.selected) {
+    if (categoryFacet?.selected) {
+      setSelectedCategory(String(categoryFacet.selected));
+    } else {
       setSelectedCategory("All");
     }
     setSearchTerm("");
-    setSortOption("default");
-  }, [title, collection?.entity]);
+    if (detectedInitialSort && detectedInitialSort !== "default") {
+      setSortOption(detectedInitialSort);
+    } else {
+      setSortOption("default");
+    }
+  }, [title, collection?.entity, detectedInitialSort, categoryFacet?.selected]);
 
   // 4. Defensive customer filtering & Search + Category Filter
   const filteredRecords = useMemo(() => {
