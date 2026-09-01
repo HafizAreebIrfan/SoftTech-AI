@@ -393,17 +393,24 @@ function extractIdFromAny(val: unknown): string | null {
   if (typeof val === "string" && /^[0-9a-fA-F]{24}$/.test(val.trim())) {
     return val.trim();
   }
+  if (Array.isArray(val) && val.length > 0) {
+    return extractIdFromAny(val[0]);
+  }
   if (typeof val === "object") {
     const obj = val as Record<string, any>;
-    if (obj._id) {
+    if (obj["0"]) {
+      const insideZero = extractIdFromAny(obj["0"]);
+      if (insideZero) return insideZero;
+    }
+    if (obj._id && !String(obj._id).startsWith("temp-")) {
       if (typeof obj._id === "object" && obj._id.$oid) return String(obj._id.$oid);
       return String(obj._id);
     }
     if (obj.id && !String(obj.id).startsWith("temp-")) return String(obj.id);
     if (obj.insertedId) return String(obj.insertedId);
-    if (obj.packageId) return String(obj.packageId);
-    if (obj.productId) return String(obj.productId);
-    if (obj.recordId) return String(obj.recordId);
+    if (obj.packageId && !String(obj.packageId).startsWith("temp-")) return String(obj.packageId);
+    if (obj.productId && !String(obj.productId).startsWith("temp-")) return String(obj.productId);
+    if (obj.recordId && !String(obj.recordId).startsWith("temp-")) return String(obj.recordId);
     if (obj.data) return extractIdFromAny(obj.data);
     if (obj.package) return extractIdFromAny(obj.package);
     if (obj.item) return extractIdFromAny(obj.item);
@@ -411,6 +418,33 @@ function extractIdFromAny(val: unknown): string | null {
     if (obj.result) return extractIdFromAny(obj.result);
   }
   return null;
+}
+
+function unwrapRecordObject(val: unknown): Record<string, any> {
+  if (!val || typeof val !== "object") return {};
+  if (Array.isArray(val) && val.length > 0) {
+    return unwrapRecordObject(val[0]);
+  }
+  const obj = val as Record<string, any>;
+  if (obj["0"] && typeof obj["0"] === "object") {
+    return unwrapRecordObject(obj["0"]);
+  }
+  if (obj.data && typeof obj.data === "object") {
+    return unwrapRecordObject(obj.data);
+  }
+  if (obj.package && typeof obj.package === "object") {
+    return unwrapRecordObject(obj.package);
+  }
+  if (obj.item && typeof obj.item === "object") {
+    return unwrapRecordObject(obj.item);
+  }
+  if (obj.record && typeof obj.record === "object") {
+    return unwrapRecordObject(obj.record);
+  }
+  if (obj.result && typeof obj.result === "object") {
+    return unwrapRecordObject(obj.result);
+  }
+  return obj;
 }
 
 function parseCreatedRecord(
@@ -442,28 +476,38 @@ function parseCreatedRecord(
     }
     if (r.structuredContent) {
       const sc = r.structuredContent;
-      parsed = sc.data || sc.package || sc.item || sc.record || sc;
+      parsed = sc.data ?? sc.package ?? sc.item ?? sc.record ?? sc;
     }
   }
 
-  // 2. Extract MongoDB / DB ID
+  // 2. Deep unwrap any array or indexed object ("0", "data", "package", etc.)
+  const unwrapped = unwrapRecordObject(parsed);
+
+  // 3. Extract MongoDB / Database ID
   const dbId =
+    extractIdFromAny(unwrapped) ||
     extractIdFromAny(parsed) ||
     extractIdFromAny(result) ||
-    extractIdFromAny(formData) ||
+    (formData.id && !String(formData.id).startsWith("temp-") ? formData.id : null) ||
+    (formData._id && !String(formData._id).startsWith("temp-") ? formData._id : null) ||
     `temp-${Date.now()}`;
 
-  const unwrappedObj =
-    parsed && typeof parsed === "object"
-      ? (parsed.data || parsed.package || parsed.item || parsed.record || parsed)
-      : {};
+  // Clean out any indexed keys like "0" from spreading
+  const { "0": _zero, ...cleanUnwrapped } = unwrapped;
 
-  return {
+  const merged: Record<string, any> = {
     ...formData,
-    ...(typeof unwrappedObj === "object" ? unwrappedObj : {}),
+    ...cleanUnwrapped,
     id: dbId,
     _id: dbId,
   };
+
+  // If packageId / productId / itemId exists or is used, sync it to dbId as well
+  if (merged.packageId !== undefined) merged.packageId = dbId;
+  if (merged.productId !== undefined) merged.productId = dbId;
+  if (merged.itemId !== undefined) merged.itemId = dbId;
+
+  return merged;
 }
 
   const handleSaveForm = async (formData: Record<string, any>) => {
