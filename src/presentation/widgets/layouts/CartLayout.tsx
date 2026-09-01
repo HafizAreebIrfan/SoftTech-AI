@@ -253,16 +253,21 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
       // Popup blocked
     }
 
+    // Clear cart immediately upon proceeding to checkout so returns show completed state
+    clearCart();
+
     const cleanup = monitorCheckoutWindow(checkoutWindow, {
       onSuccess: () => {
         console.log("[CartLayout] Checkout completed (postMessage success)");
         setPendingCheckout(false);
         setCheckoutComplete(true);
+        clearCart();
       },
       onClosed: () => {
         console.log("[CartLayout] Checkout window closed");
         setPendingCheckout(false);
         setCheckoutComplete(true);
+        clearCart();
       },
     });
 

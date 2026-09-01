@@ -139,6 +139,7 @@ export const CardItem: React.FC<CardItemProps> = ({
       {Boolean($image) && (
         <div
           style={{
+            position: "relative",
             height: "160px",
             width: "100%",
             background: "var(--BackgroundSecondary, #0f172a)",
@@ -150,11 +151,23 @@ export const CardItem: React.FC<CardItemProps> = ({
           }}
         >
           {renderImage($image, titleStr, "cover")}
+          {$status && (
+            <div
+              style={{
+                position: "absolute",
+                top: "8px",
+                left: "8px",
+                zIndex: 2,
+              }}
+            >
+              {renderStatus($status)}
+            </div>
+          )}
         </div>
       )}
 
         <div className={styles.contentBody}>
-          {/* Header & Status */}
+          {/* Header */}
           <div className={styles.cardHeader}>
             <div className={styles.titleGroup}>
               <h3 className={styles.title} title={titleStr}>
@@ -166,9 +179,6 @@ export const CardItem: React.FC<CardItemProps> = ({
                 </span>
               )}
             </div>
-            {$status && (
-              <div className={styles.statusBadge}>{renderStatus($status)}</div>
-            )}
           </div>
 
           {/* Tiered Options Dropdown (if paired CSV tiers exist) */}

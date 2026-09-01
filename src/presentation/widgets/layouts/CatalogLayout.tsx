@@ -153,12 +153,25 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
 
   const handleCategorySelect = async (cat: string) => {
     setSelectedCategory(cat);
-    if (categoryFacet?.tool && categoryFacet.optionsTool) {
+    if (categoryFacet?.optionsTool) {
       try {
-        const res = await callMcpTool(categoryFacet.tool, {
-          [categoryFacet.param]: cat === "All" ? "" : cat,
-        });
-        applyReQueryResult(res);
+        let res: unknown;
+        if (cat === "All" || cat === "") {
+          if (categoryFacet.listTool) {
+            res = await callMcpTool(categoryFacet.listTool, {});
+          } else if (categoryFacet.tool) {
+            res = await callMcpTool(categoryFacet.tool, {
+              [categoryFacet.param]: "all",
+            });
+          }
+        } else if (categoryFacet.tool) {
+          res = await callMcpTool(categoryFacet.tool, {
+            [categoryFacet.param]: cat,
+          });
+        }
+        if (res) {
+          applyReQueryResult(res);
+        }
       } catch (err) {
         console.error("[CatalogLayout] Error switching category:", err);
       }

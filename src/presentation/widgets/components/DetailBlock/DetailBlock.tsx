@@ -6,7 +6,7 @@ import { renderStatus } from "../../helper/RenderStatus";
 import { callMcpTool, requestDisplayMode } from "../../../../utils/mcpBridge";
 import { addToCartAndSync } from "../../../../utils/cartFlow";
 import { extractTieredPrices } from "../../helper/TieredPriceHelper/tieredPriceHelper";
-import { findCartAction } from "../../../../infrastructure/store/cartStore";
+import { findCartAction, useCartStore } from "../../../../infrastructure/store/cartStore";
 import { DetailField } from "./DetailField";
 import styles from "../../../../styles/detailblock.module.css";
 import pd from "../../../../styles/productdetail.module.css";
@@ -299,17 +299,20 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     : null;
   const effectivePrice = activeTier ? activeTier.price : price;
 
-  const canAddToCart =
-    audience !== "admin" &&
-    effectivePrice !== undefined &&
-    effectivePrice !== null;
+  const isOrderEntity = /order|invoice|booking/i.test(
+    String(collection?.entity || title || ""),
+  );
+  const canAddToCart = audience !== "admin" && !isOrderEntity;
+
+  const openCart = useCartStore((s) => s.openCart);
+  const totalCartCount = useCartStore((s) => s.getTotalCount());
 
   const handleAddToCart = () => {
     addToCartAndSync({
       item: {
         id: targetRecord.id || targetRecord._id || title,
         title: title || "Product",
-        price: effectivePrice ?? 0,
+        price: effectivePrice ?? price ?? 0,
         image: images[0] || null,
         tier: activeTier ? activeTier.label : undefined,
         options: selectedOptions,
@@ -342,6 +345,52 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           gap: "0",
         }}
       >
+        {/* Top bar with Cart drawer button */}
+        {canAddToCart && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              padding: "12px 16px 0 16px",
+            }}
+          >
+            <button
+              type="button"
+              onClick={openCart}
+              title="Open Shopping Cart"
+              style={{
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.15)",
+                borderRadius: "8px",
+                padding: "6px 12px",
+                color: "#f8fafc",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <span>🛒 Cart</span>
+              {totalCartCount > 0 && (
+                <span
+                  style={{
+                    background: "var(--widget-accent, #6366f1)",
+                    color: "#fff",
+                    borderRadius: "999px",
+                    padding: "1px 6px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                  }}
+                >
+                  {totalCartCount}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Hero: gallery + about (left) / buy box (right). Two columns when a
             gallery exists AND the viewport is wide (fullscreen); one column
             otherwise (inline, or a non-product record such as an order). */}

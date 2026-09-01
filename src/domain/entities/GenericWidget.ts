@@ -58,6 +58,7 @@ export interface CollectionFacet {
   name: string;
   param: string;
   tool: string;
+  listTool?: string;
   optionsTool?: string;
   selected?: string | number;
   options?: Array<{ label: string; value: string | number }>;
