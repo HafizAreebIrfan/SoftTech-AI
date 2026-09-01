@@ -48,11 +48,24 @@ export const registerCompanyApiTools = (
 
     const customInputSchema = buildCustomMcpInputSchema(configuredInputFields);
 
-    const toolDescription =
-      api.mcpDescription ||
-      `Calls ${company.companyName} -> ${
-        api.name || `API ${index + 1}`
-      } and returns the API result as an interactive widget.`;
+    const rawDesc = api.mcpDescription || "";
+    let toolDescription = rawDesc;
+    if (
+      !toolDescription ||
+      toolDescription.includes("generic widget response") ||
+      toolDescription.includes("Calls ")
+    ) {
+      const endpoint = String(api.endpoint || "");
+      if (endpoint.includes("/categories") || endpoint.includes("/category-list")) {
+        toolDescription = `Retrieves the list of all product categories for ${company.companyName}. Use ONLY when the user explicitly asks to see or list available categories.`;
+      } else if (endpoint.includes("/category/")) {
+        toolDescription = `Retrieves products in a specific category (e.g. categoryname='vehicle', categoryname='womens-bags') from ${company.companyName}. Use when user asks to see or search products by category.`;
+      } else if (isDetailEndpoint(api)) {
+        toolDescription = `Retrieves the full details for a single item by ID from ${company.companyName}. Use when the user requests details for a specific item.`;
+      } else {
+        toolDescription = `Fetches ${api.name || "records"} from ${company.companyName}.`;
+      }
+    }
     const resourceUri = api.mcpResourceUri;
 
     const method = (api.method || "GET").toUpperCase();
@@ -383,6 +396,37 @@ const PATH_PARAM_RE = /\{[^}]+\}|:[a-zA-Z0-9_-]+/;
 const hasPathParam = (endpoint?: string): boolean =>
   PATH_PARAM_RE.test(String(endpoint || ""));
 
+const isDetailEndpoint = (api: any): boolean => {
+  const endpoint = String(api?.endpoint || "");
+  const method = String(api?.method || "GET").toUpperCase();
+  if (method !== "GET") return false;
+
+  // Filter endpoints (e.g. /category/{categoryname}, /type/{type}) are NOT single item detail endpoints
+  if (/\/category\/|\/categories\/|\/type\/|\/tag\/|\/department\/|\/filter\//i.test(endpoint)) {
+    return false;
+  }
+
+  // Endpoints with ID parameters (e.g. /{id}, /:id, /{productId}, /{packageId}, /{itemId})
+  const pathIdParamRegex =
+    /\{(?:[a-zA-Z0-9_-]*id|_id|uuid|item|record|code|key)\}|:(?:[a-zA-Z0-9_-]*id|_id|uuid|item|record|code|key)\b/i;
+  if (pathIdParamRegex.test(endpoint)) {
+    return true;
+  }
+
+  // Or name explicitly indicates detail / single item inspection
+  const name = String(api?.name || "").toLowerCase();
+  if (name.includes("detail") || name.includes("get by id") || name.includes("single")) {
+    return true;
+  }
+
+  // If path param exists and is NOT a category/type/slug/filter
+  if (hasPathParam(endpoint) && !/category|type|status|genre|slug|filter/i.test(endpoint)) {
+    return true;
+  }
+
+  return false;
+};
+
 const firstPathSegment = (endpoint?: string): string => {
   const clean = String(endpoint || "").split("?")[0];
   for (const segment of clean.split("/")) {
@@ -408,9 +452,8 @@ const entityKeyFor = (api: any): string => {
 
 /**
  * Groups a company's APIs by entity and records the registered tool id that
- * plays each CRUD role: GET + a path parameter => detail (get-by-id); POST =>
- * create; PUT/PATCH => update; DELETE => delete. First match per role wins.
- * Generic for every company and industry.
+ * plays each CRUD role: GET + an ID path parameter => detail (get-by-id); POST =>
+ * create; PUT/PATCH => update; DELETE => delete.
  */
 const buildEntityToolDirectory = (
   apis: any[],
@@ -429,7 +472,9 @@ const buildEntityToolDirectory = (
     const roles = directory.get(key) || {};
 
     if (method === "GET") {
-      if (hasPathParam(api.endpoint) && !roles.detail) roles.detail = toolId;
+      if (isDetailEndpoint(api)) {
+        roles.detail = toolId;
+      }
     } else if (method === "POST") {
       if (!roles.create) roles.create = toolId;
     } else if (method === "PUT" || method === "PATCH") {
