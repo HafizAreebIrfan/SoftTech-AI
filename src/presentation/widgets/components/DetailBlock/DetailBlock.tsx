@@ -291,7 +291,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const visibleActions = (actions || []).filter(
     (a: any) =>
       (classifyAction(a) !== "mutate" || permissions.canMutate) &&
-      a !== cartAction,
+      a !== cartAction &&
+      classifyAction(a) !== "view" &&
+      !/select.*option|view.*detail/i.test(a?.id || a?.label || ""),
   );
 
   const activeTier = tieredResult.hasTiers
@@ -555,7 +557,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               >
                 {title}
               </h2>
-              {status && <div>{renderStatus(status)}</div>}
+              {status && (
+                <div style={{ flexShrink: 0, whiteSpace: "nowrap" }}>
+                  {renderStatus(status)}
+                </div>
+              )}
             </div>
 
             {/* Price & rating */}
@@ -598,8 +604,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               )}
             </div>
 
-            {/* Tiered option selector */}
-            {tieredResult.hasTiers && (
+            {/* Tiered option selector — only show if there are 2 or more tier options */}
+            {tieredResult.hasTiers && tieredResult.options.length > 1 && (
               <div>
                 <label
                   style={{

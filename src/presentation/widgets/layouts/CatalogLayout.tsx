@@ -27,11 +27,6 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   const openCart = useCartStore((state) => state.openCart);
   const totalCartCount = useCartStore((state) => state.getTotalCount());
 
-  // Interactive filtering & sorting states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [sortOption, setSortOption] = useState<string>("default");
-
   // 1. Identify category / type field dynamically
   const categoryField = useMemo(() => {
     return fields.find((f) => {
@@ -151,9 +146,20 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     };
   }, [categoryFacet?.optionsTool]);
 
+  // Interactive filtering & sorting states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [sortOption, setSortOption] = useState<string>("default");
+
+  // Pagination & Loading states
+  const [pageSize, setPageSize] = useState<number>(12);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const handleCategorySelect = async (cat: string) => {
     setSelectedCategory(cat);
     if (categoryFacet?.optionsTool) {
+      setIsLoading(true);
       try {
         let res: unknown;
         if (cat === "All" || cat === "") {
@@ -174,6 +180,8 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         }
       } catch (err) {
         console.error("[CatalogLayout] Error switching category:", err);
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -380,6 +388,17 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     (hasSearchFilter ? 1 : 0) +
     (hasSortFilter ? 1 : 0);
 
+  // Reset pagination to page 1 on filter/search/sort/pageSize change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, sortOption, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
+  const paginatedRecords = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredRecords.slice(start, start + pageSize);
+  }, [filteredRecords, currentPage, pageSize]);
+
   return (
     <section className={styles.container}>
       {/* Header */}
@@ -560,17 +579,113 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         </div>
       )}
 
-      {/* Product Cards Grid */}
-      {filteredRecords.length > 0 ? (
-        <CardsBlock
-          block={cardsBlock}
-          records={filteredRecords}
-          fields={fields}
-          collection={collection}
-          capabilities={capabilities}
-          actions={actions}
-          audience={audience}
-        />
+      {/* Product Cards Grid & Loading Overlay */}
+      {isLoading ? (
+        <div className={styles.loadingOverlay}>
+          <div className={styles.spinner} />
+          <span>Loading products...</span>
+        </div>
+      ) : filteredRecords.length > 0 ? (
+        <>
+          <CardsBlock
+            block={cardsBlock}
+            records={paginatedRecords}
+            fields={fields}
+            collection={collection}
+            capabilities={capabilities}
+            actions={actions}
+            audience={audience}
+          />
+
+          {/* Pagination Bar */}
+          <div className={styles.paginationBar}>
+            <div className={styles.paginationInfo}>
+              <span>
+                Showing{" "}
+                <strong>{(currentPage - 1) * pageSize + 1}</strong>–
+                <strong>
+                  {Math.min(filteredRecords.length, currentPage * pageSize)}
+                </strong>{" "}
+                of <strong>{filteredRecords.length}</strong> items
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>Show:</span>
+                <select
+                  className={styles.limitSelect}
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  aria-label="Items per page"
+                >
+                  <option value={8}>8 per page</option>
+                  <option value={12}>12 per page</option>
+                  <option value={24}>24 per page</option>
+                  <option value={48}>48 per page</option>
+                </select>
+              </div>
+            </div>
+
+            {totalPages > 1 && (
+              <div className={styles.paginationControls}>
+                <button
+                  type="button"
+                  className={styles.pageBtn}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Previous Page"
+                >
+                  &larr; Prev
+                </button>
+
+                {Array.from({ length: totalPages }, (_, idx) => idx + 1)
+                  .filter((p) => {
+                    if (totalPages <= 7) return true;
+                    if (p === 1 || p === totalPages) return true;
+                    return Math.abs(p - currentPage) <= 1;
+                  })
+                  .map((p, idx, arr) => {
+                    const showEllipsisBefore = idx > 0 && p - arr[idx - 1] > 1;
+                    return (
+                      <React.Fragment key={`page-${p}`}>
+                        {showEllipsisBefore && (
+                          <span
+                            style={{
+                              color: "var(--app-text-secondary)",
+                              padding: "0 4px",
+                            }}
+                          >
+                            …
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          className={`${styles.pageBtn} ${currentPage === p ? styles.pageBtnActive : ""}`}
+                          onClick={() => setCurrentPage(p)}
+                          aria-label={`Page ${p}`}
+                        >
+                          {p}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+
+                <button
+                  type="button"
+                  className={styles.pageBtn}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  aria-label="Next Page"
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            )}
+          </div>
+        </>
       ) : (
         <div className={styles.noResults}>
           <p>
