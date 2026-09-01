@@ -19,38 +19,27 @@ export const FormField: React.FC<FormFieldProps> = ({
       field.uiRole === "status" ||
       /status$/i.test(field.key);
 
-    if (fieldOptions && Array.isArray(fieldOptions) && fieldOptions.length > 0) {
+    if (isStatus || (fieldOptions && Array.isArray(fieldOptions) && fieldOptions.length > 0)) {
+      const suggestions = fieldOptions || ["Active", "Inactive"];
       return (
-        <select
-          id={inputId}
-          className={`${styles.input} ${error ? styles.inputError : ""}`}
-          value={value ? String(value) : fieldOptions[0]}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          {fieldOptions.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
-      );
-    }
-
-    if (isStatus) {
-      const defaultStatusOptions = ["Active", "Inactive"];
-      return (
-        <select
-          id={inputId}
-          className={`${styles.input} ${error ? styles.inputError : ""}`}
-          value={value ? String(value) : defaultStatusOptions[0]}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          {defaultStatusOptions.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
+        <>
+          <input
+            id={inputId}
+            type="text"
+            list={`${inputId}-datalist`}
+            className={`${styles.input} ${error ? styles.inputError : ""}`}
+            value={value !== undefined && value !== null ? String(value) : ""}
+            placeholder={isStatus ? "e.g. Active" : field.label}
+            onChange={(e) => onChange(e.target.value)}
+          />
+          {suggestions.length > 0 && (
+            <datalist id={`${inputId}-datalist`}>
+              {suggestions.map((opt) => (
+                <option key={opt} value={opt} />
+              ))}
+            </datalist>
+          )}
+        </>
       );
     }
 
