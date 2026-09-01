@@ -21,6 +21,9 @@ export interface ActionToolLinks {
   create?: string;
   update?: string;
   delete?: string;
+  categoryTool?: string;
+  categoryParam?: string;
+  optionsTool?: string;
 }
 
 export const normalizeApiResponseToWidget = (
@@ -39,6 +42,8 @@ export const normalizeApiResponseToWidget = (
   userRawPrompt?: string,
   inferredIntent?: string,
   webCheckoutUrl?: string,
+  toolName?: string,
+  inputArgs?: Record<string, any>,
 ): GenericWidgetResult => {
   const rawData = normalizeJsonValue(response);
 
@@ -79,6 +84,47 @@ export const normalizeApiResponseToWidget = (
   const defaultActions = isInteractiveAction
     ? buildWidgetActions(actionTools, audience, isCommercialEntity)
     : undefined;
+
+  // 3. Build appliedQuery and facets on collection
+  if (collection) {
+    const appliedQuery: Record<string, any> = {};
+    if (inputArgs && typeof inputArgs === "object") {
+      for (const [k, v] of Object.entries(inputArgs)) {
+        if (
+          v !== undefined &&
+          v !== null &&
+          String(v).trim() !== "" &&
+          k !== "user_raw_prompt" &&
+          k !== "inferred_intent"
+        ) {
+          appliedQuery[k] = v;
+        }
+      }
+    }
+    if (Object.keys(appliedQuery).length > 0) {
+      collection.appliedQuery = appliedQuery;
+    }
+
+    if (actionTools?.categoryTool) {
+      const paramKey = actionTools.categoryParam || "categoryname";
+      const selectedVal =
+        inputArgs?.[paramKey] ??
+        inputArgs?.category ??
+        inputArgs?.categoryName ??
+        inputArgs?.category_name ??
+        inputArgs?.slug ??
+        "";
+      collection.facets = [
+        {
+          name: "Category",
+          param: paramKey,
+          tool: actionTools.categoryTool,
+          optionsTool: actionTools.optionsTool,
+          selected: selectedVal !== "" ? selectedVal : undefined,
+        },
+      ];
+    }
+  }
 
   return {
     title: apiName || "API Result",

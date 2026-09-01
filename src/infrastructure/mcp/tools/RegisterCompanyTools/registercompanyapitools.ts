@@ -177,6 +177,8 @@ export const registerCompanyApiTools = (
             userRawPrompt,
             inferredIntent,
             (api as any).webCheckoutUrl,
+            toolName,
+            input,
           );
 
           // If the search was empty and we relaxed the query (or still found
@@ -452,14 +454,44 @@ const entityKeyFor = (api: any): string => {
 
 /**
  * Groups a company's APIs by entity and records the registered tool id that
- * plays each CRUD role: GET + an ID path parameter => detail (get-by-id); POST =>
- * create; PUT/PATCH => update; DELETE => delete.
+ * plays each CRUD role & facet role:
+ * - GET + an ID path parameter => detail (get-by-id)
+ * - POST => create
+ * - PUT/PATCH => update
+ * - DELETE => delete
+ * - GET + category/filter parameter or /category/{x} path => categoryTool
+ * - GET + /categories or /category-list or name has 'categories' => optionsTool
  */
 const buildEntityToolDirectory = (
   apis: any[],
 ): Map<string, ActionToolLinks> => {
   const directory = new Map<string, ActionToolLinks>();
 
+  // 1. First pass: find optionsTool (e.g. call_product_categories or call_product_category_list)
+  let globalOptionsTool: string | undefined;
+  apis.forEach((api, index) => {
+    const endpoint = String(api?.endpoint || "").toLowerCase();
+    const name = String(api?.name || "").toLowerCase();
+    const method = String(api?.method || "GET").toUpperCase();
+    if (method === "GET") {
+      if (
+        endpoint.includes("/categories") ||
+        endpoint.includes("/category-list") ||
+        endpoint.includes("/category_list") ||
+        name.includes("categories") ||
+        name.includes("category list")
+      ) {
+        if (!globalOptionsTool) {
+          globalOptionsTool = toToolName(
+            api.mcpToolName || api.name || `api_${index + 1}`,
+            index,
+          );
+        }
+      }
+    }
+  });
+
+  // 2. Second pass: map CRUD and facet roles per entity
   apis.forEach((api, index) => {
     const key = entityKeyFor(api);
     if (!key) return;
@@ -469,11 +501,43 @@ const buildEntityToolDirectory = (
       index,
     );
     const method = String(api.method || "GET").toUpperCase();
+    const endpoint = String(api?.endpoint || "").toLowerCase();
     const roles = directory.get(key) || {};
+
+    if (globalOptionsTool && !roles.optionsTool) {
+      roles.optionsTool = globalOptionsTool;
+    }
 
     if (method === "GET") {
       if (isDetailEndpoint(api)) {
         roles.detail = toolId;
+      } else if (
+        endpoint.includes("/category/") ||
+        endpoint.includes("/categories/") ||
+        endpoint.includes("/type/") ||
+        endpoint.includes("/tag/") ||
+        endpoint.includes("/filter/") ||
+        (Array.isArray(api.params) &&
+          api.params.some((p: any) =>
+            /category|type|slug|genre|tag/i.test(p?.key || p?.inputName || ""),
+          ))
+      ) {
+        if (!roles.categoryTool) {
+          roles.categoryTool = toolId;
+          const paramObj = Array.isArray(api.params)
+            ? api.params.find((p: any) =>
+                /category|type|slug|genre|tag/i.test(
+                  p?.key || p?.inputName || "",
+                ),
+              )
+            : undefined;
+          roles.categoryParam =
+            paramObj?.inputName ||
+            String(paramObj?.key || "")
+              .replace(/^\{|\}$/g, "")
+              .trim() ||
+            "categoryname";
+        }
       }
     } else if (method === "POST") {
       if (!roles.create) roles.create = toolId;

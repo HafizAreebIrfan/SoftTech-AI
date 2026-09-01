@@ -43,6 +43,15 @@ export type CollectionChart = {
   data: CollectionChartDataPoint[];
 };
 
+export type CollectionFacet = {
+  name: string;
+  param: string;
+  tool: string;
+  optionsTool?: string;
+  selected?: string | number;
+  options?: Array<{ label: string; value: string | number }>;
+};
+
 export type CollectionResult = {
   entity?: string;
   dataPath?: string;
@@ -55,4 +64,6 @@ export type CollectionResult = {
   fields?: FieldSchema[];
   metrics?: CollectionMetric[];
   charts?: CollectionChart[];
+  facets?: CollectionFacet[];
+  appliedQuery?: Record<string, any>;
 };
