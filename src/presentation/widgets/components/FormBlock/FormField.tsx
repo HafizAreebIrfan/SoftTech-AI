@@ -11,7 +11,9 @@ export const FormField: React.FC<FormFieldProps> = ({
   const inputId = `form-field-${field.key}`;
 
   const renderInput = () => {
-    const fieldOptions = (field as any).options as string[] | undefined;
+    const fieldOptions = ((field as any).options || (field as any).enum) as
+      | string[]
+      | undefined;
     const isStatus =
       field.type === "status" ||
       field.uiRole === "status" ||
@@ -22,10 +24,9 @@ export const FormField: React.FC<FormFieldProps> = ({
         <select
           id={inputId}
           className={`${styles.input} ${error ? styles.inputError : ""}`}
-          value={value ? String(value) : ""}
+          value={value ? String(value) : fieldOptions[0]}
           onChange={(e) => onChange(e.target.value)}
         >
-          <option value="">Select {field.label}...</option>
           {fieldOptions.map((opt) => (
             <option key={opt} value={opt}>
               {opt}
@@ -36,18 +37,12 @@ export const FormField: React.FC<FormFieldProps> = ({
     }
 
     if (isStatus) {
-      const defaultStatusOptions = [
-        "Active",
-        "Pending",
-        "Inactive",
-        "Completed",
-        "Cancelled",
-      ];
+      const defaultStatusOptions = ["Active", "Inactive"];
       return (
         <select
           id={inputId}
           className={`${styles.input} ${error ? styles.inputError : ""}`}
-          value={value ? String(value) : "Active"}
+          value={value ? String(value) : defaultStatusOptions[0]}
           onChange={(e) => onChange(e.target.value)}
         >
           {defaultStatusOptions.map((opt) => (

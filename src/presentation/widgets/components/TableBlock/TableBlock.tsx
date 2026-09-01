@@ -182,6 +182,49 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     });
   }, [block?.fields, fields]);
 
+  // Dynamically attach discovered enum/options to fields that lack explicit options
+  const fieldsWithOptions = useMemo(() => {
+    return activeFields.map((field) => {
+      const existingOptions = (field as any).options || (field as any).enum;
+      if (existingOptions && Array.isArray(existingOptions) && existingOptions.length > 0) {
+        return field;
+      }
+
+      const isStatus =
+        field.type === "status" ||
+        field.uiRole === "status" ||
+        /status$/i.test(field.key);
+
+      if (isStatus) {
+        // Collect distinct status values from current records
+        const foundStatuses = new Set<string>();
+        localRecords.forEach((rec) => {
+          const val =
+            getFieldValue(rec, field) ??
+            (rec as any)[field.key] ??
+            (rec as any).status ??
+            (rec as any).packagestatus;
+          if (typeof val === "string" && val.trim()) {
+            const clean = val.trim();
+            foundStatuses.add(clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase());
+          }
+        });
+
+        const statusOptions =
+          foundStatuses.size > 0
+            ? Array.from(foundStatuses)
+            : ["Active", "Inactive"];
+
+        return {
+          ...field,
+          options: statusOptions,
+        };
+      }
+
+      return field;
+    });
+  }, [activeFields, localRecords]);
+
   // Searching & Filtering Logic
   const filteredRecords = useMemo(() => {
     let list = localRecords;
@@ -345,6 +388,84 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     }
   };
 
+function extractIdFromAny(val: unknown): string | null {
+  if (!val) return null;
+  if (typeof val === "string" && /^[0-9a-fA-F]{24}$/.test(val.trim())) {
+    return val.trim();
+  }
+  if (typeof val === "object") {
+    const obj = val as Record<string, any>;
+    if (obj._id) {
+      if (typeof obj._id === "object" && obj._id.$oid) return String(obj._id.$oid);
+      return String(obj._id);
+    }
+    if (obj.id && !String(obj.id).startsWith("temp-")) return String(obj.id);
+    if (obj.insertedId) return String(obj.insertedId);
+    if (obj.packageId) return String(obj.packageId);
+    if (obj.productId) return String(obj.productId);
+    if (obj.recordId) return String(obj.recordId);
+    if (obj.data) return extractIdFromAny(obj.data);
+    if (obj.package) return extractIdFromAny(obj.package);
+    if (obj.item) return extractIdFromAny(obj.item);
+    if (obj.record) return extractIdFromAny(obj.record);
+    if (obj.result) return extractIdFromAny(obj.result);
+  }
+  return null;
+}
+
+function parseCreatedRecord(
+  result: unknown,
+  formData: Record<string, any>,
+): Record<string, any> {
+  let parsed: any = result;
+
+  // 1. If result has MCP envelope content/structuredContent
+  if (result && typeof result === "object") {
+    const r = result as Record<string, any>;
+    if (Array.isArray(r.content)) {
+      for (const item of r.content) {
+        if (item && item.type === "text" && typeof item.text === "string") {
+          try {
+            const json = JSON.parse(item.text);
+            if (json && typeof json === "object") {
+              parsed = json;
+              break;
+            }
+          } catch {
+            const hexMatch = item.text.match(/\b([0-9a-fA-F]{24})\b/);
+            if (hexMatch) {
+              parsed = { _id: hexMatch[1], id: hexMatch[1] };
+            }
+          }
+        }
+      }
+    }
+    if (r.structuredContent) {
+      const sc = r.structuredContent;
+      parsed = sc.data || sc.package || sc.item || sc.record || sc;
+    }
+  }
+
+  // 2. Extract MongoDB / DB ID
+  const dbId =
+    extractIdFromAny(parsed) ||
+    extractIdFromAny(result) ||
+    extractIdFromAny(formData) ||
+    `temp-${Date.now()}`;
+
+  const unwrappedObj =
+    parsed && typeof parsed === "object"
+      ? (parsed.data || parsed.package || parsed.item || parsed.record || parsed)
+      : {};
+
+  return {
+    ...formData,
+    ...(typeof unwrappedObj === "object" ? unwrappedObj : {}),
+    id: dbId,
+    _id: dbId,
+  };
+}
+
   const handleSaveForm = async (formData: Record<string, any>) => {
     const isEdit = Boolean(editingRecord);
     const actionType = isEdit ? "UPDATE" : "CREATE";
@@ -384,10 +505,8 @@ export const TableBlock: React.FC<TableBlockProps> = ({
         );
         showToast(`✓ "${displayName}" updated successfully`);
       } else {
-        const createdRec =
-          result && typeof result === "object" && (result as any).id
-            ? { ...formData, ...(result as any) }
-            : { ...formData, id: `temp-${Date.now()}` };
+        const createdRec = parseCreatedRecord(result, formData);
+        console.log(`[TableBlock] Created record stored with ID "${createdRec.id || createdRec._id}":`, createdRec);
         commitRecords((prev) => [createdRec, ...prev]);
         showToast(`✓ "${displayName}" created successfully`);
       }
@@ -672,7 +791,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
         }
       >
         <FormBlock
-          fields={activeFields}
+          fields={fieldsWithOptions}
           initialData={editingRecord || {}}
           onSubmit={handleSaveForm}
         />

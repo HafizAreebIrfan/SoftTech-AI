@@ -117,8 +117,29 @@ export const FormBlock: React.FC<FormBlockProps> = ({
     });
   }, [block?.fields, fields]);
 
-  const [formData, setFormData] =
-    useState<Record<string, unknown>>(initialData);
+  const [formData, setFormData] = useState<Record<string, unknown>>(() => {
+    const initial: Record<string, unknown> = { ...initialData };
+    activeFields.forEach((field) => {
+      if (initial[field.key] === undefined || initial[field.key] === null) {
+        const fieldOptions = ((field as any).options || (field as any).enum) as
+          | string[]
+          | undefined;
+        const isStatus =
+          field.type === "status" ||
+          field.uiRole === "status" ||
+          /status$/i.test(field.key);
+
+        if (isStatus) {
+          const availableStatuses =
+            fieldOptions && fieldOptions.length > 0
+              ? fieldOptions
+              : ["Active", "Inactive"];
+          initial[field.key] = availableStatuses[0];
+        }
+      }
+    });
+    return initial;
+  });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
