@@ -185,6 +185,58 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       return Array.isArray(val) && val.length > 0;
     });
 
+    // 6. Extract selectable scalar-array option groups (e.g. sizes, colors, variants)
+    const optionGroupsList: Array<{
+      key: string;
+      label: string;
+      options: Array<string | number>;
+    }> = [];
+
+    activeFields.forEach((f) => {
+      if (f.hidden) return;
+      const val = getFieldValue(targetRecord, f);
+      if (
+        Array.isArray(val) &&
+        val.length > 1 &&
+        val.length <= 16 &&
+        val.every((item) => typeof item === "string" || typeof item === "number") &&
+        !val.some((item) => typeof item === "string" && /^https?:\/\//i.test(item))
+      ) {
+        optionGroupsList.push({
+          key: f.key,
+          label: f.label || f.key.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+          options: val,
+        });
+      }
+    });
+
+    for (const [key, val] of Object.entries(targetRecord)) {
+      if (key.startsWith("$")) continue;
+      if (
+        Array.isArray(val) &&
+        val.length > 1 &&
+        val.length <= 16 &&
+        val.every((item) => typeof item === "string" || typeof item === "number") &&
+        !val.some((item) => typeof item === "string" && /^https?:\/\//i.test(item)) &&
+        !optionGroupsList.some((og) => og.key.toLowerCase() === key.toLowerCase())
+      ) {
+        const kLower = key.toLowerCase();
+        if (
+          kLower.includes("size") ||
+          kLower.includes("color") ||
+          kLower.includes("shade") ||
+          kLower.includes("variant") ||
+          kLower.includes("tag")
+        ) {
+          optionGroupsList.push({
+            key,
+            label: key.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+            options: val,
+          });
+        }
+      }
+    }
+
     return {
       images: dedupedImages,
       title: itemTitle,
@@ -195,9 +247,26 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       metric: itemMetric,
       detailFields: detailFieldsList,
       arrayFields: arrayFieldsList,
+      optionGroups: optionGroupsList,
       tieredResult: tiers,
     };
   }, [targetRecord, block?.fields, fields, collection?.entity]);
+
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, string | number>
+  >({});
+
+  useEffect(() => {
+    if (optionGroups && optionGroups.length > 0) {
+      const defaults: Record<string, string | number> = {};
+      optionGroups.forEach((og) => {
+        if (og.options.length > 0 && selectedOptions[og.key] === undefined) {
+          defaults[og.key] = og.options[0];
+        }
+      });
+      setSelectedOptions((prev) => ({ ...defaults, ...prev }));
+    }
+  }, [optionGroups]);
 
   // A "rich product" (has a gallery) opens as a true-fullscreen product page via
   // the Apps SDK; inline is restored when the detail closes. Feature-detected —
@@ -241,6 +310,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         price: effectivePrice ?? 0,
         image: images[0] || null,
         tier: activeTier ? activeTier.label : undefined,
+        options: selectedOptions,
       },
       quantity,
       actions,
@@ -516,6 +586,86 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     </option>
                   ))}
                 </select>
+              </div>
+            )}
+            {canAddToCart && optionGroups && optionGroups.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                  margin: "8px 0",
+                }}
+              >
+                {optionGroups.map((og) => {
+                  const currentSelected =
+                    selectedOptions[og.key] ?? og.options[0];
+                  return (
+                    <div
+                      key={`og-${og.key}`}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: "var(--app-text-secondary, #94a3b8)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {og.label}:{" "}
+                        <strong style={{ color: "#ffffff" }}>
+                          {String(currentSelected)}
+                        </strong>
+                      </span>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                        }}
+                      >
+                        {og.options.map((opt, optIdx) => {
+                          const isSelected = currentSelected === opt;
+                          return (
+                            <button
+                              key={`opt-${optIdx}`}
+                              type="button"
+                              onClick={() =>
+                                setSelectedOptions((prev) => ({
+                                  ...prev,
+                                  [og.key]: opt,
+                                }))
+                              }
+                              style={{
+                                background: isSelected
+                                  ? "var(--widget-accent, #6366f1)"
+                                  : "rgba(255,255,255,0.06)",
+                                color: isSelected
+                                  ? "var(--widget-accent-contrast, #ffffff)"
+                                  : "var(--app-text-primary, #f8fafc)",
+                                border: isSelected
+                                  ? "1px solid var(--widget-accent, #6366f1)"
+                                  : "1px solid rgba(255,255,255,0.15)",
+                                borderRadius: "8px",
+                                padding: "6px 14px",
+                                fontSize: "12px",
+                                fontWeight: isSelected ? 700 : 500,
+                                cursor: "pointer",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              {String(opt)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

@@ -54,6 +54,15 @@ export interface CollectionChart {
   data: CollectionChartDataPoint[];
 }
 
+export interface CollectionFacet {
+  name: string;
+  param: string;
+  tool: string;
+  optionsTool?: string;
+  selected?: string | number;
+  options?: Array<{ label: string; value: string | number }>;
+}
+
 export interface CollectionResult {
   entity?: string;
   dataPath?: string;
@@ -67,6 +76,8 @@ export interface CollectionResult {
   metrics?: CollectionMetric[];
   charts?: CollectionChart[];
   summary?: string;
+  facets?: CollectionFacet[];
+  appliedQuery?: Record<string, any>;
 }
 
 export interface Capabilities {

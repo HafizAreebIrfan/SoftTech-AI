@@ -139,3 +139,30 @@ export async function requestDisplayMode(
     return false;
   }
 }
+
+/**
+ * Get the initial tool input passed by the AI model.
+ */
+export function getToolInput(): Record<string, any> | undefined {
+  const openai =
+    typeof window !== "undefined" ? (window as any).openai : undefined;
+  return openai?.toolInput || (window as any).__WIDGET_DATA__?.toolInput;
+}
+
+/**
+ * Re-render the widget with a freshly fetched tool result from an MCP tool call.
+ */
+export function applyReQueryResult(result: unknown): boolean {
+  if (!result) return false;
+  try {
+    const store = (window as any).__MCP_WIDGET_STORE__;
+    if (store?.getState?.()?.setToolResult) {
+      store.getState().setToolResult(result);
+      return true;
+    }
+  } catch (err) {
+    console.warn("[MCP Bridge] applyReQueryResult error:", err);
+  }
+  return false;
+}
+

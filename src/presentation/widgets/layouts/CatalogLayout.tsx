@@ -3,6 +3,8 @@ import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.inte
 import { CardsBlock } from "../components/CardsBlock";
 import { useCartStore, parseNumericPrice } from "../../../infrastructure/store/cartStore";
 import { getFieldValue } from "../../../utils/schema/getValue";
+import { callMcpTool, applyReQueryResult } from "../../../utils/mcpBridge";
+import { extractToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import styles from "../../../styles/cataloglayout.module.css";
 import { FormBlock } from "../components";
 
@@ -88,10 +90,94 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     );
   }, [fields]);
 
+  // Category Facet integration (Backend-driven)
+  const categoryFacet = collection?.facets?.find(
+    (f) =>
+      f.name.toLowerCase() === "category" ||
+      f.param.toLowerCase().includes("category") ||
+      f.param.toLowerCase() === "slug",
+  );
+
+  const [backendCategories, setBackendCategories] = useState<
+    Array<{ label: string; value: string }>
+  >([]);
+
+  React.useEffect(() => {
+    if (!categoryFacet?.optionsTool) return;
+    let active = true;
+    callMcpTool(categoryFacet.optionsTool, {})
+      .then((res: any) => {
+        if (!active) return;
+        const payload = extractToolResult(res) as any;
+        let rawList: any[] = [];
+        const d = payload?.structuredContent?.data || payload?.data || res;
+        if (Array.isArray(d)) {
+          rawList = d;
+        } else if (d && typeof d === "object") {
+          const arr = Object.values(d).find((v) => Array.isArray(v)) as any[];
+          if (arr) rawList = arr;
+        }
+        const parsed = rawList
+          .map((item) => {
+            if (typeof item === "string") {
+              return {
+                label: item
+                  .replace(/[-_]+/g, " ")
+                  .replace(/\b\w/g, (c) => c.toUpperCase()),
+                value: item,
+              };
+            }
+            if (item && typeof item === "object") {
+              const val = String(
+                item.slug || item.category || item.name || item.id || "",
+              );
+              const lbl = String(item.name || item.title || item.label || val);
+              return { label: lbl, value: val };
+            }
+            return { label: String(item), value: String(item) };
+          })
+          .filter((o) => o.value);
+
+        if (parsed.length > 0) {
+          setBackendCategories(parsed);
+        }
+      })
+      .catch((err) =>
+        console.warn("[CatalogLayout] Failed to load backend categories:", err),
+      );
+
+    return () => {
+      active = false;
+    };
+  }, [categoryFacet?.optionsTool]);
+
+  // Sync initial category from facet or appliedQuery
+  React.useEffect(() => {
+    if (categoryFacet?.selected) {
+      setSelectedCategory(String(categoryFacet.selected));
+    }
+  }, [categoryFacet?.selected]);
+
+  const handleCategorySelect = async (cat: string) => {
+    setSelectedCategory(cat);
+    if (categoryFacet?.tool && categoryFacet.optionsTool) {
+      try {
+        const res = await callMcpTool(categoryFacet.tool, {
+          [categoryFacet.param]: cat === "All" ? "" : cat,
+        });
+        applyReQueryResult(res);
+      } catch (err) {
+        console.error("[CatalogLayout] Error switching category:", err);
+      }
+    }
+  };
+
   // Reset filters when the tool data / entity changes
   React.useEffect(() => {
+    if (!categoryFacet?.selected) {
+      setSelectedCategory("All");
+    }
     setSearchTerm("");
-    setSelectedCategory("All");
     setSortOption("default");
   }, [title, collection?.entity]);
 
@@ -127,8 +213,8 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
       });
     }
 
-    // Category filter
-    if (selectedCategory !== "All" && categoryField) {
+    // Category filter (client-side fallback if not handled by server tool)
+    if (selectedCategory !== "All" && categoryField && !categoryFacet?.tool) {
       list = list.filter((rec) => {
         const val = String(getFieldValue(rec, categoryField) || "").toLowerCase();
         return val.includes(selectedCategory.toLowerCase());
@@ -185,11 +271,25 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     audience,
     selectedCategory,
     categoryField,
+    categoryFacet?.tool,
     searchTerm,
     sortOption,
   ]);
 
-  const showToolbar = records.length > 2 || availableCategories.length > 0;
+  const showToolbar =
+    records.length > 1 ||
+    availableCategories.length > 0 ||
+    Boolean(categoryFacet?.optionsTool);
+
+  // Active filter chips detection (#B)
+  const hasCategoryFilter =
+    selectedCategory !== "All" && selectedCategory !== "";
+  const hasSearchFilter = Boolean(searchTerm.trim());
+  const hasSortFilter = sortOption !== "default";
+  const activeFiltersCount =
+    (hasCategoryFilter ? 1 : 0) +
+    (hasSearchFilter ? 1 : 0) +
+    (hasSortFilter ? 1 : 0);
 
   return (
     <section className={styles.container}>
@@ -228,7 +328,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         </div>
       )}
 
-      {/* Dynamic Catalog Toolbar (Search & Sort) */}
+      {/* Dynamic Catalog Toolbar (Category Dropdown, Search & Sort) */}
       {showToolbar && (
         <div className={styles.toolbar}>
           <div className={styles.searchContainer}>
@@ -257,7 +357,24 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
             )}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            {/* Category Dropdown (Rendered ONLY if company has categories/category-list tool) */}
+            {categoryFacet?.optionsTool && backendCategories.length > 0 && (
+              <select
+                className={styles.categorySelect}
+                value={selectedCategory}
+                onChange={(e) => handleCategorySelect(e.target.value)}
+                aria-label="Filter by Category"
+              >
+                <option value="All">All Categories</option>
+                {backendCategories.map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+            )}
+
             <select
               className={styles.sortSelect}
               value={sortOption}
@@ -274,8 +391,69 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         </div>
       )}
 
-      {/* Category Pills */}
-      {availableCategories.length > 1 && (
+      {/* Applied Filters Chips Row (#B) */}
+      {activeFiltersCount > 0 && (
+        <div className={styles.appliedFiltersRow}>
+          {hasCategoryFilter && (
+            <span className={styles.filterChip}>
+              Category: {selectedCategory}
+              <button
+                type="button"
+                className={styles.filterChipRemove}
+                onClick={() => handleCategorySelect("All")}
+                title="Remove Category filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {hasSearchFilter && (
+            <span className={styles.filterChip}>
+              Search: "{searchTerm}"
+              <button
+                type="button"
+                className={styles.filterChipRemove}
+                onClick={() => setSearchTerm("")}
+                title="Remove Search filter"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {hasSortFilter && (
+            <span className={styles.filterChip}>
+              Sort: {sortOption.replace("_", " ")}
+              <button
+                type="button"
+                className={styles.filterChipRemove}
+                onClick={() => setSortOption("default")}
+                title="Reset Sort"
+              >
+                ✕
+              </button>
+            </span>
+          )}
+
+          {activeFiltersCount > 1 && (
+            <button
+              type="button"
+              className={styles.clearAllBtn}
+              onClick={() => {
+                handleCategorySelect("All");
+                setSearchTerm("");
+                setSortOption("default");
+              }}
+            >
+              Clear All
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Category Pills (When no backend optionsTool exists, fallback to available in-record pills) */}
+      {!categoryFacet?.optionsTool && availableCategories.length > 1 && (
         <div className={styles.categoriesWrapper}>
           {availableCategories.map((cat) => {
             const isActive = selectedCategory === cat;

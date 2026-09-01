@@ -237,6 +237,77 @@ export const CardItem: React.FC<CardItemProps> = ({
             )}
           </div>
 
+          {/* Compact Swatch / Size Preview (#D) */}
+          {(() => {
+            for (const [key, val] of Object.entries(record as any)) {
+              if (key.startsWith("$")) continue;
+              if (
+                Array.isArray(val) &&
+                val.length > 1 &&
+                val.length <= 16 &&
+                val.every(
+                  (item) =>
+                    typeof item === "string" || typeof item === "number",
+                ) &&
+                !val.some(
+                  (item) =>
+                    typeof item === "string" && /^https?:\/\//i.test(item),
+                )
+              ) {
+                const kLower = key.toLowerCase();
+                if (
+                  kLower.includes("size") ||
+                  kLower.includes("color") ||
+                  kLower.includes("shade") ||
+                  kLower.includes("variant") ||
+                  kLower.includes("flavor") ||
+                  kLower.includes("tag")
+                ) {
+                  return (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        margin: "4px 0 6px 0",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      {val.slice(0, 3).map((item, idx) => (
+                        <span
+                          key={`swatch-${idx}`}
+                          style={{
+                            background: "rgba(255, 255, 255, 0.06)",
+                            border: "1px solid rgba(255, 255, 255, 0.12)",
+                            borderRadius: "4px",
+                            padding: "1px 6px",
+                            fontSize: "10px",
+                            fontWeight: 600,
+                            color: "var(--app-text-secondary, #cbd5e1)",
+                          }}
+                        >
+                          {String(item)}
+                        </span>
+                      ))}
+                      {val.length > 3 && (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            color: "var(--app-text-secondary, #94a3b8)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          +{val.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  );
+                }
+              }
+            }
+            return null;
+          })()}
+
           {/* Secondary Metadata List */}
           {secondaryFields.length > 0 && (
             <div className={styles.metaList}>
