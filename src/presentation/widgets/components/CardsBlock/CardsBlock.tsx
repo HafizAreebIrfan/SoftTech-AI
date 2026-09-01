@@ -68,12 +68,19 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
   //    (the new tool result re-renders the widget as its detail layout);
   //  • otherwise push an instant in-widget detail view built from this record.
   const handleSelect = async (record: Record<string, any>) => {
-    const id = record.id ?? record._id;
+    const rawId = record.id ?? record._id;
 
-    if (detailTool?.tool && id !== undefined) {
-      console.log(`[CardsBlock] Card selected → calling detail tool "${detailTool.tool}" for id=${id}`);
+    if (detailTool?.tool && rawId !== undefined && rawId !== null) {
+      const idStr = String(rawId);
+      console.log(`[CardsBlock] Card selected → calling detail tool "${detailTool.tool}" for id=${idStr}`);
       try {
-        const result = await callMcpTool(detailTool.tool, { id });
+        const result = await callMcpTool(detailTool.tool, {
+          id: idStr,
+          _id: idStr,
+          productId: idStr,
+          packageId: idStr,
+          itemId: idStr,
+        });
         console.log(`[CardsBlock] ✓ Detail tool "${detailTool.tool}" succeeded:`, result);
       } catch (err) {
         console.error(`[CardsBlock] ✗ Detail tool "${detailTool.tool}" failed:`, err);
