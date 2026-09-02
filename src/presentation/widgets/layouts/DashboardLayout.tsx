@@ -25,27 +25,10 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
   const blocks = presentationPlan?.blocks ?? [];
 
   return (
-    <section
-      className={styles.container}
-      style={{
-        color: colors.TextPrimary,
-      }}
-    >
-
+    <section className={styles.container}>
       {/* Prompt Answer Summary Banner */}
       {Boolean(collection?.summary || (collection as any)?.text) && (
-        <div
-          style={{
-            background: colors.WidgetCardBg,
-            border: `1px solid ${colors.WidgetCardBorder}`,
-            borderRadius: "10px",
-            padding: "12px 16px",
-            marginBottom: "12px",
-            fontSize: "13.5px",
-            lineHeight: "1.5",
-            color: colors.TextPrimary,
-          }}
-        >
+        <div className={styles.summaryBanner}>
           ✨ {String(collection?.summary || (collection as any)?.text)}
         </div>
       )}

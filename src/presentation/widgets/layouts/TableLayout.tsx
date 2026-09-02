@@ -21,7 +21,7 @@ export const TableLayout: React.FC<WidgetLayoutProps> = ({
   const tableBlock = blocks.find((b) => b.type === "table");
 
   return (
-    <section className={styles.container} style={{ color: colors.TextPrimary }}>
+    <section className={styles.container}>
 
       <TableBlock
         block={tableBlock}

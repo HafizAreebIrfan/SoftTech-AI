@@ -21,7 +21,6 @@ import {
 import styles from "../../../../styles/chartsblock.module.css";
 import type {
   ChartRendererProps,
-  ChartDataPoint,
 } from "../../../../interfaces/mcp/chartblock.interface";
 
 export const ChartRenderer: React.FC<ChartRendererProps> = ({
@@ -63,29 +62,17 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
     }));
   }, [dataPoints]);
 
-  const isWide = dataPoints.length > 4;
-  const calculatedWidth = isWide ? Math.max(520, dataPoints.length * 75) : 0;
+  const isManyPoints = dataPoints.length > 8;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0];
       return (
-        <div
-          style={{
-            background: "rgba(15, 23, 42, 0.95)",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
-            borderRadius: "8px",
-            padding: "8px 12px",
-            backdropFilter: "blur(8px)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-            color: "#f8fafc",
-            fontSize: "12px",
-          }}
-        >
-          <div style={{ fontWeight: 600, color: "#94a3b8", marginBottom: "4px" }}>
+        <div className={styles.tooltipCard}>
+          <div className={styles.tooltipLabel}>
             {label || data.name}
           </div>
-          <div style={{ fontWeight: 700, color: themeColor }}>
+          <div className={styles.tooltipValue} style={{ color: themeColor }}>
             {data.payload?.formattedY || Number(data.value).toLocaleString()}
           </div>
         </div>
@@ -106,8 +93,8 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
               fontSize={11}
               tickLine={false}
               interval={0}
-              angle={isWide ? -30 : 0}
-              textAnchor={isWide ? "end" : "middle"}
+              angle={isManyPoints ? -30 : 0}
+              textAnchor={isManyPoints ? "end" : "middle"}
             />
             <YAxis
               stroke="#94a3b8"
@@ -177,8 +164,8 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
               fontSize={11}
               tickLine={false}
               interval={0}
-              angle={isWide ? -30 : 0}
-              textAnchor={isWide ? "end" : "middle"}
+              angle={isManyPoints ? -30 : 0}
+              textAnchor={isManyPoints ? "end" : "middle"}
             />
             <YAxis
               stroke="#94a3b8"
@@ -209,24 +196,14 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
         <span className={styles.typeBadge}>{type}</span>
       </header>
 
-      <div
-        style={{
-          width: "100%",
-          overflowX: "auto",
-          overflowY: "hidden",
-          WebkitOverflowScrolling: "touch",
-          paddingBottom: "8px",
-          display: "block",
-        }}
-      >
+      <div className={styles.scrollWrapper}>
         <div
+          className={styles.chartInner}
           style={{
-            width: isWide ? `${calculatedWidth}px` : "100%",
-            minWidth: isWide ? `${calculatedWidth}px` : "100%",
-            height: 260,
+            minWidth: isManyPoints ? `${dataPoints.length * 55}px` : "100%",
           }}
         >
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={260}>
             {renderChart()}
           </ResponsiveContainer>
         </div>

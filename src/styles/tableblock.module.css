@@ -1,13 +1,71 @@
 .container {
   width: 100%;
   margin-bottom: 1rem;
+  color: var(--app-text-primary, var(--widget-header-title, #f8fafc));
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.toolbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--app-text-heading, var(--widget-header-title, #ffffff));
+}
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--app-bg-secondary, var(--widget-card-bg, rgba(255, 255, 255, 0.04)));
+  border: 1px solid var(--app-card-border, var(--Border, rgba(255, 255, 255, 0.15)));
+  border-radius: 8px;
+  padding: 6px 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.searchContainer:focus-within {
+  border-color: var(--widget-accent, var(--BrandIndigo, #6366f1));
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.searchIcon {
+  color: var(--app-icon-color, var(--IconColor, var(--widget-header-subtitle, #94a3b8)));
+  font-size: 13px;
+}
+
+.searchInput {
+  background: transparent;
+  border: none;
+  color: var(--app-text-primary, var(--widget-header-title, #ffffff));
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.searchInput::placeholder {
+  color: var(--app-text-secondary, var(--widget-header-subtitle, #94a3b8));
+  opacity: 0.7;
 }
 
 .tableWrapper {
   width: 100%;
   overflow-x: auto;
-  background-color: var(--widget-card-bg);
-  border: 1px solid var(--widget-card-border);
+  background-color: var(--app-card, var(--widget-card-bg, rgba(15, 23, 42, 0.6)));
+  border: 1px solid var(--app-card-border, var(--widget-card-border, rgba(255, 255, 255, 0.08)));
   border-radius: 12px;
   box-sizing: border-box;
 }
@@ -20,22 +78,23 @@
 }
 
 .th {
-  background-color: var(--widget-container-bg);
-  color: var(--widget-header-subtitle);
+  background-color: var(--app-bg-secondary, var(--widget-container-bg, rgba(255, 255, 255, 0.03)));
+  color: var(--app-text-secondary, var(--widget-header-subtitle, #94a3b8));
   font-weight: 600;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--widget-card-border);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--app-card-border, var(--widget-card-border, rgba(255, 255, 255, 0.08)));
   white-space: nowrap;
   user-select: none;
 }
 
 .thSortable {
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .thSortable:hover {
-  color: var(--widget-header-title);
+  color: var(--app-text-heading, var(--widget-header-title, #ffffff));
+  background-color: var(--widget-card-hover, rgba(255, 255, 255, 0.06));
 }
 
 .headerContent {
@@ -47,11 +106,18 @@
 .sortIcon {
   display: inline-flex;
   align-items: center;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
+  color: var(--widget-accent, #6366f1);
+  transition: transform 0.15s ease;
+}
+
+.sortIconInactive {
+  color: var(--app-text-secondary, #64748b);
+  opacity: 0.5;
 }
 
 .tr {
-  border-bottom: 1px solid var(--widget-card-border);
+  border-bottom: 1px solid var(--app-card-border, var(--widget-card-border, rgba(255, 255, 255, 0.06)));
   transition: background-color 0.15s ease;
 }
 
@@ -60,66 +126,13 @@
 }
 
 .tr:hover {
-  background-color: var(--widget-card-hover);
+  background-color: var(--widget-card-hover, rgba(255, 255, 255, 0.04));
 }
 
 .td {
-  padding: 12px 14px;
-  color: var(--widget-header-title);
+  padding: 12px 16px;
+  color: var(--app-text-primary, var(--widget-header-title, #f8fafc));
   vertical-align: middle;
-}
-
-.searchContainer {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--widget-card-bg);
-  border: 1px solid var(--widget-card-border);
-  border-radius: 8px;
-  padding: 6px 12px;
-  width: max-content;
-}
-
-.searchInput {
-  background: transparent;
-  border: none;
-  color: var(--widget-header-title);
-  font-size: 0.825rem;
-  outline: none;
-}
-
-.pagination {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 16px;
-  color: var(--widget-header-subtitle);
-  font-size: 0.8rem;
-  border-top: 1px solid var(--widget-card-border);
-}
-
-.pageBtn {
-  background-color: var(--widget-badge-bg);
-  color: var(--widget-badge-text);
-  border: 1px solid var(--widget-badge-border);
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 0.775rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.pageBtn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-@media (max-width: 540px) {
-  .pagination {
-    flex-direction: column;
-    align-items: flex-start;
-  }
 }
 
 .actionsCell {
@@ -132,14 +145,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
-  border: 1px solid var(--widget-card-border);
-  background: var(--widget-card-bg);
-  color: var(--widget-header-title);
+  border: 1px solid var(--app-card-border, var(--widget-card-border, rgba(255, 255, 255, 0.12)));
+  background: var(--app-bg-secondary, var(--widget-card-bg, rgba(255, 255, 255, 0.04)));
+  color: var(--app-text-primary, var(--widget-header-title, #ffffff));
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.actionBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .editBtn {
@@ -149,17 +166,17 @@
 }
 
 .editBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(99, 102, 241, 0.15);
 }
 
 .deleteBtn {
-  background: #ef4444;
-  color: #ffffff;
-  border: none;
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 .deleteBtn:hover {
-  opacity: 0.88;
+  background: rgba(239, 68, 68, 0.25);
 }
 
 .createNewBtn {
@@ -174,7 +191,6 @@
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
@@ -197,3 +213,278 @@
   gap: 8px;
 }
 
+/* Pagination Bar */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  color: var(--app-text-secondary, var(--widget-header-subtitle, #94a3b8));
+  font-size: 0.85rem;
+  border-top: 1px solid var(--app-card-border, var(--widget-card-border, rgba(255, 255, 255, 0.08)));
+  flex-wrap: wrap;
+}
+
+.paginationLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.limitGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.limitSelect {
+  background-color: var(--app-bg-secondary, var(--widget-card-bg, rgba(255, 255, 255, 0.06)));
+  border: 1px solid var(--app-card-border, var(--Border, rgba(255, 255, 255, 0.15)));
+  border-radius: 6px;
+  color: var(--app-text-primary, var(--widget-header-title, #f8fafc));
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+}
+
+.limitSelect option {
+  background-color: var(--app-card, #0f172a);
+  color: var(--app-text-primary, #f8fafc);
+}
+
+.pageControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pageBtn {
+  background-color: var(--app-bg-secondary, var(--widget-badge-bg, rgba(255, 255, 255, 0.06)));
+  color: var(--app-text-primary, var(--widget-badge-text, #f8fafc));
+  border: 1px solid var(--app-card-border, var(--widget-badge-border, rgba(255, 255, 255, 0.12)));
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background-color: var(--widget-card-hover, rgba(255, 255, 255, 0.12));
+  border-color: var(--widget-accent, #6366f1);
+}
+
+.pageBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pageIndicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text-primary, var(--widget-header-title, #f8fafc));
+}
+
+.cancelBtn {
+  background: var(--app-bg-secondary, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  color: var(--app-text-primary, #f8fafc);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.deleteConfirmBtn {
+  background: #ef4444;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.deleteDialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.deleteText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--app-text-primary, #f8fafc);
+}
+
+.deleteActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ==========================================================================
+   Table Record Detail View (Matches Theme Colors, Zero Hardcoded Blue)
+   ========================================================================== */
+
+.recordDetailContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--app-text-primary, #f8fafc);
+  padding-bottom: 24px;
+}
+
+.recordDetailTopNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.backBtn {
+  background: var(--app-bg-secondary, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  color: var(--app-text-primary, #f8fafc);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.backBtn:hover {
+  background: var(--widget-card-hover, rgba(255, 255, 255, 0.12));
+  border-color: var(--widget-accent, #6366f1);
+}
+
+.recordDetailActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recordDetailCard {
+  background: var(--app-card, var(--widget-card-bg, rgba(15, 23, 42, 0.7)));
+  border: 1px solid var(--app-card-border, var(--widget-card-border, rgba(255, 255, 255, 0.08)));
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+.recordDetailHero {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.recordDetailImage {
+  width: 80px;
+  height: 80px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--app-bg-secondary, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.08));
+}
+
+.recordDetailHeroInfo {
+  flex: 1;
+  min-width: 200px;
+}
+
+.recordDetailTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.recordDetailTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--app-text-heading, #ffffff);
+}
+
+.recordDetailDescription {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--app-text-secondary, #94a3b8);
+  line-height: 1.4;
+}
+
+.recordDetailPrice {
+  margin-top: 8px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--widget-accent, #6366f1);
+}
+
+.recordDetailSpecsSection {
+  border-top: 1px solid var(--app-card-border, var(--widget-card-border, rgba(255, 255, 255, 0.08)));
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.recordDetailSpecsTitle {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.recordDetailSpecsGrid {
+  display: grid;
+  grid-templateColumns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.recordDetailSpecItem {
+  background: var(--app-bg-secondary, rgba(255, 255, 255, 0.025));
+  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recordDetailSpecLabel {
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.recordDetailSpecValue {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--app-text-primary, #ffffff);
+  word-break: break-word;
+}

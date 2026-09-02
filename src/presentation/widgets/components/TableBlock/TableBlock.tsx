@@ -317,21 +317,23 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     return sorted;
   }, [filteredRecords, sortKey, sortDir, activeFields]);
 
-  const totalItems = pagination?.total ?? sortedRecords.length;
-  const totalPages =
-    pagination?.totalPages ?? (Math.ceil(sortedRecords.length / pageSize) || 1);
+  const totalItems = sortedRecords.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
   const paginatedRecords = useMemo(() => {
-    if (pagination?.totalPages) return sortedRecords;
     const start = (currentPage - 1) * pageSize;
     return sortedRecords.slice(start, start + pageSize);
-  }, [sortedRecords, currentPage, pageSize, pagination?.totalPages]);
+  }, [sortedRecords, currentPage, pageSize]);
 
   const handleHeaderClick = (field: FieldSchema) => {
-    if (!capOn(capabilities, "sort") && !field.sortable) return;
-    if (sortKey === field.key) {
-      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
+    if (!capOn(capabilities, "sort") && field.sortable === false) return;
+    if (sortKey !== field.key) {
       setSortKey(field.key);
+      setSortDir("asc");
+    } else if (sortDir === "asc") {
+      setSortDir("desc");
+    } else {
+      // 3rd click: Reset to default order
+      setSortKey(null);
       setSortDir("asc");
     }
   };
@@ -617,21 +619,8 @@ function parseCreatedRecord(
           title="Confirm Deletion"
         >
           {deletingRecord && (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "16px",
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  lineHeight: 1.5,
-                  color: "var(--app-text-primary, #f8fafc)",
-                }}
-              >
+            <div className={styles.deleteDialog}>
+              <p className={styles.deleteText}>
                 Are you sure you want to delete{" "}
                 <strong>
                   "
@@ -643,13 +632,7 @@ function parseCreatedRecord(
                 </strong>
                 ? This action cannot be undone.
               </p>
-              <div
-                style={{
-                  display: "flex",
-                  gap: "10px",
-                  justifyContent: "flex-end",
-                }}
-              >
+              <div className={styles.deleteActions}>
                 <button
                   type="button"
                   className={styles.cancelBtn}
@@ -681,80 +664,21 @@ function parseCreatedRecord(
         </div>
       )}
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px",
-          marginBottom: "12px",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          {title && (
-            <h3
-              className={styles.title}
-              style={{ margin: 0, color: "var(--TextHeading)" }}
-            >
-              {title}
-            </h3>
-          )}
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarLeft}>
+          {title && <h3 className={styles.title}>{title}</h3>}
           {(capabilities?.search || records.length > 3) && (
-            <div
-              className={styles.searchContainer}
-              style={{
-                background: "var(--BackgroundSecondary)",
-                border: "1px solid var(--Border)",
-              }}
-            >
-              <span style={{ color: "var(--IconColor)" }}>🔍</span>
+            <div className={styles.searchContainer}>
+              <span className={styles.searchIcon}>🔍</span>
               <input
                 type="text"
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className={styles.searchInput}
-                style={{ color: "var(--TextPrimary)" }}
               />
             </div>
           )}
-
-          {/* Sort Dropdown */}
-          <select
-            value={sortKey ? `${sortKey}:${sortDir}` : "default"}
-            onChange={(e) => {
-              if (e.target.value === "default") {
-                setSortKey(null);
-                setSortDir("asc");
-              } else {
-                const [key, dir] = e.target.value.split(":");
-                setSortKey(key);
-                setSortDir(dir as "asc" | "desc");
-              }
-            }}
-            style={{
-              background: "var(--BackgroundSecondary, rgba(255,255,255,0.06))",
-              border: "1px solid var(--Border, rgba(255,255,255,0.12))",
-              borderRadius: "8px",
-              color: "var(--TextPrimary, #f8fafc)",
-              padding: "6px 10px",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-            aria-label="Sort records"
-          >
-            <option value="default">Sort: Default</option>
-            {activeFields
-              .filter((f) => f.type !== "image")
-              .map((f) => (
-                <React.Fragment key={f.key}>
-                  <option value={`${f.key}:asc`}>{f.label} (Asc)</option>
-                  <option value={`${f.key}:desc`}>{f.label} (Desc)</option>
-                </React.Fragment>
-              ))}
-          </select>
         </div>
 
         {canCreate && (
@@ -768,33 +692,30 @@ function parseCreatedRecord(
         )}
       </div>
 
-      <div
-        className={styles.tableWrapper}
-        style={{ border: "1px solid var(--TableDivider)", borderRadius: "8px" }}
-      >
+      <div className={styles.tableWrapper}>
         <table className={styles.table}>
-          <thead
-            style={{
-              background: "var(--BackgroundSecondary)",
-              borderBottom: "1px solid var(--TableDivider)",
-            }}
-          >
+          <thead>
             <tr>
               {activeFields.map((field) => {
                 const isSortable = Boolean(
-                  capOn(capabilities, "sort") || field.sortable,
+                  capOn(capabilities, "sort") || field.sortable !== false,
                 );
                 return (
                   <th
                     key={field.key}
                     className={`${styles.th} ${isSortable ? styles.thSortable : ""}`}
-                    onClick={() => handleHeaderClick(field)}
-                    style={{ color: "var(--TextSecondary)" }}
+                    onClick={() => isSortable && handleHeaderClick(field)}
                   >
                     <div className={styles.headerContent}>
                       <span>{field.label}</span>
                       {isSortable && (
-                        <span className={styles.sortIcon}>
+                        <span
+                          className={
+                            sortKey === field.key
+                              ? styles.sortIcon
+                              : `${styles.sortIcon} ${styles.sortIconInactive}`
+                          }
+                        >
                           {sortKey === field.key
                             ? sortDir === "asc"
                               ? "▲"
@@ -807,10 +728,7 @@ function parseCreatedRecord(
                 );
               })}
               {showActions && (
-                <th
-                  className={styles.th}
-                  style={{ color: "var(--TextSecondary)" }}
-                >
+                <th className={styles.th}>
                   Actions
                 </th>
               )}
@@ -838,76 +756,49 @@ function parseCreatedRecord(
         </table>
       </div>
 
-      {/* Pagination Bar (Only show if total items > 8) */}
-      {totalItems > 8 && (
-        <div
-          className={styles.pagination}
-          style={{
-            color: "var(--TextSecondary)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "12px",
-            padding: "12px 0",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      {/* Pagination Bar */}
+      {totalItems > 0 && (
+        <div className={styles.pagination}>
+          <div className={styles.paginationLeft}>
             <span>
-              Showing{" "}
-              <strong>{(currentPage - 1) * pageSize + 1}</strong>–
+              Showing <strong>{(currentPage - 1) * pageSize + 1}</strong>–
               <strong>{Math.min(totalItems, currentPage * pageSize)}</strong> of{" "}
               <strong>{totalItems}</strong>
             </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div className={styles.limitGroup}>
               <span>Show:</span>
               <select
+                className={styles.limitSelect}
                 value={pageSize}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                style={{
-                  background: "var(--BackgroundSecondary, rgba(255,255,255,0.06))",
-                  border: "1px solid var(--Border, rgba(255,255,255,0.12))",
-                  borderRadius: "6px",
-                  color: "var(--TextPrimary, #f8fafc)",
-                  padding: "4px 8px",
-                  fontSize: "12px",
-                  cursor: "pointer",
-                }}
                 aria-label="Items per page"
               >
-                <option value={8}>8 / page</option>
-                <option value={12}>12 / page</option>
-                <option value={24}>24 / page</option>
-                <option value={48}>48 / page</option>
+                <option value={5}>5 / page</option>
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+                <option value={50}>50 / page</option>
               </select>
             </div>
           </div>
 
           {totalPages > 1 && (
-            <div style={{ display: "flex", gap: "6px" }}>
+            <div className={styles.pageControls}>
               <button
+                type="button"
                 className={styles.pageBtn}
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               >
                 &larr; Prev
               </button>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  padding: "0 8px",
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "var(--TextPrimary)",
-                }}
-              >
+              <span className={styles.pageIndicator}>
                 Page {currentPage} of {totalPages}
               </span>
               <button
+                type="button"
                 className={styles.pageBtn}
                 disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
@@ -943,42 +834,26 @@ function parseCreatedRecord(
         title="Confirm Deletion"
       >
         {deletingRecord && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-            <p style={{ margin: 0, fontSize: "14px", lineHeight: 1.5, color: "var(--app-text-primary, #f8fafc)" }}>
+          <div className={styles.deleteDialog}>
+            <p className={styles.deleteText}>
               Are you sure you want to delete{" "}
               <strong>
                 "{deletingRecord.$title || deletingRecord.packagename || deletingRecord.username || "this item"}"
               </strong>
               ? This action cannot be undone.
             </p>
-            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+            <div className={styles.deleteActions}>
               <button
                 type="button"
+                className={styles.cancelBtn}
                 onClick={() => setDeletingRecord(null)}
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--widget-card-border, rgba(255,255,255,0.15))",
-                  borderRadius: "8px",
-                  padding: "8px 16px",
-                  color: "var(--app-text-secondary, #94a3b8)",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
               >
                 Cancel
               </button>
               <button
                 type="button"
+                className={styles.deleteConfirmBtn}
                 onClick={handleConfirmDelete}
-                style={{
-                  background: "#ef4444",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "8px 16px",
-                  color: "#ffffff",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
               >
                 🗑️ Delete Record
               </button>

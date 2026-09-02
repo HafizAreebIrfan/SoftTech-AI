@@ -434,32 +434,18 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
 
   return (
     <section className={styles.container}>
-      {/* Floating Cart FAB */}
-      <button
-        type="button"
-        className={styles.floatingCartFab}
-        onClick={openCart}
-        title="View Shopping Cart"
-        aria-label="View Shopping Cart"
-      >
-        <span>🛒</span>
-        {totalCartCount > 0 && (
-          <span className={styles.floatingCartBadge}>{totalCartCount}</span>
-        )}
-      </button>
-
       {/* Structured Filters from Plan (if provided) */}
       {filtersBlock && (
-        <div style={{ marginBottom: "12px" }}>
+        <div className={styles.filtersBlockWrapper}>
           <FormBlock block={filtersBlock} fields={fields} />
         </div>
       )}
 
-      {/* Dynamic Catalog Toolbar (Search & Filter Sidebar Trigger) */}
+      {/* Dynamic Catalog Toolbar (Search, Filter Sidebar Trigger & Cart Button) */}
       {showToolbar && (
         <div className={styles.toolbar}>
           <div className={styles.searchContainer}>
-            <span style={{ color: "var(--app-text-secondary, #94a3b8)" }}>🔍</span>
+            <span className={styles.searchIcon}>🔍</span>
             <input
               type="text"
               className={styles.searchInput}
@@ -471,33 +457,43 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "var(--app-text-secondary)",
-                  cursor: "pointer",
-                  padding: "2px",
-                }}
+                className={styles.searchClearBtn}
+                aria-label="Clear search"
               >
                 ✕
               </button>
             )}
           </div>
 
-          <button
-            type="button"
-            className={styles.filterDrawerTrigger}
-            onClick={() => setIsFilterDrawerOpen(true)}
-            aria-label="Open filter and sort drawer"
-          >
-            <span>🎛️</span>
-            <span>Filters</span>
-            {activeFiltersCount > 0 && (
-              <span className={styles.filterCountBadge}>
-                {activeFiltersCount}
-              </span>
-            )}
-          </button>
+          <div className={styles.toolbarActions}>
+            <button
+              type="button"
+              className={styles.filterDrawerTrigger}
+              onClick={() => setIsFilterDrawerOpen(true)}
+              aria-label="Open filter and sort drawer"
+            >
+              <span>🎛️</span>
+              <span>Filters</span>
+              {activeFiltersCount > 0 && (
+                <span className={styles.filterCountBadge}>
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              className={styles.cartHeaderBtn}
+              onClick={openCart}
+              aria-label={`View Shopping Cart (${totalCartCount} items)`}
+            >
+              <span>🛒</span>
+              <span>Cart</span>
+              {totalCartCount > 0 && (
+                <span className={styles.cartCountBadge}>{totalCartCount}</span>
+              )}
+            </button>
+          </div>
         </div>
       )}
 

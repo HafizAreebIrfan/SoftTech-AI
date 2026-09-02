@@ -89,6 +89,10 @@
   flex-wrap: wrap;
 }
 
+.filtersBlockWrapper {
+  margin-bottom: 14px;
+}
+
 .searchContainer {
   display: flex;
   align-items: center;
@@ -107,6 +111,11 @@
   border-color: var(--widget-accent, #6366f1);
 }
 
+.searchIcon {
+  color: var(--app-text-secondary, #94a3b8);
+  font-size: 13px;
+}
+
 .searchInput {
   background: transparent;
   border: none;
@@ -118,6 +127,22 @@
 
 .searchInput::placeholder {
   color: var(--app-text-secondary, #64748b);
+}
+
+.searchClearBtn {
+  background: transparent;
+  border: none;
+  color: var(--app-text-secondary, #94a3b8);
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchClearBtn:hover {
+  color: var(--app-text-primary, #ffffff);
 }
 
 .sortSelect {
@@ -357,49 +382,41 @@
   }
 }
 
-/* Floating Cart FAB */
-.floatingCartFab {
-  position: fixed !important;
-  bottom: 24px !important;
-  right: 20px !important;
-  z-index: 99999 !important;
-  background: var(--widget-accent, #6366f1);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
-  padding: 14px 22px;
-  font-size: 16px;
-  font-weight: 800;
+/* Toolbar Actions (Filters & Cart) */
+.toolbarActions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.55), 0 4px 12px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  backdrop-filter: blur(12px);
+  gap: 8px;
 }
 
-.floatingCartFab:hover {
-  transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 12px 36px rgba(99, 102, 241, 0.65);
-}
-
-.floatingCartBadge {
-  background: rgba(0, 0, 0, 0.4);
-  color: #ffffff;
-  padding: 2px 9px;
-  border-radius: 999px;
+.cartHeaderBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--widget-accent, #6366f1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--widget-accent-contrast, #ffffff);
+  border-radius: 8px;
+  padding: 8px 14px;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  white-space: nowrap;
 }
 
-@media (max-width: 600px) {
-  .floatingCartFab {
-    bottom: 20px !important;
-    right: 16px !important;
-    padding: 14px 20px;
-    font-size: 16px;
-  }
+.cartHeaderBtn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.cartCountBadge {
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 /* Filter Drawer Trigger Button */

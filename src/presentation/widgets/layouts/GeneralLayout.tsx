@@ -19,7 +19,7 @@ export const GeneralLayout: React.FC<WidgetLayoutProps> = ({
   const detailBlock = blocks.find((b) => b.type === "details" || b.type === "detail");
 
   return (
-    <section className={styles.container} style={{ color: colors.TextPrimary, padding: 0 }}>
+    <section className={styles.container}>
 
       <DetailBlock
         block={detailBlock}

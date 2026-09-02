@@ -47,6 +47,17 @@
   box-sizing: border-box;
 }
 
+.summaryBanner {
+  background: var(--app-card, var(--widget-card-bg, rgba(15, 23, 42, 0.6)));
+  border: 1px solid var(--app-card-border, var(--widget-card-border, rgba(255, 255, 255, 0.08)));
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--app-text-primary, #ffffff);
+}
+
 @media (max-width: 560px) {
   .header {
     flex-direction: column;

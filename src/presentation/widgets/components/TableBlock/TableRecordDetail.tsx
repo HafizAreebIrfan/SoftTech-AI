@@ -5,6 +5,7 @@ import { renderCurrency } from "../../helper/RenderCurrency";
 import { renderDate } from "../../helper/RenderDate";
 import { getFieldValue } from "../../../../utils/schema/getValue";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
+import styles from "../../../../styles/tableblock.module.css";
 
 interface TableRecordDetailProps {
   record: Record<string, any>;
@@ -40,62 +41,24 @@ export const TableRecordDetail: React.FC<TableRecordDetailProps> = ({
   const activeFields = fields.filter((f) => !f.hidden);
 
   return (
-    <div
-      style={{
-        width: "100%",
-        display: "flex",
-        flexDirection: "column",
-        gap: "20px",
-        color: "var(--app-text-primary, #f8fafc)",
-        paddingBottom: "40px",
-      }}
-    >
+    <div className={styles.recordDetailContainer}>
       {/* Navigation Top Bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "12px",
-          flexWrap: "wrap",
-        }}
-      >
+      <div className={styles.recordDetailTopNav}>
         <button
           type="button"
           onClick={onBack}
-          style={{
-            background: "rgba(255, 255, 255, 0.06)",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-            borderRadius: "8px",
-            color: "var(--app-text-primary, #f8fafc)",
-            padding: "8px 14px",
-            fontSize: "13px",
-            fontWeight: 600,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "6px",
-            transition: "all 0.15s ease",
-          }}
+          className={styles.backBtn}
         >
           <span>←</span> Back to Table
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className={styles.recordDetailActions}>
           {onEdit && (
             <button
               type="button"
               onClick={() => onEdit(record)}
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                borderRadius: "8px",
-                color: "#f8fafc",
-                padding: "8px 14px",
-                fontSize: "13px",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
+              className={`${styles.actionBtn} ${styles.editBtn}`}
+              style={{ width: "auto", padding: "6px 14px", height: "auto" }}
             >
               ✏️ Edit
             </button>
@@ -104,16 +67,8 @@ export const TableRecordDetail: React.FC<TableRecordDetailProps> = ({
             <button
               type="button"
               onClick={() => onDelete(record)}
-              style={{
-                background: "rgba(239, 68, 68, 0.15)",
-                border: "1px solid rgba(239, 68, 68, 0.3)",
-                borderRadius: "8px",
-                color: "#ef4444",
-                padding: "8px 14px",
-                fontSize: "13px",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
+              className={`${styles.actionBtn} ${styles.deleteBtn}`}
+              style={{ width: "auto", padding: "6px 14px", height: "auto" }}
             >
               🗑️ Delete
             </button>
@@ -122,86 +77,30 @@ export const TableRecordDetail: React.FC<TableRecordDetailProps> = ({
       </div>
 
       {/* Main Detail Card Header */}
-      <div
-        style={{
-          background: "var(--WidgetCardBg, rgba(15, 23, 42, 0.7))",
-          border: "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
-          borderRadius: "16px",
-          padding: "20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "16px",
-          boxShadow: "0 8px 32px rgba(0, 0, 0, 0.25)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: "16px",
-            flexWrap: "wrap",
-          }}
-        >
+      <div className={styles.recordDetailCard}>
+        <div className={styles.recordDetailHero}>
           {image && (
-            <div
-              style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "10px",
-                overflow: "hidden",
-                flexShrink: 0,
-                background: "rgba(0,0,0,0.2)",
-              }}
-            >
+            <div className={styles.recordDetailImage}>
               {renderImage(image, title, "cover")}
             </div>
           )}
 
-          <div style={{ flex: 1, minWidth: "200px" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                flexWrap: "wrap",
-                marginBottom: "6px",
-              }}
-            >
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "20px",
-                  fontWeight: 800,
-                  color: "var(--app-text-heading, #ffffff)",
-                }}
-              >
+          <div className={styles.recordDetailHeroInfo}>
+            <div className={styles.recordDetailTitleRow}>
+              <h2 className={styles.recordDetailTitle}>
                 {title}
               </h2>
               {status && <div>{renderStatus(status)}</div>}
             </div>
 
             {description && (
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "13px",
-                  color: "var(--app-text-secondary, #94a3b8)",
-                  lineHeight: 1.4,
-                }}
-              >
+              <p className={styles.recordDetailDescription}>
                 {description}
               </p>
             )}
 
             {price !== undefined && price !== null && (
-              <div
-                style={{
-                  marginTop: "8px",
-                  fontSize: "22px",
-                  fontWeight: 800,
-                  color: "var(--widget-accent, #6366f1)",
-                }}
-              >
+              <div className={styles.recordDetailPrice}>
                 {renderCurrency(price)}
               </div>
             )}
@@ -209,35 +108,12 @@ export const TableRecordDetail: React.FC<TableRecordDetailProps> = ({
         </div>
 
         {/* Labeled Specifications / Field Rows */}
-        <div
-          style={{
-            borderTop: "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
-            paddingTop: "16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-          }}
-        >
-          <h4
-            style={{
-              margin: "0 0 4px 0",
-              fontSize: "12px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              color: "var(--app-text-secondary, #94a3b8)",
-            }}
-          >
+        <div className={styles.recordDetailSpecsSection}>
+          <h4 className={styles.recordDetailSpecsTitle}>
             Record Details
           </h4>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "12px",
-            }}
-          >
+          <div className={styles.recordDetailSpecsGrid}>
             {activeFields.map((field) => {
               const val = getFieldValue(record, field);
               if (val === null || val === undefined || val === "") return null;
@@ -254,35 +130,11 @@ export const TableRecordDetail: React.FC<TableRecordDetailProps> = ({
               }
 
               return (
-                <div
-                  key={field.key}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.025)",
-                    border: "1px solid rgba(255, 255, 255, 0.06)",
-                    borderRadius: "8px",
-                    padding: "10px 14px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "4px",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      color: "var(--app-text-secondary, #94a3b8)",
-                    }}
-                  >
+                <div key={field.key} className={styles.recordDetailSpecItem}>
+                  <span className={styles.recordDetailSpecLabel}>
                     {field.label}
                   </span>
-                  <span
-                    style={{
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      color: "var(--app-text-primary, #ffffff)",
-                      wordBreak: "break-word",
-                    }}
-                  >
+                  <span className={styles.recordDetailSpecValue}>
                     {renderedVal}
                   </span>
                 </div>
