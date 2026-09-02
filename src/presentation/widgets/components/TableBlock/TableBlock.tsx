@@ -24,6 +24,7 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(pagination?.limit || 8);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Storage key for persistent state
@@ -134,8 +135,6 @@ export const TableBlock: React.FC<TableBlockProps> = ({
       });
     }
   };
-
-  const pageSize = pagination?.limit || 5;
 
   const permissions = getPermissions(audience, capabilities, actions);
   const hasVerb = (...verbs: string[]) =>
@@ -692,7 +691,7 @@ function parseCreatedRecord(
           flexWrap: "wrap",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           {title && (
             <h3
               className={styles.title}
@@ -720,6 +719,42 @@ function parseCreatedRecord(
               />
             </div>
           )}
+
+          {/* Sort Dropdown */}
+          <select
+            value={sortKey ? `${sortKey}:${sortDir}` : "default"}
+            onChange={(e) => {
+              if (e.target.value === "default") {
+                setSortKey(null);
+                setSortDir("asc");
+              } else {
+                const [key, dir] = e.target.value.split(":");
+                setSortKey(key);
+                setSortDir(dir as "asc" | "desc");
+              }
+            }}
+            style={{
+              background: "var(--BackgroundSecondary, rgba(255,255,255,0.06))",
+              border: "1px solid var(--Border, rgba(255,255,255,0.12))",
+              borderRadius: "8px",
+              color: "var(--TextPrimary, #f8fafc)",
+              padding: "6px 10px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+            aria-label="Sort records"
+          >
+            <option value="default">Sort: Default</option>
+            {activeFields
+              .filter((f) => f.type !== "image")
+              .map((f) => (
+                <React.Fragment key={f.key}>
+                  <option value={`${f.key}:asc`}>{f.label} (Asc)</option>
+                  <option value={`${f.key}:desc`}>{f.label} (Desc)</option>
+                </React.Fragment>
+              ))}
+          </select>
         </div>
 
         {canCreate && (
@@ -803,31 +838,84 @@ function parseCreatedRecord(
         </table>
       </div>
 
-      {totalPages > 1 && (
+      {/* Pagination Bar (Only show if total items > 8) */}
+      {totalItems > 8 && (
         <div
           className={styles.pagination}
-          style={{ color: "var(--TextSecondary)" }}
+          style={{
+            color: "var(--TextSecondary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+            padding: "12px 0",
+          }}
         >
-          <span>
-            Page {pagination?.page ?? currentPage} of {totalPages} ({totalItems}{" "}
-            items)
-          </span>
-          <div style={{ display: "flex", gap: "6px" }}>
-            <button
-              className={styles.pageBtn}
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            >
-              Prev
-            </button>
-            <button
-              className={styles.pageBtn}
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Next
-            </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span>
+              Showing{" "}
+              <strong>{(currentPage - 1) * pageSize + 1}</strong>–
+              <strong>{Math.min(totalItems, currentPage * pageSize)}</strong> of{" "}
+              <strong>{totalItems}</strong>
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span>Show:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                style={{
+                  background: "var(--BackgroundSecondary, rgba(255,255,255,0.06))",
+                  border: "1px solid var(--Border, rgba(255,255,255,0.12))",
+                  borderRadius: "6px",
+                  color: "var(--TextPrimary, #f8fafc)",
+                  padding: "4px 8px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                }}
+                aria-label="Items per page"
+              >
+                <option value={8}>8 / page</option>
+                <option value={12}>12 / page</option>
+                <option value={24}>24 / page</option>
+                <option value={48}>48 / page</option>
+              </select>
+            </div>
           </div>
+
+          {totalPages > 1 && (
+            <div style={{ display: "flex", gap: "6px" }}>
+              <button
+                className={styles.pageBtn}
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              >
+                &larr; Prev
+              </button>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "0 8px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "var(--TextPrimary)",
+                }}
+              >
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                className={styles.pageBtn}
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next &rarr;
+              </button>
+            </div>
+          )}
         </div>
       )}
 

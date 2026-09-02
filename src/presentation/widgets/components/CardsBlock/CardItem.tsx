@@ -182,40 +182,8 @@ export const CardItem: React.FC<CardItemProps> = ({
               zIndex: 3,
               display: "flex",
               alignItems: "center",
-              gap: "6px",
             }}
           >
-            {/* Quick View Button */}
-            {(actionUrlStr || onSelect) && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleClick(e);
-                }}
-                title="Quick View"
-                aria-label="Quick View"
-                style={{
-                  background: "rgba(15, 23, 42, 0.75)",
-                  backdropFilter: "blur(6px)",
-                  border: "1px solid rgba(255, 255, 255, 0.18)",
-                  borderRadius: "50%",
-                  width: "32px",
-                  height: "32px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#ffffff",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
-                  transition: "all 0.15s ease",
-                }}
-              >
-                👁️
-              </button>
-            )}
-
             {/* Quick Add to Cart Button */}
             {canAddToCart && !isOutOfStock && (
               <button
@@ -226,20 +194,20 @@ export const CardItem: React.FC<CardItemProps> = ({
                 style={{
                   background: addedToast
                     ? "#10b981"
-                    : "rgba(15, 23, 42, 0.75)",
-                  backdropFilter: "blur(6px)",
-                  border: "1px solid rgba(255, 255, 255, 0.18)",
+                    : "rgba(15, 23, 42, 0.85)",
+                  backdropFilter: "blur(8px)",
+                  border: "1px solid rgba(255, 255, 255, 0.22)",
                   borderRadius: "50%",
-                  width: "32px",
-                  height: "32px",
+                  width: "38px",
+                  height: "38px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   color: "#ffffff",
                   cursor: "pointer",
-                  fontSize: "13px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
-                  transition: "all 0.15s ease",
+                  fontSize: "16px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                  transition: "all 0.2s ease",
                 }}
               >
                 {addedToast ? "✓" : "🛒"}

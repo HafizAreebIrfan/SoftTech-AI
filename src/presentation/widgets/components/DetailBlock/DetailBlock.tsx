@@ -34,7 +34,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const [selectedTierIdx, setSelectedTierIdx] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
   const [addedToast, setAddedToast] = useState<boolean>(false);
-  const [imgExpanded, setImgExpanded] = useState<boolean>(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState<boolean>(false);
 
   const {
     images,
@@ -68,13 +68,23 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     const activeFields =
       block?.fields && block.fields.length > 0 ? block.fields : fields;
 
-    // 1. Collect all images generically (from $image, image fields, and URL lists)
+    // 1. Collect all images (Prioritize high-resolution 'images' array over low-res 'thumbnail')
     const collectedImages: string[] = [];
-    if (targetRecord.$image && typeof targetRecord.$image === "string") {
-      collectedImages.push(targetRecord.$image);
+
+    // Prioritize explicit high-res images array
+    if (Array.isArray(targetRecord.images) && targetRecord.images.length > 0) {
+      targetRecord.images.forEach((item: unknown) => {
+        if (typeof item === "string" && /^https?:\/\//i.test(item.trim())) {
+          collectedImages.push(item.trim());
+        }
+      });
     }
 
     activeFields.forEach((f) => {
+      // Don't add 'thumbnail' key if we already collected high-res images
+      if (f.key.toLowerCase() === "thumbnail" && collectedImages.length > 0) {
+        return;
+      }
       const val = getFieldValue(targetRecord, f);
       if (typeof val === "string" && val.trim()) {
         // Handle comma-separated list of image URLs (e.g. from dummyjson)
@@ -98,6 +108,14 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         });
       }
     });
+
+    if (
+      targetRecord.$image &&
+      typeof targetRecord.$image === "string" &&
+      collectedImages.length === 0
+    ) {
+      collectedImages.push(targetRecord.$image);
+    }
 
     // Second pass: scan ALL string values in the record for image URLs.
     // This catches images in fields that don't have type: "image" annotation
@@ -301,6 +319,18 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     : null;
   const effectivePrice = activeTier ? activeTier.price : price;
 
+  const detailUrl =
+    targetRecord?.url ||
+    targetRecord?.link ||
+    targetRecord?.productUrl ||
+    targetRecord?.product_url ||
+    targetRecord?.website ||
+    targetRecord?.sourceUrl ||
+    targetRecord?.deeplink ||
+    targetRecord?.app_url ||
+    (actions?.find((a: any) => a?.type === "url" || Boolean(a?.url || a?.href)) as any)?.url ||
+    (actions?.find((a: any) => a?.type === "url" || Boolean(a?.url || a?.href)) as any)?.href;
+
   const isOrderEntity = /order|invoice|booking/i.test(
     String(collection?.entity || title || ""),
   );
@@ -382,24 +412,21 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               <div
                 style={{ display: "flex", flexDirection: "column", gap: "12px" }}
               >
-                {/* Main image — inline expand (no fixed overlay, iframe-safe) */}
+                {/* Main image — tap to open full-screen modal */}
                 <div
-                  onClick={() => setImgExpanded((v) => !v)}
-                  title={imgExpanded ? "Click to shrink" : "Click to enlarge"}
+                  onClick={() => setIsImageModalOpen(true)}
+                  title="View full screen"
                   style={{
                     width: "100%",
-                    height: imgExpanded ? "560px" : "360px",
+                    height: "360px",
                     borderRadius: "12px",
                     overflow: "hidden",
-                    background: imgExpanded
-                      ? "rgba(0,0,0,0.6)"
-                      : "rgba(0,0,0,0.2)",
+                    background: "rgba(0,0,0,0.2)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    cursor: imgExpanded ? "zoom-out" : "zoom-in",
+                    cursor: "pointer",
                     position: "relative",
-                    transition: "height 0.2s ease",
                   }}
                 >
                   <span
@@ -413,26 +440,40 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     {renderImage(
                       activeMainImage,
                       title || "Item Preview",
-                      imgExpanded ? "contain" : "cover",
+                      "cover",
                     )}
                   </span>
-                  <span
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsImageModalOpen(true);
+                    }}
+                    title="Full Screen"
+                    aria-label="Full Screen"
                     style={{
                       position: "absolute",
                       top: "10px",
                       right: "10px",
-                      background: "rgba(0,0,0,0.5)",
-                      padding: "4px 8px",
+                      background: "rgba(15, 23, 42, 0.75)",
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
                       borderRadius: "6px",
-                      fontSize: "12px",
+                      width: "32px",
+                      height: "32px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "15px",
                       color: "#fff",
+                      cursor: "pointer",
+                      backdropFilter: "blur(4px)",
                     }}
                   >
-                    {imgExpanded ? "🔍 Close" : "🔍 Zoom"}
-                  </span>
+                    ⛶
+                  </button>
                 </div>
 
-                {/* Thumbnail selector — switches the main image (Fix #1) */}
+                {/* Thumbnail selector — switches the main image */}
                 {images.length > 1 && (
                   <div
                     style={{
@@ -446,10 +487,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                       <button
                         key={`thumb-${idx}`}
                         type="button"
-                        onClick={() => {
-                          setSelectedImgIdx(idx);
-                          setImgExpanded(false);
-                        }}
+                        onClick={() => setSelectedImgIdx(idx)}
                         style={{
                           width: "64px",
                           height: "64px",
@@ -909,6 +947,35 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 ))}
               </div>
             )}
+            {/* View Product in Detail Action Link */}
+            {detailUrl && (
+              <a
+                href={detailUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  padding: "12px 18px",
+                  borderRadius: "8px",
+                  background: "rgba(255, 255, 255, 0.06)",
+                  border: "1px solid rgba(255, 255, 255, 0.16)",
+                  color: "var(--app-text-primary, #f8fafc)",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  transition: "all 0.15s ease",
+                  width: "100%",
+                  boxSizing: "border-box",
+                  marginTop: "4px",
+                }}
+              >
+                <span>🌐</span>
+                <span>View Product in Detail ↗</span>
+              </a>
+            )}
           </aside>
         </div>
 
@@ -1076,6 +1143,67 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           </div>
         )}
       </div>
+
+      {/* Fullscreen Image Modal */}
+      {isImageModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.92)",
+            backdropFilter: "blur(12px)",
+            zIndex: 999999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={() => setIsImageModalOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setIsImageModalOpen(false)}
+            aria-label="Exit full screen"
+            title="Exit full screen"
+            style={{
+              position: "absolute",
+              top: "24px",
+              right: "24px",
+              background: "rgba(255, 255, 255, 0.18)",
+              border: "1px solid rgba(255, 255, 255, 0.3)",
+              borderRadius: "50%",
+              width: "40px",
+              height: "40px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              fontSize: "20px",
+              cursor: "pointer",
+              zIndex: 10,
+              transition: "transform 0.15s ease",
+            }}
+          >
+            ✕
+          </button>
+          <div
+            style={{
+              maxWidth: "92vw",
+              maxHeight: "90vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderImage(
+              activeMainImage,
+              title || "Product Fullscreen",
+              "contain",
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 };

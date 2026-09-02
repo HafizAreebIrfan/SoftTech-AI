@@ -211,32 +211,13 @@ export const GenericWidgetRenderer: React.FC = () => {
     if (activeSubView) {
       if (activeSubView.blockType === "detail") {
         return (
-          <div>
-            <button
-              type="button"
-              onClick={() => popSubView()}
-              style={{
-                background: "transparent",
-                border: "1px solid var(--WidgetCardBorder)",
-                borderRadius: "8px",
-                color: "var(--TextSecondary)",
-                cursor: "pointer",
-                padding: "6px 12px",
-                fontSize: "13px",
-                fontWeight: 600,
-                marginBottom: "12px",
-              }}
-            >
-              ← Back
-            </button>
-            <DetailBlock
-              records={[activeSubView.data]}
-              fields={fields}
-              collection={collection}
-              actions={content.actions}
-              audience={content.audience}
-            />
-          </div>
+          <DetailBlock
+            records={[activeSubView.data]}
+            fields={fields}
+            collection={collection}
+            actions={content.actions}
+            audience={content.audience}
+          />
         );
       }
       return (

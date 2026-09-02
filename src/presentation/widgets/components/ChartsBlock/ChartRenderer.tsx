@@ -63,8 +63,8 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
     }));
   }, [dataPoints]);
 
-  const isWide = dataPoints.length > 5;
-  const chartWidth = isWide ? Math.max(380, dataPoints.length * 60) : "100%";
+  const isWide = dataPoints.length > 4;
+  const calculatedWidth = isWide ? Math.max(520, dataPoints.length * 75) : 0;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -212,16 +212,17 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
       <div
         style={{
           width: "100%",
-          maxHeight: "500px",
           overflowX: "auto",
-          overflowY: "auto",
+          overflowY: "hidden",
           WebkitOverflowScrolling: "touch",
+          paddingBottom: "8px",
+          display: "block",
         }}
       >
         <div
           style={{
-            width: typeof chartWidth === "number" ? `${chartWidth}px` : chartWidth,
-            minWidth: typeof chartWidth === "number" ? `${chartWidth}px` : "100%",
+            width: isWide ? `${calculatedWidth}px` : "100%",
+            minWidth: isWide ? `${calculatedWidth}px` : "100%",
             height: 260,
           }}
         >

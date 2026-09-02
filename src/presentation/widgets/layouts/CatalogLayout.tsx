@@ -747,94 +747,97 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
             audience={audience}
           />
 
-          {/* Pagination Bar */}
-          <div className={styles.paginationBar}>
-            <div className={styles.paginationInfo}>
-              <span>
-                Showing{" "}
-                <strong>{(currentPage - 1) * pageSize + 1}</strong>–
-                <strong>
-                  {Math.min(filteredRecords.length, currentPage * pageSize)}
-                </strong>{" "}
-                of <strong>{filteredRecords.length}</strong> items
-              </span>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <span>Show:</span>
-                <select
-                  className={styles.limitSelect}
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  aria-label="Items per page"
-                >
-                  <option value={8}>8 per page</option>
-                  <option value={12}>12 per page</option>
-                  <option value={24}>24 per page</option>
-                  <option value={48}>48 per page</option>
-                </select>
+          {/* Pagination Bar (Only show if more than 8 items) */}
+          {filteredRecords.length > 8 && (
+            <div className={styles.paginationBar}>
+              <div className={styles.paginationInfo}>
+                <span>
+                  Showing{" "}
+                  <strong>{(currentPage - 1) * pageSize + 1}</strong>–
+                  <strong>
+                    {Math.min(filteredRecords.length, currentPage * pageSize)}
+                  </strong>{" "}
+                  of <strong>{filteredRecords.length}</strong> items
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>Show:</span>
+                  <select
+                    className={styles.limitSelect}
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    aria-label="Items per page"
+                  >
+                    <option value={8}>8 per page</option>
+                    <option value={12}>12 per page</option>
+                    <option value={24}>24 per page</option>
+                    <option value={48}>48 per page</option>
+                  </select>
+                </div>
               </div>
-            </div>
 
-            {totalPages > 1 && (
-              <div className={styles.paginationControls}>
-                <button
-                  type="button"
-                  className={styles.pageBtn}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  aria-label="Previous Page"
-                >
-                  &larr; Prev
-                </button>
+              {totalPages > 1 && (
+                <div className={styles.paginationControls}>
+                  <button
+                    type="button"
+                    className={styles.pageBtn}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    aria-label="Previous Page"
+                  >
+                    &larr; Prev
+                  </button>
 
-                {Array.from({ length: totalPages }, (_, idx) => idx + 1)
-                  .filter((p) => {
-                    if (totalPages <= 7) return true;
-                    if (p === 1 || p === totalPages) return true;
-                    return Math.abs(p - currentPage) <= 1;
-                  })
-                  .map((p, idx, arr) => {
-                    const showEllipsisBefore = idx > 0 && p - arr[idx - 1] > 1;
-                    return (
-                      <React.Fragment key={`page-${p}`}>
-                        {showEllipsisBefore && (
-                          <span
-                            style={{
-                              color: "var(--app-text-secondary)",
-                              padding: "0 4px",
-                            }}
+                  {Array.from({ length: totalPages }, (_, idx) => idx + 1)
+                    .filter((p) => {
+                      if (totalPages <= 7) return true;
+                      if (p === 1 || p === totalPages) return true;
+                      return Math.abs(p - currentPage) <= 1;
+                    })
+                    .map((p, idx, arr) => {
+                      const showEllipsisBefore =
+                        idx > 0 && p - arr[idx - 1] > 1;
+                      return (
+                        <React.Fragment key={`page-${p}`}>
+                          {showEllipsisBefore && (
+                            <span
+                              style={{
+                                color: "var(--app-text-secondary)",
+                                padding: "0 4px",
+                              }}
+                            >
+                              …
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className={`${styles.pageBtn} ${currentPage === p ? styles.pageBtnActive : ""}`}
+                            onClick={() => setCurrentPage(p)}
+                            aria-label={`Page ${p}`}
                           >
-                            …
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          className={`${styles.pageBtn} ${currentPage === p ? styles.pageBtnActive : ""}`}
-                          onClick={() => setCurrentPage(p)}
-                          aria-label={`Page ${p}`}
-                        >
-                          {p}
-                        </button>
-                      </React.Fragment>
-                    );
-                  })}
+                            {p}
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
 
-                <button
-                  type="button"
-                  className={styles.pageBtn}
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  aria-label="Next Page"
-                >
-                  Next &rarr;
-                </button>
-              </div>
-            )}
-          </div>
+                  <button
+                    type="button"
+                    className={styles.pageBtn}
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    aria-label="Next Page"
+                  >
+                    Next &rarr;
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </>
       ) : (
         <div className={styles.noResults}>
