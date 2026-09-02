@@ -38,6 +38,10 @@ export const ApiSchema = new mongoose.Schema(
     // Legacy field name kept so previously-saved APIs still resolve.
     mobileDeepLink: { type: String },
 
+    // Real-Time Live Data Stream (WebSocket / SSE)
+    isRealtimeApi: { type: Boolean, default: false },
+    streamUrl: { type: String },
+
     apiSchema: { type: mongoose.Schema.Types.Mixed },
 
     inputFieldMap: { type: [mongoose.Schema.Types.Mixed], default: [] },

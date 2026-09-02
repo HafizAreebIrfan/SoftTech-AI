@@ -123,6 +123,35 @@ export const registerGenericWidgetResources = (
   </html>
 `;
 
+      const customConnectDomains: string[] = [];
+      (company.apis || []).forEach((api: any) => {
+        if (api.baseUrl) {
+          try {
+            customConnectDomains.push(new URL(api.baseUrl).origin);
+          } catch {}
+        }
+        if (api.streamUrl) {
+          try {
+            customConnectDomains.push(new URL(api.streamUrl).origin);
+          } catch {
+            customConnectDomains.push(api.streamUrl);
+          }
+        }
+        if (api.webCheckoutUrl) {
+          try {
+            customConnectDomains.push(new URL(api.webCheckoutUrl).origin);
+          } catch {}
+        }
+      });
+
+      const connectDomains = Array.from(
+        new Set([
+          WIDGET_BASE_URL,
+          WIDGET_SERVER_URL,
+          ...customConnectDomains,
+        ]),
+      );
+
       return {
         contents: [
           {
@@ -139,7 +168,7 @@ export const registerGenericWidgetResources = (
                 prefersBorder: true,
                 domain: WIDGET_SERVER_URL,
                 csp: {
-                  connectDomains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
+                  connectDomains,
                   resourceDomains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
                 },
               },

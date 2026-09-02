@@ -179,6 +179,7 @@ export const registerCompanyApiTools = (
             (api as any).webCheckoutUrl,
             toolName,
             input,
+            (api as any).streamUrl,
           );
 
           // If the search was empty and we relaxed the query (or still found

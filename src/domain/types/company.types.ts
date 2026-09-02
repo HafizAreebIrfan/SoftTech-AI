@@ -27,6 +27,8 @@ export interface IApi {
   audience?: "customer" | "admin";
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
+  isRealtimeApi?: boolean;
+  streamUrl?: string;
   apiSchema?: Record<string, unknown>;
   inputFieldMap?: any[];
   outputFieldMap?: any[];

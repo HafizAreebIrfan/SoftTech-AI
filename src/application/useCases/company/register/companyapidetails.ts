@@ -83,6 +83,8 @@ const transformApiEntry = (api: any, index: number): any => {
     webCheckoutUrl: api.webCheckoutUrl || api.checkoutTemplate || undefined,
     mobileDeepLinkUrl:
       api.mobileDeepLinkUrl || api.mobileDeepLink || undefined,
+    isRealtimeApi: Boolean(api.isRealtimeApi),
+    streamUrl: api.streamUrl || undefined,
     apiSchema: existingSchema,
     mcpToolName:
       api.mcpToolName || toToolName(api.name || api.apiName || "", index),

@@ -19,6 +19,7 @@ export type WidgetAction = {
   requiresItem?: boolean;
   requiresConfirmation?: boolean;
   confirmationMessage?: string;
+  streamUrl?: string;
 };
 
 export type GenericWidgetResult = {
