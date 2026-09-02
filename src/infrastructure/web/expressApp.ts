@@ -12,6 +12,10 @@ import { CompanyLoginRoutes } from "../../adapters/http/routes/companies/login/c
 import { CompanyLogoutRoutes } from "../../adapters/http/routes/companies/logout/companylogoutroute";
 import { mcpRoutes } from "../../adapters/http/routes/mcp/mcpRoutes";
 import { AdminDashboardRoutes } from "../../adapters/http/routes/companies/admin/adminDashboardRoutes";
+import AdminLogsRoutes from "../../adapters/http/routes/companies/admin/adminLogsRoutes";
+import SystemHealthRoutes from "../../adapters/http/routes/companies/admin/systemHealthRoutes";
+import adminAuditMiddleware from "../middlewares/AdminMiddleware/adminAudit";
+import { incrementRequestCount } from "../../adapters/http/controllers/admin/systemHealthController";
 
 export const buildApp = (): Express => {
   const app = express();
@@ -32,6 +36,7 @@ export const buildApp = (): Express => {
 
   app.use((req, res, next) => {
     console.log(req.path, req.method);
+    incrementRequestCount();
     next();
   });
 
@@ -40,7 +45,11 @@ export const buildApp = (): Express => {
   app.use("/api/company", CompanyLoginRoutes);
   app.use("/api/company", CompanyLogoutRoutes);
   app.use("/api/company", CompanyForgetPasswordRoutes);
+  // audit admin requests (non-blocking)
+  app.use("/api/admin", adminAuditMiddleware);
   app.use("/api/admin", AdminDashboardRoutes);
+  app.use("/api/admin", AdminLogsRoutes);
+  app.use("/api/admin", SystemHealthRoutes);
   app.use("/mcp", mcpRoutes);
 
   app.use(errorMiddleware);

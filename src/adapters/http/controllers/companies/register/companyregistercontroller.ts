@@ -23,9 +23,39 @@ export async function registerCompanyInfoController(req: Request, res: Response,
 
 export async function saveCompanyApiDetailsController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const { companyId } = req.params;
+    const { apis } = req.body;
+
+    // Validation
+    if (!companyId) {
+      res.status(400).json({
+        success: false,
+        message: "Company ID is missing. Please provide a valid company ID.",
+      });
+      return;
+    }
+
+    if (!apis || !Array.isArray(apis) || apis.length === 0) {
+      res.status(422).json({
+        success: false,
+        message: "Please provide at least one API configuration.",
+      });
+      return;
+    }
+
+    // Check if API details are already saved
+    const existingCompany = await companyRepository.findById(companyId as string);
+    if (existingCompany && existingCompany.apis && existingCompany.apis.length > 0) {
+      res.status(409).json({
+        success: false,
+        message: "API details have already been configured for this company. To modify, please contact support.",
+      });
+      return;
+    }
+
     const result = await saveCompanyApiDetails(
       companyRepository,
-      req.params.companyId as string,
+      companyId as string,
       req.body,
     );
 
@@ -41,9 +71,39 @@ export async function saveCompanyApiDetailsController(req: Request, res: Respons
 
 export async function saveCompanyUiSelectionController(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    const { companyId } = req.params;
+    const { uiPreference } = req.body;
+
+    // Validation
+    if (!companyId) {
+      res.status(400).json({
+        success: false,
+        message: "Company ID is missing. Please provide a valid company ID.",
+      });
+      return;
+    }
+
+    if (!uiPreference) {
+      res.status(422).json({
+        success: false,
+        message: "Please select a UI preference to continue.",
+      });
+      return;
+    }
+
+    // Check if UI preference is already saved
+    const existingCompany = await companyRepository.findById(companyId as string);
+    if (existingCompany && existingCompany.uiPreference) {
+      res.status(409).json({
+        success: false,
+        message: "UI preference has already been configured for this company. To modify, please contact support.",
+      });
+      return;
+    }
+
     const result = await saveCompanyUiSelection(
       companyRepository,
-      req.params.companyId as string,
+      companyId as string,
       req.body,
     );
 

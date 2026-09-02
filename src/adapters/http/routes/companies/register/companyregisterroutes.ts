@@ -7,12 +7,12 @@ import {
 
 export const CompanyRoutes = express.Router();
 
-CompanyRoutes.post("/registerstep", registerCompanyInfoController);
+CompanyRoutes.post("/register", registerCompanyInfoController);
 CompanyRoutes.post(
-  "/:companyId/apidetailsstep",
+  "/:companyId/apidetails",
   saveCompanyApiDetailsController,
 );
 CompanyRoutes.post(
-  "/:companyId/uiselectionstep",
+  "/:companyId/uiselection",
   saveCompanyUiSelectionController
 );
