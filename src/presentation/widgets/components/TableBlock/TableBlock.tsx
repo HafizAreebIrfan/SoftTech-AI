@@ -8,6 +8,7 @@ import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 import type { TableBlockProps } from "../../../../interfaces/mcp/tableblock.interface";
 import { FormBlock } from "../FormBlock";
 import { Modal } from "../Modal";
+import { TableRecordDetail } from "./TableRecordDetail";
 import { getPermissions, capOn } from "../../helper/AudienceHelper";
 
 export const TableBlock: React.FC<TableBlockProps> = ({
@@ -563,6 +564,115 @@ function parseCreatedRecord(
   if (!records || records.length === 0 || activeFields.length === 0)
     return null;
 
+  if (selectedRecord) {
+    return (
+      <section className={styles.container}>
+        {toastMessage && (
+          <div className={styles.toastBanner}>
+            <span>{toastMessage}</span>
+          </div>
+        )}
+
+        <TableRecordDetail
+          record={selectedRecord}
+          fields={fieldsWithOptions}
+          onBack={() => updateModalState(null, null, false)}
+          onEdit={
+            canUpdate
+              ? (rec) => {
+                  updateModalState(null, rec, false);
+                }
+              : undefined
+          }
+          onDelete={
+            canDelete
+              ? (rec) => {
+                  updateModalState(null, null, false);
+                  handleDelete(rec);
+                }
+              : undefined
+          }
+        />
+
+        {/* Create / Edit Form Modal */}
+        <Modal
+          isOpen={Boolean(isCreating || editingRecord)}
+          onClose={() => updateModalState(null, null, false)}
+          title={
+            isCreating
+              ? "Create New Item"
+              : `Edit ${editingRecord?.$title || editingRecord?.packagename || "Item"}`
+          }
+        >
+          <FormBlock
+            fields={fieldsWithOptions}
+            initialData={editingRecord || {}}
+            onSubmit={handleSaveForm}
+          />
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          isOpen={Boolean(deletingRecord)}
+          onClose={() => setDeletingRecord(null)}
+          title="Confirm Deletion"
+        >
+          {deletingRecord && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "14px",
+                  lineHeight: 1.5,
+                  color: "var(--app-text-primary, #f8fafc)",
+                }}
+              >
+                Are you sure you want to delete{" "}
+                <strong>
+                  "
+                  {deletingRecord.$title ||
+                    deletingRecord.packagename ||
+                    deletingRecord.username ||
+                    "this item"}
+                  "
+                </strong>
+                ? This action cannot be undone.
+              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  type="button"
+                  className={styles.cancelBtn}
+                  onClick={() => setDeletingRecord(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={styles.deleteConfirmBtn}
+                  onClick={handleConfirmDelete}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
+      </section>
+    );
+  }
+
   return (
     <section className={styles.container}>
       {/* Toast Notification Banner */}
@@ -720,109 +830,6 @@ function parseCreatedRecord(
           </div>
         </div>
       )}
-
-      {/* Detail Modal */}
-      <Modal
-        isOpen={Boolean(selectedRecord)}
-        onClose={() => updateModalState(null, null, false)}
-        title={selectedRecord?.$title || "Item Details"}
-      >
-        {selectedRecord && (
-          <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "16px",
-                marginBottom: "16px",
-              }}
-            >
-              {selectedRecord.$image && (
-                <div
-                  style={{
-                    width: "60px",
-                    height: "60px",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                  }}
-                >
-                  {renderImage(
-                    selectedRecord.$image,
-                    selectedRecord.$title || "Item",
-                    "cover",
-                  )}
-                </div>
-              )}
-              <div>
-                <h4 style={{ margin: 0, color: "var(--TextHeading)" }}>
-                  {selectedRecord.$title || "Details"}
-                </h4>
-                {selectedRecord.$description && (
-                  <p
-                    style={{
-                      margin: "4px 0 0 0",
-                      fontSize: "13px",
-                      color: "var(--TextSecondary)",
-                    }}
-                  >
-                    {selectedRecord.$description}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                borderTop: "1px solid var(--TableDivider)",
-                paddingTop: "16px",
-              }}
-            >
-              {activeFields.map((field) => {
-                const val = getFieldValue(selectedRecord, field);
-                if (val === null || val === undefined || val === "")
-                  return null;
-                return (
-                  <div
-                    key={field.key}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      borderBottom: "1px solid var(--TableDivider)",
-                      paddingBottom: "8px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontWeight: 600,
-                        fontSize: "13px",
-                        color: "var(--TextSecondary)",
-                      }}
-                    >
-                      {field.label}:
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "13px",
-                        color: "var(--TextPrimary)",
-                        textAlign: "right",
-                        maxWidth: "60%",
-                      }}
-                    >
-                      {typeof val === "object"
-                        ? JSON.stringify(val)
-                        : String(val)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </Modal>
 
       {/* Create / Edit Form Modal */}
       <Modal

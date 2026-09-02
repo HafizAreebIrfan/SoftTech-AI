@@ -63,8 +63,8 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
     }));
   }, [dataPoints]);
 
-  const isWide = dataPoints.length > 7;
-  const chartWidth = isWide ? Math.max(520, dataPoints.length * 64) : "100%";
+  const isWide = dataPoints.length > 5;
+  const chartWidth = isWide ? Math.max(380, dataPoints.length * 60) : "100%";
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

@@ -22,18 +22,6 @@ export const TableLayout: React.FC<WidgetLayoutProps> = ({
 
   return (
     <section className={styles.container} style={{ color: colors.TextPrimary }}>
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title} style={{ color: colors.TextHeading }}>
-            {title || collection?.entity || "Data Table"}
-          </h1>
-          {subtitle && (
-            <p className={styles.subtitle} style={{ color: colors.TextSecondary }}>
-              {subtitle}
-            </p>
-          )}
-        </div>
-      </header>
 
       <TableBlock
         block={tableBlock}

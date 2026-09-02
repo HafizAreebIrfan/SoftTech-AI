@@ -151,18 +151,101 @@ export const CardItem: React.FC<CardItemProps> = ({
           }}
         >
           {renderImage($image, titleStr, "cover")}
-          {$status && (
+
+          {/* Out of Stock Badge (Only shown if out of stock, never for in stock) */}
+          {isOutOfStock && (
             <div
               style={{
                 position: "absolute",
                 top: "8px",
                 left: "8px",
                 zIndex: 2,
+                background: "rgba(239, 68, 68, 0.85)",
+                color: "#ffffff",
+                fontSize: "11px",
+                fontWeight: 700,
+                padding: "2px 8px",
+                borderRadius: "6px",
+                backdropFilter: "blur(4px)",
               }}
             >
-              {renderStatus($status)}
+              Out of Stock
             </div>
           )}
+
+          {/* Quick Action Icons on Image (Top Right) */}
+          <div
+            style={{
+              position: "absolute",
+              top: "8px",
+              right: "8px",
+              zIndex: 3,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            {/* Quick View Button */}
+            {(actionUrlStr || onSelect) && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClick(e);
+                }}
+                title="Quick View"
+                aria-label="Quick View"
+                style={{
+                  background: "rgba(15, 23, 42, 0.75)",
+                  backdropFilter: "blur(6px)",
+                  border: "1px solid rgba(255, 255, 255, 0.18)",
+                  borderRadius: "50%",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                👁️
+              </button>
+            )}
+
+            {/* Quick Add to Cart Button */}
+            {canAddToCart && !isOutOfStock && (
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                title="Add to Cart"
+                aria-label="Add to Cart"
+                style={{
+                  background: addedToast
+                    ? "#10b981"
+                    : "rgba(15, 23, 42, 0.75)",
+                  backdropFilter: "blur(6px)",
+                  border: "1px solid rgba(255, 255, 255, 0.18)",
+                  borderRadius: "50%",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                {addedToast ? "✓" : "🛒"}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -335,81 +418,6 @@ export const CardItem: React.FC<CardItemProps> = ({
               })}
             </div>
           )}
-        </div>
-
-        {/* Card Footer with Detail and Cart CTAs */}
-        <div
-          className={styles.cardFooter}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "8px",
-            borderTop: "1px solid var(--WidgetCardBorder, rgba(255,255,255,0.06))",
-            padding: "10px 14px",
-          }}
-        >
-          {(actionUrlStr || onSelect) && (
-            <span className={styles.actionButton} style={{ fontSize: "12px" }}>
-              View Details &rarr;
-            </span>
-          )}
-
-          {isOutOfStock ? (
-            <button
-              type="button"
-              disabled
-              style={{
-                background: "rgba(255, 255, 255, 0.05)",
-                border: "1px solid rgba(255, 255, 255, 0.1)",
-                borderRadius: "6px",
-                padding: "6px 12px",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "var(--app-text-secondary, #64748b)",
-                cursor: "not-allowed",
-                marginLeft: "auto",
-                opacity: 0.6,
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              Out of Stock
-            </button>
-          ) : canAddToCart ? (
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              style={{
-                background: addedToast
-                  ? "#10b981"
-                  : "var(--widget-accent, #6366f1)",
-                color: "var(--widget-accent-contrast, #ffffff)",
-                border: "none",
-                borderRadius: "6px",
-                padding: "6px 12px",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: "pointer",
-                marginLeft: "auto",
-                transition: "all 0.2s ease",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-              }}
-            >
-              {addedToast ? (
-                <>
-                  <span>✓</span> Added
-                </>
-              ) : (
-                <>
-                  <span>🛒</span> + Cart
-                </>
-              )}
-            </button>
-          ) : null}
         </div>
       </CardContainerComponent>
   );

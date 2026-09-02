@@ -9,18 +9,23 @@
 .heroGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
-  padding: 20px;
+  gap: 0;
+  padding: 0;
 }
 
 .leftCol {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   min-width: 0; /* prevent wide images from blowing out the grid track */
 }
 
 @media (min-width: 760px) {
+  .heroGrid {
+    gap: 20px;
+    padding: 16px;
+  }
+
   .heroGridTwoCol {
     grid-template-columns: minmax(0, 1.55fr) minmax(300px, 360px);
     align-items: start;

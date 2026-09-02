@@ -2,21 +2,23 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   color: var(--app-text-primary, #f8fafc);
+  padding-bottom: 90px;
+  box-sizing: border-box;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   flex-wrap: wrap;
   gap: 12px;
 }
 
 .title {
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
   color: var(--app-text-heading, #ffffff);
 }
@@ -46,6 +48,32 @@
 @media (max-width: 768px) {
   .cartGrid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .itemsCard {
+    padding: 12px;
+  }
+  
+  .itemRow {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+  }
+  
+  .itemInfo {
+    flex: 1 1 calc(100% - 64px);
+  }
+  
+  .stepper {
+    margin-left: auto;
+  }
+  
+  .summaryCard {
+    padding: 14px;
+    position: static;
   }
 }
 

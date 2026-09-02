@@ -388,6 +388,39 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     (hasSearchFilter ? 1 : 0) +
     (hasSortFilter ? 1 : 0);
 
+  // Filter Drawer & Variant Options
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
+  const availableVariants = useMemo(() => {
+    const variants: Record<string, Set<string>> = {};
+    records.forEach((rec: any) => {
+      if (!rec || typeof rec !== "object") return;
+      for (const [key, val] of Object.entries(rec)) {
+        if (key.startsWith("$")) continue;
+        if (Array.isArray(val) && val.length > 0 && val.length <= 12) {
+          const kLower = key.toLowerCase();
+          if (
+            kLower.includes("size") ||
+            kLower.includes("color") ||
+            kLower.includes("shade") ||
+            kLower.includes("variant")
+          ) {
+            if (!variants[key]) variants[key] = new Set();
+            val.forEach((item) => {
+              if (typeof item === "string" || typeof item === "number") {
+                variants[key].add(String(item));
+              }
+            });
+          }
+        }
+      }
+    });
+    return Object.entries(variants).map(([name, set]) => ({
+      name,
+      options: Array.from(set),
+    }));
+  }, [records]);
+
   // Reset pagination to page 1 on filter/search/sort/pageSize change
   React.useEffect(() => {
     setCurrentPage(1);
@@ -401,33 +434,19 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
 
   return (
     <section className={styles.container}>
-      {/* Header */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div className={styles.titleGroup}>
-            <h1 className={styles.title}>
-              {title || collection?.entity || "Catalog"}
-            </h1>
-            {records.length > 0 && (
-              <span className={styles.countBadge}>{filteredRecords.length} items</span>
-            )}
-          </div>
-          {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
-        </div>
-
-        {/* Live Cart Drawer Toggle Button */}
-        <button
-          type="button"
-          className={styles.cartButton}
-          onClick={openCart}
-          title="Open Shopping Cart"
-        >
-          <span>🛒 Cart</span>
-          {totalCartCount > 0 && (
-            <span className={styles.cartBadge}>{totalCartCount}</span>
-          )}
-        </button>
-      </header>
+      {/* Floating Cart FAB */}
+      <button
+        type="button"
+        className={styles.floatingCartFab}
+        onClick={openCart}
+        title="View Shopping Cart"
+        aria-label="View Shopping Cart"
+      >
+        <span>🛒</span>
+        {totalCartCount > 0 && (
+          <span className={styles.floatingCartBadge}>{totalCartCount}</span>
+        )}
+      </button>
 
       {/* Structured Filters from Plan (if provided) */}
       {filtersBlock && (
@@ -436,7 +455,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         </div>
       )}
 
-      {/* Dynamic Catalog Toolbar (Category Dropdown, Search & Sort) */}
+      {/* Dynamic Catalog Toolbar (Search & Filter Sidebar Trigger) */}
       {showToolbar && (
         <div className={styles.toolbar}>
           <div className={styles.searchContainer}>
@@ -465,37 +484,168 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
             )}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-            {/* Category Dropdown (Rendered ONLY if company has categories/category-list tool) */}
-            {categoryFacet?.optionsTool && backendCategories.length > 0 && (
-              <select
-                className={styles.categorySelect}
-                value={selectedCategory}
-                onChange={(e) => handleCategorySelect(e.target.value)}
-                aria-label="Filter by Category"
-              >
-                <option value="All">All Categories</option>
-                {backendCategories.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
+          <button
+            type="button"
+            className={styles.filterDrawerTrigger}
+            onClick={() => setIsFilterDrawerOpen(true)}
+            aria-label="Open filter and sort drawer"
+          >
+            <span>🎛️</span>
+            <span>Filters</span>
+            {activeFiltersCount > 0 && (
+              <span className={styles.filterCountBadge}>
+                {activeFiltersCount}
+              </span>
             )}
+          </button>
+        </div>
+      )}
 
-            <select
-              className={styles.sortSelect}
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              aria-label="Sort products"
-            >
-              <option value="default">Sort: Default</option>
-              {hasPriceField && <option value="price_asc">Price: Low to High</option>}
-              {hasPriceField && <option value="price_desc">Price: High to Low</option>}
-              {hasRatingField && <option value="rating_desc">Highest Rated</option>}
-              <option value="name_asc">Name: A–Z</option>
-            </select>
-          </div>
+      {/* Slide-over Filter Drawer */}
+      {isFilterDrawerOpen && (
+        <div
+          className={styles.drawerBackdrop}
+          onClick={() => setIsFilterDrawerOpen(false)}
+        >
+          <aside
+            className={styles.drawerSidebar}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.drawerHeader}>
+              <h3>Filter & Sort</h3>
+              <button
+                type="button"
+                className={styles.drawerCloseBtn}
+                onClick={() => setIsFilterDrawerOpen(false)}
+                aria-label="Close filters"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.drawerBody}>
+              {/* Sort Options */}
+              <div className={styles.filterSection}>
+                <label className={styles.filterSectionTitle}>Sort By</label>
+                <div className={styles.sortOptionsList}>
+                  {[
+                    { label: "Default", value: "default" },
+                    ...(hasPriceField
+                      ? [
+                          { label: "Price: Low to High", value: "price_asc" },
+                          { label: "Price: High to Low", value: "price_desc" },
+                        ]
+                      : []),
+                    ...(hasRatingField
+                      ? [{ label: "Highest Rated", value: "rating_desc" }]
+                      : []),
+                    { label: "Name: A–Z", value: "name_asc" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`${styles.filterOptionBtn} ${sortOption === opt.value ? styles.filterOptionBtnActive : ""}`}
+                      onClick={() => {
+                        setSortOption(opt.value);
+                        setIsFilterDrawerOpen(false);
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Category Options */}
+              {(backendCategories.length > 0 ||
+                availableCategories.length > 1) && (
+                <div className={styles.filterSection}>
+                  <label className={styles.filterSectionTitle}>Category</label>
+                  <div className={styles.categoryChipsList}>
+                    <button
+                      type="button"
+                      className={`${styles.filterOptionBtn} ${selectedCategory === "All" ? styles.filterOptionBtnActive : ""}`}
+                      onClick={() => {
+                        handleCategorySelect("All");
+                        setIsFilterDrawerOpen(false);
+                      }}
+                    >
+                      All Categories
+                    </button>
+                    {(backendCategories.length > 0
+                      ? backendCategories
+                      : availableCategories
+                          .slice(1)
+                          .map((c) => ({ label: c, value: c }))
+                    ).map((cat) => (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        className={`${styles.filterOptionBtn} ${selectedCategory === cat.value ? styles.filterOptionBtnActive : ""}`}
+                        onClick={() => {
+                          handleCategorySelect(cat.value);
+                          setIsFilterDrawerOpen(false);
+                        }}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dynamic Variants / Swatches (if any) */}
+              {availableVariants.map((v) => (
+                <div key={v.name} className={styles.filterSection}>
+                  <label className={styles.filterSectionTitle}>
+                    {v.name}
+                  </label>
+                  <div className={styles.categoryChipsList}>
+                    {v.options.map((opt) => {
+                      const isSelected = searchTerm
+                        .toLowerCase()
+                        .includes(opt.toLowerCase());
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          className={`${styles.filterOptionBtn} ${isSelected ? styles.filterOptionBtnActive : ""}`}
+                          onClick={() => {
+                            setSearchTerm(opt);
+                            setIsFilterDrawerOpen(false);
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.drawerFooter}>
+              <button
+                type="button"
+                className={styles.drawerResetBtn}
+                onClick={() => {
+                  handleCategorySelect("All");
+                  setSearchTerm("");
+                  setSortOption("default");
+                  setIsFilterDrawerOpen(false);
+                }}
+              >
+                Reset All
+              </button>
+              <button
+                type="button"
+                className={styles.drawerApplyBtn}
+                onClick={() => setIsFilterDrawerOpen(false)}
+              >
+                Apply & Close
+              </button>
+            </div>
+          </aside>
         </div>
       )}
 

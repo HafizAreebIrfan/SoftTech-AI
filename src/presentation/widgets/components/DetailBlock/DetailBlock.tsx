@@ -331,71 +331,48 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const activeMainImage = images[selectedImgIdx] || images[0] || null;
   const hasGallery = images.length > 0;
 
+  const cartItems = useCartStore((s) => s.items);
+  const currentItemId = targetRecord.id || targetRecord._id || title;
+  const isInCart = cartItems.some(
+    (ci) => String(ci.id) === String(currentItemId),
+  );
+
+  const normalizedStatus = String(
+    status ||
+      (targetRecord as any).availabilityStatus ||
+      (targetRecord as any).status ||
+      "",
+  )
+    .toLowerCase()
+    .trim();
+  const isOutOfStock =
+    (targetRecord as any).stock === 0 ||
+    normalizedStatus === "out of stock" ||
+    normalizedStatus === "outofstock" ||
+    normalizedStatus === "sold out" ||
+    normalizedStatus === "unavailable" ||
+    normalizedStatus === "inactive";
+
   return (
     <section
       className={`${styles.container} ${hasGallery ? pd.pageWide : ""}`}
+      style={{ padding: 0 }}
     >
       <div
         className={styles.card}
         style={{
-          background: "var(--WidgetCardBg, rgba(22, 24, 38, 0.75))",
-          border: "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
-          borderRadius: "16px",
+          background: "transparent",
+          border: "none",
+          borderRadius: "0",
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
           gap: "0",
         }}
       >
-        {/* Top bar with Cart drawer button */}
-        {canAddToCart && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              padding: "12px 16px 0 16px",
-            }}
-          >
-            <button
-              type="button"
-              onClick={openCart}
-              title="Open Shopping Cart"
-              style={{
-                background: "rgba(255, 255, 255, 0.08)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
-                borderRadius: "8px",
-                padding: "6px 12px",
-                color: "#f8fafc",
-                fontSize: "13px",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <span>🛒 Cart</span>
-              {totalCartCount > 0 && (
-                <span
-                  style={{
-                    background: "var(--widget-accent, #6366f1)",
-                    color: "#fff",
-                    borderRadius: "999px",
-                    padding: "1px 6px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {totalCartCount}
-                </span>
-              )}
-            </button>
-          </div>
-        )}
-
-        {/* Hero: gallery + about (left) / buy box (right). Two columns when a
+        {/* Hero: gallery (left) / buy box (right). Two columns when a
             gallery exists AND the viewport is wide (fullscreen); one column
-            otherwise (inline, or a non-product record such as an order). */}
+            otherwise. */}
         <div
           className={`${pd.heroGrid} ${hasGallery ? pd.heroGridTwoCol : ""}`}
         >
@@ -505,37 +482,19 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 )}
               </div>
             )}
-
-            {/* About / Description */}
-            {description && (
-              <div>
-                <h4 style={sectionTitleStyle}>About</h4>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "14px",
-                    lineHeight: 1.6,
-                    color: "var(--WidgetHeaderSubtitle, #cbd5e1)",
-                  }}
-                >
-                  {description}
-                </p>
-              </div>
-            )}
           </div>
 
-          {/* RIGHT COLUMN — buy box (title, status, price, tier, cart, actions) */}
+          {/* RIGHT COLUMN — buy box (title, status, price, about, tier, cart, actions) */}
           <aside
             className={hasGallery ? pd.buyBoxSticky : undefined}
             style={{
               display: "flex",
               flexDirection: "column",
               gap: "14px",
-              background: "var(--WidgetCardBg, rgba(22, 24, 38, 0.6))",
-              border:
-                "1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08))",
-              borderRadius: "14px",
-              padding: "18px",
+              background: "transparent",
+              border: "none",
+              borderRadius: "0",
+              padding: "16px",
             }}
           >
             <div
@@ -557,9 +516,21 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               >
                 {title}
               </h2>
-              {status && (
+              {isOutOfStock && (
                 <div style={{ flexShrink: 0, whiteSpace: "nowrap" }}>
-                  {renderStatus(status)}
+                  <span
+                    style={{
+                      background: "rgba(239, 68, 68, 0.2)",
+                      color: "#ef4444",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Out of Stock
+                  </span>
                 </div>
               )}
             </div>
@@ -603,6 +574,23 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 </span>
               )}
             </div>
+
+            {/* About / Description (Inside product detail info area) */}
+            {description && (
+              <div style={{ margin: "2px 0 6px 0" }}>
+                <h4 style={sectionTitleStyle}>About</h4>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "14px",
+                    lineHeight: 1.6,
+                    color: "var(--WidgetHeaderSubtitle, #cbd5e1)",
+                  }}
+                >
+                  {description}
+                </p>
+              </div>
+            )}
 
             {/* Tiered option selector — only show if there are 2 or more tier options */}
             {tieredResult.hasTiers && tieredResult.options.length > 1 && (
@@ -726,7 +714,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               </div>
             )}
 
-            {/* Quantity stepper & Add to Cart */}
+            {/* Quantity stepper & Add to Cart / View Cart CTA */}
             {canAddToCart && (
               <div
                 style={{
@@ -736,83 +724,129 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                   flexWrap: "wrap",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                {!isInCart && !isOutOfStock && (
+                  <div
                     style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "#fff",
-                      padding: "8px 12px",
-                      cursor: "pointer",
-                      fontSize: "16px",
-                      fontWeight: "bold",
+                      display: "flex",
+                      alignItems: "center",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      borderRadius: "8px",
+                      overflow: "hidden",
                     }}
                   >
-                    −
-                  </button>
-                  <span
-                    style={{
-                      padding: "0 8px",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      minWidth: "24px",
-                      textAlign: "center",
-                    }}
-                  >
-                    {quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity(quantity + 1)}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "#fff",
-                      padding: "8px 12px",
-                      cursor: "pointer",
-                      fontSize: "16px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "#fff",
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      −
+                    </button>
+                    <span
+                      style={{
+                        padding: "0 8px",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        minWidth: "24px",
+                        textAlign: "center",
+                      }}
+                    >
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(quantity + 1)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "#fff",
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        fontSize: "16px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
 
-                <button
-                  type="button"
-                  onClick={handleAddToCart}
-                  style={{
-                    flex: 1,
-                    minWidth: "140px",
-                    background: "var(--widget-accent, #6366f1)",
-                    color: "var(--widget-accent-contrast, #ffffff)",
-                    border: "none",
-                    borderRadius: "8px",
-                    padding: "12px 20px",
-                    fontSize: "14px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3)",
-                    transition: "all 0.15s ease",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px",
-                  }}
-                >
-                  🛒 {addedToast ? "Added to Cart ✓" : "Add to Cart"}
-                </button>
+                {isOutOfStock ? (
+                  <button
+                    type="button"
+                    disabled
+                    style={{
+                      flex: 1,
+                      minWidth: "140px",
+                      background: "rgba(255, 255, 255, 0.05)",
+                      color: "var(--app-text-secondary, #64748b)",
+                      border: "1px solid rgba(255, 255, 255, 0.1)",
+                      borderRadius: "8px",
+                      padding: "12px 20px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    Out of Stock
+                  </button>
+                ) : isInCart ? (
+                  <button
+                    type="button"
+                    onClick={openCart}
+                    style={{
+                      flex: 1,
+                      minWidth: "140px",
+                      background: "#10b981",
+                      color: "#ffffff",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "12px 20px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    🛍️ View Cart
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    style={{
+                      flex: 1,
+                      minWidth: "140px",
+                      background: "var(--widget-accent, #6366f1)",
+                      color: "var(--widget-accent-contrast, #ffffff)",
+                      border: "none",
+                      borderRadius: "8px",
+                      padding: "12px 20px",
+                      fontSize: "14px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    🛒 {addedToast ? "Added to Cart ✓" : "Add to Cart"}
+                  </button>
+                )}
               </div>
             )}
 

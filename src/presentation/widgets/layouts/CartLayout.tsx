@@ -286,19 +286,8 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
     <section className={styles.container}>
       {/* Header */}
       <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>
-            {title === "Get Cart" || !title ? "Shopping Cart" : title}
-          </h1>
-          {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
-        </div>
+        <h1 className={styles.title}>Shopping Cart</h1>
         <div className={styles.headerActions}>
-          {cartSummary.totalQuantity > 0 && (
-            <span className={styles.badge}>
-              {cartSummary.totalQuantity} Item
-              {cartSummary.totalQuantity === 1 ? "" : "s"}
-            </span>
-          )}
           {lineItems.length > 0 && (
             <button
               type="button"

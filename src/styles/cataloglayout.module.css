@@ -356,3 +356,211 @@
     transform: rotate(360deg);
   }
 }
+
+/* Floating Cart FAB */
+.floatingCartFab {
+  position: fixed;
+  bottom: 24px;
+  right: 20px;
+  z-index: 999;
+  background: var(--widget-accent, #6366f1);
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.floatingCartFab:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 10px 28px rgba(99, 102, 241, 0.55);
+}
+
+.floatingCartBadge {
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Filter Drawer Trigger Button */
+.filterDrawerTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--widget-card-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--widget-card-border, rgba(255, 255, 255, 0.12));
+  color: var(--app-text-primary, #f8fafc);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.filterDrawerTrigger:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--widget-accent, #6366f1);
+}
+
+.filterCountBadge {
+  background: var(--widget-accent, #6366f1);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Slide-over Filter Drawer */
+.drawerBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawerSidebar {
+  width: 100%;
+  max-width: 360px;
+  height: 100%;
+  background: var(--BackgroundSecondary, #0f172a);
+  border-left: 1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.1));
+  display: flex;
+  flex-direction: column;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  animation: slideInRight 0.25s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08));
+}
+
+.drawerHeader h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--app-text-heading, #ffffff);
+}
+
+.drawerCloseBtn {
+  background: transparent;
+  border: none;
+  color: var(--app-text-secondary, #94a3b8);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.drawerBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.filterSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filterSectionTitle {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.sortOptionsList,
+.categoryChipsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filterOptionBtn {
+  background: var(--widget-card-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--widget-card-border, rgba(255, 255, 255, 0.1));
+  color: var(--app-text-secondary, #cbd5e1);
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.filterOptionBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.filterOptionBtnActive {
+  background: var(--widget-accent, #6366f1);
+  border-color: var(--widget-accent, #6366f1);
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.drawerFooter {
+  padding: 16px 20px;
+  border-top: 1px solid var(--WidgetCardBorder, rgba(255, 255, 255, 0.08));
+  display: flex;
+  gap: 10px;
+}
+
+.drawerResetBtn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--widget-card-border, rgba(255, 255, 255, 0.15));
+  color: var(--app-text-secondary, #94a3b8);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.drawerApplyBtn {
+  flex: 1;
+  background: var(--widget-accent, #6366f1);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}

@@ -19,19 +19,7 @@ export const GeneralLayout: React.FC<WidgetLayoutProps> = ({
   const detailBlock = blocks.find((b) => b.type === "details" || b.type === "detail");
 
   return (
-    <section className={styles.container} style={{ color: colors.TextPrimary }}>
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title} style={{ color: colors.TextHeading }}>
-            {title || collection?.entity || "Details"}
-          </h1>
-          {subtitle && (
-            <p className={styles.subtitle} style={{ color: colors.TextSecondary }}>
-              {subtitle}
-            </p>
-          )}
-        </div>
-      </header>
+    <section className={styles.container} style={{ color: colors.TextPrimary, padding: 0 }}>
 
       <DetailBlock
         block={detailBlock}

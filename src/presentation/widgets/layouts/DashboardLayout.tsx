@@ -31,23 +31,6 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
         color: colors.TextPrimary,
       }}
     >
-      {/* Header */}
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title} style={{ color: colors.TextHeading }}>
-            {title || collection?.entity || "Dashboard"}
-          </h1>
-
-          {subtitle && (
-            <p
-              className={styles.subtitle}
-              style={{ color: colors.TextSecondary }}
-            >
-              {subtitle}
-            </p>
-          )}
-        </div>
-      </header>
 
       {/* Prompt Answer Summary Banner */}
       {Boolean(collection?.summary || (collection as any)?.text) && (
