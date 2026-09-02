@@ -338,6 +338,8 @@ export const useSignupStore = create<SignupStore>()(
           oauthTokenUrl: "",
           oauthClientId: "",
           apiHeaders: "",
+          isRealtimeApi: false,
+          streamUrl: "",
         },
       ],
       selectedLayout: "auto",
@@ -425,6 +427,8 @@ export const useSignupStore = create<SignupStore>()(
               oauthTokenUrl: "",
               oauthClientId: "",
               apiHeaders: "",
+              isRealtimeApi: false,
+              streamUrl: "",
             },
           ],
         })),
@@ -460,6 +464,8 @@ export const useSignupStore = create<SignupStore>()(
               oauthTokenUrl: "",
               oauthClientId: "",
               apiHeaders: "",
+              isRealtimeApi: false,
+              streamUrl: "",
             },
           ],
           selectedLayout: "auto",
@@ -980,6 +986,8 @@ export const useSignupStore = create<SignupStore>()(
                 webCheckoutUrl:
                   api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
                 mobileDeepLink: api.mobileDeepLink || undefined,
+                isRealtimeApi: Boolean(api.isRealtimeApi),
+                streamUrl: api.streamUrl || undefined,
                 apiSchema:
                   api.apiSchema ||
                   api.schema ||
@@ -1155,6 +1163,8 @@ export const useSignupStore = create<SignupStore>()(
               webCheckoutUrl:
                 api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
               mobileDeepLink: api.mobileDeepLink || undefined,
+              isRealtimeApi: Boolean(api.isRealtimeApi),
+              streamUrl: api.streamUrl || undefined,
               apiSchema:
                 api.apiSchema ||
                 api.schema ||

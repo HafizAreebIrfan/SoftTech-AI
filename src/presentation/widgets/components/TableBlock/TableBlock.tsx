@@ -10,6 +10,7 @@ import { FormBlock } from "../FormBlock";
 import { Modal } from "../Modal";
 import { TableRecordDetail } from "./TableRecordDetail";
 import { getPermissions, capOn } from "../../helper/AudienceHelper";
+import { useRealtimeStream } from "../../hooks/useRealtimeStream";
 
 export const TableBlock: React.FC<TableBlockProps> = ({
   block,
@@ -108,6 +109,48 @@ export const TableBlock: React.FC<TableBlockProps> = ({
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
+
+  // Real-Time Live Data Stream (WebSocket / SSE)
+  const streamUrl: string | undefined =
+    (block as any)?.streamUrl ||
+    (window as any).__WIDGET_METADATA__?.streamUrl ||
+    (window as any).__WIDGET_DATA__?.streamUrl ||
+    actions?.find((a: any) => a?.streamUrl || a?.isRealtimeApi)?.streamUrl;
+
+  useRealtimeStream({
+    streamUrl,
+    onMessage: (payload) => {
+      if (!payload) return;
+      const incomingList = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload.data)
+          ? payload.data
+          : Array.isArray(payload.records)
+            ? payload.records
+            : [payload];
+
+      commitRecords((prev) => {
+        let updated = [...prev];
+        for (const item of incomingList) {
+          if (!item || typeof item !== "object") continue;
+          const itemId = item.id || item._id || item.packageId || item.productId;
+          if (itemId) {
+            const idx = updated.findIndex(
+              (r) => (r.id || r._id || r.packageId || r.productId) === itemId,
+            );
+            if (idx >= 0) {
+              updated[idx] = { ...updated[idx], ...item };
+            } else {
+              updated = [item, ...updated];
+            }
+          } else {
+            updated = [item, ...updated];
+          }
+        }
+        return updated;
+      });
+    },
+  });
 
   const [selectedRecord, setSelectedRecord] = useState<Record<
     string,

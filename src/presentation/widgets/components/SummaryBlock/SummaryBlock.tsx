@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderCurrency } from "../../helper/RenderCurrency";
 import { renderNumber } from "../../helper/RenderNumber";
@@ -11,6 +11,7 @@ import type {
   CollectionResult,
 } from "../../../../domain/entities/GenericWidget";
 import type { PresentationBlock } from "../../../../interfaces/mcp/widgetdecider.interface";
+import { useRealtimeStream } from "../../hooks/useRealtimeStream";
 
 export interface SummaryBlockProps {
   block?: PresentationBlock;
@@ -104,6 +105,52 @@ export const SummaryBlock: React.FC<SummaryBlockProps> = ({
   fields = [],
   collection,
 }) => {
+  const [localRecords, setLocalRecords] = useState<unknown[]>(records);
+
+  useEffect(() => {
+    setLocalRecords(records);
+  }, [records]);
+
+  const streamUrl =
+    (block as any)?.streamUrl ||
+    (window as any).__WIDGET_METADATA__?.streamUrl ||
+    (window as any).__WIDGET_DATA__?.streamUrl;
+
+  useRealtimeStream({
+    streamUrl,
+    onMessage: (payload) => {
+      if (!payload) return;
+      const incomingList = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload.data)
+          ? payload.data
+          : Array.isArray(payload.records)
+            ? payload.records
+            : [payload];
+
+      setLocalRecords((prev) => {
+        let updated = [...prev];
+        for (const item of incomingList) {
+          if (!item || typeof item !== "object") continue;
+          const itemId = (item as any).id || (item as any)._id;
+          if (itemId) {
+            const idx = updated.findIndex(
+              (r: any) => (r.id || r._id) === itemId,
+            );
+            if (idx >= 0) {
+              updated[idx] = { ...(updated[idx] as object), ...item };
+            } else {
+              updated = [item, ...updated];
+            }
+          } else {
+            updated = [item, ...updated];
+          }
+        }
+        return updated;
+      });
+    },
+  });
+
   const metrics = useMemo<MetricCardData[]>(() => {
     // 0. If backend pre-calculated metrics exist, use them!
     if (
@@ -162,7 +209,7 @@ export const SummaryBlock: React.FC<SummaryBlockProps> = ({
       const extractedValues: number[] = [];
       let assetUrl: string | undefined;
 
-      records.forEach((rec) => {
+      localRecords.forEach((rec) => {
         const rawVal = getFieldValue(rec, field);
         const parsed = parseNumericValue(rawVal);
         if (parsed !== null) {
@@ -171,7 +218,10 @@ export const SummaryBlock: React.FC<SummaryBlockProps> = ({
 
         // Try extracting icon/asset if provided in record
         if (!assetUrl && rec && typeof rec === "object") {
-          const possibleAsset = (rec as Record<string, unknown>).icon || (rec as Record<string, unknown>).image || (rec as Record<string, unknown>).avatar;
+          const possibleAsset =
+            (rec as Record<string, unknown>).icon ||
+            (rec as Record<string, unknown>).image ||
+            (rec as Record<string, unknown>).avatar;
           if (typeof possibleAsset === "string" && possibleAsset.trim()) {
             assetUrl = possibleAsset;
           }
@@ -187,7 +237,7 @@ export const SummaryBlock: React.FC<SummaryBlockProps> = ({
 
         const formattedValue = formatMetricValue(aggregate, field);
         const supportingText =
-          records.length > 1
+          localRecords.length > 1
             ? method === "avg"
               ? `Avg across ${count} items`
               : method === "count"
@@ -208,21 +258,25 @@ export const SummaryBlock: React.FC<SummaryBlockProps> = ({
     });
 
     // 3. Fallback: If no numeric fields, produce a total count card
-    if (calculatedMetrics.length === 0 && (records.length > 0 || collection?.total)) {
-      const entityLabel = collection?.itemLabel || collection?.entity || "Records";
-      const totalCount = collection?.total ?? records.length;
+    if (
+      calculatedMetrics.length === 0 &&
+      (localRecords.length > 0 || collection?.total)
+    ) {
+      const entityLabel =
+        collection?.itemLabel || collection?.entity || "Records";
+      const totalCount = collection?.total ?? localRecords.length;
 
       calculatedMetrics.push({
         id: "metric-total-count",
         label: `Total ${entityLabel}`,
         value: totalCount,
         formattedValue: String(renderNumber(totalCount)),
-        supportingText: `${records.length} displayed`,
+        supportingText: `${localRecords.length} displayed`,
       });
     }
 
     return calculatedMetrics;
-  }, [block, records, fields, collection]);
+  }, [block, localRecords, fields, collection]);
 
   if (metrics.length === 0) {
     return null;

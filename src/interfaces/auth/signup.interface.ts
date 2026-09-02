@@ -17,6 +17,8 @@ export interface ApiConnection {
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
   isCheckoutApi?: boolean;
+  isRealtimeApi?: boolean;
+  streamUrl?: string;
   isUserOAuth?: boolean;
   isTested?: boolean;
   isAnalyzed?: boolean;

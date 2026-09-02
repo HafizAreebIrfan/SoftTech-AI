@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { CardsBlock } from "../components/CardsBlock";
 import { useCartStore, parseNumericPrice } from "../../../infrastructure/store/cartStore";
@@ -7,6 +7,7 @@ import { callMcpTool, applyReQueryResult, getToolInput } from "../../../utils/mc
 import { extractToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import styles from "../../../styles/cataloglayout.module.css";
 import { FormBlock } from "../components";
+import { useRealtimeStream } from "../hooks/useRealtimeStream";
 
 export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   title,
@@ -22,6 +23,52 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   const blocks = presentationPlan?.blocks ?? [];
   const filtersBlock = blocks.find((b) => b.type === "filters");
   const cardsBlock = blocks.find((b) => b.type === "cards");
+
+  const [localRecords, setLocalRecords] = useState<any[]>(records);
+
+  useEffect(() => {
+    setLocalRecords(records);
+  }, [records]);
+
+  const streamUrl: string | undefined =
+    (window as any).__WIDGET_METADATA__?.streamUrl ||
+    (window as any).__WIDGET_DATA__?.streamUrl ||
+    actions?.find((a: any) => a?.streamUrl || a?.isRealtimeApi)?.streamUrl;
+
+  useRealtimeStream({
+    streamUrl,
+    onMessage: (payload) => {
+      if (!payload) return;
+      const incomingList = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload.data)
+          ? payload.data
+          : Array.isArray(payload.records)
+            ? payload.records
+            : [payload];
+
+      setLocalRecords((prev) => {
+        let updated = [...prev];
+        for (const item of incomingList) {
+          if (!item || typeof item !== "object") continue;
+          const itemId = item.id || item._id || item.packageId || item.productId;
+          if (itemId) {
+            const idx = updated.findIndex(
+              (r) => (r.id || r._id || r.packageId || r.productId) === itemId,
+            );
+            if (idx >= 0) {
+              updated[idx] = { ...updated[idx], ...item };
+            } else {
+              updated = [item, ...updated];
+            }
+          } else {
+            updated = [item, ...updated];
+          }
+        }
+        return updated;
+      });
+    },
+  });
 
   // Cart store integration
   const openCart = useCartStore((state) => state.openCart);
@@ -47,7 +94,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     if (!categoryField) return [];
     const catSet = new Set<string>();
 
-    records.forEach((rec) => {
+    localRecords.forEach((rec) => {
       const val = getFieldValue(rec, categoryField);
       if (typeof val === "string" && val.trim()) {
         if (val.includes(",")) {
@@ -69,7 +116,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
 
     const list = Array.from(catSet);
     return list.length > 1 ? ["All", ...list] : [];
-  }, [records, categoryField]);
+  }, [localRecords, categoryField]);
 
   // 3. Identify Price & Rating fields for sort options
   const hasPriceField = useMemo(() => {
@@ -280,7 +327,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
 
   // 4. Defensive customer filtering & Search + Category Filter
   const filteredRecords = useMemo(() => {
-    let list = records;
+    let list = localRecords;
 
     // Audience customer filter: drop inactive/pending records for customers
     if (audience === "customer") {
@@ -364,7 +411,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
 
     return list;
   }, [
-    records,
+    localRecords,
     audience,
     selectedCategory,
     categoryField,
@@ -374,7 +421,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   ]);
 
   const showToolbar =
-    records.length > 1 ||
+    localRecords.length > 1 ||
     availableCategories.length > 0 ||
     Boolean(categoryFacet?.optionsTool);
 
@@ -393,7 +440,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
 
   const availableVariants = useMemo(() => {
     const variants: Record<string, Set<string>> = {};
-    records.forEach((rec: any) => {
+    localRecords.forEach((rec: any) => {
       if (!rec || typeof rec !== "object") return;
       for (const [key, val] of Object.entries(rec)) {
         if (key.startsWith("$")) continue;
@@ -419,7 +466,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
       name,
       options: Array.from(set),
     }));
-  }, [records]);
+  }, [localRecords]);
 
   // Reset pagination to page 1 on filter/search/sort/pageSize change
   React.useEffect(() => {

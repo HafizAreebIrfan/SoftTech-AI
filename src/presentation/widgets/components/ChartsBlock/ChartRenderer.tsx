@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -21,7 +21,9 @@ import {
 import styles from "../../../../styles/chartsblock.module.css";
 import type {
   ChartRendererProps,
+  ChartDataPoint,
 } from "../../../../interfaces/mcp/chartblock.interface";
+import { useRealtimeStream } from "../../hooks/useRealtimeStream";
 
 export const ChartRenderer: React.FC<ChartRendererProps> = ({
   type,
@@ -30,7 +32,54 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
   xLabel,
   yLabel,
 }) => {
-  if (!dataPoints || dataPoints.length === 0) {
+  const [localPoints, setLocalPoints] = useState<ChartDataPoint[]>(dataPoints);
+
+  useEffect(() => {
+    setLocalPoints(dataPoints);
+  }, [dataPoints]);
+
+  const streamUrl =
+    (window as any).__WIDGET_METADATA__?.streamUrl ||
+    (window as any).__WIDGET_DATA__?.streamUrl;
+
+  useRealtimeStream({
+    streamUrl,
+    onMessage: (payload) => {
+      if (!payload) return;
+      const incomingList = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload.data)
+          ? payload.data
+          : Array.isArray(payload.points)
+            ? payload.points
+            : [payload];
+
+      setLocalPoints((prev) => {
+        const next = [...prev];
+        for (const item of incomingList) {
+          if (!item || typeof item !== "object") continue;
+          const rawY = Number(item.y ?? item.value ?? item.price ?? item.rawY ?? 0);
+          const rawX =
+            item.x ??
+            item.label ??
+            item.name ??
+            item.timestamp ??
+            new Date().toLocaleTimeString();
+          const newPt: ChartDataPoint = {
+            rawX,
+            rawY,
+            formattedX: item.formattedX || String(rawX),
+            formattedY: item.formattedY || String(rawY),
+            label: item.label || String(rawX),
+          };
+          next.push(newPt);
+        }
+        return next.slice(-30);
+      });
+    },
+  });
+
+  if (!localPoints || localPoints.length === 0) {
     return null;
   }
 
@@ -52,7 +101,7 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
   ];
 
   const chartData = useMemo(() => {
-    return dataPoints.map((pt) => ({
+    return localPoints.map((pt) => ({
       name: pt.formattedX || pt.label,
       value: pt.rawY,
       formattedY: pt.formattedY,
@@ -60,9 +109,9 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
       x: pt.rawX,
       y: pt.rawY,
     }));
-  }, [dataPoints]);
+  }, [localPoints]);
 
-  const isManyPoints = dataPoints.length > 8;
+  const isManyPoints = localPoints.length > 8;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -200,7 +249,7 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
         <div
           className={styles.chartInner}
           style={{
-            minWidth: isManyPoints ? `${dataPoints.length * 55}px` : "100%",
+            minWidth: isManyPoints ? `${localPoints.length * 55}px` : "100%",
           }}
         >
           <ResponsiveContainer width="100%" height={260}>

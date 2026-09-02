@@ -610,6 +610,101 @@ const SignupStep2: FC = () => {
                         )}
                       </div>
                     )}
+
+                    {/* Real-time / Live Stream (WebSocket / SSE) Option */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        marginTop: "0.5rem",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        id={`realtime-toggle-${api.id}`}
+                        checked={Boolean(api.isRealtimeApi)}
+                        onChange={(e) =>
+                          updateApiField(
+                            api.id,
+                            "isRealtimeApi",
+                            e.target.checked,
+                          )
+                        }
+                        style={{
+                          accentColor: colors.PrimaryButtonBackground,
+                          cursor: "pointer",
+                          width: "1rem",
+                          height: "1rem",
+                        }}
+                      />
+                      <label
+                        htmlFor={`realtime-toggle-${api.id}`}
+                        style={{
+                          fontSize: "0.8125rem",
+                          fontWeight: 500,
+                          color: colors.TextPrimary,
+                          margin: 0,
+                          cursor: "pointer",
+                        }}
+                      >
+                        ⚡ Does this API provide Live / Real-Time updates (WebSocket or SSE)?
+                      </label>
+                    </div>
+
+                    {api.isRealtimeApi && (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.75rem",
+                          paddingLeft: "1.5rem",
+                          borderLeft: `2px solid ${colors.CardActiveBorder}`,
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        <div>
+                          <label
+                            className={styles.fieldLabel}
+                            style={{ color: colors.TextBody }}
+                          >
+                            WebSocket / SSE Stream URL
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. wss://api.company.com/ws/feed or https://api.company.com/events"
+                            value={api.streamUrl || ""}
+                            onChange={(e) =>
+                              updateApiField(
+                                api.id,
+                                "streamUrl",
+                                e.target.value,
+                              )
+                            }
+                            className={styles.urlInput}
+                            style={{
+                              width: "100%",
+                              background: colors.BackgroundSecondary,
+                              border: `1px solid ${colors.CardBorder}`,
+                              borderRadius: "0.375rem",
+                              color: colors.TextHeading,
+                              padding: "0.5rem 0.75rem",
+                              fontSize: "0.8125rem",
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: "0.75rem",
+                              color: colors.TextMuted,
+                              marginTop: "0.25rem",
+                              display: "block",
+                            }}
+                          >
+                            The widget will connect directly to this stream to receive live tickers, chart points, and real-time record updates.
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

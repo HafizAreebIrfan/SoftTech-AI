@@ -29,6 +29,8 @@ export interface ApisInformation {
   audience?: WidgetAudience;
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
+  isRealtimeApi?: boolean;
+  streamUrl?: string;
   apiSchema?: any;
   schema?: any;
   authHeader?: string;

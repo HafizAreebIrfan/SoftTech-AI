@@ -181,6 +181,7 @@ export interface WidgetAction {
   requiresItem?: boolean;
   requiresConfirmation?: boolean;
   confirmationMessage?: string;
+  streamUrl?: string;
 }
 
 export type WidgetTone = "default" | "good" | "warning" | "danger";

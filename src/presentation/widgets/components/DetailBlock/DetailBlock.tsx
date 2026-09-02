@@ -12,6 +12,7 @@ import styles from "../../../../styles/detailblock.module.css";
 import pd from "../../../../styles/productdetail.module.css";
 import type { DetailBlockProps } from "../../../../interfaces/mcp/detailblock.interface";
 import { classifyAction, getPermissions } from "../../helper/AudienceHelper";
+import { useRealtimeStream } from "../../hooks/useRealtimeStream";
 
 const sectionTitleStyle: React.CSSProperties = {
   margin: "0 0 8px 0",
@@ -29,7 +30,47 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   actions = [],
   audience,
 }) => {
-  const targetRecord = records.length > 0 ? (records[0] as any) : null;
+  const [liveRecord, setLiveRecord] = useState<any>(
+    records.length > 0 ? (records[0] as any) : null,
+  );
+
+  useEffect(() => {
+    setLiveRecord(records.length > 0 ? (records[0] as any) : null);
+  }, [records]);
+
+  const streamUrl: string | undefined =
+    (block as any)?.streamUrl ||
+    (window as any).__WIDGET_METADATA__?.streamUrl ||
+    (window as any).__WIDGET_DATA__?.streamUrl ||
+    actions?.find((a: any) => a?.streamUrl || a?.isRealtimeApi)?.streamUrl;
+
+  useRealtimeStream({
+    streamUrl,
+    onMessage: (payload) => {
+      if (!payload || typeof payload !== "object") return;
+      const incomingItem = Array.isArray(payload)
+        ? payload[0]
+        : payload.data || payload;
+      if (!incomingItem || typeof incomingItem !== "object") return;
+
+      const currentId =
+        liveRecord?.id ||
+        liveRecord?._id ||
+        liveRecord?.packageId ||
+        liveRecord?.productId;
+      const incomingId =
+        incomingItem.id ||
+        incomingItem._id ||
+        incomingItem.packageId ||
+        incomingItem.productId;
+
+      if (!currentId || !incomingId || String(currentId) === String(incomingId)) {
+        setLiveRecord((prev: any) => ({ ...prev, ...incomingItem }));
+      }
+    },
+  });
+
+  const targetRecord = liveRecord;
   const [selectedImgIdx, setSelectedImgIdx] = useState<number>(0);
   const [selectedTierIdx, setSelectedTierIdx] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
