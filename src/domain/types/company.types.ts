@@ -8,6 +8,20 @@ export interface IOAuth {
   scopes?: string[];
 }
 
+export interface ICompanyAuthStrategy {
+  strategyType?: "none" | "api_key" | "bearer" | "oauth2" | "custom_header";
+  apiKey?: string;
+  authHeader?: string;
+  bearerToken?: string;
+  // For User OAuth 2.0 (ChatGPT / MCP User OAuth)
+  authorizationServer?: string;
+  authorizationEndpoint?: string;
+  tokenEndpoint?: string;
+  clientId?: string;
+  clientSecret?: string;
+  scopes?: string[];
+}
+
 export interface IApi {
   name: string;
   mcpToolName?: string;
@@ -16,6 +30,7 @@ export interface IApi {
   endpoint: string;
   method?: string;
   authType?: string;
+  requiresAuth?: boolean;
   headers?: any[];
   params?: ApiParam[];
   body?: ApiParam[];
@@ -51,6 +66,7 @@ export interface ICompany {
   password?: string;
   phone?: string;
   apis?: IApi[];
+  authStrategy?: ICompanyAuthStrategy;
   uiPreference?: IUiPreference | null;
   onboardingStep?: number;
   status?: string;

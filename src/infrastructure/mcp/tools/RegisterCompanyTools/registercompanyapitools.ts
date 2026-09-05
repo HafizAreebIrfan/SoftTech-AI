@@ -83,6 +83,31 @@ export const registerCompanyApiTools = (
       destructiveHint = false;
     }
 
+    const authStrategy = (company as any).authStrategy;
+    const isOauthConfigured =
+      authStrategy?.strategyType === "oauth2" ||
+      Boolean(authStrategy?.authorizationServer) ||
+      Boolean(authStrategy?.authorizationEndpoint) ||
+      api.authType === "oauth_user" ||
+      api.authType === "oauth2" ||
+      api.authType === "oauth";
+
+    const isToolAuthRequired = Boolean(
+      api.requiresAuth ||
+      api.authType === "oauth_user" ||
+      api.authType === "bearer" ||
+      api.authType === "apikey" ||
+      (method !== "GET" && isOauthConfigured)
+    );
+
+    const scopes = Array.isArray(authStrategy?.scopes) && authStrategy.scopes.length > 0
+      ? authStrategy.scopes
+      : (Array.isArray(api.oauth?.scopes) && api.oauth.scopes.length > 0 ? api.oauth.scopes : ["read", "write"]);
+
+    const securitySchemes: any[] = isOauthConfigured
+      ? (isToolAuthRequired ? [{ type: "oauth2", scopes }] : [{ type: "noauth" }, { type: "oauth2", scopes }])
+      : [{ type: "noauth" }];
+
     registerAppTool(
       server,
       toolName,
@@ -91,6 +116,7 @@ export const registerCompanyApiTools = (
         description: toolDescription,
         inputSchema: customInputSchema,
         outputSchema: genericWidgetOutputSchema,
+        securitySchemes,
         annotations: {
           readOnlyHint,
           destructiveHint,
@@ -104,7 +130,7 @@ export const registerCompanyApiTools = (
           "openai/toolInvocation/invoking": `Preparing ${api.name || "widget"}...`,
           "openai/toolInvocation/invoked": "Loaded",
         },
-      },
+      } as any,
       async (input: any, extra: any) => {
         try {
           const req = extra?.req;
@@ -134,6 +160,8 @@ export const registerCompanyApiTools = (
               company,
               resourceUri,
               method,
+              undefined,
+              true,
             );
           }
 
@@ -210,6 +238,8 @@ export const registerCompanyApiTools = (
               company,
               resourceUri,
               method,
+              undefined,
+              true,
             );
           }
 
@@ -326,6 +356,7 @@ const buildMcpSuccessResult = (
   resourceUri?: string,
   method = "GET",
   summaryText?: string,
+  isAuthChallenge = false,
 ) => {
   const metaObject: Record<string, any> = {
     ui: { resourceUri },
@@ -341,6 +372,13 @@ const buildMcpSuccessResult = (
     "softtech/httpMethod": method,
     "softtech/apiName": apiName,
   };
+
+  if (isAuthChallenge) {
+    const resourceMetadataUrl = `https://softtech-ai.onrender.com/mcp/${company.mcpSlug || ""}/.well-known/oauth-protected-resource`;
+    metaObject["mcp/www_authenticate"] = [
+      `Bearer resource_metadata="${resourceMetadataUrl}", error="insufficient_scope", error_description="Account authorization is required to access ${company.companyName}"`,
+    ];
+  }
 
   return {
     structuredContent: widgetContent,

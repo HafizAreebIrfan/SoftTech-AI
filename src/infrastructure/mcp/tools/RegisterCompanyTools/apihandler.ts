@@ -920,6 +920,18 @@ const buildHeaders = async (
     }
   });
 
+  // 1. Check for dynamic user Bearer token passed from ChatGPT / MCP Client
+  const incomingAuth =
+    req?.headers?.authorization ||
+    req?.headers?.Authorization ||
+    req?.headers?.["authorization"] ||
+    req?.headers?.["Authorization"];
+
+  if (incomingAuth) {
+    headers.Authorization = String(incomingAuth).trim();
+    return headers;
+  }
+
   const authType = normalizeAuthType(api.authType, (api.oauth as any)?.flow);
 
   if (authType === "BEARER" && api.bearerToken) {
@@ -932,7 +944,7 @@ const buildHeaders = async (
   } else if (authType === "OAUTH") {
     const token = await getAccessToken(api.oauth, forceRefreshToken, api.name);
     headers.Authorization = `Bearer ${token}`;
-  } else if (authType === "OAUTH_USER") {
+  } else if (authType === "OAUTH_USER" || api.requiresAuth) {
     const userId = req ? resolveMcpUserId(req) : "anonymous_user";
     const token = await getUserAccessToken({
       companyId,

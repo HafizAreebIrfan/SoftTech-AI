@@ -92,11 +92,26 @@ const transformApiEntry = (api: any, index: number): any => {
       api.mcpDescription ||
       `Calls ${api.name || api.apiName || "a registered company API"} and returns a generic widget response.`,
     mcpResourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
+    requiresAuth: Boolean(api.requiresAuth),
     inputFieldMap: Array.isArray(api.inputFieldMap) ? api.inputFieldMap : [],
     outputFieldMap: Array.isArray(api.outputFieldMap) ? api.outputFieldMap : [],
     fallbackWidget: api.fallbackWidget || "",
     testedonregister: Boolean(api.testedonregister),
   };
+};
+
+const isInternalAuthRoute = (endpoint: string, name: string): boolean => {
+  const lowerEndpoint = String(endpoint || "").toLowerCase();
+  const lowerName = String(name || "").toLowerCase();
+
+  return (
+    /\/api\/auth\/(login|signin|register|signup|verify-mfa|verify_mfa|oauth|google|github|forgot-password|reset-password)/i.test(
+      lowerEndpoint,
+    ) ||
+    /^(login|sign in|register|sign up|google oauth|github oauth|verify mfa)$/i.test(
+      lowerName,
+    )
+  );
 };
 
 export async function saveCompanyApiDetails(
@@ -107,19 +122,31 @@ export async function saveCompanyApiDetails(
   if (!companyId) throw new Error("companyId is required");
   if (
     !payload.apis ||
-    !Array.isArray(payload.apis) ||
-    payload.apis.length === 0
+    !Array.isArray(payload.apis)
   ) {
-    throw new Error("apis must be a non-empty array");
+    throw new Error("apis must be an array");
   }
 
-  const apis = payload.apis.map((api: any, index: number) =>
+  // Filter out internal website authentication endpoints so only real business tools become MCP tools
+  const businessApis = payload.apis.filter(
+    (api: any) => !isInternalAuthRoute(api.endpoint || api.apiEndpoint, api.name || api.apiName),
+  );
+
+  const apisToProcess = businessApis.length > 0 ? businessApis : payload.apis;
+
+  const apis = apisToProcess.map((api: any, index: number) =>
     transformApiEntry(api, index),
   );
 
-  return await companyRepository.update(companyId, {
+  const updateData: any = {
     apis,
     onboardingStep: 2,
     updatedAt: new Date(),
-  });
+  };
+
+  if (payload.authStrategy) {
+    updateData.authStrategy = payload.authStrategy;
+  }
+
+  return await companyRepository.update(companyId, updateData);
 }

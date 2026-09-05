@@ -12,6 +12,7 @@ export const ApiSchema = new mongoose.Schema(
     method: { type: String, default: "GET" },
 
     authType: { type: String },
+    requiresAuth: { type: Boolean, default: false },
 
     headers: { type: [mongoose.Schema.Types.Mixed], default: [] },
 

@@ -13,6 +13,7 @@ export interface ICompanyDocument extends Document, ICompanyForgotPassword {
   password?: string;
   phone?: string;
   apis?: any[];
+  authStrategy?: any;
   uiPreference?: any;
   latestWidgetSnapshot?: McpToolResultPayload | null;
   latestWidgetSnapshotUpdatedAt?: Date;
@@ -42,6 +43,7 @@ const CompanySchema = new mongoose.Schema<ICompanyDocument, ICompanyModel>(
     password: { type: String, required: true },
     phone: { type: String },
     apis: [ApiSchema],
+    authStrategy: { type: mongoose.Schema.Types.Mixed, default: null },
     uiPreference: UiPreferenceSchema,
     latestWidgetSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
     latestWidgetSnapshotUpdatedAt: { type: Date },
