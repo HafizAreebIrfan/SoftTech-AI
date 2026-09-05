@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { SignupStore, ParamRow } from "../../interfaces/auth/signup.interface";
+import {
+  SignupStore,
+  ParamRow,
+  ApiConnection,
+} from "../../interfaces/auth/signup.interface";
 import {
   saveCompanyApiDetails,
   analyzeSingleCompanyApi,
@@ -439,6 +443,58 @@ export const useSignupStore = create<SignupStore>()(
               ? state.apisList.filter((api) => api.id !== id)
               : state.apisList,
         })),
+      handleDeleteAllApis: async () => {
+        const emptyApiList: ApiConnection[] = [
+          {
+            id: `api-${Date.now()}`,
+            apiName: "",
+            apiMethod: "GET",
+            apiEndpoint: "",
+            apiAuthType: "No Auth",
+            apiCredentials: "",
+            apiQueryParams: "",
+            apiCheckoutTemplate: "",
+            apiAuthHeader: "",
+            oauthTokenUrl: "",
+            oauthClientId: "",
+            apiHeaders: "",
+            isRealtimeApi: false,
+            streamUrl: "",
+          },
+        ];
+
+        set({
+          apisList: emptyApiList,
+          apiTestStates: {},
+        });
+
+        // Explicitly update localStorage
+        try {
+          const persistedState = localStorage.getItem("softtech-signup-store");
+          if (persistedState) {
+            const parsed = JSON.parse(persistedState);
+            if (parsed.state) {
+              parsed.state.apisList = emptyApiList;
+              parsed.state.apiTestStates = {};
+              localStorage.setItem("softtech-signup-store", JSON.stringify(parsed));
+            }
+          }
+        } catch (storageErr) {
+          console.warn("Could not write directly to localStorage:", storageErr);
+        }
+
+        // Synchronize with backend database if companyId is registered
+        const { companyId } = get();
+        if (companyId) {
+          try {
+            await saveCompanyApiDetails(companyId, [] as any);
+          } catch (dbErr) {
+            console.warn("Could not clear APIs from database:", dbErr);
+          }
+        }
+
+        showToast("All API endpoints cleared from storage and database.", "info");
+      },
       clearSignupProgress: () =>
         set({
           companyId: null,
@@ -1281,6 +1337,133 @@ export const useSignupStore = create<SignupStore>()(
             "https://" + inputUrl.replace(/^https?:\/\//, ""),
           );
         }
+      },
+      importApisBatch: async (
+        importedApis: ApiConnection[],
+        mode: "append" | "replace",
+      ) => {
+        if (!importedApis || importedApis.length === 0) return;
+
+        let finalList: ApiConnection[] = [];
+
+        set((state) => {
+          let updatedList: ApiConnection[];
+          if (mode === "replace") {
+            updatedList = [...importedApis];
+          } else {
+            const isSingleEmpty =
+              state.apisList.length === 1 &&
+              (!state.apisList[0].apiName ||
+                !state.apisList[0].apiName.trim()) &&
+              (!state.apisList[0].apiEndpoint ||
+                state.apisList[0].apiEndpoint === "https://" ||
+                state.apisList[0].apiEndpoint.trim() === "");
+
+            if (isSingleEmpty) {
+              updatedList = [...importedApis];
+            } else {
+              updatedList = [...state.apisList, ...importedApis];
+            }
+          }
+
+          finalList = updatedList;
+
+          const updatedTestStates: Record<string, any> =
+            mode === "replace" ? {} : { ...state.apiTestStates };
+
+          importedApis.forEach((api) => {
+            if (api.sampleresponse) {
+              updatedTestStates[api.id] = {
+                status: "success",
+                logs: `[${new Date().toLocaleTimeString()}] Imported with sample payload (${api.apiMethod} ${api.apiEndpoint})\nReady for AI schema analysis.\n`,
+                sampleResponse: api.sampleresponse,
+              };
+            }
+          });
+
+          return {
+            apisList: updatedList,
+            apiTestStates: updatedTestStates,
+          };
+        });
+
+        // 1. Explicitly synchronize localStorage
+        try {
+          const persistedState = localStorage.getItem("softtech-signup-store");
+          if (persistedState) {
+            const parsed = JSON.parse(persistedState);
+            if (parsed.state) {
+              parsed.state.apisList = finalList;
+              localStorage.setItem("softtech-signup-store", JSON.stringify(parsed));
+            }
+          }
+        } catch (storageErr) {
+          console.warn("Could not write directly to localStorage:", storageErr);
+        }
+
+        // 2. Synchronize with backend database if companyId exists
+        const { companyId } = get();
+        if (companyId && finalList.length > 0) {
+          try {
+            const apisPayload = finalList.map((api) => {
+              const isbearertoken =
+                api.apiAuthType === "Bearer Token"
+                  ? { bearerToken: api.apiCredentials }
+                  : {};
+              const isapikey =
+                api.apiAuthType === "API Key"
+                  ? { apiKey: api.apiCredentials, authHeader: api.apiAuthHeader }
+                  : {};
+              const isoauth =
+                api.apiAuthType === "OAuth 2.0"
+                  ? {
+                      oauthClientSecret: api.apiCredentials,
+                      oauthTokenUrl: api.oauthTokenUrl,
+                      oauthClientId: api.oauthClientId,
+                    }
+                  : {};
+              const isuseroauth =
+                api.apiAuthType === "User-Level OAuth"
+                  ? {
+                      oauthAuthorizationUrl: api.oauthAuthorizationUrl,
+                      oauthTokenUrl: api.oauthTokenUrl,
+                      oauthClientId: api.oauthClientId,
+                    }
+                  : {};
+
+              return {
+                name: api.apiName || "API Endpoint",
+                method: api.apiMethod || "GET",
+                baseUrl: api.apiEndpoint ? getBaseUrl(api.apiEndpoint) : "",
+                endpoint: api.apiEndpoint ? getEndpointPath(api.apiEndpoint) : "/",
+                authType: api.apiAuthType || "No Auth",
+                authHeader: api.apiAuthHeader || "Authorization",
+                headers: api.apiHeaders ? [api.apiHeaders] : [],
+                params: api.apiQueryParams ? [api.apiQueryParams] : [],
+                requestBody: api.apiRequestBody ? [api.apiRequestBody] : [],
+                sampleresponse: api.sampleresponse || "",
+                audience: api.audience || "customer",
+                isRealtimeApi: Boolean(api.isRealtimeApi),
+                streamUrl: api.streamUrl || "",
+                apiSchema: api.apiSchema || api.schema || undefined,
+                schema: api.apiSchema || api.schema || undefined,
+                ...isbearertoken,
+                ...isapikey,
+                ...isoauth,
+                ...isuseroauth,
+              };
+            });
+
+            await saveCompanyApiDetails(companyId, apisPayload as any);
+          } catch (dbErr) {
+            console.warn("Could not sync imported APIs to database:", dbErr);
+          }
+        }
+
+        showToast(
+          `Successfully imported ${importedApis.length} API endpoint(s) (${mode === "replace" ? "Replaced all" : "Appended"})!`,
+          "success",
+        );
       },
       applyTemplateSuggestions: (apiId, field, industry, apiName, method) => {
         const { updateApiField } = get();

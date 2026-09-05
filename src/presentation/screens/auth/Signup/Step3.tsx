@@ -1,9 +1,7 @@
 import React, { FC, useEffect, useState, useMemo } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
 import { useThemeStore, useAuthStore, useSignupStore } from "../../../../hooks";
-import { saveCompanyUiSelection } from "../../../../adapters/api/authApi";
 import {
   CheckIcon,
   LeftArrowIcon,
@@ -100,42 +98,6 @@ const SignupStep3: FC = () => {
     }
   }, [companyId, isAuthenticated, navigate]);
 
-  const { mutate: stepThreeMutate, isPending: isStepThreePending } =
-    useMutation({
-      mutationFn: ({
-        id,
-        uiPreference,
-      }: {
-        id: string;
-        uiPreference: {
-          layout: string;
-          themeColor?: string;
-          audienceDefault?: string;
-        };
-      }) => saveCompanyUiSelection(id, uiPreference),
-      onSuccess: (res) => {
-        if (res && res.success && res.data) {
-          const user = {
-            id: res.data._id,
-            name: res.data.companyName,
-            email: res.data.email,
-          };
-          setAuth(user);
-          clearSignupProgress();
-          showToast(
-            "Registration completed successfully! Welcome aboard.",
-            "success",
-          );
-          navigate({ to: "/dashboard" });
-        } else {
-          showToast(res?.message || "Failed to save UI details.", "error");
-        }
-      },
-      onError: (err: any) => {
-        showToast(err.message || "An error occurred during Step 3.", "error");
-      },
-    });
-
   const handleStepThreeSubmit = () => {
     if (!companyId) {
       showToast("Company ID is missing. Please restart signup.", "error");
@@ -143,15 +105,7 @@ const SignupStep3: FC = () => {
       return;
     }
 
-    stepThreeMutate({
-      id: companyId,
-      uiPreference: {
-        layout: selectedLayout || "auto",
-        themeColor: selectedThemeColor || "#6366f1",
-        audienceDefault:
-          selectedAudienceDefault || calculatedAudienceDefault || "customer",
-      },
-    });
+    navigate({ to: "/signup/provisioning" });
   };
 
   const handleColorChange = (hex: string) => {
@@ -387,12 +341,10 @@ const SignupStep3: FC = () => {
               className={`${styles.btn}`}
               style={{
                 background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
-                opacity: isStepThreePending ? 0.7 : 1,
                 color: colors.TextOverlay,
               }}
-              disabled={isStepThreePending}
             >
-              {isStepThreePending ? "Creating..." : "Create Account"}
+              Finalize & Provision AI
             </button>
           </div>
         </div>

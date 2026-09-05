@@ -19,7 +19,9 @@ const Signup: FC = () => {
     ? 2
     : location.pathname.endsWith("/step3")
       ? 3
-      : 1;
+      : location.pathname.endsWith("/provisioning")
+        ? 4
+        : 1;
 
   const handleLogoClick = () => {
     navigate({ to: "/" });

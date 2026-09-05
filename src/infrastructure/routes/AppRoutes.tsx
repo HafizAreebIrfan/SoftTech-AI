@@ -12,6 +12,7 @@ import Signup from "../../presentation/screens/auth/Signup";
 import SignupStep1 from "../../presentation/screens/auth/Signup/Step1";
 import SignupStep2 from "../../presentation/screens/auth/Signup/Step2";
 import SignupStep3 from "../../presentation/screens/auth/Signup/Step3";
+import ProvisioningScreen from "../../presentation/screens/auth/Signup/ProvisioningScreen";
 import Dashboard from "../../presentation/screens/private/Dashboard";
 import NotFound from "../../presentation/screens/public/NotFound";
 import ServiceUnavailable from "../../presentation/screens/public/ServiceUnavailable";
@@ -89,6 +90,12 @@ const signupStep3Route = createRoute({
   component: SignupStep3,
 });
 
+const signupProvisioningRoute = createRoute({
+  getParentRoute: () => signupRoute,
+  path: "/provisioning",
+  component: ProvisioningScreen,
+});
+
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard",
@@ -129,6 +136,7 @@ const routeTree = rootRoute.addChildren([
       signupStep1Route,
       signupStep2Route,
       signupStep3Route,
+      signupProvisioningRoute,
     ]),
   ]),
   dashboardRoute,

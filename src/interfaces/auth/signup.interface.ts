@@ -83,6 +83,11 @@ export interface SignupStore {
   updateApiField: (id: string, field: keyof ApiConnection, value: any) => void;
   handleAddApi: () => void;
   handleDeleteApi: (id: string) => void;
+  handleDeleteAllApis: () => Promise<void> | void;
+  importApisBatch: (
+    apis: ApiConnection[],
+    mode: "append" | "replace",
+  ) => Promise<void> | void;
   setSelectedLayout: (
     layout:
       | "dashboard"

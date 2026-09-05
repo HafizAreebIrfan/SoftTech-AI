@@ -1148,3 +1148,228 @@
   font-weight: 600;
   text-transform: uppercase;
 }
+
+/* Step 2 Hero Choice Card */
+.step2HeroCard {
+  border-radius: 1rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  border: 1px solid var(--hero-border, rgba(255, 255, 255, 0.1));
+  background: var(--hero-bg, rgba(15, 23, 42, 0.6));
+}
+
+.heroIconBg {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.heroTitle {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+  font-family: "JOST", "Poppins", sans-serif;
+}
+
+.heroDesc {
+  font-size: 0.875rem;
+  max-width: 540px;
+  line-height: 1.5;
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+}
+
+.heroActionGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 0.5rem;
+}
+
+.heroPrimaryBtn {
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  border-radius: 0.625rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: "Poppins", sans-serif;
+  color: #ffffff;
+}
+
+.heroPrimaryBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.45);
+}
+
+.heroOrDivider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  font-family: "Poppins", sans-serif;
+  opacity: 0.6;
+}
+
+.heroOrDivider::before,
+.heroOrDivider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.heroSecondaryBtn {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.15s ease;
+  font-family: "Poppins", sans-serif;
+  border: 1px solid var(--btn-border, rgba(255, 255, 255, 0.15));
+}
+
+.heroSecondaryBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Step 2 Header Toolbar */
+.step2HeaderContainer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.step2HeaderTextCol {
+  flex: 1;
+  min-width: 280px;
+}
+
+.step2HeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.step2HeaderImportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: "Poppins", sans-serif;
+  color: #ffffff;
+}
+
+.step2HeaderImportBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
+}
+
+.step2HeaderDeleteAllBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.15s ease;
+  font-family: "Poppins", sans-serif;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.step2HeaderDeleteAllBtn:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: #ef4444;
+}
+
+/* Step 2 Realtime Live Stream Section */
+.realtimeToggleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-top: 0.25rem;
+}
+
+.realtimeCheckbox {
+  cursor: pointer;
+  width: 1rem;
+  height: 1rem;
+}
+
+.realtimeLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin: 0;
+  cursor: pointer;
+  font-family: "Poppins", sans-serif;
+}
+
+.realtimeInputContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-left: 1.5rem;
+  margin-top: 0.25rem;
+}
+
+.realtimeStreamInput {
+  width: 100%;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.realtimeHelpText {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: block;
+  font-family: "Poppins", sans-serif;
+}
+

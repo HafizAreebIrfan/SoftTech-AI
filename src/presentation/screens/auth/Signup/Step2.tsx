@@ -31,6 +31,7 @@ import {
 import { showToast } from "../../../../utils/toasts";
 import styles from "../../../../styles/signup.module.css";
 import { PostmanTableEditor } from "../../../components/auth/PostmanTableEditor";
+import { ApiImportModal } from "../../../components/auth/ApiImportModal";
 
 const getMethodBadgeStyle = (
   method: string,
@@ -91,8 +92,20 @@ const SignupStep2: FC = () => {
     handleSaveSampleResponse,
     handleStepTwoSubmit,
     handleEndpointUrlChange,
+    handleDeleteAllApis,
+    importApisBatch,
     stepOneData,
   } = useSignupStore();
+
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [hasChosenManual, setHasChosenManual] = useState(false);
+
+  const isInitialEmpty =
+    apisList.length === 1 &&
+    (!apisList[0].apiName || !apisList[0].apiName.trim()) &&
+    (!apisList[0].apiEndpoint ||
+      apisList[0].apiEndpoint === "https://" ||
+      apisList[0].apiEndpoint.trim() === "");
 
   React.useEffect(() => {
     if (!companyId) {
@@ -128,13 +141,6 @@ const SignupStep2: FC = () => {
     setActiveTabs((prev) => ({ ...prev, [apiId]: tab }));
   };
 
-  const allApisTestedSuccessfully = apisList.every(
-    (api) =>
-      api.isTested ||
-      api.isAnalyzed ||
-      apiTestStates[api.id]?.status === "success",
-  );
-
   const anyApiHasError = apisList.some(
     (api) => apiTestStates[api.id]?.status === "error",
   );
@@ -142,9 +148,7 @@ const SignupStep2: FC = () => {
   const getButtonText = () => {
     if (isStepTwoPending) return "Saving...";
     if (anyApiHasError) return "Fix API Errors to Continue";
-    if (!allApisTestedSuccessfully)
-      return "Upload Samples for All APIs to Continue";
-    return "Continue";
+    return "Continue to UI Preferences";
   };
 
   const handleStepTwoSubmitWithValidation = () => {
@@ -153,14 +157,6 @@ const SignupStep2: FC = () => {
       const errorMsg =
         result.error.issues[0]?.message || "Please fix validation errors.";
       showToast(errorMsg, "warning");
-      return;
-    }
-
-    if (!allApisTestedSuccessfully) {
-      showToast(
-        "Please upload sample responses for all APIs before continuing.",
-        "warning",
-      );
       return;
     }
 
@@ -184,20 +180,109 @@ const SignupStep2: FC = () => {
           boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`,
         }}
       >
-        {/* Header Title */}
-        <div className={styles.headerWrapper}>
-          <h2
-            className={styles.headerTitle}
-            style={{ color: colors.TextHeading }}
-          >
-            API Configuration
-          </h2>
-          <p className={styles.headerDesc} style={{ color: colors.TextBody }}>
-            Define how your backend communicates with your services. Specify
-            endpoints without query parameters, configure authentication
-            protocols, and let our AI automatically generate your schema.
-          </p>
+        {/* Header Title & Actions */}
+        <div className={styles.step2HeaderContainer}>
+          <div className={styles.step2HeaderTextCol}>
+            <h2
+              className={styles.headerTitle}
+              style={{ color: colors.TextHeading }}
+            >
+              API Configuration
+            </h2>
+            <p className={styles.headerDesc} style={{ color: colors.TextBody }}>
+              Define how your backend communicates with your services. Specify
+              endpoints, configure authentication, or import all routes in 1-click via OpenAPI / Postman.
+            </p>
+          </div>
+
+          <div className={styles.step2HeaderActions}>
+            <button
+              type="button"
+              onClick={() => setIsImportModalOpen(true)}
+              className={styles.step2HeaderImportBtn}
+              style={{
+                background: `linear-gradient(120deg, ${colors.ButtonGradientOne || "#6366f1"}, ${colors.ButtonGradientTwo || "#8b5cf6"})`,
+              }}
+            >
+              <SparklesIcon size={15} color="#ffffff" />
+              <span>1-Click Import (Swagger / Postman)</span>
+            </button>
+
+            {apisList.length > 0 && !isInitialEmpty && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (
+                    window.confirm(
+                      "Are you sure you want to delete all API connections? This will clear all endpoints from local storage and the database."
+                    )
+                  ) {
+                    await handleDeleteAllApis();
+                    setHasChosenManual(false);
+                  }
+                }}
+                className={styles.step2HeaderDeleteAllBtn}
+                title="Delete all API connections"
+              >
+                <TrashIcon size={13} color="currentColor" />
+                <span>Delete All</span>
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Hero Card when initial/empty and manual not chosen yet */}
+        {isInitialEmpty && !hasChosenManual && (
+          <div
+            className={styles.step2HeroCard}
+            style={{
+              "--hero-border": colors.CardBorder,
+              "--hero-bg": colors.BackgroundSecondary,
+            } as React.CSSProperties}
+          >
+            <div className={styles.heroIconBg}>
+              <SparklesIcon size={28} color={colors.BrandIndigo} />
+            </div>
+            <h3 className={styles.heroTitle} style={{ color: colors.TextHeading }}>
+              Fast-Track: 1-Click API Import
+            </h3>
+            <p className={styles.heroDesc} style={{ color: colors.TextBody }}>
+              Have an OpenAPI 3.0 / Swagger specification or a Postman collection?
+              Import all your routes, headers, parameters, and sample payloads in seconds.
+            </p>
+
+            <div className={styles.heroActionGroup}>
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className={styles.heroPrimaryBtn}
+                style={{
+                  background: `linear-gradient(120deg, ${colors.ButtonGradientOne || "#6366f1"}, ${colors.ButtonGradientTwo || "#8b5cf6"})`,
+                }}
+              >
+                <SparklesIcon size={18} color="#ffffff" />
+                <span>1-Click Import (Swagger / Postman)</span>
+              </button>
+
+              <div className={styles.heroOrDivider} style={{ color: colors.TextBody }}>
+                <span>OR</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setHasChosenManual(true)}
+                className={styles.heroSecondaryBtn}
+                style={{
+                  color: colors.TextHeading,
+                  borderColor: colors.CardBorder,
+                }}
+              >
+                <SlidersIcon size={16} color={colors.BrandIndigo} />
+                <span>Configure Endpoints Manually</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {apisList.map((api, index) => {
           const methodColors = getMethodBadgeStyle(
@@ -632,7 +717,7 @@ const SignupStep2: FC = () => {
                           )
                         }
                         style={{
-                          accentColor: colors.PrimaryButtonBackground,
+                          accentColor: colors.ButtonGradientOne,
                           cursor: "pointer",
                           width: "1rem",
                           height: "1rem",
@@ -695,7 +780,7 @@ const SignupStep2: FC = () => {
                           <span
                             style={{
                               fontSize: "0.75rem",
-                              color: colors.TextMuted,
+                              color: colors.TextBody,
                               marginTop: "0.25rem",
                               display: "block",
                             }}
@@ -1678,17 +1763,39 @@ const SignupStep2: FC = () => {
           );
         })}
 
-        {/* Add Another API Connection */}
-        <button
-          type="button"
-          onClick={handleAddApi}
-          className={styles.btnAddApi}
-        >
-          <div className={styles.addIconBg}>
-            <Plus size={14} color={colors.BrandIndigo} />
-          </div>
-          <span className={styles.addApiText}>Add Another API Endpoint</span>
-        </button>
+        {/* Add Another API & Secondary Import Buttons */}
+        <div className={styles.addApiBtnGroup}>
+          <button
+            type="button"
+            onClick={handleAddApi}
+            className={`${styles.btnAddApi} ${styles.btnAddApiFlex}`}
+          >
+            <div className={styles.addIconBg}>
+              <Plus size={14} color={colors.BrandIndigo} />
+            </div>
+            <span className={styles.addApiText}>Add Another API Endpoint</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className={styles.btnSecondaryImport}
+            style={{
+              background: colors.BackgroundSecondary,
+              border: `1px dashed ${colors.BrandIndigo || "#6366f1"}`,
+            }}
+          >
+            <div className={styles.secondaryImportIconBg}>
+              <UploadIcon size={14} color={colors.BrandIndigo || "#6366f1"} />
+            </div>
+            <span
+              className={styles.addApiText}
+              style={{ color: colors.TextHeading }}
+            >
+              Import OpenAPI / Postman
+            </span>
+          </button>
+        </div>
 
         {/* Footer Action Bar */}
         <div className={styles.footerActionBar}>
@@ -1711,34 +1818,24 @@ const SignupStep2: FC = () => {
               className={styles.btn}
               style={{
                 background:
-                  isStepTwoPending ||
-                  !allApisTestedSuccessfully ||
-                  anyApiHasError
+                  isStepTwoPending || anyApiHasError
                     ? colors.Background
                     : `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
                 color:
-                  isStepTwoPending ||
-                  !allApisTestedSuccessfully ||
-                  anyApiHasError
+                  isStepTwoPending || anyApiHasError
                     ? colors.TextBody
                     : "#ffffff",
                 border:
-                  isStepTwoPending ||
-                  !allApisTestedSuccessfully ||
-                  anyApiHasError
+                  isStepTwoPending || anyApiHasError
                     ? `1px solid ${colors.CardBorder}`
                     : "none",
                 cursor:
-                  isStepTwoPending ||
-                  !allApisTestedSuccessfully ||
-                  anyApiHasError
+                  isStepTwoPending || anyApiHasError
                     ? "not-allowed"
                     : "pointer",
                 opacity: 1,
               }}
-              disabled={
-                isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
-              }
+              disabled={isStepTwoPending || anyApiHasError}
             >
               {getButtonText()}
             </button>
@@ -1962,6 +2059,15 @@ const SignupStep2: FC = () => {
           </div>
         </div>
       )}
+      {/* OpenAPI / Postman Importer Modal */}
+      <ApiImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={(apis, mode) => {
+          importApisBatch(apis, mode);
+          setHasChosenManual(true);
+        }}
+      />
     </motion.div>
   );
 };
