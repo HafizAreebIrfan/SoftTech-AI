@@ -1,6 +1,6 @@
 import { ApiConnection } from "../../interfaces/auth/signup.interface";
 import { WidgetAudience } from "../../domain/entities/GenericWidget";
-import { isInternalAuthPath } from "./openApiImporter";
+import { isInternalAuthPath, inferRequiresAuth } from "./openApiImporter";
 
 export interface ExtendedPostmanApiConnection extends ApiConnection {
   isInternalAuthRoute?: boolean;
@@ -382,6 +382,12 @@ export function parsePostmanCollection(
         isInternalAuthRoute,
         isRealtimeApi,
         streamUrl,
+        requiresAuth: inferRequiresAuth(
+          fullUrl,
+          upperMethod,
+          authInfo.apiAuthType,
+          Boolean(request.auth),
+        ),
         sampleresponse: sampleresponse || undefined,
         isTested: Boolean(sampleresponse),
         isAnalyzed: false,

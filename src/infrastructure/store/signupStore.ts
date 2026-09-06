@@ -30,6 +30,113 @@ const getEndpointPath = (urlStr: string): string => {
   }
 };
 
+export const resolveApiAuthPayload = (
+  api: ApiConnection,
+  globalStrategy?: any,
+): {
+  authType: string;
+  authtype?: string;
+  requiresAuth?: boolean;
+  apiKey?: string;
+  authHeader?: string;
+  bearerToken?: string;
+  oauthTokenUrl?: string;
+  oauthAuthorizationUrl?: string;
+  oauthClientId?: string;
+  oauthClientSecret?: string;
+  oauth?: {
+    tokenUrl?: string;
+    authorizationUrl?: string;
+    clientId?: string;
+    clientSecret?: string;
+    flow?: string;
+  };
+  [key: string]: any;
+} => {
+  const strategyType = globalStrategy?.strategyType || "none";
+
+  if (strategyType === "oauth2") {
+    if (api.requiresAuth) {
+      return {
+        authType: "oauth_user",
+        authtype: "oauth_user",
+        requiresAuth: true,
+        oauthAuthorizationUrl: globalStrategy.authorizationEndpoint || "",
+        oauthTokenUrl: globalStrategy.tokenEndpoint || "",
+        oauthClientId: globalStrategy.clientId || "",
+        oauthClientSecret: globalStrategy.clientSecret || "",
+        oauth: {
+          authorizationUrl: globalStrategy.authorizationEndpoint || "",
+          tokenUrl: globalStrategy.tokenEndpoint || "",
+          clientId: globalStrategy.clientId || "",
+          clientSecret: globalStrategy.clientSecret || "",
+          flow: "authorization_code",
+        },
+      };
+    } else {
+      return {
+        authType: "No Auth",
+        authtype: "No Auth",
+        requiresAuth: false,
+      };
+    }
+  }
+
+  if (strategyType === "api_key") {
+    return {
+      authType: "API Key",
+      authtype: "API Key",
+      apiKey: globalStrategy.apiKey || "",
+      authHeader: globalStrategy.authHeader || "Authorization",
+      requiresAuth: Boolean(api.requiresAuth),
+    };
+  }
+
+  if (strategyType === "custom_header") {
+    return {
+      authType: "Custom Header",
+      authtype: "Custom Header",
+      apiKey: globalStrategy.apiKey || "",
+      authHeader: globalStrategy.authHeader || "X-Custom-Header",
+      requiresAuth: Boolean(api.requiresAuth),
+    };
+  }
+
+  if (strategyType === "bearer") {
+    return {
+      authType: "Bearer Token",
+      authtype: "Bearer Token",
+      bearerToken: globalStrategy.bearerToken || globalStrategy.apiKey || "",
+      requiresAuth: Boolean(api.requiresAuth),
+    };
+  }
+
+  // Fallback: If individual API had explicit credentials provided
+  if (api.apiAuthType === "Bearer Token" && api.apiCredentials?.trim()) {
+    return {
+      authType: "Bearer Token",
+      authtype: "Bearer Token",
+      bearerToken: api.apiCredentials.trim(),
+      requiresAuth: Boolean(api.requiresAuth),
+    };
+  }
+  if (api.apiAuthType === "API Key" && api.apiCredentials?.trim()) {
+    return {
+      authType: "API Key",
+      authtype: "API Key",
+      apiKey: api.apiCredentials.trim(),
+      authHeader: api.apiAuthHeader || "X-API-Key",
+      requiresAuth: Boolean(api.requiresAuth),
+    };
+  }
+
+  return {
+    authType: "No Auth",
+    authtype: "No Auth",
+    requiresAuth: Boolean(api.requiresAuth),
+  };
+};
+
 export function trimSampleJson(jsonStr: string, maxLen = 8000): string {
   if (!jsonStr || typeof jsonStr !== "string") return jsonStr;
   if (jsonStr.length <= maxLen) return jsonStr;
@@ -327,6 +434,9 @@ export const useSignupStore = create<SignupStore>()(
         targetPlatform: "web",
       },
       lastSavedStepOneData: null,
+      authStrategy: {
+        strategyType: "none",
+      },
       apisList: [
         {
           id: "1",
@@ -344,6 +454,7 @@ export const useSignupStore = create<SignupStore>()(
           apiHeaders: "",
           isRealtimeApi: false,
           streamUrl: "",
+          requiresAuth: false,
         },
       ],
       selectedLayout: "auto",
@@ -401,6 +512,12 @@ export const useSignupStore = create<SignupStore>()(
         })),
       setLastSavedStepOneData: (lastSavedStepOneData) =>
         set({ lastSavedStepOneData }),
+      setAuthStrategy: (strategy) => {
+        set((state) => ({
+          authStrategy: { ...state.authStrategy, ...strategy },
+        }));
+        get().triggerAutoSave();
+      },
       setApisList: (apis) =>
         set((state) => ({
           apisList: typeof apis === "function" ? apis(state.apisList) : apis,
@@ -436,13 +553,15 @@ export const useSignupStore = create<SignupStore>()(
             },
           ],
         })),
-      handleDeleteApi: (id) =>
+      handleDeleteApi: (id) => {
         set((state) => ({
           apisList:
             state.apisList.length > 1
               ? state.apisList.filter((api) => api.id !== id)
               : state.apisList,
-        })),
+        }));
+        get().triggerAutoSave();
+      },
       handleDeleteAllApis: async () => {
         const emptyApiList: ApiConnection[] = [
           {
@@ -487,7 +606,10 @@ export const useSignupStore = create<SignupStore>()(
         const { companyId } = get();
         if (companyId) {
           try {
-            await saveCompanyApiDetails(companyId, [] as any);
+            await saveCompanyApiDetails(companyId, {
+              apis: [] as any,
+              authStrategy: get().authStrategy,
+            });
           } catch (dbErr) {
             console.warn("Could not clear APIs from database:", dbErr);
           }
@@ -941,50 +1063,9 @@ export const useSignupStore = create<SignupStore>()(
         autoSaveTimer = setTimeout(async () => {
           set({ saveStatus: "saving" });
           try {
+            const currentAuthStrategy = get().authStrategy;
             const apisPayload = apisList.map((api) => {
-              const isbearertoken =
-                api.apiAuthType === "Bearer Token"
-                  ? { bearerToken: api.apiCredentials }
-                  : {};
-              const isapikey =
-                api.apiAuthType === "API Key"
-                  ? {
-                      apiKey: api.apiCredentials,
-                      authHeader: api.apiAuthHeader,
-                    }
-                  : {};
-              const isoauth =
-                api.apiAuthType === "OAuth 2.0"
-                  ? {
-                      oauthTokenUrl: api.oauthTokenUrl,
-                      oauthClientId: api.oauthClientId,
-                      oauthClientSecret: api.apiCredentials,
-                      oauth: {
-                        tokenUrl: api.oauthTokenUrl,
-                        clientId: api.oauthClientId,
-                        clientSecret: api.apiCredentials,
-                        flow: "client_credentials",
-                      },
-                    }
-                  : {};
-              const isuseroauth =
-                api.apiAuthType === "User OAuth"
-                  ? {
-                      authType: "oauth_user",
-                      authtype: "oauth_user",
-                      oauthAuthorizationUrl: api.oauthAuthorizationUrl,
-                      oauthTokenUrl: api.oauthTokenUrl,
-                      oauthClientId: api.oauthClientId,
-                      oauthClientSecret: api.apiCredentials,
-                      oauth: {
-                        authorizationUrl: api.oauthAuthorizationUrl,
-                        tokenUrl: api.oauthTokenUrl,
-                        clientId: api.oauthClientId,
-                        clientSecret: api.apiCredentials,
-                        flow: "authorization_code",
-                      },
-                    }
-                  : {};
+              const authProps = resolveApiAuthPayload(api, currentAuthStrategy);
 
               const paramRows = parseJsonToRows(
                 api.apiQueryParams,
@@ -1028,8 +1109,6 @@ export const useSignupStore = create<SignupStore>()(
                 method: api.apiMethod,
                 baseUrl: getBaseUrl(api.apiEndpoint),
                 endpoint: getEndpointPath(api.apiEndpoint),
-                authType: api.apiAuthType,
-                authtype: api.apiAuthType,
                 headers: headersArray,
                 params: paramsArray,
                 body: isBodyMethod ? bodyArray : [],
@@ -1044,6 +1123,7 @@ export const useSignupStore = create<SignupStore>()(
                 mobileDeepLink: api.mobileDeepLink || undefined,
                 isRealtimeApi: Boolean(api.isRealtimeApi),
                 streamUrl: api.streamUrl || undefined,
+                requiresAuth: Boolean(api.requiresAuth),
                 apiSchema:
                   api.apiSchema ||
                   api.schema ||
@@ -1054,14 +1134,14 @@ export const useSignupStore = create<SignupStore>()(
                   api.schema ||
                   get().apiTestStates[api.id]?.apiSchema ||
                   undefined,
-                ...isbearertoken,
-                ...isapikey,
-                ...isoauth,
-                ...isuseroauth,
+                ...authProps,
               };
             });
 
-            const res = await saveCompanyApiDetails(companyId, apisPayload);
+            const res = await saveCompanyApiDetails(companyId, {
+              apis: apisPayload,
+              authStrategy: currentAuthStrategy,
+            });
             if (res && res.success) {
               set({ saveStatus: "saved" });
               showToast("Auto saved successfully!", "success");
@@ -1122,47 +1202,9 @@ export const useSignupStore = create<SignupStore>()(
         set({ isStepTwoPending: true });
 
         try {
+          const currentAuthStrategy = get().authStrategy;
           const apisPayload = apisList.map((api) => {
-            const isbearertoken =
-              api.apiAuthType === "Bearer Token"
-                ? { bearerToken: api.apiCredentials }
-                : {};
-            const isapikey =
-              api.apiAuthType === "API Key"
-                ? { apiKey: api.apiCredentials, authHeader: api.apiAuthHeader }
-                : {};
-            const isoauth =
-              api.apiAuthType === "OAuth 2.0"
-                ? {
-                    oauthTokenUrl: api.oauthTokenUrl,
-                    oauthClientId: api.oauthClientId,
-                    oauthClientSecret: api.apiCredentials,
-                    oauth: {
-                      tokenUrl: api.oauthTokenUrl,
-                      clientId: api.oauthClientId,
-                      clientSecret: api.apiCredentials,
-                      flow: "client_credentials",
-                    },
-                  }
-                : {};
-            const isuseroauth =
-              api.apiAuthType === "User OAuth"
-                ? {
-                    authType: "oauth_user",
-                    authtype: "oauth_user",
-                    oauthAuthorizationUrl: api.oauthAuthorizationUrl,
-                    oauthTokenUrl: api.oauthTokenUrl,
-                    oauthClientId: api.oauthClientId,
-                    oauthClientSecret: api.apiCredentials,
-                    oauth: {
-                      authorizationUrl: api.oauthAuthorizationUrl,
-                      tokenUrl: api.oauthTokenUrl,
-                      clientId: api.oauthClientId,
-                      clientSecret: api.apiCredentials,
-                      flow: "authorization_code",
-                    },
-                  }
-                : {};
+            const authProps = resolveApiAuthPayload(api, currentAuthStrategy);
 
             const paramRows = parseJsonToRows(api.apiQueryParams, true).filter(
               (r) => r.key.trim() !== "",
@@ -1205,8 +1247,6 @@ export const useSignupStore = create<SignupStore>()(
               method: api.apiMethod,
               baseUrl: getBaseUrl(api.apiEndpoint),
               endpoint: getEndpointPath(api.apiEndpoint),
-              authType: api.apiAuthType,
-              authtype: api.apiAuthType,
               headers: headersArray,
               params: paramsArray,
               body: isBodyMethod ? bodyArray : [],
@@ -1221,6 +1261,7 @@ export const useSignupStore = create<SignupStore>()(
               mobileDeepLink: api.mobileDeepLink || undefined,
               isRealtimeApi: Boolean(api.isRealtimeApi),
               streamUrl: api.streamUrl || undefined,
+              requiresAuth: Boolean(api.requiresAuth),
               apiSchema:
                 api.apiSchema ||
                 api.schema ||
@@ -1231,14 +1272,14 @@ export const useSignupStore = create<SignupStore>()(
                 api.schema ||
                 get().apiTestStates[api.id]?.apiSchema ||
                 undefined,
-              ...isbearertoken,
-              ...isapikey,
-              ...isoauth,
-              ...isuseroauth,
+              ...authProps,
             };
           });
 
-          const res = await saveCompanyApiDetails(companyId, apisPayload);
+          const res = await saveCompanyApiDetails(companyId, {
+            apis: apisPayload,
+            authStrategy: currentAuthStrategy,
+          });
           set({ isStepTwoPending: false });
           if (res && res.success) {
             showToast(
@@ -1405,38 +1446,15 @@ export const useSignupStore = create<SignupStore>()(
         const { companyId } = get();
         if (companyId && finalList.length > 0) {
           try {
+            const currentAuthStrategy = get().authStrategy;
             const apisPayload = finalList.map((api) => {
-              const isbearertoken =
-                api.apiAuthType === "Bearer Token"
-                  ? { bearerToken: api.apiCredentials }
-                  : {};
-              const isapikey =
-                api.apiAuthType === "API Key"
-                  ? { apiKey: api.apiCredentials, authHeader: api.apiAuthHeader }
-                  : {};
-              const isoauth =
-                api.apiAuthType === "OAuth 2.0"
-                  ? {
-                      oauthClientSecret: api.apiCredentials,
-                      oauthTokenUrl: api.oauthTokenUrl,
-                      oauthClientId: api.oauthClientId,
-                    }
-                  : {};
-              const isuseroauth =
-                api.apiAuthType === "User-Level OAuth"
-                  ? {
-                      oauthAuthorizationUrl: api.oauthAuthorizationUrl,
-                      oauthTokenUrl: api.oauthTokenUrl,
-                      oauthClientId: api.oauthClientId,
-                    }
-                  : {};
+              const authProps = resolveApiAuthPayload(api, currentAuthStrategy);
 
               return {
                 name: api.apiName || "API Endpoint",
                 method: api.apiMethod || "GET",
                 baseUrl: api.apiEndpoint ? getBaseUrl(api.apiEndpoint) : "",
                 endpoint: api.apiEndpoint ? getEndpointPath(api.apiEndpoint) : "/",
-                authType: api.apiAuthType || "No Auth",
                 authHeader: api.apiAuthHeader || "Authorization",
                 headers: api.apiHeaders ? [api.apiHeaders] : [],
                 params: api.apiQueryParams ? [api.apiQueryParams] : [],
@@ -1447,14 +1465,14 @@ export const useSignupStore = create<SignupStore>()(
                 streamUrl: api.streamUrl || "",
                 apiSchema: api.apiSchema || api.schema || undefined,
                 schema: api.apiSchema || api.schema || undefined,
-                ...isbearertoken,
-                ...isapikey,
-                ...isoauth,
-                ...isuseroauth,
+                ...authProps,
               };
             });
 
-            await saveCompanyApiDetails(companyId, apisPayload as any);
+            await saveCompanyApiDetails(companyId, {
+              apis: apisPayload as any,
+              authStrategy: currentAuthStrategy,
+            });
           } catch (dbErr) {
             console.warn("Could not sync imported APIs to database:", dbErr);
           }
@@ -1486,6 +1504,7 @@ export const useSignupStore = create<SignupStore>()(
         companyId: state.companyId,
         stepOneData: state.stepOneData,
         lastSavedStepOneData: state.lastSavedStepOneData,
+        authStrategy: state.authStrategy,
         apisList: state.apisList,
         apiTestStates: state.apiTestStates,
         selectedLayout: state.selectedLayout,

@@ -25,12 +25,14 @@ interface ApiImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (apis: ExtendedApiConnection[], mode: "append" | "replace") => void;
+  hasExistingManualApis?: boolean;
 }
 
 export const ApiImportModal: FC<ApiImportModalProps> = ({
   isOpen,
   onClose,
   onImport,
+  hasExistingManualApis = false,
 }) => {
   const { colors } = useThemeStore();
   const fileInputId = useId();
@@ -63,12 +65,23 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
   const [warnings, setWarnings] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [importMode, setImportMode] = useState<"append" | "replace">("append");
+  const [importMode, setImportMode] = useState<"append" | "replace">(
+    hasExistingManualApis ? "append" : "replace",
+  );
 
   if (!isOpen) return null;
 
-  const applyInitialSelection = (apis: ExtendedApiConnection[]) => {
-    const valid = apis.filter((a) => !excludeInternalAuth || !a.isInternalAuthRoute);
+  const applyInitialSelection = (
+    apis: ExtendedApiConnection[],
+    scope = audienceScope,
+    excludeAuth = excludeInternalAuth,
+  ) => {
+    const valid = apis.filter((a) => {
+      if (excludeAuth && a.isInternalAuthRoute) return false;
+      if (scope === "customer" && a.audience === "admin") return false;
+      if (scope === "admin" && a.audience !== "admin") return false;
+      return true;
+    });
     setSelectedIds(new Set(valid.map((a) => a.id)));
   };
 
@@ -741,7 +754,7 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
 
         {/* Footer */}
         <div className={styles.modalFooter}>
-          {parsedApis.length > 0 ? (
+          {parsedApis.length > 0 && hasExistingManualApis ? (
             <div className={styles.modeToggleGroup}>
               <label className={styles.modeRadio}>
                 <input

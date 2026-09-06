@@ -32,19 +32,81 @@ export interface ParsedOpenApiResult {
 export function isInternalAuthPath(path: string): boolean {
   const p = (path || "").toLowerCase();
   return (
-    p.includes("/auth/login") ||
-    p.includes("/auth/register") ||
-    p.includes("/auth/signin") ||
-    p.includes("/auth/signup") ||
-    p.includes("/auth/mfa") ||
-    p.includes("/auth/2fa") ||
-    p.includes("/auth/refresh") ||
-    p.includes("/auth/logout") ||
-    p.includes("/auth/forgot-password") ||
-    p.includes("/auth/reset-password") ||
-    p.includes("/auth/verify-email") ||
-    p.includes("/auth/resend-verification") ||
-    p.includes("/auth/challenge")
+    // General auth routes
+    p.includes("/auth/") ||
+    p.endsWith("/auth") ||
+    p.includes("/oauth/") ||
+    p.endsWith("/oauth") ||
+    p.includes("/oauth2/") ||
+    // Specific session/auth actions
+    p.includes("/login") ||
+    p.includes("/signin") ||
+    p.includes("/sign-in") ||
+    p.includes("/register") ||
+    p.includes("/signup") ||
+    p.includes("/sign-up") ||
+    p.includes("/logout") ||
+    p.includes("/signout") ||
+    p.includes("/sign-out") ||
+    p.includes("/mfa") ||
+    p.includes("/2fa") ||
+    p.includes("/challenge") ||
+    p.includes("/verify-email") ||
+    p.includes("/resend-verification") ||
+    p.includes("/verify-otp") ||
+    p.includes("/send-otp") ||
+    p.includes("/refresh-token") ||
+    p.includes("/refreshtoken") ||
+    // Password reset & recovery
+    p.includes("password") ||
+    p.includes("forgot") ||
+    p.includes("reset-pass") ||
+    // OAuth endpoints & callbacks
+    p.includes("/callback") ||
+    p.includes("/authorize") ||
+    p.includes("/token") ||
+    // Internal user/profile auth endpoints
+    p.includes("/auth/me") ||
+    p.endsWith("/me") ||
+    p.includes("/current-user") ||
+    p.includes("/profile/update") ||
+    p.includes("/user/password") ||
+    p.includes("/users/password")
+  );
+}
+
+/**
+ * Automatically infers if an API endpoint requires user authentication (Protected Resource).
+ */
+export function inferRequiresAuth(
+  endpoint: string,
+  method: string,
+  authType?: string,
+  hasExplicitAuth?: boolean,
+): boolean {
+  if (authType === "No Auth" || authType === "none") return false;
+  const m = (method || "GET").toUpperCase();
+  if (m !== "GET") return true;
+
+  const p = (endpoint || "").toLowerCase();
+  return (
+    hasExplicitAuth === true ||
+    p.includes("/me") ||
+    p.includes("/user") ||
+    p.includes("/profile") ||
+    p.includes("/account") ||
+    p.includes("/booking") ||
+    p.includes("/order") ||
+    p.includes("/cart") ||
+    p.includes("/checkout") ||
+    p.includes("/history") ||
+    p.includes("/favorite") ||
+    p.includes("/saved") ||
+    p.includes("/notification") ||
+    p.includes("/payment") ||
+    p.includes("/dashboard") ||
+    p.includes("/reservation") ||
+    p.includes("/my-")
   );
 }
 
@@ -428,6 +490,12 @@ export function parseOpenApiDocument(
         isInternalAuthRoute,
         isRealtimeApi,
         streamUrl,
+        requiresAuth: inferRequiresAuth(
+          fullEndpoint,
+          upperMethod,
+          apiAuthType,
+          opSecurity.length > 0,
+        ),
         sampleresponse: sampleresponse || undefined,
         isTested: Boolean(sampleresponse),
         isAnalyzed: false,

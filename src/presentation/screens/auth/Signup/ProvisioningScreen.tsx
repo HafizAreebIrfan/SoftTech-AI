@@ -51,6 +51,7 @@ const ProvisioningScreen: FC = () => {
     selectedAudienceDefault,
     updateApiField,
     clearSignupProgress,
+    authStrategy,
   } = useSignupStore();
   const { setAuth } = useAuthStore();
 
@@ -59,6 +60,14 @@ const ProvisioningScreen: FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [failedApiIndex, setFailedApiIndex] = useState<number | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyField = (text: string, fieldKey: string) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldKey);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Schema Batch Progress
   const [analyzedCount, setAnalyzedCount] = useState<number>(0);
@@ -201,10 +210,10 @@ const ProvisioningScreen: FC = () => {
         };
       });
 
-      const saveRes = await saveCompanyApiDetails(
-        companyId,
-        apisPayload as any,
-      );
+      const saveRes = await saveCompanyApiDetails(companyId, {
+        apis: apisPayload,
+        authStrategy,
+      } as any);
       if (!saveRes || !saveRes.success) {
         throw new Error(
           saveRes?.message || "Failed to save company API details.",
@@ -774,6 +783,132 @@ const ProvisioningScreen: FC = () => {
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+
+            {/* OpenAI ChatGPT Plugin & MCP Connection Details */}
+            <div
+              className={styles.urlBox}
+              style={{
+                background: colors.BackgroundSecondary,
+                border: `1px solid ${colors.CardBorder}`,
+                marginTop: "1rem",
+              }}
+            >
+              <div className={styles.urlBoxHeader}>
+                <span style={{ color: colors.TextHeading, display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <SparklesIcon size={16} color={colors.BrandIndigo} />
+                  <strong>OpenAI ChatGPT Plugin & OAuth Settings</strong>
+                </span>
+                <span style={{ color: colors.BrandIndigo, fontSize: "0.75rem", fontWeight: 600 }}>
+                  RFC 9728 Ready
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem", padding: "0.5rem 0" }}>
+                {/* Discovery URL */}
+                <div>
+                  <label style={{ fontSize: "0.75rem", color: colors.TextBody, display: "block", marginBottom: "0.25rem" }}>
+                    OAuth Protected Resource Metadata URL (Discovery):
+                  </label>
+                  <div className={styles.urlInputRow}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${mcpServerUrl}/.well-known/oauth-protected-resource`}
+                      className={styles.urlInputText}
+                      style={{
+                        background: colors.Background,
+                        color: colors.TextHeading,
+                        border: `1px solid ${colors.CardBorder}`,
+                        fontSize: "0.75rem",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyField(`${mcpServerUrl}/.well-known/oauth-protected-resource`, "discovery")}
+                      className={styles.copyBtn}
+                      style={{
+                        background: copiedField === "discovery" ? colors.BrandEmerald : colors.Background,
+                        border: `1px solid ${colors.CardBorder}`,
+                        color: copiedField === "discovery" ? "#ffffff" : colors.TextHeading,
+                      }}
+                    >
+                      {copiedField === "discovery" ? <CheckIcon size={13} color="#ffffff" /> : <ClipboardIcon size={13} color="currentColor" />}
+                      <span>{copiedField === "discovery" ? "Copied" : "Copy"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {authStrategy?.strategyType === "oauth2" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.625rem" }}>
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: colors.TextBody, display: "block", marginBottom: "0.25rem" }}>
+                        Authorization URL (Login):
+                      </label>
+                      <div className={styles.urlInputRow}>
+                        <input
+                          type="text"
+                          readOnly
+                          value={authStrategy.authorizationEndpoint || ""}
+                          className={styles.urlInputText}
+                          style={{
+                            background: colors.Background,
+                            color: colors.TextHeading,
+                            border: `1px solid ${colors.CardBorder}`,
+                            fontSize: "0.75rem",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => copyField(authStrategy.authorizationEndpoint || "", "authUrl")}
+                          className={styles.copyBtn}
+                          style={{
+                            background: copiedField === "authUrl" ? colors.BrandEmerald : colors.Background,
+                            border: `1px solid ${colors.CardBorder}`,
+                            color: copiedField === "authUrl" ? "#ffffff" : colors.TextHeading,
+                          }}
+                        >
+                          {copiedField === "authUrl" ? <CheckIcon size={13} color="#ffffff" /> : <ClipboardIcon size={13} color="currentColor" />}
+                          <span>{copiedField === "authUrl" ? "Copied" : "Copy"}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: colors.TextBody, display: "block", marginBottom: "0.25rem" }}>
+                        Token URL:
+                      </label>
+                      <div className={styles.urlInputRow}>
+                        <input
+                          type="text"
+                          readOnly
+                          value={authStrategy.tokenEndpoint || ""}
+                          className={styles.urlInputText}
+                          style={{
+                            background: colors.Background,
+                            color: colors.TextHeading,
+                            border: `1px solid ${colors.CardBorder}`,
+                            fontSize: "0.75rem",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => copyField(authStrategy.tokenEndpoint || "", "tokenUrl")}
+                          className={styles.copyBtn}
+                          style={{
+                            background: copiedField === "tokenUrl" ? colors.BrandEmerald : colors.Background,
+                            border: `1px solid ${colors.CardBorder}`,
+                            color: copiedField === "tokenUrl" ? "#ffffff" : colors.TextHeading,
+                          }}
+                        >
+                          {copiedField === "tokenUrl" ? <CheckIcon size={13} color="#ffffff" /> : <ClipboardIcon size={13} color="currentColor" />}
+                          <span>{copiedField === "tokenUrl" ? "Copied" : "Copy"}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -3,6 +3,25 @@ import {
   WidgetAudience,
 } from "../../domain/entities/GenericWidget";
 
+export interface CompanyAuthStrategy {
+  strategyType: "none" | "api_key" | "bearer" | "oauth2" | "custom_header";
+  apiKey?: string;
+  authHeader?: string;
+  bearerToken?: string;
+  authorizationServer?: string;
+  authorizationEndpoint?: string;
+  tokenEndpoint?: string;
+  clientId?: string;
+  clientSecret?: string;
+  scopes?: string[];
+  globalStreamUrl?: string;
+  hasGlobalCheckout?: boolean;
+  globalCheckoutUrl?: string;
+  hasProductPages?: boolean;
+  shopCatalogUrl?: string;
+  productItemUrlTemplate?: string;
+}
+
 export interface ApiConnection {
   id: string;
   apiName: string;
@@ -20,6 +39,7 @@ export interface ApiConnection {
   isRealtimeApi?: boolean;
   streamUrl?: string;
   isUserOAuth?: boolean;
+  requiresAuth?: boolean;
   isTested?: boolean;
   isAnalyzed?: boolean;
   apiCheckoutTemplate?: string;
@@ -46,6 +66,7 @@ export interface SignupStore {
   companyId: string | null;
   stepOneData: StepOneData;
   lastSavedStepOneData?: StepOneData | null;
+  authStrategy: CompanyAuthStrategy;
   apisList: ApiConnection[];
   selectedLayout:
     | "auto"
@@ -77,6 +98,7 @@ export interface SignupStore {
   setCompanyId: (id: string | null) => void;
   setStepOneData: (data: Partial<StepOneData>) => void;
   setLastSavedStepOneData: (data: StepOneData | null) => void;
+  setAuthStrategy: (strategy: Partial<CompanyAuthStrategy>) => void;
   setApisList: (
     apis: ApiConnection[] | ((prev: ApiConnection[]) => ApiConnection[]),
   ) => void;

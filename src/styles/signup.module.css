@@ -502,41 +502,18 @@
 }
 
 .configGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
   padding-top: 8px;
-}
-
-@media (min-width: 1024px) {
-  .configGrid {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-  }
 }
 
 .requestCol {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-@media (min-width: 1024px) {
-  .requestCol {
-    grid-column: span 7 / span 7;
-  }
-}
-
-.responseCol {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-@media (min-width: 1024px) {
-  .responseCol {
-    grid-column: span 5 / span 5;
-  }
+  width: 100%;
 }
 
 .tabBar {

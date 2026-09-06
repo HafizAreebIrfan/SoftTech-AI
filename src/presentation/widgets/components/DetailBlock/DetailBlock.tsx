@@ -7,6 +7,7 @@ import { callMcpTool, requestDisplayMode } from "../../../../utils/mcpBridge";
 import { addToCartAndSync } from "../../../../utils/cartFlow";
 import { extractTieredPrices } from "../../helper/TieredPriceHelper/tieredPriceHelper";
 import { findCartAction, useCartStore } from "../../../../infrastructure/store/cartStore";
+import { useMcpWidgetStore } from "../../../../infrastructure/store/mcpWidgetStore";
 import { DetailField } from "./DetailField";
 import styles from "../../../../styles/detailblock.module.css";
 import pd from "../../../../styles/productdetail.module.css";
@@ -22,6 +23,17 @@ const sectionTitleStyle: React.CSSProperties = {
   color: "var(--app-text-secondary, #94a3b8)",
 };
 
+const getEntityIcon = (rec: any): string => {
+  const str = `${rec.make || ""} ${rec.model || ""} ${rec.category || ""} ${rec.$title || ""} ${rec.title || ""} ${rec.name || ""}`.toLowerCase();
+  if (/car|auto|vehicle|rental|sedan|suv|truck|corolla|fortuner/i.test(str)) return "🚗";
+  if (/hotel|room|suite|stay|resort|villa/i.test(str)) return "🏨";
+  if (/flight|plane|air|airline/i.test(str)) return "✈️";
+  if (/course|class|lesson|learn/i.test(str)) return "🎓";
+  if (/tour|trip|travel|holiday/i.test(str)) return "🏖️";
+  if (/food|meal|dish|restaurant|burger|pizza/i.test(str)) return "🍔";
+  return "📦";
+};
+
 export const DetailBlock: React.FC<DetailBlockProps> = ({
   block,
   records = [],
@@ -30,6 +42,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   actions = [],
   audience,
 }) => {
+  const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
+  const popSubView = useMcpWidgetStore((state) => state.popSubView);
+
   const [liveRecord, setLiveRecord] = useState<any>(
     records.length > 0 ? (records[0] as any) : null,
   );
@@ -77,6 +92,21 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const [addedToast, setAddedToast] = useState<boolean>(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState<boolean>(false);
 
+  const isServiceNotice = Boolean(
+    targetRecord?.status === "Service Notice" ||
+    targetRecord?.actionSuggestion ||
+    targetRecord?.error ||
+    (targetRecord?.message && !targetRecord?.price && !targetRecord?.pricePerDay && !targetRecord?.make && !targetRecord?.$price)
+  );
+
+  useEffect(() => {
+    if (isServiceNotice) return;
+    requestDisplayMode("fullscreen");
+    return () => {
+      requestDisplayMode("inline");
+    };
+  }, [isServiceNotice]);
+
   const {
     images,
     title,
@@ -109,10 +139,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     const activeFields =
       block?.fields && block.fields.length > 0 ? block.fields : fields;
 
-    // 1. Collect all images (Prioritize high-resolution 'images' array over low-res 'thumbnail')
+    // 1. Collect all images
     const collectedImages: string[] = [];
-
-    // Prioritize explicit high-res images array
     if (Array.isArray(targetRecord.images) && targetRecord.images.length > 0) {
       targetRecord.images.forEach((item: unknown) => {
         if (typeof item === "string" && /^https?:\/\//i.test(item.trim())) {
@@ -122,13 +150,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     }
 
     activeFields.forEach((f) => {
-      // Don't add 'thumbnail' key if we already collected high-res images
-      if (f.key.toLowerCase() === "thumbnail" && collectedImages.length > 0) {
-        return;
-      }
+      if (f.key.toLowerCase() === "thumbnail" && collectedImages.length > 0) return;
       const val = getFieldValue(targetRecord, f);
       if (typeof val === "string" && val.trim()) {
-        // Handle comma-separated list of image URLs (e.g. from dummyjson)
         if (val.includes(",") && val.includes("http")) {
           const parts = val
             .split(",")
@@ -153,25 +177,17 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     if (
       targetRecord.$image &&
       typeof targetRecord.$image === "string" &&
+      targetRecord.$image.trim() !== "" &&
       collectedImages.length === 0
     ) {
       collectedImages.push(targetRecord.$image);
     }
 
-    // Second pass: scan ALL string values in the record for image URLs.
-    // This catches images in fields that don't have type: "image" annotation
-    // and in the sub-view path where collection schema may not be detailed.
     if (collectedImages.length === 0) {
       for (const [key, val] of Object.entries(targetRecord)) {
         if (key.startsWith("$")) continue;
         if (typeof val === "string" && /^https?:\/\/.*\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(val.trim())) {
           collectedImages.push(val.trim());
-        } else if (Array.isArray(val)) {
-          val.forEach((item) => {
-            if (typeof item === "string" && /^https?:\/\/.*\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(item.trim())) {
-              collectedImages.push(item.trim());
-            }
-          });
         }
       }
     }
@@ -182,13 +198,26 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     const tiers = extractTieredPrices(targetRecord, activeFields);
 
     // 3. Extract hero properties
-    const itemTitle = targetRecord.$title || collection?.entity || "Details";
-    const itemDesc = targetRecord.$description || null;
-    const itemPrice = targetRecord.$price;
-    const itemStatus = targetRecord.$status;
-    const itemMetric = targetRecord.$metric;
+    const itemTitle =
+      (targetRecord.make ? `${targetRecord.make} ${targetRecord.model || ""}`.trim() : null) ||
+      targetRecord.$title ||
+      targetRecord.title ||
+      targetRecord.name ||
+      collection?.entity ||
+      "Details";
 
-    // 4. Filter scalar fields for specs (exclude fields shown in hero or bare ID)
+    const itemDesc =
+      (targetRecord.make && targetRecord.year ? `Model Year: ${targetRecord.year} • ${targetRecord.category || "Vehicle"}` : null) ||
+      targetRecord.$description ||
+      targetRecord.description ||
+      null;
+
+    const rawDailyPrice = targetRecord.pricePerDay ?? targetRecord.price_per_day ?? targetRecord.dailyRate ?? targetRecord.rent;
+    const itemPrice = rawDailyPrice ?? targetRecord.$price ?? targetRecord.price;
+    const itemStatus = targetRecord.$status || targetRecord.status || targetRecord.availabilityStatus;
+    const itemMetric = targetRecord.$metric || targetRecord.rating || targetRecord.averageRating;
+
+    // 4. Filter scalar fields for specs
     const primaryRoles = [
       "title",
       "description",
@@ -197,6 +226,24 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       "status",
       "metric",
     ];
+
+    const blacklistedSpecs = new Set([
+      "createdat",
+      "updatedat",
+      "created_at",
+      "updated_at",
+      "__v",
+      "id",
+      "_id",
+      "images",
+      "image",
+      "latitude",
+      "longitude",
+      "locationid",
+      "isrestricted",
+      "restrictexpiresat",
+    ]);
+
     const detailFieldsList = activeFields.filter((f) => {
       if (f.hidden) return false;
       if (f.type === "array" || f.type === "object" || f.type === "image")
@@ -204,49 +251,21 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       if (primaryRoles.includes(f.uiRole as string)) return false;
 
       const keyLower = f.key.toLowerCase();
-      const labelLower = (f.label || "").toLowerCase();
+      if (blacklistedSpecs.has(keyLower)) return false;
+      if (keyLower === "make" || keyLower === "model") return false;
 
-      // Suppress status (already in hero) and audit timestamps
-      if (
-        f.type === "status" ||
-        keyLower.includes("status") ||
-        keyLower === "createdat" ||
-        keyLower === "updatedat" ||
-        keyLower === "created_at" ||
-        keyLower === "updated_at" ||
-        keyLower === "__v"
-      ) {
-        return false;
-      }
-
-      // Suppress bare ID fields without uiRole
-      if (
-        (keyLower === "id" || keyLower === "_id" || labelLower === "id") &&
-        !f.uiRole
-      ) {
-        return false;
-      }
-
-      // Filter out redundant imperial duplicates
-      if (
-        keyLower.endsWith("_f") ||
-        keyLower.endsWith("_mph") ||
-        keyLower.endsWith("_in") ||
-        keyLower.endsWith("_miles")
-      ) {
-        return false;
-      }
-      return true;
+      const val = getFieldValue(targetRecord, f);
+      return val !== null && val !== undefined && val !== "";
     });
 
-    // 5. Extract array / collection fields (e.g. reviews, features)
+    // 5. Extract array fields (features, amenities, reviews)
     const arrayFieldsList = activeFields.filter((f) => {
       if (f.hidden) return false;
       const val = getFieldValue(targetRecord, f);
       return Array.isArray(val) && val.length > 0;
     });
 
-    // 6. Extract selectable scalar-array option groups (e.g. sizes, colors, variants)
+    // 6. Option groups
     const optionGroupsList: Array<{
       key: string;
       label: string;
@@ -270,33 +289,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         });
       }
     });
-
-    for (const [key, val] of Object.entries(targetRecord)) {
-      if (key.startsWith("$")) continue;
-      if (
-        Array.isArray(val) &&
-        val.length > 1 &&
-        val.length <= 16 &&
-        val.every((item) => typeof item === "string" || typeof item === "number") &&
-        !val.some((item) => typeof item === "string" && /^https?:\/\//i.test(item)) &&
-        !optionGroupsList.some((og) => og.key.toLowerCase() === key.toLowerCase())
-      ) {
-        const kLower = key.toLowerCase();
-        if (
-          kLower.includes("size") ||
-          kLower.includes("color") ||
-          kLower.includes("shade") ||
-          kLower.includes("variant") ||
-          kLower.includes("tag")
-        ) {
-          optionGroupsList.push({
-            key,
-            label: key.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-            options: val,
-          });
-        }
-      }
-    }
 
     return {
       images: dedupedImages,
@@ -329,24 +321,69 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     }
   }, [optionGroups]);
 
-  // A "rich product" (has a gallery) opens as a true-fullscreen product page via
-  // the Apps SDK; inline is restored when the detail closes. Feature-detected —
-  // a no-op where the host lacks requestDisplayMode, so the same layout simply
-  // renders inline. Generic: the gate is data-driven (image count), never names.
-  useEffect(() => {
-    if (images.length === 0) return;
-    requestDisplayMode("fullscreen");
-    return () => {
-      requestDisplayMode("inline");
-    };
-  }, [images.length]);
-
   if (!targetRecord) return null;
+
+  // Handle Service Notice / Auth Error cleanly
+  if (isServiceNotice) {
+    const noticeMessage =
+      targetRecord?.message ||
+      targetRecord?.error?.message ||
+      "The service could not authenticate the request.";
+    const noticeAction =
+      targetRecord?.actionSuggestion ||
+      "Please verify your configured authentication credentials.";
+    const statusLabel = targetRecord?.status || "Service Notice";
+
+    return (
+      <section className={styles.container}>
+        <div
+          style={{
+            background: "rgba(239, 68, 68, 0.08)",
+            border: "1px solid rgba(239, 68, 68, 0.28)",
+            borderRadius: "12px",
+            padding: "24px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            maxWidth: "600px",
+            margin: "20px auto",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <span style={{ fontSize: "32px" }}>🛡️</span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "#f8fafc" }}>
+                {statusLabel}
+              </h3>
+              <p style={{ margin: "3px 0 0 0", fontSize: "13px", color: "#ef4444", fontWeight: 500, lineHeight: 1.4 }}>
+                {noticeMessage}
+              </p>
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: "rgba(0, 0, 0, 0.25)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "8px",
+              padding: "12px 16px",
+            }}
+          >
+            <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--app-text-secondary, #94a3b8)", fontWeight: 700 }}>
+              Recommended Action
+            </span>
+            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--app-text-primary, #f8fafc)", lineHeight: 1.5 }}>
+              {noticeAction}
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const permissions = getPermissions(audience, undefined, actions as any);
   const cartAction = findCartAction(actions as any);
-  // Show mutations only to admins, and drop the detected cart/order tool from
-  // the button row (it is already surfaced as the Add-to-Cart CTA).
   const visibleActions = (actions || []).filter(
     (a: any) =>
       (classifyAction(a) !== "mutate" || permissions.canMutate) &&
@@ -372,10 +409,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     (actions?.find((a: any) => a?.type === "url" || Boolean(a?.url || a?.href)) as any)?.url ||
     (actions?.find((a: any) => a?.type === "url" || Boolean(a?.url || a?.href)) as any)?.href;
 
-  const isOrderEntity = /order|invoice|booking/i.test(
-    String(collection?.entity || title || ""),
-  );
-  const canAddToCart = audience !== "admin" && !isOrderEntity;
+  const rawDailyPrice = targetRecord.pricePerDay ?? targetRecord.price_per_day ?? targetRecord.dailyRate ?? targetRecord.rent;
+  const isDailyRental = rawDailyPrice !== undefined && rawDailyPrice !== null;
+  const hasCartAction = Boolean(cartAction) || actions?.some((a: any) => /cart|order/i.test(a?.id || a?.label || a?.tool || ""));
+  const isOrderEntity = /order|invoice/i.test(String(collection?.entity || title || ""));
+  const canAddToCart = audience !== "admin" && !isOrderEntity && hasCartAction;
 
   const openCart = useCartStore((s) => s.openCart);
   const totalCartCount = useCartStore((s) => s.getTotalCount());
@@ -413,22 +451,47 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       (targetRecord as any).availabilityStatus ||
       (targetRecord as any).status ||
       "",
-  )
-    .toLowerCase()
-    .trim();
+  ).toLowerCase().trim();
+
   const isOutOfStock =
     (targetRecord as any).stock === 0 ||
     normalizedStatus === "out of stock" ||
-    normalizedStatus === "outofstock" ||
     normalizedStatus === "sold out" ||
     normalizedStatus === "unavailable" ||
     normalizedStatus === "inactive";
 
   return (
     <section
-      className={`${styles.container} ${hasGallery ? pd.pageWide : ""}`}
+      className={`${styles.container} ${pd.pageWide}`}
       style={{ padding: 0 }}
     >
+      {/* Top Back Navigation Bar when opened as a subview */}
+      {subViewHistory.length > 0 && (
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={() => popSubView()}
+            style={{
+              background: "rgba(255, 255, 255, 0.06)",
+              border: "1px solid rgba(255, 255, 255, 0.15)",
+              borderRadius: "8px",
+              color: "var(--app-text-primary, #ffffff)",
+              padding: "6px 14px",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.15s ease",
+            }}
+          >
+            <span>&larr;</span>
+            <span>Back to {collection?.itemLabel || collection?.entity || "Catalog"}</span>
+          </button>
+        </div>
+      )}
+
       <div
         className={styles.card}
         style={{
@@ -441,25 +504,19 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           gap: "0",
         }}
       >
-        {/* Hero: gallery (left) / buy box (right). Two columns when a
-            gallery exists AND the viewport is wide (fullscreen); one column
-            otherwise. */}
-        <div
-          className={`${pd.heroGrid} ${hasGallery ? pd.heroGridTwoCol : ""}`}
-        >
-          {/* LEFT COLUMN — gallery + description */}
+        {/* Two-Column Hero: Gallery or Fallback Banner (Left) | Buy/Reservation Box (Right) */}
+        <div className={`${pd.heroGrid} ${pd.heroGridTwoCol}`}>
+          {/* LEFT COLUMN */}
           <div className={pd.leftCol}>
-            {hasGallery && (
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-              >
-                {/* Main image — tap to open full-screen modal */}
+            {hasGallery ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {/* Main image */}
                 <div
                   onClick={() => setIsImageModalOpen(true)}
                   title="View full screen"
                   style={{
                     width: "100%",
-                    height: "360px",
+                    height: "340px",
                     borderRadius: "12px",
                     overflow: "hidden",
                     background: "rgba(0,0,0,0.2)",
@@ -470,19 +527,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     position: "relative",
                   }}
                 >
-                  <span
-                    style={{
-                      pointerEvents: "none",
-                      display: "flex",
-                      width: "100%",
-                      height: "100%",
-                    }}
-                  >
-                    {renderImage(
-                      activeMainImage,
-                      title || "Item Preview",
-                      "cover",
-                    )}
+                  <span style={{ pointerEvents: "none", display: "flex", width: "100%", height: "100%" }}>
+                    {renderImage(activeMainImage, title || "Item Preview", "cover")}
                   </span>
                   <button
                     type="button"
@@ -514,45 +560,30 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                   </button>
                 </div>
 
-                {/* Thumbnail selector — switches the main image */}
+                {/* Thumbnails */}
                 {images.length > 1 && (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "8px",
-                      overflowX: "auto",
-                      paddingBottom: "4px",
-                    }}
-                  >
+                  <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }}>
                     {images.map((imgUrl, idx) => (
                       <button
                         key={`thumb-${idx}`}
                         type="button"
                         onClick={() => setSelectedImgIdx(idx)}
                         style={{
-                          width: "64px",
-                          height: "64px",
+                          width: "60px",
+                          height: "60px",
                           borderRadius: "8px",
                           overflow: "hidden",
                           border:
                             selectedImgIdx === idx
-                              ? "2px solid var(--widget-accent, #6366f1)"
+                              ? "2px solid var(--widget-accent, #3b82f6)"
                               : "1px solid rgba(255,255,255,0.12)",
                           background: "rgba(0,0,0,0.3)",
                           padding: 0,
                           cursor: "pointer",
                           flexShrink: 0,
-                          transition: "all 0.15s ease",
                         }}
                       >
-                        <span
-                          style={{
-                            pointerEvents: "none",
-                            display: "flex",
-                            width: "100%",
-                            height: "100%",
-                          }}
-                        >
+                        <span style={{ pointerEvents: "none", display: "flex", width: "100%", height: "100%" }}>
                           {renderImage(imgUrl, `Thumb ${idx + 1}`, "cover")}
                         </span>
                       </button>
@@ -560,78 +591,85 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                   </div>
                 )}
               </div>
+            ) : (
+              /* Fallback Media Banner */
+              <div
+                style={{
+                  width: "100%",
+                  height: "300px",
+                  borderRadius: "12px",
+                  background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(15,23,42,0.7) 100%)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "12px",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+                }}
+              >
+                <span style={{ fontSize: "64px", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }}>
+                  {getEntityIcon(targetRecord)}
+                </span>
+                <span
+                  style={{
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "var(--app-text-secondary, #94a3b8)",
+                  }}
+                >
+                  {targetRecord.category || targetRecord.make || collection?.entity || "Details"}
+                </span>
+              </div>
             )}
           </div>
 
-          {/* RIGHT COLUMN — buy box (title, status, price, about, tier, cart, actions) */}
+          {/* RIGHT COLUMN — Info & Action Box */}
           <aside
-            className={hasGallery ? pd.buyBoxSticky : undefined}
+            className={pd.buyBoxSticky}
             style={{
               display: "flex",
               flexDirection: "column",
               gap: "14px",
-              background: "transparent",
-              border: "none",
-              borderRadius: "0",
               padding: "16px",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: "12px",
-              }}
-            >
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "22px",
-                  fontWeight: 700,
-                  color: "var(--WidgetHeaderTitle, #f8fafc)",
-                  lineHeight: 1.3,
-                }}
-              >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+              <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 700, color: "var(--WidgetHeaderTitle, #f8fafc)", lineHeight: 1.3 }}>
                 {title}
               </h2>
-              {isOutOfStock && (
-                <div style={{ flexShrink: 0, whiteSpace: "nowrap" }}>
+              {status && (
+                <div style={{ flexShrink: 0 }}>
                   <span
                     style={{
-                      background: "rgba(239, 68, 68, 0.2)",
-                      color: "#ef4444",
-                      border: "1px solid rgba(239, 68, 68, 0.4)",
-                      padding: "4px 8px",
+                      background: isOutOfStock ? "rgba(239, 68, 68, 0.2)" : "rgba(16, 185, 129, 0.2)",
+                      color: isOutOfStock ? "#ef4444" : "#10b981",
+                      border: `1px solid ${isOutOfStock ? "rgba(239, 68, 68, 0.4)" : "rgba(16, 185, 129, 0.4)"}`,
+                      padding: "3px 8px",
                       borderRadius: "6px",
-                      fontSize: "12px",
+                      fontSize: "11px",
                       fontWeight: 700,
+                      textTransform: "uppercase",
                     }}
                   >
-                    Out of Stock
+                    {isOutOfStock ? "Unavailable" : String(status)}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Price & rating */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                flexWrap: "wrap",
-              }}
-            >
+            {/* Price & Rating */}
+            <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flexWrap: "wrap" }}>
               {effectivePrice !== undefined && effectivePrice !== null && (
-                <span
-                  style={{
-                    fontSize: "26px",
-                    fontWeight: 800,
-                    color: "var(--app-text-heading, #ffffff)",
-                  }}
-                >
+                <span style={{ fontSize: "26px", fontWeight: 800, color: "var(--app-text-heading, #ffffff)" }}>
                   {renderCurrency(effectivePrice)}
+                  {isDailyRental && (
+                    <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--app-text-secondary, #94a3b8)", marginLeft: "4px" }}>
+                      / day
+                    </span>
+                  )}
                 </span>
               )}
 
@@ -643,9 +681,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     gap: "4px",
                     background: "rgba(245, 158, 11, 0.15)",
                     color: "#f59e0b",
-                    padding: "4px 8px",
+                    padding: "3px 7px",
                     borderRadius: "6px",
-                    fontSize: "13px",
+                    fontSize: "12px",
                     fontWeight: 700,
                   }}
                 >
@@ -654,36 +692,21 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               )}
             </div>
 
-            {/* About / Description (Inside product detail info area) */}
+            {/* Subtitle / Description */}
             {description && (
-              <div style={{ margin: "2px 0 6px 0" }}>
-                <h4 style={sectionTitleStyle}>About</h4>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "14px",
-                    lineHeight: 1.6,
-                    color: "var(--WidgetHeaderSubtitle, #cbd5e1)",
-                  }}
-                >
+              <div>
+                <h4 style={sectionTitleStyle}>Overview</h4>
+                <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.5, color: "var(--WidgetHeaderSubtitle, #cbd5e1)" }}>
                   {description}
                 </p>
               </div>
             )}
 
-            {/* Tiered option selector — only show if there are 2 or more tier options */}
+            {/* Tiered Options */}
             {tieredResult.hasTiers && tieredResult.options.length > 1 && (
               <div>
-                <label
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--app-text-secondary, #94a3b8)",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Select Option / Tier:
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--app-text-secondary, #94a3b8)", display: "block", marginBottom: "4px" }}>
+                  Select Option:
                 </label>
                 <select
                   value={selectedTierIdx}
@@ -701,294 +724,48 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                   }}
                 >
                   {tieredResult.options.map((opt) => (
-                    <option
-                      key={`tier-${opt.index}`}
-                      value={opt.index}
-                      style={{ background: "#0f172a", color: "#f8fafc" }}
-                    >
+                    <option key={`tier-${opt.index}`} value={opt.index} style={{ background: "#0f172a", color: "#f8fafc" }}>
                       {opt.label}
                     </option>
                   ))}
                 </select>
               </div>
             )}
-            {canAddToCart && optionGroups && optionGroups.length > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "10px",
-                  margin: "8px 0",
-                }}
-              >
-                {optionGroups.map((og) => {
-                  const currentSelected =
-                    selectedOptions[og.key] ?? og.options[0];
-                  return (
-                    <div
-                      key={`og-${og.key}`}
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "6px",
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontSize: "12px",
-                          color: "var(--app-text-secondary, #94a3b8)",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {og.label}:{" "}
-                        <strong style={{ color: "#ffffff" }}>
-                          {String(currentSelected)}
-                        </strong>
-                      </span>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: "8px",
-                        }}
-                      >
-                        {og.options.map((opt, optIdx) => {
-                          const isSelected = currentSelected === opt;
-                          return (
-                            <button
-                              key={`opt-${optIdx}`}
-                              type="button"
-                              onClick={() =>
-                                setSelectedOptions((prev) => ({
-                                  ...prev,
-                                  [og.key]: opt,
-                                }))
-                              }
-                              style={{
-                                background: isSelected
-                                  ? "var(--widget-accent, #6366f1)"
-                                  : "rgba(255,255,255,0.06)",
-                                color: isSelected
-                                  ? "var(--widget-accent-contrast, #ffffff)"
-                                  : "var(--app-text-primary, #f8fafc)",
-                                border: isSelected
-                                  ? "1px solid var(--widget-accent, #6366f1)"
-                                  : "1px solid rgba(255,255,255,0.15)",
-                                borderRadius: "8px",
-                                padding: "6px 14px",
-                                fontSize: "12px",
-                                fontWeight: isSelected ? 700 : 500,
-                                cursor: "pointer",
-                                transition: "all 0.15s ease",
-                              }}
-                            >
-                              {String(opt)}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
 
-            {/* Quantity stepper & Add to Cart / View Cart CTA */}
+            {/* Add to Cart Flow (E-commerce) */}
             {canAddToCart && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                }}
-              >
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginTop: "4px" }}>
                 {!isInCart && !isOutOfStock && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      borderRadius: "8px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#fff",
-                        padding: "8px 12px",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                        fontWeight: "bold",
-                      }}
-                    >
+                  <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", overflow: "hidden" }}>
+                    <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ background: "transparent", border: "none", color: "#fff", padding: "8px 12px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>
                       −
                     </button>
-                    <span
-                      style={{
-                        padding: "0 8px",
-                        fontSize: "14px",
-                        fontWeight: 600,
-                        minWidth: "24px",
-                        textAlign: "center",
-                      }}
-                    >
+                    <span style={{ padding: "0 8px", fontSize: "13px", fontWeight: 600, minWidth: "24px", textAlign: "center" }}>
                       {quantity}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(quantity + 1)}
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#fff",
-                        padding: "8px 12px",
-                        cursor: "pointer",
-                        fontSize: "16px",
-                        fontWeight: "bold",
-                      }}
-                    >
+                    <button type="button" onClick={() => setQuantity(quantity + 1)} style={{ background: "transparent", border: "none", color: "#fff", padding: "8px 12px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>
                       +
                     </button>
                   </div>
                 )}
 
                 {isOutOfStock ? (
-                  <button
-                    type="button"
-                    disabled
-                    style={{
-                      flex: 1,
-                      minWidth: "140px",
-                      background: "rgba(255, 255, 255, 0.05)",
-                      color: "var(--app-text-secondary, #64748b)",
-                      border: "1px solid rgba(255, 255, 255, 0.1)",
-                      borderRadius: "8px",
-                      padding: "12px 20px",
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      cursor: "not-allowed",
-                    }}
-                  >
-                    Out of Stock
+                  <button type="button" disabled style={{ flex: 1, background: "rgba(255, 255, 255, 0.05)", color: "var(--app-text-secondary, #64748b)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "8px", padding: "10px 18px", fontSize: "13px", fontWeight: 700, cursor: "not-allowed" }}>
+                    Unavailable
                   </button>
                 ) : isInCart ? (
-                  <button
-                    type="button"
-                    onClick={openCart}
-                    style={{
-                      flex: 1,
-                      minWidth: "140px",
-                      background: "#10b981",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "8px",
-                      padding: "12px 20px",
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      boxShadow: "0 4px 14px rgba(16, 185, 129, 0.3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
-                    }}
-                  >
+                  <button type="button" onClick={openCart} style={{ flex: 1, background: "var(--widget-accent, #3b82f6)", color: "var(--widget-accent-contrast, #ffffff)", border: "none", borderRadius: "8px", padding: "10px 18px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                     🛍️ View Cart
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={handleAddToCart}
-                    style={{
-                      flex: 1,
-                      minWidth: "140px",
-                      background: "var(--widget-accent, #6366f1)",
-                      color: "var(--widget-accent-contrast, #ffffff)",
-                      border: "none",
-                      borderRadius: "8px",
-                      padding: "12px 20px",
-                      fontSize: "14px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      boxShadow: "0 4px 14px rgba(99, 102, 241, 0.3)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    🛒 {addedToast ? "Added to Cart ✓" : "Add to Cart"}
+                  <button type="button" onClick={handleAddToCart} style={{ flex: 1, background: "var(--widget-accent, #3b82f6)", color: "var(--widget-accent-contrast, #ffffff)", border: "none", borderRadius: "8px", padding: "10px 18px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                    🛒 {addedToast ? "Added ✓" : "Add to Cart"}
                   </button>
                 )}
               </div>
             )}
 
-            {/* Visible actions (admin mutations / custom / URL actions) */}
-            {visibleActions.length > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px",
-                }}
-              >
-                {visibleActions.map((act: any) => (
-                  <button
-                    key={act.id || act.tool}
-                    type="button"
-                    style={{
-                      width: "100%",
-                      background: "var(--widget-accent, #6366f1)",
-                      color: "var(--widget-accent-contrast, #ffffff)",
-                      border: "none",
-                      borderRadius: "8px",
-                      padding: "10px 16px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      transition: "all 0.15s ease",
-                    }}
-                    onClick={async () => {
-                      const url =
-                        act.url || (act.type === "url" ? act.href : undefined);
-                      if (url) {
-                        console.log(
-                          `[DetailBlock] Opening URL action "${act.label}":`,
-                          url,
-                        );
-                        window.open(url, "_blank", "noopener,noreferrer");
-                        return;
-                      }
-                      console.log(
-                        `[DetailBlock] Action "${act.label}" → calling MCP tool "${act.tool}" for record id=${targetRecord?.id || targetRecord?._id}`,
-                      );
-                      try {
-                        const result = await callMcpTool(act.tool, {
-                          id: targetRecord?.id || targetRecord?._id,
-                        });
-                        console.log(
-                          `[DetailBlock] ✓ Tool "${act.tool}" succeeded:`,
-                          result,
-                        );
-                      } catch (err: any) {
-                        console.error(
-                          `[DetailBlock] ✗ Tool "${act.tool}" failed:`,
-                          err,
-                        );
-                      }
-                    }}
-                  >
-                    {act.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {/* View Product in Detail Action Link */}
+            {/* Direct Booking / Detail Action Link */}
             {detailUrl && (
               <a
                 href={detailUrl}
@@ -999,28 +776,127 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "8px",
-                  padding: "12px 18px",
+                  padding: "11px 18px",
                   borderRadius: "8px",
-                  background: "rgba(255, 255, 255, 0.06)",
-                  border: "1px solid rgba(255, 255, 255, 0.16)",
-                  color: "var(--app-text-primary, #f8fafc)",
+                  background: "var(--widget-accent, #3b82f6)",
+                  color: "var(--widget-accent-contrast, #ffffff)",
                   fontSize: "13px",
-                  fontWeight: 600,
+                  fontWeight: 700,
                   textDecoration: "none",
                   transition: "all 0.15s ease",
                   width: "100%",
                   boxSizing: "border-box",
-                  marginTop: "4px",
+                  marginTop: "2px",
                 }}
               >
-                <span>🌐</span>
-                <span>View Product in Detail ↗</span>
+                <span>📅</span>
+                <span>Proceed to Book / Reserve &rarr;</span>
               </a>
+            )}
+
+            {/* Other visible actions */}
+            {visibleActions.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {visibleActions.map((act: any) => (
+                  <button
+                    key={act.id || act.tool}
+                    type="button"
+                    style={{
+                      width: "100%",
+                      background: "rgba(255, 255, 255, 0.06)",
+                      border: "1px solid rgba(255, 255, 255, 0.14)",
+                      color: "var(--app-text-primary, #ffffff)",
+                      borderRadius: "8px",
+                      padding: "9px 14px",
+                      fontWeight: "600",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                    }}
+                    onClick={async () => {
+                      const url = act.url || (act.type === "url" ? act.href : undefined);
+                      if (url) {
+                        window.open(url, "_blank", "noopener,noreferrer");
+                        return;
+                      }
+                      try {
+                        await callMcpTool(act.tool, { id: targetRecord?.id || targetRecord?._id });
+                      } catch (err: any) {
+                        console.error("[DetailBlock] Action failed:", err);
+                      }
+                    }}
+                  >
+                    {act.label}
+                  </button>
+                ))}
+              </div>
             )}
           </aside>
         </div>
 
-        {/* Specifications / Detail Fields (full width) */}
+        {/* Location & Contact Card (if present) */}
+        {targetRecord.location && typeof targetRecord.location === "object" && (
+          <div
+            style={{
+              padding: "16px 20px",
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.07)",
+              borderRadius: "10px",
+              margin: "0 20px 16px 20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "6px",
+            }}
+          >
+            <h4 style={{ ...sectionTitleStyle, marginBottom: 0 }}>Location &amp; Contact</h4>
+            <div style={{ fontSize: "13px", color: "var(--app-text-primary, #ffffff)", fontWeight: 600 }}>
+              📍 {targetRecord.location.name || targetRecord.location.city}
+            </div>
+            {targetRecord.location.address && (
+              <div style={{ fontSize: "12px", color: "var(--app-text-secondary, #94a3b8)" }}>
+                {targetRecord.location.address}, {targetRecord.location.city || ""}
+              </div>
+            )}
+            {targetRecord.location.phone && (
+              <div style={{ fontSize: "12px", color: "var(--widget-accent, #3b82f6)", fontWeight: 600 }}>
+                📞 {targetRecord.location.phone}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Features String (e.g. comma-separated list of amenities) */}
+        {typeof targetRecord.features === "string" && targetRecord.features.trim() && (
+          <div style={{ padding: "0 20px 16px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
+            <h4 style={{ ...sectionTitleStyle, marginBottom: 0 }}>Features &amp; Amenities</h4>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              {targetRecord.features.split(",").map((feat: string, idx: number) => {
+                const trimmed = feat.trim();
+                if (!trimmed) return null;
+                return (
+                  <span
+                    key={`feat-${idx}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      background: "rgba(255,255,255,0.06)",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      padding: "3px 9px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      color: "var(--app-text-primary, #f8fafc)",
+                    }}
+                  >
+                    <span>✓</span>
+                    <span>{trimmed}</span>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Specifications / Detail Fields Grid */}
         {detailFields.length > 0 && (
           <div
             className={styles.grid}
@@ -1032,7 +908,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               borderTop: "1px solid var(--TableDivider, rgba(255,255,255,0.08))",
             }}
           >
-            <h4 style={sectionTitleStyle}>Product Details &amp; Specs</h4>
+            <h4 style={sectionTitleStyle}>Specifications &amp; Details</h4>
             {detailFields.map((field) => (
               <DetailField key={field.key} field={field} record={targetRecord} />
             ))}
@@ -1041,52 +917,25 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
         {/* Collections / Array Data (e.g. Reviews, Specs Lists) */}
         {arrayFields.length > 0 && (
-          <div
-            style={{
-              padding: "0 20px 20px 20px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "16px",
-            }}
-          >
+          <div style={{ padding: "0 20px 20px 20px", display: "flex", flexDirection: "column", gap: "16px" }}>
             {arrayFields.map((field) => {
               const rawArray = getFieldValue(targetRecord, field);
               if (!Array.isArray(rawArray) || rawArray.length === 0) return null;
 
-              const isObjectArray = rawArray.every(
-                (item) => item && typeof item === "object",
-              );
+              const isObjectArray = rawArray.every((item) => item && typeof item === "object");
 
               return (
-                <div
-                  key={field.key}
-                  style={{ display: "flex", flexDirection: "column", gap: "8px" }}
-                >
+                <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <h4 style={{ ...sectionTitleStyle, marginBottom: 0 }}>
                     {field.label} ({rawArray.length})
                   </h4>
 
                   {isObjectArray ? (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "8px",
-                      }}
-                    >
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {rawArray.slice(0, 5).map((objItem: any, idx: number) => {
-                        const reviewRating =
-                          objItem.rating || objItem.score || objItem.stars;
-                        const reviewComment =
-                          objItem.comment ||
-                          objItem.review ||
-                          objItem.text ||
-                          objItem.message;
-                        const reviewerName =
-                          objItem.reviewerName ||
-                          objItem.user ||
-                          objItem.author ||
-                          objItem.name;
+                        const reviewRating = objItem.rating || objItem.score || objItem.stars;
+                        const reviewComment = objItem.comment || objItem.review || objItem.text || objItem.message;
+                        const reviewerName = objItem.reviewerName || objItem.user || objItem.author || objItem.name;
                         const reviewDate = objItem.date || objItem.createdAt;
 
                         return (
@@ -1103,53 +952,23 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                               gap: "4px",
                             }}
                           >
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                              }}
-                            >
-                              <span
-                                style={{
-                                  fontWeight: 600,
-                                  color: "var(--app-text-heading, #fff)",
-                                }}
-                              >
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ fontWeight: 600, color: "var(--app-text-heading, #fff)" }}>
                                 {reviewerName || `Item #${idx + 1}`}
                               </span>
                               {reviewRating !== undefined && (
-                                <span
-                                  style={{
-                                    color: "#f59e0b",
-                                    fontSize: "12px",
-                                    fontWeight: 700,
-                                  }}
-                                >
+                                <span style={{ color: "#f59e0b", fontSize: "12px", fontWeight: 700 }}>
                                   ⭐ {reviewRating}
                                 </span>
                               )}
                             </div>
                             {reviewComment && (
-                              <p
-                                style={{
-                                  margin: 0,
-                                  color: "var(--app-text-secondary, #94a3b8)",
-                                  fontSize: "12px",
-                                  lineHeight: 1.4,
-                                }}
-                              >
+                              <p style={{ margin: 0, color: "var(--app-text-secondary, #94a3b8)", fontSize: "12px", lineHeight: 1.4 }}>
                                 &ldquo;{reviewComment}&rdquo;
                               </p>
                             )}
                             {reviewDate && (
-                              <span
-                                style={{
-                                  fontSize: "11px",
-                                  color: "#64748b",
-                                  alignSelf: "flex-end",
-                                }}
-                              >
+                              <span style={{ fontSize: "11px", color: "#64748b", alignSelf: "flex-end" }}>
                                 {String(reviewDate).slice(0, 10)}
                               </span>
                             )}
@@ -1158,9 +977,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                       })}
                     </div>
                   ) : (
-                    <div
-                      style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}
-                    >
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
                       {rawArray.map((tag: any, idx: number) => (
                         <span
                           key={`tag-${idx}`}
@@ -1222,7 +1039,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               fontSize: "20px",
               cursor: "pointer",
               zIndex: 10,
-              transition: "transform 0.15s ease",
             }}
           >
             ✕
@@ -1237,14 +1053,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {renderImage(
-              activeMainImage,
-              title || "Product Fullscreen",
-              "contain",
-            )}
+            {renderImage(activeMainImage, title || "Product Fullscreen", "contain")}
           </div>
         </div>
       )}
     </section>
   );
 };
+

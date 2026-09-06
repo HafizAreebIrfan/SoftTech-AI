@@ -22,10 +22,11 @@ export const registerCompanyInfo = async (
 
 export const saveCompanyApiDetails = async (
   companyId: string,
-  apis: ApisInformation[],
+  payload: ApisInformation[] | { apis: ApisInformation[]; authStrategy?: any },
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
   const url = `${env.apiBaseUrl}/api/companies/${companyId}/apidetailsstep`;
-  return post(url, { apis }, { skipRedirect: true });
+  const body = Array.isArray(payload) ? { apis: payload } : payload;
+  return post(url, body, { skipRedirect: true });
 };
 
 export const analyzeSingleCompanyApi = async (

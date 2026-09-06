@@ -6,7 +6,6 @@ import { getFieldValue } from "../../../utils/schema/getValue";
 import { callMcpTool, applyReQueryResult, getToolInput } from "../../../utils/mcpBridge";
 import { extractToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import styles from "../../../styles/cataloglayout.module.css";
-import { FormBlock } from "../components";
 import { useRealtimeStream } from "../hooks/useRealtimeStream";
 
 export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
@@ -21,7 +20,6 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   presentationPlan,
 }) => {
   const blocks = presentationPlan?.blocks ?? [];
-  const filtersBlock = blocks.find((b) => b.type === "filters");
   const cardsBlock = blocks.find((b) => b.type === "cards");
 
   const [localRecords, setLocalRecords] = useState<any[]>(records);
@@ -197,6 +195,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [sortOption, setSortOption] = useState<string>("default");
+  const [selectedFacets, setSelectedFacets] = useState<Record<string, string>>({});
 
   // Pagination & Loading states
   const [pageSize, setPageSize] = useState<number>(12);
@@ -318,6 +317,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
       setSelectedCategory("All");
     }
     setSearchTerm("");
+    setSelectedFacets({});
     if (detectedInitialSort && detectedInitialSort !== "default") {
       setSortOption(detectedInitialSort);
     } else {
@@ -325,7 +325,94 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     }
   }, [title, collection?.entity, detectedInitialSort, categoryFacet?.selected]);
 
-  // 4. Defensive customer filtering & Search + Category Filter
+  // Smart Dynamic Facet Extraction for slide-over drawer
+  const smartFacets = useMemo(() => {
+    const blacklistedKeys = new Set([
+      "id",
+      "_id",
+      "__v",
+      "images",
+      "image",
+      "url",
+      "link",
+      "createdat",
+      "updatedat",
+      "created_at",
+      "updated_at",
+      "latitude",
+      "longitude",
+      "locationid",
+      "postalcode",
+      "zipcode",
+      "phone",
+      "email",
+      "address",
+      "description",
+      "isrestricted",
+      "restrictexpiresat",
+      "passwordhash",
+      "hash",
+      "licenseplate",
+    ]);
+
+    const facetMap: Record<string, { label: string; values: Set<string> }> = {};
+
+    localRecords.forEach((rec: any) => {
+      if (!rec || typeof rec !== "object") return;
+      for (const [key, rawVal] of Object.entries(rec)) {
+        if (key.startsWith("$")) continue;
+        const kLower = key.toLowerCase();
+        if (blacklistedKeys.has(kLower)) continue;
+
+        const fieldSchema = fields.find((f) => f.key === key || f.path === key);
+        if (fieldSchema?.hidden) continue;
+
+        const fieldLabel =
+          fieldSchema?.label ||
+          key
+            .replace(/[-_]+/g, " ")
+            .replace(/\b\w/g, (c) => c.toUpperCase());
+
+        if (typeof rawVal === "string" || typeof rawVal === "number" || typeof rawVal === "boolean") {
+          const strVal = String(rawVal).trim();
+          if (strVal && strVal.length <= 30 && !strVal.startsWith("http")) {
+            if (!facetMap[key]) {
+              facetMap[key] = { label: fieldLabel, values: new Set() };
+            }
+            facetMap[key].values.add(strVal);
+          }
+        } else if (Array.isArray(rawVal) && rawVal.length > 0 && rawVal.length <= 15) {
+          rawVal.forEach((item) => {
+            if (typeof item === "string" && item.trim() && item.length <= 30 && !item.startsWith("http")) {
+              if (!facetMap[key]) {
+                facetMap[key] = { label: fieldLabel, values: new Set() };
+              }
+              facetMap[key].values.add(item.trim());
+            }
+          });
+        } else if (rawVal && typeof rawVal === "object" && (rawVal as any).city) {
+          const cityVal = String((rawVal as any).city).trim();
+          if (cityVal) {
+            const cityKey = `${key}.city`;
+            if (!facetMap[cityKey]) {
+              facetMap[cityKey] = { label: "City", values: new Set() };
+            }
+            facetMap[cityKey].values.add(cityVal);
+          }
+        }
+      }
+    });
+
+    return Object.entries(facetMap)
+      .filter(([_, data]) => data.values.size >= 2 && data.values.size <= 12)
+      .map(([key, data]) => ({
+        key,
+        label: data.label,
+        options: Array.from(data.values),
+      }));
+  }, [localRecords, fields]);
+
+  // 4. Defensive customer filtering & Search + Dynamic Facets Filter
   const filteredRecords = useMemo(() => {
     let list = localRecords;
 
@@ -365,6 +452,27 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
       });
     }
 
+    // Dynamic Facets filter
+    Object.entries(selectedFacets).forEach(([fKey, fVal]) => {
+      if (!fVal || fVal === "All") return;
+      list = list.filter((rec: any) => {
+        if (!rec || typeof rec !== "object") return false;
+        if (fKey.includes(".")) {
+          const parts = fKey.split(".");
+          let cur = rec;
+          for (const p of parts) {
+            cur = cur?.[p];
+          }
+          return String(cur || "").toLowerCase() === fVal.toLowerCase();
+        }
+        const val = rec[fKey];
+        if (Array.isArray(val)) {
+          return val.some((item) => String(item).toLowerCase() === fVal.toLowerCase());
+        }
+        return String(val || "").toLowerCase() === fVal.toLowerCase();
+      });
+    });
+
     // Search query filter
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
@@ -383,26 +491,26 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
       const sorted = [...list];
       if (sortOption === "price_asc") {
         sorted.sort((a: any, b: any) => {
-          const pA = parseNumericPrice(a.$price ?? a.price ?? a.packageprice ?? 0);
-          const pB = parseNumericPrice(b.$price ?? b.price ?? b.packageprice ?? 0);
+          const pA = parseNumericPrice(a.pricePerDay ?? a.price_per_day ?? a.$price ?? a.price ?? a.packageprice ?? 0);
+          const pB = parseNumericPrice(b.pricePerDay ?? b.price_per_day ?? b.$price ?? b.price ?? b.packageprice ?? 0);
           return pA - pB;
         });
       } else if (sortOption === "price_desc") {
         sorted.sort((a: any, b: any) => {
-          const pA = parseNumericPrice(a.$price ?? a.price ?? a.packageprice ?? 0);
-          const pB = parseNumericPrice(b.$price ?? b.price ?? b.packageprice ?? 0);
+          const pA = parseNumericPrice(a.pricePerDay ?? a.price_per_day ?? a.$price ?? a.price ?? a.packageprice ?? 0);
+          const pB = parseNumericPrice(b.pricePerDay ?? b.price_per_day ?? b.$price ?? b.price ?? b.packageprice ?? 0);
           return pB - pA;
         });
       } else if (sortOption === "rating_desc") {
         sorted.sort((a: any, b: any) => {
-          const rA = Number(a.$metric ?? a.rating ?? 0);
-          const rB = Number(b.$metric ?? b.rating ?? 0);
+          const rA = Number(a.$metric ?? a.rating ?? a.averageRating ?? 0);
+          const rB = Number(b.$metric ?? b.rating ?? b.averageRating ?? 0);
           return rB - rA;
         });
       } else if (sortOption === "name_asc") {
         sorted.sort((a: any, b: any) => {
-          const nA = String(a.$title ?? a.title ?? a.name ?? a.packagename ?? "");
-          const nB = String(b.$title ?? b.title ?? b.name ?? b.packagename ?? "");
+          const nA = String(a.make ? `${a.make} ${a.model || ""}` : (a.$title ?? a.title ?? a.name ?? ""));
+          const nB = String(b.make ? `${b.make} ${b.model || ""}` : (b.$title ?? b.title ?? b.name ?? ""));
           return nA.localeCompare(nB);
         });
       }
@@ -416,6 +524,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     selectedCategory,
     categoryField,
     categoryFacet?.tool,
+    selectedFacets,
     searchTerm,
     sortOption,
   ]);
@@ -423,55 +532,30 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   const showToolbar =
     localRecords.length > 1 ||
     availableCategories.length > 0 ||
+    smartFacets.length > 0 ||
     Boolean(categoryFacet?.optionsTool);
 
-  // Active filter chips detection (#B)
+  // Active filter chips detection
   const hasCategoryFilter =
     selectedCategory !== "All" && selectedCategory !== "";
   const hasSearchFilter = Boolean(searchTerm.trim());
   const hasSortFilter = sortOption !== "default";
+  const activeFacetEntries = Object.entries(selectedFacets).filter(
+    ([_, val]) => val && val !== "All",
+  );
   const activeFiltersCount =
     (hasCategoryFilter ? 1 : 0) +
     (hasSearchFilter ? 1 : 0) +
-    (hasSortFilter ? 1 : 0);
+    (hasSortFilter ? 1 : 0) +
+    activeFacetEntries.length;
 
-  // Filter Drawer & Variant Options
+  // Filter Drawer State
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-
-  const availableVariants = useMemo(() => {
-    const variants: Record<string, Set<string>> = {};
-    localRecords.forEach((rec: any) => {
-      if (!rec || typeof rec !== "object") return;
-      for (const [key, val] of Object.entries(rec)) {
-        if (key.startsWith("$")) continue;
-        if (Array.isArray(val) && val.length > 0 && val.length <= 12) {
-          const kLower = key.toLowerCase();
-          if (
-            kLower.includes("size") ||
-            kLower.includes("color") ||
-            kLower.includes("shade") ||
-            kLower.includes("variant")
-          ) {
-            if (!variants[key]) variants[key] = new Set();
-            val.forEach((item) => {
-              if (typeof item === "string" || typeof item === "number") {
-                variants[key].add(String(item));
-              }
-            });
-          }
-        }
-      }
-    });
-    return Object.entries(variants).map(([name, set]) => ({
-      name,
-      options: Array.from(set),
-    }));
-  }, [localRecords]);
 
   // Reset pagination to page 1 on filter/search/sort/pageSize change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory, sortOption, pageSize]);
+  }, [searchTerm, selectedCategory, selectedFacets, sortOption, pageSize]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / pageSize));
   const paginatedRecords = useMemo(() => {
@@ -479,15 +563,19 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     return filteredRecords.slice(start, start + pageSize);
   }, [filteredRecords, currentPage, pageSize]);
 
+  const rawItemLabel = collection?.itemLabel || collection?.entity || "item";
+  const itemLabelPlural = rawItemLabel.endsWith("s")
+    ? rawItemLabel
+    : `${rawItemLabel}s`;
+  const searchPlaceholder = `Search ${itemLabelPlural.toLowerCase()}...`;
+
+  const isEcomCart = Boolean(
+    totalCartCount > 0 ||
+    actions?.some((a: any) => /cart|order/i.test(a?.id || a?.label || a?.tool || ""))
+  );
+
   return (
     <section className={styles.container}>
-      {/* Structured Filters from Plan (if provided) */}
-      {filtersBlock && (
-        <div className={styles.filtersBlockWrapper}>
-          <FormBlock block={filtersBlock} fields={fields} />
-        </div>
-      )}
-
       {/* Dynamic Catalog Toolbar (Search, Filter Sidebar Trigger & Cart Button) */}
       {showToolbar && (
         <div className={styles.toolbar}>
@@ -496,7 +584,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
             <input
               type="text"
               className={styles.searchInput}
-              placeholder="Search products..."
+              placeholder={searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -528,18 +616,20 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
               )}
             </button>
 
-            <button
-              type="button"
-              className={styles.cartHeaderBtn}
-              onClick={openCart}
-              aria-label={`View Shopping Cart (${totalCartCount} items)`}
-            >
-              <span>🛒</span>
-              <span>Cart</span>
-              {totalCartCount > 0 && (
-                <span className={styles.cartCountBadge}>{totalCartCount}</span>
-              )}
-            </button>
+            {isEcomCart && (
+              <button
+                type="button"
+                className={styles.cartHeaderBtn}
+                onClick={openCart}
+                aria-label={`View Shopping Cart (${totalCartCount} items)`}
+              >
+                <span>🛒</span>
+                <span>Cart</span>
+                {totalCartCount > 0 && (
+                  <span className={styles.cartCountBadge}>{totalCartCount}</span>
+                )}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -637,34 +727,50 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
                 </div>
               )}
 
-              {/* Dynamic Variants / Swatches (if any) */}
-              {availableVariants.map((v) => (
-                <div key={v.name} className={styles.filterSection}>
-                  <label className={styles.filterSectionTitle}>
-                    {v.name}
-                  </label>
-                  <div className={styles.categoryChipsList}>
-                    {v.options.map((opt) => {
-                      const isSelected = searchTerm
-                        .toLowerCase()
-                        .includes(opt.toLowerCase());
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          className={`${styles.filterOptionBtn} ${isSelected ? styles.filterOptionBtnActive : ""}`}
-                          onClick={() => {
-                            setSearchTerm(opt);
-                            setIsFilterDrawerOpen(false);
-                          }}
-                        >
-                          {opt}
-                        </button>
-                      );
-                    })}
+              {/* Smart Facets (Transmission, Fuel, Seats, Make, City, etc.) */}
+              {smartFacets.map((facet) => {
+                const currentSelected = selectedFacets[facet.key] || "All";
+                return (
+                  <div key={facet.key} className={styles.filterSection}>
+                    <label className={styles.filterSectionTitle}>
+                      {facet.label}
+                    </label>
+                    <div className={styles.categoryChipsList}>
+                      <button
+                        type="button"
+                        className={`${styles.filterOptionBtn} ${currentSelected === "All" ? styles.filterOptionBtnActive : ""}`}
+                        onClick={() => {
+                          setSelectedFacets((prev) => {
+                            const next = { ...prev };
+                            delete next[facet.key];
+                            return next;
+                          });
+                        }}
+                      >
+                        All
+                      </button>
+                      {facet.options.map((opt) => {
+                        const isSelected = currentSelected === opt;
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            className={`${styles.filterOptionBtn} ${isSelected ? styles.filterOptionBtnActive : ""}`}
+                            onClick={() => {
+                              setSelectedFacets((prev) => ({
+                                ...prev,
+                                [facet.key]: isSelected ? "All" : opt,
+                              }));
+                            }}
+                          >
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className={styles.drawerFooter}>
@@ -673,6 +779,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
                 className={styles.drawerResetBtn}
                 onClick={() => {
                   handleCategorySelect("All");
+                  setSelectedFacets({});
                   setSearchTerm("");
                   setSortOption("default");
                   setIsFilterDrawerOpen(false);
@@ -692,7 +799,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         </div>
       )}
 
-      {/* Applied Filters Chips Row (#B) */}
+      {/* Applied Filters Chips Row */}
       {activeFiltersCount > 0 && (
         <div className={styles.appliedFiltersRow}>
           {hasCategoryFilter && (
@@ -708,6 +815,30 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
               </button>
             </span>
           )}
+
+          {activeFacetEntries.map(([fKey, fVal]) => {
+            const facetLabel =
+              smartFacets.find((f) => f.key === fKey)?.label || fKey;
+            return (
+              <span key={fKey} className={styles.filterChip}>
+                {facetLabel}: {fVal}
+                <button
+                  type="button"
+                  className={styles.filterChipRemove}
+                  onClick={() =>
+                    setSelectedFacets((prev) => {
+                      const next = { ...prev };
+                      delete next[fKey];
+                      return next;
+                    })
+                  }
+                  title={`Remove ${facetLabel} filter`}
+                >
+                  ✕
+                </button>
+              </span>
+            );
+          })}
 
           {hasSearchFilter && (
             <span className={styles.filterChip}>
@@ -743,6 +874,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
               className={styles.clearAllBtn}
               onClick={() => {
                 handleCategorySelect("All");
+                setSelectedFacets({});
                 setSearchTerm("");
                 setSortOption("default");
               }}

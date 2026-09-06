@@ -4,9 +4,103 @@ export const stepOneSchema = z.object({
   companyName: z.string().min(2, "Company Name must be at least 2 characters"),
   adminEmail: z.string().min(1, "Email is required").email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  mcpSlug: z.string().min(2, "Subdomain must be at least 2 characters").regex(/^[a-zA-Z0-9-]+$/, "Only letters, numbers, and hyphens"),
-  primaryIndustry: z.string().min(1, "Please select an industry")
+  mcpSlug: z
+    .string()
+    .min(2, "Subdomain must be at least 2 characters")
+    .regex(/^[a-zA-Z0-9-]+$/, "Only letters, numbers, and hyphens"),
+  primaryIndustry: z.string().min(1, "Please select an industry"),
 });
+
+export const authStrategySchema = z
+  .object({
+    strategyType: z.enum([
+      "none",
+      "api_key",
+      "bearer",
+      "oauth2",
+      "custom_header",
+    ]),
+    apiKey: z.string().optional(),
+    authHeader: z.string().optional(),
+    bearerToken: z.string().optional(),
+    authorizationServer: z.string().optional(),
+    authorizationEndpoint: z.string().optional(),
+    tokenEndpoint: z.string().optional(),
+    clientId: z.string().optional(),
+    clientSecret: z.string().optional(),
+    scopes: z.array(z.string()).optional(),
+    globalStreamUrl: z.string().optional(),
+    hasGlobalCheckout: z.boolean().optional(),
+    globalCheckoutUrl: z.string().optional(),
+    hasProductPages: z.boolean().optional(),
+    shopCatalogUrl: z.string().optional(),
+    productItemUrlTemplate: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.strategyType === "api_key") {
+      if (!data.authHeader?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "Header / Parameter Name is required for API Key authentication.",
+          path: ["authHeader"],
+        });
+      }
+      if (!data.apiKey?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "API Key Value is required.",
+          path: ["apiKey"],
+        });
+      }
+    }
+    if (data.strategyType === "custom_header") {
+      if (!data.authHeader?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Custom Header Name is required.",
+          path: ["authHeader"],
+        });
+      }
+      if (!data.apiKey?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Header Value is required.",
+          path: ["apiKey"],
+        });
+      }
+    }
+    if (data.strategyType === "oauth2") {
+      if (!data.authorizationServer?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Authorization Server URL is required for User OAuth 2.0.",
+          path: ["authorizationServer"],
+        });
+      }
+      if (!data.clientId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "OAuth Client ID is required for User OAuth 2.0.",
+          path: ["clientId"],
+        });
+      }
+      if (!data.authorizationEndpoint?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Authorization / Login URL is required for User OAuth 2.0.",
+          path: ["authorizationEndpoint"],
+        });
+      }
+      if (!data.tokenEndpoint?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Token Endpoint URL is required for User OAuth 2.0.",
+          path: ["tokenEndpoint"],
+        });
+      }
+    }
+  });
 
 export const stepTwoSchema = z.array(
   z.object({
@@ -21,9 +115,9 @@ export const stepTwoSchema = z.array(
           return false;
         }
       },
-      { message: "Invalid URL (must start with https:// and have a domain)" }
+      { message: "Invalid URL (must start with https:// and have a domain)" },
     ),
-    apiAuthType: z.string(),
+    apiAuthType: z.string().optional(),
     apiCredentials: z.string().optional(),
     apiQueryParams: z.string().optional(),
     apiCheckoutTemplate: z.string().optional(),
@@ -31,90 +125,17 @@ export const stepTwoSchema = z.array(
     oauthTokenUrl: z.string().optional(),
     oauthClientId: z.string().optional(),
     apiHeaders: z.string().optional(),
-  })
-).superRefine((apis, ctx) => {
-  apis.forEach((api, idx) => {
-    if (api.apiAuthType === "Bearer Token" && !api.apiCredentials?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: `Bearer Token is required for "${api.apiName}".`,
-        path: [idx, "apiCredentials"],
-      });
-    }
-    if (api.apiAuthType === "API Key") {
-      if (!api.apiAuthHeader?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `API Key Header Name is required for "${api.apiName}".`,
-          path: [idx, "apiAuthHeader"],
-        });
-      }
-      if (!api.apiCredentials?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `API Key Value is required for "${api.apiName}".`,
-          path: [idx, "apiCredentials"],
-        });
-      }
-    }
-    if (api.apiAuthType === "OAuth 2.0") {
-      if (!api.oauthTokenUrl?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `OAuth 2.0 Token URL is required for "${api.apiName}".`,
-          path: [idx, "oauthTokenUrl"],
-        });
-      } else {
-        try {
-          new URL(api.oauthTokenUrl);
-        } catch {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: `Invalid OAuth Token URL format for "${api.apiName}".`,
-            path: [idx, "oauthTokenUrl"],
-          });
-        }
-      }
-      if (!api.oauthClientId?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `OAuth 2.0 Client ID is required for "${api.apiName}".`,
-          path: [idx, "oauthClientId"],
-        });
-      }
-      if (!api.apiCredentials?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `OAuth 2.0 Client Secret is required for "${api.apiName}".`,
-          path: [idx, "apiCredentials"],
-        });
-      }
-    }
-    if (api.apiHeaders && api.apiHeaders.trim()) {
-      try {
-        JSON.parse(api.apiHeaders);
-      } catch {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Invalid JSON structure in Custom Headers for "${api.apiName}".`,
-          path: [idx, "apiHeaders"],
-        });
-      }
-    }
-    if (api.apiQueryParams && api.apiQueryParams.trim()) {
-      try {
-        JSON.parse(api.apiQueryParams);
-      } catch {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Invalid JSON structure in Query Parameters for "${api.apiName}".`,
-          path: [idx, "apiQueryParams"],
-        });
-      }
-    }
-  });
-});
+  }),
+);
 
 export const stepThreeSchema = z.object({
-  layout: z.enum(["dashboard", "catalog", "table", "timeline", "grid", "list", "cards"]),
+  layout: z.enum([
+    "dashboard",
+    "catalog",
+    "table",
+    "timeline",
+    "grid",
+    "list",
+    "cards",
+  ]),
 });
