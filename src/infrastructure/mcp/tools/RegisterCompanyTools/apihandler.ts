@@ -10,6 +10,7 @@ import {
 } from "../../../../application/services/oauth/OAuthTokenService";
 import { env } from "../../../../infrastructure/config/env";
 import { resolveMcpUserId } from "../../../../adapters/http/middlewares/mcpUserAuthMiddleware";
+import { mcpRequestContext } from "../../../../adapters/http/controllers/mcp/mcptransportlayer";
 import {
   SearchRecoveryInfo,
   isEmptyResult,
@@ -320,8 +321,9 @@ const executeApiCall = async (
     }
   }
 
+  const sentAuthHeader = (options.headers as Record<string, string>)?.Authorization;
   console.log(
-    `[API Handler] ${method} ${url.toString()}`,
+    `[API Handler Outgoing] → ${method} ${url.toString()} | Auth: ${sentAuthHeader ? `Bearer (${sentAuthHeader.substring(0, 18)}...)` : "NONE"}`,
     options.body ? `body=${options.body}` : "(no body)",
   );
 
@@ -393,7 +395,10 @@ const executeApiCall = async (
   const responseText = await response.text();
 
   console.log(
-    `[API Handler] ← ${response.status} ${url.toString()}`,
+    `[API Handler Response] ← ${response.status} ${response.statusText} for ${method} ${url.toString()} | SentAuth: ${sentAuthHeader ? "YES" : "NO"}`,
+    response.status === 401
+      ? `\n⚠️ [MCP 401 UNAUTHORIZED WARNING] The upstream API rejected the call. Sent Auth Header: ${sentAuthHeader ? "YES" : "NO"} | Body: ${responseText.substring(0, 300)}`
+      : "",
     responseText.length > 500
       ? responseText.substring(0, 500) + "..."
       : responseText,
@@ -921,14 +926,27 @@ const buildHeaders = async (
   });
 
   // 1. Check for dynamic user Bearer token passed from ChatGPT / MCP Client
+  const store = mcpRequestContext.getStore();
   const incomingAuth =
+    store?.authHeader ||
+    store?.req?.headers?.authorization ||
+    store?.req?.headers?.Authorization ||
     req?.headers?.authorization ||
     req?.headers?.Authorization ||
     req?.headers?.["authorization"] ||
     req?.headers?.["Authorization"];
 
+  console.log(`[MCP Auth Resolution] API "${api.name || apiId}"`, {
+    foundInAsyncStore: Boolean(store?.authHeader),
+    foundInReq: Boolean(req?.headers?.authorization),
+    incomingAuthPreview: incomingAuth ? `${incomingAuth.substring(0, 18)}...` : "NONE",
+    configuredAuthType: api.authType,
+    requiresAuth: api.requiresAuth,
+  });
+
   if (incomingAuth) {
     headers.Authorization = String(incomingAuth).trim();
+    console.log(`[MCP Auth Attached] Forwarding ChatGPT Bearer token to API "${api.name || apiId}"`);
     return headers;
   }
 

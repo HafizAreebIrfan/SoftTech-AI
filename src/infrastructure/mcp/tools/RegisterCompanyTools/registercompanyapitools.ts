@@ -9,6 +9,7 @@ import {
 import { translateApiError } from "../../errors/errorTranslator";
 import { buildCustomMcpInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
 import { formatCheckoutToolResult } from "../CheckoutHandle/index";
+import { mcpRequestContext } from "../../../../adapters/http/controllers/mcp/mcptransportlayer";
 
 // We will extract the HTTP and execution logic into this new file in the next step
 import {
@@ -133,7 +134,17 @@ export const registerCompanyApiTools = (
       } as any,
       async (input: any, extra: any) => {
         try {
-          const req = extra?.req;
+          const store = mcpRequestContext.getStore();
+          const req = extra?.req || store?.req;
+          const authHeader = store?.authHeader || req?.headers?.authorization;
+
+          console.log(`[MCP Tool Invocation] → Executing "${toolName}" (${api.name || apiId}) for "${company.companyName}"`, {
+            hasAuthHeader: Boolean(authHeader),
+            authHeaderPreview: authHeader ? `${authHeader.substring(0, 18)}...` : "NONE",
+            sessionId: store?.sessionId || extra?.sessionId || "(none)",
+            inputArgs: input,
+          });
+
           const recovery: SearchRecoveryInfo = {};
 
           // Delegate the actual HTTP fetching to the Secondary Adapter

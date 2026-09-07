@@ -1,14 +1,26 @@
 import { randomUUID } from "crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { Request, Response } from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createCompanyMcpServer } from "../../../../infrastructure/mcp/server/companymcpserver";
 import { CompanyModel } from "../../../persistence/models/companies/register/companyinfo";
 
+export interface McpRequestContext {
+  authHeader?: string;
+  userId?: string;
+  sessionId?: string;
+  mcpSlug?: string;
+  req?: Request;
+}
+
+export const mcpRequestContext = new AsyncLocalStorage<McpRequestContext>();
+
 type McpSession = {
   server: McpServer;
   transport: StreamableHTTPServerTransport;
   lastSeenAt: number;
+  authHeader?: string;
 };
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
@@ -20,30 +32,57 @@ const mcpSessions = new Map<string, McpSession>();
  * Routes initialize requests into a new session and all later requests into an existing one.
  */
 export const McpTransportLayer = async (req: Request, res: Response) => {
-  try {
-    if (isInitializeRequest(req)) {
-      await handleInitializeRequest(req, res);
-      return;
-    }
+  const authHeader =
+    (req.headers.authorization as string) ||
+    (req.headers.Authorization as string) ||
+    (req.headers["authorization"] as string) ||
+    (req.headers["Authorization"] as string);
 
-    const sessionId = getSessionIdFromHeader(req);
+  const sessionId = getSessionIdFromHeader(req) || (req.query.sessionId as string);
+  const mcpSlug = normalizeMcpSlug(req.params.mcpSlug);
 
-    if (!sessionId) {
-      sendSessionNotFound(res);
-      return;
-    }
+  console.log(`[MCP Transport] Incoming ${req.method} /mcp/${mcpSlug}`, {
+    hasAuthHeader: Boolean(authHeader),
+    authHeaderPreview: authHeader ? `${authHeader.substring(0, 18)}...` : "NONE",
+    sessionId: sessionId || "(new/none)",
+    jsonRpcMethod: req.body?.method,
+    toolName: req.body?.params?.name,
+  });
 
-    await handleExistingSessionRequest(req, res, sessionId);
-  } catch (error) {
-    logMcpError(req, error);
+  return mcpRequestContext.run(
+    {
+      authHeader,
+      sessionId: typeof sessionId === "string" ? sessionId : undefined,
+      mcpSlug,
+      req,
+    },
+    async () => {
+      try {
+        if (isInitializeRequest(req)) {
+          await handleInitializeRequest(req, res);
+          return;
+        }
 
-    if (!res.headersSent) {
-      res.status(500).json({
-        success: false,
-        message: "MCP transport request failed",
-      });
-    }
-  }
+        const sid = getSessionIdFromHeader(req);
+
+        if (!sid) {
+          sendSessionNotFound(res);
+          return;
+        }
+
+        await handleExistingSessionRequest(req, res, sid);
+      } catch (error) {
+        logMcpError(req, error);
+
+        if (!res.headersSent) {
+          res.status(500).json({
+            success: false,
+            message: "MCP transport request failed",
+          });
+        }
+      }
+    },
+  );
 };
 
 /**
@@ -53,12 +92,17 @@ const handleInitializeRequest = async (req: Request, res: Response) => {
   const server = await createServerForRequest(req);
   let initializedSessionId: string | undefined;
 
+  const authHeader =
+    (req.headers.authorization as string) ||
+    (req.headers.Authorization as string);
+
   const transport = buildTransport(server, (sessionId) => {
     initializedSessionId = sessionId;
     mcpSessions.set(sessionId, {
       server,
       transport,
       lastSeenAt: Date.now(),
+      authHeader,
     });
   });
 
@@ -89,6 +133,22 @@ const handleExistingSessionRequest = async (
   }
 
   touchSession(sessionId);
+
+  // Capture or update Bearer token on active session if supplied
+  const incomingAuth =
+    (req.headers.authorization as string) ||
+    (req.headers.Authorization as string);
+
+  if (incomingAuth) {
+    session.authHeader = incomingAuth;
+  }
+
+  // If request didn't include header but session previously cached it, restore it to context
+  const currentContext = mcpRequestContext.getStore();
+  if (currentContext && !currentContext.authHeader && session.authHeader) {
+    currentContext.authHeader = session.authHeader;
+  }
+
   await session.transport.handleRequest(req, res, req.body);
 };
 
