@@ -1,0 +1,688 @@
+/* Dashboard, User Account, Bookings & Profile Styles (Pitch Black #09090b) */
+
+.container {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--app-text-primary, #ffffff);
+  font-family: inherit;
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 14px;
+  padding: 16px;
+  box-sizing: border-box;
+  height: fit-content;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    padding: 12px;
+  }
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 8px;
+  color: var(--app-text-secondary, #94a3b8);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: fit-content;
+}
+
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.userSnippet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px 12px;
+  border-bottom: 1px solid var(--widget-card-border, #22242a);
+}
+
+.avatarCircle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--widget-accent, #3b82f6);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.userInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.userName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.userEmail {
+  font-size: 11.5px;
+  color: var(--app-text-secondary, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.navMenu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 768px) {
+  .navMenu {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--app-text-secondary, #94a3b8);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.navItem:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+}
+
+.navItemActive {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: var(--widget-accent, #3b82f6) !important;
+  font-weight: 700;
+}
+
+.navIcon {
+  font-size: 14px;
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Main Area */
+.mainArea {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.headerText {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 750;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+}
+
+.statusSelect {
+  background: #111215;
+  border: 1px solid #22242a;
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Metric Cards Row */
+.metricsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.metricCard {
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  transition: border-color 0.15s ease;
+}
+
+.metricCard:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.metricTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+  font-weight: 500;
+}
+
+.metricIconBadge {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.metricValue {
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Sections */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.sectionLink {
+  background: transparent;
+  border: none;
+  color: var(--widget-accent, #3b82f6);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.sectionLink:hover {
+  text-decoration: underline;
+}
+
+/* Empty State Card */
+.emptyCard {
+  background: var(--widget-card-bg, #121316);
+  border: 1px dashed var(--widget-card-border, #22242a);
+  border-radius: 12px;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 10px;
+}
+
+.emptyTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.emptyDesc {
+  font-size: 13px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+  max-width: 320px;
+  line-height: 1.4;
+}
+
+.actionBtn {
+  background: var(--widget-accent, #3b82f6);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: opacity 0.15s ease;
+}
+
+.actionBtn:hover {
+  opacity: 0.92;
+}
+
+/* Loyalty Banner */
+.loyaltyBanner {
+  background: #121316;
+  border: 1px solid #22242a;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.loyaltyStar {
+  font-size: 24px;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.loyaltyContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.loyaltyTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.loyaltyDesc {
+  font-size: 12.5px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Profile Form View */
+.profileCard {
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.profileAvatarSection {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #22242a;
+}
+
+.avatarLg {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--widget-accent, #3b82f6);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 600px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formGroupFull {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inputLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+}
+
+.textInput {
+  background: #09090b;
+  border: 1px solid #22242a;
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 9px 12px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+
+.textInput:focus {
+  border-color: var(--widget-accent, #3b82f6);
+}
+
+.inputHelper {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Security / MFA Card */
+.securityCard {
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.securityHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.securityTitle {
+  font-size: 14px;
+  font-weight: 750;
+  color: #ffffff;
+  margin: 0;
+}
+
+.securityDesc {
+  font-size: 12.5px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+}
+
+.securityStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.statusPillActive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.statusPillDisabled {
+  background: rgba(148, 163, 184, 0.1);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.statusPillPending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.statusPillCancelled {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Bookings List Cards */
+.bookingsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bookingItemCard {
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  transition: border-color 0.15s ease;
+}
+
+.bookingItemCard:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.bookingMainInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bookingCarIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: #1e2025;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.bookingCarName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.bookingMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin-top: 2px;
+}
+
+.bookingRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.bookingAmount {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+/* Admin Real-time Feed Card */
+.feedCard {
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feedHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.feedDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+  animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.feedEmptyText {
+  font-size: 12.5px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+}
+
+.profileHeaderName {
+  font-size: 16px;
+  font-weight: 750;
+  color: #ffffff;
+  margin: 0;
+}
+
+.profileHeaderEmail {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.profileBadgesRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.securityIcon {
+  font-size: 18px;
+}
+
+.mfaBtn {
+  margin-left: auto;
+  background: var(--widget-accent, #3b82f6);
+}
+
+.mfaBtnActive {
+  margin-left: auto;
+  background: #334155;
+}
+
+.metricValueSmall {
+  font-size: 16px;
+}

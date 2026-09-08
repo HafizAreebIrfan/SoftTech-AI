@@ -76,6 +76,11 @@
 
 .tooltipValue {
   font-weight: 700;
+  color: var(--widget-accent, #6366f1);
+}
+
+.chartInnerWide {
+  min-width: 650px;
 }
 
 @media (max-width: 500px) {

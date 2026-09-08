@@ -14,11 +14,25 @@ export const buildPresentationPlan = ({
   records = [],
   audience,
 }: BuildPresentationPlanOptions): PresentationPlan => {
-  // 1. Resolve explicit layout or infer based on collection size & audience
+  // 1. Resolve explicit layout or infer based on entity, collection size & audience
   let explicitLayout = (collection?.layout || "auto").toLowerCase();
+  const entityStr = String(
+    collection?.entity || collection?.dataPath || collection?.itemLabel || "",
+  ).toLowerCase();
+  const isProfileOrUser = /user|profile|account|member|customer|\bme\b/.test(entityStr);
+  const isBookings = /booking|reservation|rental|\border\b/.test(entityStr);
 
   if (explicitLayout === "auto" || explicitLayout === "general") {
-    if (records.length > 1) {
+    if (isProfileOrUser || isBookings) {
+      explicitLayout = "dashboard";
+    } else if (records.length > 1) {
+      if (audience === "admin") {
+        explicitLayout = "table";
+      } else {
+        explicitLayout = "catalog";
+      }
+    } else if (records.length === 0) {
+      // Empty results: preserve catalog for e-commerce/rental items so filters & empty states show
       if (audience === "admin") {
         explicitLayout = "table";
       } else {

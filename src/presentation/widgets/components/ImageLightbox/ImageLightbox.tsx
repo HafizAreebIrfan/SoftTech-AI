@@ -102,8 +102,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         {hasMultiple && (
           <button
             type="button"
-            className={styles.navButton}
-            style={{ left: "12px" }}
+            className={`${styles.navButton} ${styles.navButtonLeft}`}
             onClick={goToPrev}
             aria-label="Previous image"
           >
@@ -116,8 +115,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         {hasMultiple && (
           <button
             type="button"
-            className={styles.navButton}
-            style={{ right: "12px" }}
+            className={`${styles.navButton} ${styles.navButtonRight}`}
             onClick={goToNext}
             aria-label="Next image"
           >

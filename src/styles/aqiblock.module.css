@@ -138,3 +138,25 @@
   font-size: 10px;
   color: #64748b;
 }
+
+.headerIcon {
+  font-size: 24px;
+}
+
+.pollutantsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.aqiBadge1 { background: #10b981; }
+.aqiBadge2 { background: #84cc16; }
+.aqiBadge3 { background: #f59e0b; }
+.aqiBadge4 { background: #ef4444; }
+.aqiBadge5 { background: #a855f7; }
+
+.statusName1 { color: #10b981; }
+.statusName2 { color: #84cc16; }
+.statusName3 { color: #f59e0b; }
+.statusName4 { color: #ef4444; }
+.statusName5 { color: #a855f7; }

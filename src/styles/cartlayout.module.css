@@ -308,3 +308,25 @@
   opacity: 0.95;
   transform: translateY(-1px);
 }
+
+.emptyCartText {
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 20px 0;
+  font-size: 13.5px;
+}
+
+.discountBadge {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.summaryRowDiscount {
+  color: #10b981;
+}
+
+.checkoutLink {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

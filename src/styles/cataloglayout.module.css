@@ -6,6 +6,85 @@
   box-sizing: border-box;
 }
 
+.catalogWrapper {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 820px) {
+  .catalogWrapper {
+    flex-direction: column;
+  }
+}
+
+.sidebar {
+  width: 230px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 14px;
+  padding: 18px;
+  box-sizing: border-box;
+  height: fit-content;
+}
+
+@media (max-width: 820px) {
+  .sidebar {
+    width: 100%;
+    padding: 14px;
+  }
+}
+
+.sidebarField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebarLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+}
+
+.sidebarInput,
+.sidebarSelect {
+  background: #09090b;
+  border: 1px solid #22242a;
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.sidebarInput:focus,
+.sidebarSelect:focus {
+  border-color: var(--widget-accent, #3b82f6);
+}
+
+.priceInputsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebarMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -295,6 +374,34 @@
   padding: 16px 4px 4px 4px;
   border-top: 1px solid var(--widget-card-border, rgba(255, 255, 255, 0.08));
   margin-top: 8px;
+}
+
+.pageSizeGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ellipsis {
+  color: var(--app-text-secondary, #94a3b8);
+  padding: 0 4px;
+}
+
+.resetBtn {
+  background: transparent;
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 6px;
+  color: var(--widget-accent, #3b82f6);
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: all 0.15s ease;
+}
+
+.resetBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .paginationInfo {

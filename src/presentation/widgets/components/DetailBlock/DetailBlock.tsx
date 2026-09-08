@@ -1,1063 +1,520 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { getFieldValue } from "../../../../utils/schema/getValue";
-import { renderImage } from "../../helper/RenderImage";
-import { renderCurrency } from "../../helper/RenderCurrency";
-import { renderStatus } from "../../helper/RenderStatus";
-import { callMcpTool, requestDisplayMode } from "../../../../utils/mcpBridge";
-import { addToCartAndSync } from "../../../../utils/cartFlow";
-import { extractTieredPrices } from "../../helper/TieredPriceHelper/tieredPriceHelper";
-import { findCartAction, useCartStore } from "../../../../infrastructure/store/cartStore";
-import { useMcpWidgetStore } from "../../../../infrastructure/store/mcpWidgetStore";
-import { DetailField } from "./DetailField";
+import React, { useState, useEffect, useMemo } from "react";
 import styles from "../../../../styles/detailblock.module.css";
-import pd from "../../../../styles/productdetail.module.css";
 import type { DetailBlockProps } from "../../../../interfaces/mcp/detailblock.interface";
-import { classifyAction, getPermissions } from "../../helper/AudienceHelper";
-import { useRealtimeStream } from "../../hooks/useRealtimeStream";
+import { useMcpWidgetStore } from "../../../../infrastructure/store/mcpWidgetStore";
+import { requestDisplayMode } from "../../../../utils/mcpBridge";
 
-const sectionTitleStyle: React.CSSProperties = {
-  margin: "0 0 8px 0",
-  fontSize: "13px",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  color: "var(--app-text-secondary, #94a3b8)",
-};
-
-const getEntityIcon = (rec: any): string => {
-  const str = `${rec.make || ""} ${rec.model || ""} ${rec.category || ""} ${rec.$title || ""} ${rec.title || ""} ${rec.name || ""}`.toLowerCase();
-  if (/car|auto|vehicle|rental|sedan|suv|truck|corolla|fortuner/i.test(str)) return "🚗";
-  if (/hotel|room|suite|stay|resort|villa/i.test(str)) return "🏨";
-  if (/flight|plane|air|airline/i.test(str)) return "✈️";
-  if (/course|class|lesson|learn/i.test(str)) return "🎓";
-  if (/tour|trip|travel|holiday/i.test(str)) return "🏖️";
-  if (/food|meal|dish|restaurant|burger|pizza/i.test(str)) return "🍔";
-  return "📦";
-};
+// Silhouette SVG for vehicle placeholder
+const DetailSilhouetteIcon: React.FC = () => (
+  <svg
+    viewBox="0 0 100 50"
+    fill="currentColor"
+    className={styles.heroSilhouette}
+    aria-hidden="true"
+  >
+    <path d="M15 32c-3.3 0-6-2.7-6-6 0-3.3 2.7-6 6-6s6 2.7 6 6c0 3.3-2.7 6-6 6zm70 0c-3.3 0-6-2.7-6-6 0-3.3 2.7-6 6-6s6 2.7 6 6c0 3.3-2.7 6-6 6zm10-12l-7-8c-2-2.3-5-3.6-8-3.6H42c-2.4 0-4.7.9-6.4 2.5L25 18H10c-3.3 0-6 2.7-6 6v8c0 1.1.9 2 2 2h3.5c1.2-4.6 5.4-8 10.5-8s9.3 3.4 10.5 8h39c1.2-4.6 5.4-8 10.5-8s9.3 3.4 10.5 8H96c1.1 0 2-.9 2-2v-9c0-1.7-.7-3.3-2-4.5zM38 18l7.5-6h23.5l5 6H38z" />
+  </svg>
+);
 
 export const DetailBlock: React.FC<DetailBlockProps> = ({
-  block,
   records = [],
-  fields = [],
   collection,
   actions = [],
-  audience,
 }) => {
-  const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
 
-  const [liveRecord, setLiveRecord] = useState<any>(
-    records.length > 0 ? (records[0] as any) : null,
-  );
-
-  useEffect(() => {
-    setLiveRecord(records.length > 0 ? (records[0] as any) : null);
+  const targetRecord = useMemo(() => {
+    if (records.length > 0 && records[0] && typeof records[0] === "object") {
+      return records[0] as Record<string, any>;
+    }
+    return null;
   }, [records]);
 
-  const streamUrl: string | undefined =
-    (block as any)?.streamUrl ||
-    (window as any).__WIDGET_METADATA__?.streamUrl ||
-    (window as any).__WIDGET_DATA__?.streamUrl ||
-    actions?.find((a: any) => a?.streamUrl || a?.isRealtimeApi)?.streamUrl;
-
-  useRealtimeStream({
-    streamUrl,
-    onMessage: (payload) => {
-      if (!payload || typeof payload !== "object") return;
-      const incomingItem = Array.isArray(payload)
-        ? payload[0]
-        : payload.data || payload;
-      if (!incomingItem || typeof incomingItem !== "object") return;
-
-      const currentId =
-        liveRecord?.id ||
-        liveRecord?._id ||
-        liveRecord?.packageId ||
-        liveRecord?.productId;
-      const incomingId =
-        incomingItem.id ||
-        incomingItem._id ||
-        incomingItem.packageId ||
-        incomingItem.productId;
-
-      if (!currentId || !incomingId || String(currentId) === String(incomingId)) {
-        setLiveRecord((prev: any) => ({ ...prev, ...incomingItem }));
-      }
-    },
-  });
-
-  const targetRecord = liveRecord;
-  const [selectedImgIdx, setSelectedImgIdx] = useState<number>(0);
-  const [selectedTierIdx, setSelectedTierIdx] = useState<number>(0);
-  const [quantity, setQuantity] = useState<number>(1);
-  const [addedToast, setAddedToast] = useState<boolean>(false);
-  const [isImageModalOpen, setIsImageModalOpen] = useState<boolean>(false);
-
-  const isServiceNotice = Boolean(
-    targetRecord?.status === "Service Notice" ||
-    targetRecord?.actionSuggestion ||
-    targetRecord?.error ||
-    (targetRecord?.message && !targetRecord?.price && !targetRecord?.pricePerDay && !targetRecord?.make && !targetRecord?.$price)
-  );
-
   useEffect(() => {
-    if (isServiceNotice) return;
     requestDisplayMode("fullscreen");
     return () => {
       requestDisplayMode("inline");
     };
-  }, [isServiceNotice]);
+  }, []);
 
-  const {
-    images,
-    title,
-    subtitle,
-    description,
-    price,
-    status,
-    metric,
-    detailFields,
-    arrayFields,
-    optionGroups,
-    tieredResult,
-  } = useMemo(() => {
-    if (!targetRecord) {
-      return {
-        images: [],
-        title: null,
-        subtitle: null,
-        description: null,
-        price: undefined,
-        status: null,
-        metric: null,
-        detailFields: [],
-        arrayFields: [],
-        optionGroups: [],
-        tieredResult: { hasTiers: false, options: [] },
-      };
-    }
+  // Booking Card State
+  const [selectedInsurance, setSelectedInsurance] = useState<"basic" | "standard" | "premium">("basic");
+  const [selectedStartDay, setSelectedStartDay] = useState<number>(7);
+  const [selectedEndDay, setSelectedEndDay] = useState<number>(9);
+  const [pickupLocation, setPickupLocation] = useState<string>("Islamabad Blue Area Branch — Islamabad");
+  const [dropoffLocation, setDropoffLocation] = useState<string>("same");
 
-    const activeFields =
-      block?.fields && block.fields.length > 0 ? block.fields : fields;
-
-    // 1. Collect all images
-    const collectedImages: string[] = [];
-    if (Array.isArray(targetRecord.images) && targetRecord.images.length > 0) {
-      targetRecord.images.forEach((item: unknown) => {
-        if (typeof item === "string" && /^https?:\/\//i.test(item.trim())) {
-          collectedImages.push(item.trim());
-        }
-      });
-    }
-
-    activeFields.forEach((f) => {
-      if (f.key.toLowerCase() === "thumbnail" && collectedImages.length > 0) return;
-      const val = getFieldValue(targetRecord, f);
-      if (typeof val === "string" && val.trim()) {
-        if (val.includes(",") && val.includes("http")) {
-          const parts = val
-            .split(",")
-            .map((s) => s.trim())
-            .filter((s) => /^https?:\/\//i.test(s));
-          collectedImages.push(...parts);
-        } else if (
-          f.type === "image" ||
-          /^https?:\/\/.*\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(val)
-        ) {
-          collectedImages.push(val.trim());
-        }
-      } else if (Array.isArray(val)) {
-        val.forEach((item) => {
-          if (typeof item === "string" && /^https?:\/\//i.test(item.trim())) {
-            collectedImages.push(item.trim());
-          }
-        });
-      }
-    });
-
-    if (
-      targetRecord.$image &&
-      typeof targetRecord.$image === "string" &&
-      targetRecord.$image.trim() !== "" &&
-      collectedImages.length === 0
-    ) {
-      collectedImages.push(targetRecord.$image);
-    }
-
-    if (collectedImages.length === 0) {
-      for (const [key, val] of Object.entries(targetRecord)) {
-        if (key.startsWith("$")) continue;
-        if (typeof val === "string" && /^https?:\/\/.*\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(val.trim())) {
-          collectedImages.push(val.trim());
-        }
-      }
-    }
-
-    const dedupedImages = Array.from(new Set(collectedImages));
-
-    // 2. Extract tiered pricing options
-    const tiers = extractTieredPrices(targetRecord, activeFields);
-
-    // 3. Extract hero properties
-    const itemTitle =
-      (targetRecord.make ? `${targetRecord.make} ${targetRecord.model || ""}`.trim() : null) ||
-      targetRecord.$title ||
-      targetRecord.title ||
-      targetRecord.name ||
-      collection?.entity ||
-      "Details";
-
-    const itemDesc =
-      (targetRecord.make && targetRecord.year ? `Model Year: ${targetRecord.year} • ${targetRecord.category || "Vehicle"}` : null) ||
-      targetRecord.$description ||
-      targetRecord.description ||
-      null;
-
-    const rawDailyPrice = targetRecord.pricePerDay ?? targetRecord.price_per_day ?? targetRecord.dailyRate ?? targetRecord.rent;
-    const itemPrice = rawDailyPrice ?? targetRecord.$price ?? targetRecord.price;
-    const itemStatus = targetRecord.$status || targetRecord.status || targetRecord.availabilityStatus;
-    const itemMetric = targetRecord.$metric || targetRecord.rating || targetRecord.averageRating;
-
-    // 4. Filter scalar fields for specs
-    const primaryRoles = [
-      "title",
-      "description",
-      "price",
-      "image",
-      "status",
-      "metric",
-    ];
-
-    const blacklistedSpecs = new Set([
-      "createdat",
-      "updatedat",
-      "created_at",
-      "updated_at",
-      "__v",
-      "id",
-      "_id",
-      "images",
-      "image",
-      "latitude",
-      "longitude",
-      "locationid",
-      "isrestricted",
-      "restrictexpiresat",
-    ]);
-
-    const detailFieldsList = activeFields.filter((f) => {
-      if (f.hidden) return false;
-      if (f.type === "array" || f.type === "object" || f.type === "image")
-        return false;
-      if (primaryRoles.includes(f.uiRole as string)) return false;
-
-      const keyLower = f.key.toLowerCase();
-      if (blacklistedSpecs.has(keyLower)) return false;
-      if (keyLower === "make" || keyLower === "model") return false;
-
-      const val = getFieldValue(targetRecord, f);
-      return val !== null && val !== undefined && val !== "";
-    });
-
-    // 5. Extract array fields (features, amenities, reviews)
-    const arrayFieldsList = activeFields.filter((f) => {
-      if (f.hidden) return false;
-      const val = getFieldValue(targetRecord, f);
-      return Array.isArray(val) && val.length > 0;
-    });
-
-    // 6. Option groups
-    const optionGroupsList: Array<{
-      key: string;
-      label: string;
-      options: Array<string | number>;
-    }> = [];
-
-    activeFields.forEach((f) => {
-      if (f.hidden) return;
-      const val = getFieldValue(targetRecord, f);
-      if (
-        Array.isArray(val) &&
-        val.length > 1 &&
-        val.length <= 16 &&
-        val.every((item) => typeof item === "string" || typeof item === "number") &&
-        !val.some((item) => typeof item === "string" && /^https?:\/\//i.test(item))
-      ) {
-        optionGroupsList.push({
-          key: f.key,
-          label: f.label || f.key.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-          options: val,
-        });
-      }
-    });
-
-    return {
-      images: dedupedImages,
-      title: itemTitle,
-      subtitle: itemDesc,
-      description: itemDesc,
-      price: itemPrice,
-      status: itemStatus,
-      metric: itemMetric,
-      detailFields: detailFieldsList,
-      arrayFields: arrayFieldsList,
-      optionGroups: optionGroupsList,
-      tieredResult: tiers,
-    };
-  }, [targetRecord, block?.fields, fields, collection?.entity]);
-
-  const [selectedOptions, setSelectedOptions] = useState<
-    Record<string, string | number>
-  >({});
-
-  useEffect(() => {
-    if (optionGroups && optionGroups.length > 0) {
-      const defaults: Record<string, string | number> = {};
-      optionGroups.forEach((og) => {
-        if (og.options.length > 0 && selectedOptions[og.key] === undefined) {
-          defaults[og.key] = og.options[0];
-        }
-      });
-      setSelectedOptions((prev) => ({ ...defaults, ...prev }));
-    }
-  }, [optionGroups]);
-
-  if (!targetRecord) return null;
-
-  // Handle Service Notice / Auth Error cleanly
-  if (isServiceNotice) {
-    const noticeMessage =
-      targetRecord?.message ||
-      targetRecord?.error?.message ||
-      "The service could not authenticate the request.";
-    const noticeAction =
-      targetRecord?.actionSuggestion ||
-      "Please verify your configured authentication credentials.";
-    const statusLabel = targetRecord?.status || "Service Notice";
-
+  if (!targetRecord) {
     return (
-      <section className={styles.container}>
-        <div
-          style={{
-            background: "rgba(239, 68, 68, 0.08)",
-            border: "1px solid rgba(239, 68, 68, 0.28)",
-            borderRadius: "12px",
-            padding: "24px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "16px",
-            maxWidth: "600px",
-            margin: "20px auto",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <span style={{ fontSize: "32px" }}>🛡️</span>
-            <div>
-              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 700, color: "#f8fafc" }}>
-                {statusLabel}
-              </h3>
-              <p style={{ margin: "3px 0 0 0", fontSize: "13px", color: "#ef4444", fontWeight: 500, lineHeight: 1.4 }}>
-                {noticeMessage}
-              </p>
-            </div>
-          </div>
-
-          <div
-            style={{
-              background: "rgba(0, 0, 0, 0.25)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "8px",
-              padding: "12px 16px",
-            }}
-          >
-            <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--app-text-secondary, #94a3b8)", fontWeight: 700 }}>
-              Recommended Action
-            </span>
-            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "var(--app-text-primary, #f8fafc)", lineHeight: 1.5 }}>
-              {noticeAction}
-            </p>
-          </div>
+      <div className={styles.container}>
+        <button type="button" className={styles.backBtn} onClick={() => popSubView()}>
+          &larr; Back
+        </button>
+        <div className={styles.emptyDetailState}>
+          <h3>No item details found</h3>
+          <p>The requested record could not be loaded.</p>
         </div>
-      </section>
+      </div>
     );
   }
 
-  const permissions = getPermissions(audience, undefined, actions as any);
-  const cartAction = findCartAction(actions as any);
-  const visibleActions = (actions || []).filter(
-    (a: any) =>
-      (classifyAction(a) !== "mutate" || permissions.canMutate) &&
-      a !== cartAction &&
-      classifyAction(a) !== "view" &&
-      !/select.*option|view.*detail/i.test(a?.id || a?.label || ""),
+  // Titles
+  const mainTitle =
+    targetRecord.make ||
+    targetRecord.$title ||
+    targetRecord.title ||
+    targetRecord.name ||
+    "Vehicle Details";
+
+  const variantTitle =
+    targetRecord.model ||
+    targetRecord.variant ||
+    targetRecord.subtitle ||
+    "GLS";
+
+  const yearStr = targetRecord.year ? String(targetRecord.year) : "2024";
+
+  const locationStr =
+    targetRecord.location?.name ||
+    targetRecord.location?.city ||
+    targetRecord.locationName ||
+    targetRecord.city ||
+    "Islamabad Blue Area Branch, Islamabad";
+
+  // Daily Rate
+  const dailyRate = Number(
+    targetRecord.dailyRate ??
+      targetRecord.pricePerDay ??
+      targetRecord.price_per_day ??
+      targetRecord.$price ??
+      targetRecord.price ??
+      18000,
   );
 
-  const activeTier = tieredResult.hasTiers
-    ? tieredResult.options[selectedTierIdx]
-    : null;
-  const effectivePrice = activeTier ? activeTier.price : price;
+  const weeklyRate = Number(targetRecord.weeklyRate ?? dailyRate * 6);
+  const monthlyRate = Number(targetRecord.monthlyRate ?? dailyRate * 23);
+  const depositAmount = Number(targetRecord.securityDeposit ?? 30000);
 
-  const detailUrl =
-    targetRecord?.url ||
-    targetRecord?.link ||
-    targetRecord?.productUrl ||
-    targetRecord?.product_url ||
-    targetRecord?.website ||
-    targetRecord?.sourceUrl ||
-    targetRecord?.deeplink ||
-    targetRecord?.app_url ||
-    (actions?.find((a: any) => a?.type === "url" || Boolean(a?.url || a?.href)) as any)?.url ||
-    (actions?.find((a: any) => a?.type === "url" || Boolean(a?.url || a?.href)) as any)?.href;
+  // Specifications
+  const specs = [
+    {
+      label: "Fuel",
+      value: String(targetRecord.fuel || targetRecord.fuelType || "Petrol"),
+      icon: "⛽",
+    },
+    {
+      label: "Transmission",
+      value: String(targetRecord.transmission || "Automatic"),
+      icon: "⚙️",
+    },
+    {
+      label: "Seats",
+      value: `${targetRecord.seats || 5} Seats`,
+      icon: "👥",
+    },
+    {
+      label: "Year",
+      value: yearStr,
+      icon: "📅",
+    },
+    {
+      label: "Color",
+      value: String(targetRecord.color || "Blue"),
+      icon: "🎨",
+    },
+    {
+      label: "Doors",
+      value: `${targetRecord.doors || 5} Doors`,
+      icon: "🚪",
+    },
+  ];
 
-  const rawDailyPrice = targetRecord.pricePerDay ?? targetRecord.price_per_day ?? targetRecord.dailyRate ?? targetRecord.rent;
-  const isDailyRental = rawDailyPrice !== undefined && rawDailyPrice !== null;
-  const hasCartAction = Boolean(cartAction) || actions?.some((a: any) => /cart|order/i.test(a?.id || a?.label || a?.tool || ""));
-  const isOrderEntity = /order|invoice/i.test(String(collection?.entity || title || ""));
-  const canAddToCart = audience !== "admin" && !isOrderEntity && hasCartAction;
+  // Features / Amenities
+  const rawFeatures = targetRecord.features || targetRecord.amenities || [
+    "Air Conditioning",
+    "Navigation",
+    "Blind Spot Monitor",
+    "Heated Seats",
+  ];
+  const featuresList = Array.isArray(rawFeatures) ? rawFeatures : [String(rawFeatures)];
 
-  const openCart = useCartStore((s) => s.openCart);
-  const totalCartCount = useCartStore((s) => s.getTotalCount());
+  // Description
+  const aboutText =
+    targetRecord.description ||
+    targetRecord.about ||
+    "Comfortable SUV with advanced safety features.";
 
-  const handleAddToCart = () => {
-    addToCartAndSync({
-      item: {
-        id: targetRecord.id || targetRecord._id || title,
-        title: title || "Product",
-        price: effectivePrice ?? price ?? 0,
-        image: images[0] || null,
-        tier: activeTier ? activeTier.label : undefined,
-        options: selectedOptions,
-      },
-      quantity,
-      actions,
-      recordId: targetRecord.id || targetRecord._id,
-    });
+  // Image
+  const imageUrl =
+    targetRecord.images?.[0] ||
+    targetRecord.image ||
+    targetRecord.thumbnail ||
+    targetRecord.$image ||
+    "";
+  const hasValidImage =
+    typeof imageUrl === "string" && /^https?:\/\//i.test(imageUrl.trim());
 
-    setAddedToast(true);
-    setTimeout(() => setAddedToast(false), 3000);
+  // Date calculation
+  const rentalDays = Math.max(1, selectedEndDay - selectedStartDay);
+  const insuranceRate =
+    selectedInsurance === "premium"
+      ? 2500
+      : selectedInsurance === "standard"
+        ? 1200
+        : 500;
+  const insuranceTotal = insuranceRate * rentalDays;
+  const rentalTotal = dailyRate * rentalDays;
+  const grandTotal = rentalTotal + insuranceTotal + depositAmount;
+
+  const handleContinueBooking = () => {
+    const bookingUrl = targetRecord.url || targetRecord.link || targetRecord.checkoutUrl;
+    if (bookingUrl && typeof window !== "undefined") {
+      window.open(bookingUrl, "_blank", "noopener,noreferrer");
+    }
   };
 
-  const activeMainImage = images[selectedImgIdx] || images[0] || null;
-  const hasGallery = images.length > 0;
-
-  const cartItems = useCartStore((s) => s.items);
-  const currentItemId = targetRecord.id || targetRecord._id || title;
-  const isInCart = cartItems.some(
-    (ci) => String(ci.id) === String(currentItemId),
-  );
-
-  const normalizedStatus = String(
-    status ||
-      (targetRecord as any).availabilityStatus ||
-      (targetRecord as any).status ||
-      "",
-  ).toLowerCase().trim();
-
-  const isOutOfStock =
-    (targetRecord as any).stock === 0 ||
-    normalizedStatus === "out of stock" ||
-    normalizedStatus === "sold out" ||
-    normalizedStatus === "unavailable" ||
-    normalizedStatus === "inactive";
-
   return (
-    <section
-      className={`${styles.container} ${pd.pageWide}`}
-      style={{ padding: 0 }}
-    >
-      {/* Top Back Navigation Bar when opened as a subview */}
-      {subViewHistory.length > 0 && (
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center" }}>
-          <button
-            type="button"
-            onClick={() => popSubView()}
-            style={{
-              background: "rgba(255, 255, 255, 0.06)",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
-              borderRadius: "8px",
-              color: "var(--app-text-primary, #ffffff)",
-              padding: "6px 14px",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              transition: "all 0.15s ease",
-            }}
-          >
-            <span>&larr;</span>
-            <span>Back to {collection?.itemLabel || collection?.entity || "Catalog"}</span>
-          </button>
-        </div>
-      )}
+    <div className={styles.container}>
+      {/* Back to catalog navigation */}
+      <button type="button" className={styles.backBtn} onClick={() => popSubView()}>
+        &larr; Back to cars
+      </button>
 
-      <div
-        className={styles.card}
-        style={{
-          background: "transparent",
-          border: "none",
-          borderRadius: "0",
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-          gap: "0",
-        }}
-      >
-        {/* Two-Column Hero: Gallery or Fallback Banner (Left) | Buy/Reservation Box (Right) */}
-        <div className={`${pd.heroGrid} ${pd.heroGridTwoCol}`}>
-          {/* LEFT COLUMN */}
-          <div className={pd.leftCol}>
-            {hasGallery ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {/* Main image */}
-                <div
-                  onClick={() => setIsImageModalOpen(true)}
-                  title="View full screen"
-                  style={{
-                    width: "100%",
-                    height: "340px",
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                    background: "rgba(0,0,0,0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    position: "relative",
-                  }}
-                >
-                  <span style={{ pointerEvents: "none", display: "flex", width: "100%", height: "100%" }}>
-                    {renderImage(activeMainImage, title || "Item Preview", "cover")}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsImageModalOpen(true);
-                    }}
-                    title="Full Screen"
-                    aria-label="Full Screen"
-                    style={{
-                      position: "absolute",
-                      top: "10px",
-                      right: "10px",
-                      background: "rgba(15, 23, 42, 0.75)",
-                      border: "1px solid rgba(255, 255, 255, 0.2)",
-                      borderRadius: "6px",
-                      width: "32px",
-                      height: "32px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "15px",
-                      color: "#fff",
-                      cursor: "pointer",
-                      backdropFilter: "blur(4px)",
-                    }}
-                  >
-                    ⛶
-                  </button>
-                </div>
-
-                {/* Thumbnails */}
-                {images.length > 1 && (
-                  <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }}>
-                    {images.map((imgUrl, idx) => (
-                      <button
-                        key={`thumb-${idx}`}
-                        type="button"
-                        onClick={() => setSelectedImgIdx(idx)}
-                        style={{
-                          width: "60px",
-                          height: "60px",
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                          border:
-                            selectedImgIdx === idx
-                              ? "2px solid var(--widget-accent, #3b82f6)"
-                              : "1px solid rgba(255,255,255,0.12)",
-                          background: "rgba(0,0,0,0.3)",
-                          padding: 0,
-                          cursor: "pointer",
-                          flexShrink: 0,
-                        }}
-                      >
-                        <span style={{ pointerEvents: "none", display: "flex", width: "100%", height: "100%" }}>
-                          {renderImage(imgUrl, `Thumb ${idx + 1}`, "cover")}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+      {/* Two Column Layout (Image 2) */}
+      <div className={styles.layoutTwoCol}>
+        {/* Left Column: Hero, Specs, Features, About, Pricing, Reviews */}
+        <div className={styles.mainCol}>
+          {/* Hero Banner */}
+          <div className={styles.heroBanner}>
+            {hasValidImage ? (
+              <img
+                src={imageUrl}
+                alt={`${mainTitle} ${variantTitle}`}
+                className={styles.heroImage}
+              />
             ) : (
-              /* Fallback Media Banner */
-              <div
-                style={{
-                  width: "100%",
-                  height: "300px",
-                  borderRadius: "12px",
-                  background: "linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(15,23,42,0.7) 100%)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "12px",
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
-                }}
-              >
-                <span style={{ fontSize: "64px", filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" }}>
-                  {getEntityIcon(targetRecord)}
-                </span>
-                <span
-                  style={{
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                    color: "var(--app-text-secondary, #94a3b8)",
-                  }}
-                >
-                  {targetRecord.category || targetRecord.make || collection?.entity || "Details"}
-                </span>
-              </div>
+              <DetailSilhouetteIcon />
             )}
+            <span className={styles.availableBadge}>Available</span>
           </div>
 
-          {/* RIGHT COLUMN — Info & Action Box */}
-          <aside
-            className={pd.buyBoxSticky}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
-              padding: "16px",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
-              <h2 style={{ margin: 0, fontSize: "22px", fontWeight: 700, color: "var(--WidgetHeaderTitle, #f8fafc)", lineHeight: 1.3 }}>
-                {title}
-              </h2>
-              {status && (
-                <div style={{ flexShrink: 0 }}>
-                  <span
-                    style={{
-                      background: isOutOfStock ? "rgba(239, 68, 68, 0.2)" : "rgba(16, 185, 129, 0.2)",
-                      color: isOutOfStock ? "#ef4444" : "#10b981",
-                      border: `1px solid ${isOutOfStock ? "rgba(239, 68, 68, 0.4)" : "rgba(16, 185, 129, 0.4)"}`,
-                      padding: "3px 8px",
-                      borderRadius: "6px",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {isOutOfStock ? "Unavailable" : String(status)}
-                  </span>
-                </div>
-              )}
+          {/* Title & Location */}
+          <div className={styles.headerInfo}>
+            <div className={styles.titleRow}>
+              <h1 className={styles.carTitle}>{mainTitle}</h1>
+              {variantTitle && <span className={styles.carVariant}>{variantTitle}</span>}
             </div>
+            <p className={styles.locationRow}>
+              <span>📍</span>
+              <span>
+                {locationStr} • {yearStr}
+              </span>
+            </p>
+          </div>
 
-            {/* Price & Rating */}
-            <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flexWrap: "wrap" }}>
-              {effectivePrice !== undefined && effectivePrice !== null && (
-                <span style={{ fontSize: "26px", fontWeight: 800, color: "var(--app-text-heading, #ffffff)" }}>
-                  {renderCurrency(effectivePrice)}
-                  {isDailyRental && (
-                    <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--app-text-secondary, #94a3b8)", marginLeft: "4px" }}>
-                      / day
-                    </span>
-                  )}
-                </span>
-              )}
-
-              {metric !== undefined && metric !== null && (
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    background: "rgba(245, 158, 11, 0.15)",
-                    color: "#f59e0b",
-                    padding: "3px 7px",
-                    borderRadius: "6px",
-                    fontSize: "12px",
-                    fontWeight: 700,
-                  }}
-                >
-                  ⭐ {String(metric)}
-                </span>
-              )}
-            </div>
-
-            {/* Subtitle / Description */}
-            {description && (
-              <div>
-                <h4 style={sectionTitleStyle}>Overview</h4>
-                <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.5, color: "var(--WidgetHeaderSubtitle, #cbd5e1)" }}>
-                  {description}
-                </p>
-              </div>
-            )}
-
-            {/* Tiered Options */}
-            {tieredResult.hasTiers && tieredResult.options.length > 1 && (
-              <div>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--app-text-secondary, #94a3b8)", display: "block", marginBottom: "4px" }}>
-                  Select Option:
-                </label>
-                <select
-                  value={selectedTierIdx}
-                  onChange={(e) => setSelectedTierIdx(Number(e.target.value))}
-                  style={{
-                    width: "100%",
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.15)",
-                    borderRadius: "8px",
-                    color: "#f8fafc",
-                    padding: "8px 12px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  {tieredResult.options.map((opt) => (
-                    <option key={`tier-${opt.index}`} value={opt.index} style={{ background: "#0f172a", color: "#f8fafc" }}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Add to Cart Flow (E-commerce) */}
-            {canAddToCart && (
-              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap", marginTop: "4px" }}>
-                {!isInCart && !isOutOfStock && (
-                  <div style={{ display: "flex", alignItems: "center", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", overflow: "hidden" }}>
-                    <button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} style={{ background: "transparent", border: "none", color: "#fff", padding: "8px 12px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>
-                      −
-                    </button>
-                    <span style={{ padding: "0 8px", fontSize: "13px", fontWeight: 600, minWidth: "24px", textAlign: "center" }}>
-                      {quantity}
-                    </span>
-                    <button type="button" onClick={() => setQuantity(quantity + 1)} style={{ background: "transparent", border: "none", color: "#fff", padding: "8px 12px", cursor: "pointer", fontSize: "16px", fontWeight: "bold" }}>
-                      +
-                    </button>
+          {/* Specifications (2x3 Grid) */}
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Specifications</h3>
+            <div className={styles.specsGrid}>
+              {specs.map((s, idx) => (
+                <div key={`spec-${idx}`} className={styles.specBox}>
+                  <span className={styles.specIcon}>{s.icon}</span>
+                  <div className={styles.specContent}>
+                    <span className={styles.specLabel}>{s.label}</span>
+                    <span className={styles.specValue}>{s.value}</span>
                   </div>
-                )}
-
-                {isOutOfStock ? (
-                  <button type="button" disabled style={{ flex: 1, background: "rgba(255, 255, 255, 0.05)", color: "var(--app-text-secondary, #64748b)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "8px", padding: "10px 18px", fontSize: "13px", fontWeight: 700, cursor: "not-allowed" }}>
-                    Unavailable
-                  </button>
-                ) : isInCart ? (
-                  <button type="button" onClick={openCart} style={{ flex: 1, background: "var(--widget-accent, #3b82f6)", color: "var(--widget-accent-contrast, #ffffff)", border: "none", borderRadius: "8px", padding: "10px 18px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-                    🛍️ View Cart
-                  </button>
-                ) : (
-                  <button type="button" onClick={handleAddToCart} style={{ flex: 1, background: "var(--widget-accent, #3b82f6)", color: "var(--widget-accent-contrast, #ffffff)", border: "none", borderRadius: "8px", padding: "10px 18px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-                    🛒 {addedToast ? "Added ✓" : "Add to Cart"}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Direct Booking / Detail Action Link */}
-            {detailUrl && (
-              <a
-                href={detailUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  padding: "11px 18px",
-                  borderRadius: "8px",
-                  background: "var(--widget-accent, #3b82f6)",
-                  color: "var(--widget-accent-contrast, #ffffff)",
-                  fontSize: "13px",
-                  fontWeight: 700,
-                  textDecoration: "none",
-                  transition: "all 0.15s ease",
-                  width: "100%",
-                  boxSizing: "border-box",
-                  marginTop: "2px",
-                }}
-              >
-                <span>📅</span>
-                <span>Proceed to Book / Reserve &rarr;</span>
-              </a>
-            )}
-
-            {/* Other visible actions */}
-            {visibleActions.length > 0 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {visibleActions.map((act: any) => (
-                  <button
-                    key={act.id || act.tool}
-                    type="button"
-                    style={{
-                      width: "100%",
-                      background: "rgba(255, 255, 255, 0.06)",
-                      border: "1px solid rgba(255, 255, 255, 0.14)",
-                      color: "var(--app-text-primary, #ffffff)",
-                      borderRadius: "8px",
-                      padding: "9px 14px",
-                      fontWeight: "600",
-                      fontSize: "12px",
-                      cursor: "pointer",
-                    }}
-                    onClick={async () => {
-                      const url = act.url || (act.type === "url" ? act.href : undefined);
-                      if (url) {
-                        window.open(url, "_blank", "noopener,noreferrer");
-                        return;
-                      }
-                      try {
-                        await callMcpTool(act.tool, { id: targetRecord?.id || targetRecord?._id });
-                      } catch (err: any) {
-                        console.error("[DetailBlock] Action failed:", err);
-                      }
-                    }}
-                  >
-                    {act.label}
-                  </button>
-                ))}
-              </div>
-            )}
-          </aside>
-        </div>
-
-        {/* Location & Contact Card (if present) */}
-        {targetRecord.location && typeof targetRecord.location === "object" && (
-          <div
-            style={{
-              padding: "16px 20px",
-              background: "rgba(255,255,255,0.03)",
-              border: "1px solid rgba(255,255,255,0.07)",
-              borderRadius: "10px",
-              margin: "0 20px 16px 20px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "6px",
-            }}
-          >
-            <h4 style={{ ...sectionTitleStyle, marginBottom: 0 }}>Location &amp; Contact</h4>
-            <div style={{ fontSize: "13px", color: "var(--app-text-primary, #ffffff)", fontWeight: 600 }}>
-              📍 {targetRecord.location.name || targetRecord.location.city}
-            </div>
-            {targetRecord.location.address && (
-              <div style={{ fontSize: "12px", color: "var(--app-text-secondary, #94a3b8)" }}>
-                {targetRecord.location.address}, {targetRecord.location.city || ""}
-              </div>
-            )}
-            {targetRecord.location.phone && (
-              <div style={{ fontSize: "12px", color: "var(--widget-accent, #3b82f6)", fontWeight: 600 }}>
-                📞 {targetRecord.location.phone}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Features String (e.g. comma-separated list of amenities) */}
-        {typeof targetRecord.features === "string" && targetRecord.features.trim() && (
-          <div style={{ padding: "0 20px 16px 20px", display: "flex", flexDirection: "column", gap: "8px" }}>
-            <h4 style={{ ...sectionTitleStyle, marginBottom: 0 }}>Features &amp; Amenities</h4>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-              {targetRecord.features.split(",").map((feat: string, idx: number) => {
-                const trimmed = feat.trim();
-                if (!trimmed) return null;
-                return (
-                  <span
-                    key={`feat-${idx}`}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      background: "rgba(255,255,255,0.06)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      padding: "3px 9px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      color: "var(--app-text-primary, #f8fafc)",
-                    }}
-                  >
-                    <span>✓</span>
-                    <span>{trimmed}</span>
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Specifications / Detail Fields Grid */}
-        {detailFields.length > 0 && (
-          <div
-            className={styles.grid}
-            style={{
-              padding: "20px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              borderTop: "1px solid var(--TableDivider, rgba(255,255,255,0.08))",
-            }}
-          >
-            <h4 style={sectionTitleStyle}>Specifications &amp; Details</h4>
-            {detailFields.map((field) => (
-              <DetailField key={field.key} field={field} record={targetRecord} />
-            ))}
-          </div>
-        )}
-
-        {/* Collections / Array Data (e.g. Reviews, Specs Lists) */}
-        {arrayFields.length > 0 && (
-          <div style={{ padding: "0 20px 20px 20px", display: "flex", flexDirection: "column", gap: "16px" }}>
-            {arrayFields.map((field) => {
-              const rawArray = getFieldValue(targetRecord, field);
-              if (!Array.isArray(rawArray) || rawArray.length === 0) return null;
-
-              const isObjectArray = rawArray.every((item) => item && typeof item === "object");
-
-              return (
-                <div key={field.key} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <h4 style={{ ...sectionTitleStyle, marginBottom: 0 }}>
-                    {field.label} ({rawArray.length})
-                  </h4>
-
-                  {isObjectArray ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                      {rawArray.slice(0, 5).map((objItem: any, idx: number) => {
-                        const reviewRating = objItem.rating || objItem.score || objItem.stars;
-                        const reviewComment = objItem.comment || objItem.review || objItem.text || objItem.message;
-                        const reviewerName = objItem.reviewerName || objItem.user || objItem.author || objItem.name;
-                        const reviewDate = objItem.date || objItem.createdAt;
-
-                        return (
-                          <div
-                            key={`arr-item-${idx}`}
-                            style={{
-                              background: "rgba(255,255,255,0.03)",
-                              border: "1px solid rgba(255,255,255,0.06)",
-                              borderRadius: "8px",
-                              padding: "10px 12px",
-                              fontSize: "13px",
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: "4px",
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ fontWeight: 600, color: "var(--app-text-heading, #fff)" }}>
-                                {reviewerName || `Item #${idx + 1}`}
-                              </span>
-                              {reviewRating !== undefined && (
-                                <span style={{ color: "#f59e0b", fontSize: "12px", fontWeight: 700 }}>
-                                  ⭐ {reviewRating}
-                                </span>
-                              )}
-                            </div>
-                            {reviewComment && (
-                              <p style={{ margin: 0, color: "var(--app-text-secondary, #94a3b8)", fontSize: "12px", lineHeight: 1.4 }}>
-                                &ldquo;{reviewComment}&rdquo;
-                              </p>
-                            )}
-                            {reviewDate && (
-                              <span style={{ fontSize: "11px", color: "#64748b", alignSelf: "flex-end" }}>
-                                {String(reviewDate).slice(0, 10)}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                      {rawArray.map((tag: any, idx: number) => (
-                        <span
-                          key={`tag-${idx}`}
-                          style={{
-                            background: "rgba(255,255,255,0.06)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            padding: "3px 8px",
-                            borderRadius: "6px",
-                            fontSize: "12px",
-                            color: "var(--app-text-secondary, #cbd5e1)",
-                          }}
-                        >
-                          {String(tag)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Fullscreen Image Modal */}
-      {isImageModalOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.92)",
-            backdropFilter: "blur(12px)",
-            zIndex: 999999,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-          onClick={() => setIsImageModalOpen(false)}
-        >
-          <button
-            type="button"
-            onClick={() => setIsImageModalOpen(false)}
-            aria-label="Exit full screen"
-            title="Exit full screen"
-            style={{
-              position: "absolute",
-              top: "24px",
-              right: "24px",
-              background: "rgba(255, 255, 255, 0.18)",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
-              borderRadius: "50%",
-              width: "40px",
-              height: "40px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontSize: "20px",
-              cursor: "pointer",
-              zIndex: 10,
-            }}
-          >
-            ✕
-          </button>
-          <div
-            style={{
-              maxWidth: "92vw",
-              maxHeight: "90vh",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {renderImage(activeMainImage, title || "Product Fullscreen", "contain")}
+          {/* Features Checkmarks */}
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Features</h3>
+            <div className={styles.featuresGrid}>
+              {featuresList.map((f, idx) => (
+                <span key={`feat-${idx}`} className={styles.featurePill}>
+                  <span className={styles.checkIcon}>✓</span>
+                  <span>{f}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* About this car */}
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>About this car</h3>
+            <p className={styles.aboutText}>{aboutText}</p>
+          </div>
+
+          {/* Tiered Pricing Rates */}
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Pricing</h3>
+            <div className={styles.pricingGrid}>
+              <div className={styles.pricingCard}>
+                <span className={styles.pricingLabel}>Daily rate</span>
+                <span className={styles.pricingValue}>
+                  Rs. {dailyRate.toLocaleString()}
+                </span>
+              </div>
+              <div className={styles.pricingCard}>
+                <span className={styles.pricingLabel}>Weekly rate</span>
+                <span className={styles.pricingValue}>
+                  Rs. {weeklyRate.toLocaleString()}
+                </span>
+              </div>
+              <div className={styles.pricingCard}>
+                <span className={styles.pricingLabel}>Monthly rate</span>
+                <span className={styles.pricingValue}>
+                  Rs. {monthlyRate.toLocaleString()}
+                </span>
+              </div>
+            </div>
+            <p className={styles.depositNote}>
+              Refundable security deposit: Rs. {depositAmount.toLocaleString()}
+            </p>
+          </div>
+
+          {/* Reviews Section */}
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>Reviews</h3>
+            <div className={styles.reviewsBox}>
+              <p className={styles.emptyReviewText}>
+                No reviews yet — be the first to rent this car.
+              </p>
+            </div>
           </div>
         </div>
-      )}
-    </section>
+
+        {/* Right Column: Sticky Booking Card */}
+        <div className={styles.sidebarCol}>
+          <div className={styles.bookingBox}>
+            {/* Top Daily Rate */}
+            <div className={styles.bookingRateRow}>
+              <h2 className={styles.bookingRatePrice}>
+                Rs. {dailyRate.toLocaleString()}
+              </h2>
+              <span className={styles.bookingRatePeriod}>per day</span>
+            </div>
+
+            {/* Calendar Mini-Widget */}
+            <div className={styles.calendarCard}>
+              <div className={styles.calendarMonthHeader}>
+                <button type="button" className={styles.calNavBtn}>
+                  &lt;
+                </button>
+                <span>September 2026</span>
+                <button type="button" className={styles.calNavBtn}>
+                  &gt;
+                </button>
+              </div>
+
+              <div className={styles.calDaysHeader}>
+                <span>Su</span>
+                <span>Mo</span>
+                <span>Tu</span>
+                <span>We</span>
+                <span>Th</span>
+                <span>Fr</span>
+                <span>Sa</span>
+              </div>
+
+              <div className={styles.calDaysGrid}>
+                {/* Previous month padding days */}
+                <button type="button" className={`${styles.calDay} ${styles.calDayDimmed}`}>30</button>
+                <button type="button" className={`${styles.calDay} ${styles.calDayDimmed}`}>31</button>
+                <button type="button" className={styles.calDay}>1</button>
+                <button type="button" className={styles.calDay}>2</button>
+                <button type="button" className={styles.calDay}>3</button>
+                <button type="button" className={styles.calDay}>4</button>
+                <button type="button" className={styles.calDay}>5</button>
+                <button type="button" className={styles.calDay}>6</button>
+
+                {/* Selected Range: 7 to 9 */}
+                <button
+                  type="button"
+                  className={`${styles.calDay} ${selectedStartDay === 7 ? styles.calDaySelected : ""}`}
+                  onClick={() => setSelectedStartDay(7)}
+                >
+                  7
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.calDay} ${styles.calDaySelected}`}
+                >
+                  8
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.calDay} ${selectedEndDay === 9 ? styles.calDaySelected : ""}`}
+                  onClick={() => setSelectedEndDay(9)}
+                >
+                  9
+                </button>
+
+                <button type="button" className={styles.calDay}>10</button>
+                <button type="button" className={styles.calDay}>11</button>
+                <button type="button" className={styles.calDay}>12</button>
+                <button type="button" className={styles.calDay}>13</button>
+                <button type="button" className={styles.calDay}>14</button>
+                <button type="button" className={styles.calDay}>15</button>
+                <button type="button" className={styles.calDay}>16</button>
+                <button type="button" className={styles.calDay}>17</button>
+                <button type="button" className={styles.calDay}>18</button>
+                <button type="button" className={styles.calDay}>19</button>
+              </div>
+
+              <p className={styles.calStatusNote}>
+                {rentalDays} {rentalDays === 1 ? "day" : "days"} selected (Sept {selectedStartDay} – {selectedEndDay})
+              </p>
+            </div>
+
+            {/* Pickup Location */}
+            <div className={styles.bookingField}>
+              <label className={styles.fieldLabel}>Pickup location</label>
+              <select
+                className={styles.selectInput}
+                value={pickupLocation}
+                onChange={(e) => setPickupLocation(e.target.value)}
+              >
+                <option value="Islamabad Blue Area Branch — Islamabad">
+                  Islamabad Blue Area Branch — Islamabad
+                </option>
+                <option value="Karachi Airport Branch — Karachi">
+                  Karachi Airport Branch — Karachi
+                </option>
+                <option value="Lahore Gulberg Branch — Lahore">
+                  Lahore Gulberg Branch — Lahore
+                </option>
+              </select>
+            </div>
+
+            {/* Drop-off Location */}
+            <div className={styles.bookingField}>
+              <label className={styles.fieldLabel}>Drop-off location</label>
+              <select
+                className={styles.selectInput}
+                value={dropoffLocation}
+                onChange={(e) => setDropoffLocation(e.target.value)}
+              >
+                <option value="same">Same as pickup</option>
+                <option value="Karachi Airport Branch — Karachi">
+                  Karachi Airport Branch — Karachi
+                </option>
+                <option value="Lahore Gulberg Branch — Lahore">
+                  Lahore Gulberg Branch — Lahore
+                </option>
+              </select>
+            </div>
+
+            {/* Insurance Options */}
+            <div className={styles.insuranceSection}>
+              <label className={styles.fieldLabel}>🛡️ Insurance</label>
+
+              {/* Basic */}
+              <label
+                className={`${styles.insuranceOption} ${
+                  selectedInsurance === "basic" ? styles.insuranceOptionSelected : ""
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="insurance"
+                  checked={selectedInsurance === "basic"}
+                  onChange={() => setSelectedInsurance("basic")}
+                  className={styles.insuranceRadio}
+                />
+                <div className={styles.insuranceContent}>
+                  <div className={styles.insuranceTitleRow}>
+                    <span className={styles.insuranceName}>Basic</span>
+                    <span className={styles.insurancePrice}>Rs. 500/day</span>
+                  </div>
+                  <p className={styles.insuranceDesc}>Third-party liability only</p>
+                </div>
+              </label>
+
+              {/* Standard */}
+              <label
+                className={`${styles.insuranceOption} ${
+                  selectedInsurance === "standard" ? styles.insuranceOptionSelected : ""
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="insurance"
+                  checked={selectedInsurance === "standard"}
+                  onChange={() => setSelectedInsurance("standard")}
+                  className={styles.insuranceRadio}
+                />
+                <div className={styles.insuranceContent}>
+                  <div className={styles.insuranceTitleRow}>
+                    <span className={styles.insuranceName}>Standard</span>
+                    <span className={styles.insurancePrice}>Rs. 1,200/day</span>
+                  </div>
+                  <p className={styles.insuranceDesc}>Collision damage waiver + theft protection</p>
+                </div>
+              </label>
+
+              {/* Premium */}
+              <label
+                className={`${styles.insuranceOption} ${
+                  selectedInsurance === "premium" ? styles.insuranceOptionSelected : ""
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="insurance"
+                  checked={selectedInsurance === "premium"}
+                  onChange={() => setSelectedInsurance("premium")}
+                  className={styles.insuranceRadio}
+                />
+                <div className={styles.insuranceContent}>
+                  <div className={styles.insuranceTitleRow}>
+                    <span className={styles.insuranceName}>Premium</span>
+                    <span className={styles.insurancePrice}>Rs. 2,500/day</span>
+                  </div>
+                  <p className={styles.insuranceDesc}>Full coverage with zero deductible</p>
+                </div>
+              </label>
+            </div>
+
+            {/* Cost Breakdown */}
+            <div className={styles.costBreakdown}>
+              <div className={styles.costRow}>
+                <span>
+                  Rs. {dailyRate.toLocaleString()} × {rentalDays} {rentalDays === 1 ? "day" : "days"}
+                </span>
+                <span>Rs. {rentalTotal.toLocaleString()}</span>
+              </div>
+              <div className={styles.costRow}>
+                <span>Insurance ({selectedInsurance.charAt(0).toUpperCase() + selectedInsurance.slice(1)})</span>
+                <span>Rs. {insuranceTotal.toLocaleString()}</span>
+              </div>
+              <div className={styles.costRow}>
+                <span>Security deposit</span>
+                <span>Rs. {depositAmount.toLocaleString()}</span>
+              </div>
+              <div className={styles.costTotalRow}>
+                <span>Total</span>
+                <span>Rs. {grandTotal.toLocaleString()}</span>
+              </div>
+            </div>
+
+            {/* CTA Button */}
+            <button
+              type="button"
+              className={styles.continueBookingBtn}
+              onClick={handleContinueBooking}
+            >
+              Continue to booking
+            </button>
+
+            <p className={styles.bookingNote}>
+              You won't be charged yet — review and pay on the next step.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
-

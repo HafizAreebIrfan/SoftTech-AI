@@ -103,6 +103,14 @@
   transform: translateY(-50%) scale(1.1);
 }
 
+.navButtonLeft {
+  left: 12px;
+}
+
+.navButtonRight {
+  right: 12px;
+}
+
 .counter {
   margin-top: 10px;
   font-size: 13px;

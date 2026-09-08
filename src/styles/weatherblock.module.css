@@ -85,6 +85,13 @@
   color: var(--widget-header-title, #ffffff);
 }
 
+.feelsLikeText {
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 2px;
+  color: var(--widget-header-subtitle, #94a3b8);
+}
+
 .locationText {
   font-size: 13px;
   color: var(--widget-header-subtitle, #94a3b8);

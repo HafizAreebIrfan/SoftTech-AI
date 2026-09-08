@@ -80,7 +80,7 @@ export const OptionPickerBlock: React.FC<OptionPickerBlockProps> = ({
                   {renderImage(opt.image || opt.icon, opt.label)}
                 </div>
               ) : (
-                <div className={styles.cardIcon} style={{ fontSize: "20px" }}>
+                <div className={styles.cardIcon}>
                   ✨
                 </div>
               )}

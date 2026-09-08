@@ -302,20 +302,20 @@ export const darkColors: ThemeColors = {
 
   /*--*/
   /* Widget Theme Tokens */
-  WidgetContainerBg: "#050507",
+  WidgetContainerBg: "#09090b",
   WidgetContainerBorder: "rgba(255, 255, 255, 0.08)",
   WidgetCardBg: "#121316",
   WidgetCardBorder: "rgba(255, 255, 255, 0.08)",
   WidgetCardHover: "rgba(255, 255, 255, 0.04)",
-  WidgetHeaderTitle: "#ECEFEF",
-  WidgetHeaderSubtitle: "#94A39D",
-  WidgetMetricVal: "#34D399",
-  WidgetMetricLabel: "#6B7C75",
+  WidgetHeaderTitle: "#ffffff",
+  WidgetHeaderSubtitle: "#94a3b8",
+  WidgetMetricVal: "#10b981",
+  WidgetMetricLabel: "#94a3b8",
   WidgetBadgeBg: "rgba(16, 185, 129, 0.12)",
-  WidgetBadgeText: "#34D399",
+  WidgetBadgeText: "#34d399",
   WidgetBadgeBorder: "rgba(16, 185, 129, 0.25)",
-  WidgetChartPrimary: "#34D399",
-  WidgetChartSecondary: "#60A5FA",
+  WidgetChartPrimary: "#3b82f6",
+  WidgetChartSecondary: "#10b981",
   WidgetChartGrid: "rgba(255, 255, 255, 0.08)",
 
   SwatchIndigo: "#6366f1",

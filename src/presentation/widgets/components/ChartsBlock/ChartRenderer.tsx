@@ -121,7 +121,7 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
           <div className={styles.tooltipLabel}>
             {label || data.name}
           </div>
-          <div className={styles.tooltipValue} style={{ color: themeColor }}>
+          <div className={styles.tooltipValue}>
             {data.payload?.formattedY || Number(data.value).toLocaleString()}
           </div>
         </div>
@@ -247,10 +247,7 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({
 
       <div className={styles.scrollWrapper}>
         <div
-          className={styles.chartInner}
-          style={{
-            minWidth: isManyPoints ? `${localPoints.length * 55}px` : "100%",
-          }}
+          className={`${styles.chartInner} ${isManyPoints ? styles.chartInnerWide : ""}`}
         >
           <ResponsiveContainer width="100%" height={260}>
             {renderChart()}

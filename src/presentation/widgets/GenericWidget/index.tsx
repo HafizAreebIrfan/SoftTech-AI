@@ -290,24 +290,45 @@ export const GenericWidgetRenderer: React.FC = () => {
       );
     }
 
-    switch (normalizedLayout) {
-      case "dashboard":
-        return (
-          <DashboardLayout
-            title={content.title}
-            subtitle={content.subtitle}
-            data={rawData}
-            records={records}
-            fields={fields}
-            collection={collection}
-            capabilities={content.capabilities}
-            pagination={content.pagination}
-            actions={content.actions}
-            audience={content.audience}
-            presentationPlan={presentationPlan}
-          />
-        );
+    const hasUserFields = Boolean(
+      rawData &&
+        typeof rawData === "object" &&
+        ("email" in (rawData as object) ||
+          "mfaEnabled" in (rawData as object) ||
+          "fullName" in (rawData as object) ||
+          "role" in (rawData as object) ||
+          (records.length > 0 &&
+            records[0] &&
+            typeof records[0] === "object" &&
+            ("email" in records[0] || "fullName" in records[0]))),
+    );
 
+    const isProfile =
+      /user|profile|account|member|\bme\b|customer/.test(entityName) ||
+      hasUserFields;
+
+    const isBookings =
+      /booking|reservation|rental|\border\b/.test(entityName);
+
+    if (isProfile || isBookings || normalizedLayout === "dashboard") {
+      return (
+        <DashboardLayout
+          title={content.title}
+          subtitle={content.subtitle}
+          data={rawData}
+          records={records}
+          fields={fields}
+          collection={collection}
+          capabilities={content.capabilities}
+          pagination={content.pagination}
+          actions={content.actions}
+          audience={content.audience}
+          presentationPlan={presentationPlan}
+        />
+      );
+    }
+
+    switch (normalizedLayout) {
       case "catalog":
         return (
           <CatalogLayout
@@ -369,68 +390,24 @@ export const GenericWidgetRenderer: React.FC = () => {
           <button
             type="button"
             onClick={() => setViewFullCart(false)}
-            style={{
-              background: "transparent",
-              border: "1px solid var(--WidgetCardBorder)",
-              borderRadius: "8px",
-              color: "var(--TextSecondary)",
-              cursor: "pointer",
-              padding: "6px 12px",
-              fontSize: "13px",
-              fontWeight: 600,
-              marginBottom: "12px",
-            }}
+            className={styles.cartBackBtn}
           >
             ← Back
           </button>
           {cartItems.length === 0 ? (
             /* Empty cart → local page only, NO tool call. */
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                textAlign: "center",
-                gap: "14px",
-                padding: "48px 24px",
-                color: "var(--TextSecondary, #94a3b8)",
-              }}
-            >
-              <div style={{ fontSize: "44px" }}>🛒</div>
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: "18px",
-                  fontWeight: 700,
-                  color: "var(--WidgetHeaderTitle, #f8fafc)",
-                }}
-              >
+            <div className={styles.cartEmptyState}>
+              <div className={styles.cartEmptyIcon}>🛒</div>
+              <h3 className={styles.cartEmptyTitle}>
                 Your cart is empty
               </h3>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "14px",
-                  maxWidth: "320px",
-                  lineHeight: 1.5,
-                }}
-              >
+              <p className={styles.cartEmptyDesc}>
                 Browse the catalog and add items to your cart to see them here.
               </p>
               <button
                 type="button"
                 onClick={() => setViewFullCart(false)}
-                style={{
-                  background: "var(--widget-accent, #6366f1)",
-                  color: "var(--widget-accent-contrast, #ffffff)",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "10px 20px",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
+                className={styles.cartBrowseBtn}
               >
                 Browse products
               </button>

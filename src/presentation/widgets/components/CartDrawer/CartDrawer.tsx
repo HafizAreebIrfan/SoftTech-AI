@@ -149,7 +149,7 @@ export const CartDrawer: React.FC = () => {
         {/* Header */}
         <header className={styles.header}>
           <div className={styles.headerTitleGroup}>
-            <span style={{ fontSize: "20px" }}>🛒</span>
+            <span className={styles.headerIcon}>🛒</span>
             <h3 className={styles.headerTitle}>Your Cart</h3>
             {totalCount > 0 && <span className={styles.badge}>{totalCount}</span>}
           </div>
@@ -166,9 +166,9 @@ export const CartDrawer: React.FC = () => {
         {/* Content */}
         <div className={styles.content}>
           {checkoutSuccess ? (
-            <div className={styles.emptyContainer} style={{ padding: "32px 16px" }}>
-              <div className={styles.emptyIcon} style={{ fontSize: "40px" }}>🎉</div>
-              <h4 className={styles.emptyTitle} style={{ color: "#10b981", fontSize: "18px" }}>
+            <div className={`${styles.emptyContainer} ${styles.emptyContainerPadding}`}>
+              <div className={`${styles.emptyIcon} ${styles.emptyIconLg}`}>🎉</div>
+              <h4 className={`${styles.emptyTitle} ${styles.emptyTitleSuccess}`}>
                 Order Confirmed!
               </h4>
               <p className={styles.emptyText}>
@@ -176,8 +176,7 @@ export const CartDrawer: React.FC = () => {
               </p>
               <button
                 type="button"
-                className={styles.checkoutBtn}
-                style={{ marginTop: "16px", width: "auto", padding: "8px 24px" }}
+                className={`${styles.checkoutBtn} ${styles.continueShoppingBtn}`}
                 onClick={() => {
                   setCheckoutSuccess(false);
                   closeCart();
@@ -187,19 +186,18 @@ export const CartDrawer: React.FC = () => {
               </button>
             </div>
           ) : pendingCheckout ? (
-            <div className={styles.emptyContainer} style={{ padding: "32px 16px" }}>
-              <div className={styles.emptyIcon} style={{ fontSize: "40px" }}>⏳</div>
-              <h4 className={styles.emptyTitle} style={{ color: "#f59e0b", fontSize: "16px" }}>
+            <div className={`${styles.emptyContainer} ${styles.emptyContainerPadding}`}>
+              <div className={`${styles.emptyIcon} ${styles.emptyIconLg}`}>⏳</div>
+              <h4 className={`${styles.emptyTitle} ${styles.emptyTitleWarning}`}>
                 Waiting for Checkout...
               </h4>
               <p className={styles.emptyText}>
                 Complete your purchase in the checkout tab. This drawer will update automatically when you return.
               </p>
-              <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+              <div className={styles.pendingBtnRow}>
                 <button
                   type="button"
-                  className={styles.checkoutBtn}
-                  style={{ flex: 1, padding: "8px 16px" }}
+                  className={`${styles.checkoutBtn} ${styles.reopenBtn}`}
                   onClick={() => {
                     window.open(checkoutUrl, "_blank");
                   }}
@@ -208,8 +206,7 @@ export const CartDrawer: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  className={styles.clearCartBtn}
-                  style={{ flex: 1 }}
+                  className={`${styles.clearCartBtn} ${styles.flexBtn}`}
                   onClick={() => {
                     clearCheckoutPending();
                     setPendingCheckout(false);
@@ -273,8 +270,8 @@ export const CartDrawer: React.FC = () => {
                       </button>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--app-text-primary)" }}>
+                    <div className={styles.itemPriceRow}>
+                      <span className={styles.itemPriceVal}>
                         {renderCurrency(lineTotal)}
                       </span>
                       <button
@@ -312,8 +309,7 @@ export const CartDrawer: React.FC = () => {
 
             <button
               type="button"
-              className={styles.clearCartBtn}
-              style={{ background: "var(--widget-cta-bg, rgba(99,102,241,0.15))", color: "var(--widget-cta-text, #818cf8)" }}
+              className={styles.viewFullCartBtn}
               onClick={() => {
                 setViewFullCart(true);
                 closeCart();

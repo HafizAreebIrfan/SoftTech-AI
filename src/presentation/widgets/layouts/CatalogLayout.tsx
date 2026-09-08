@@ -196,6 +196,8 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [sortOption, setSortOption] = useState<string>("default");
   const [selectedFacets, setSelectedFacets] = useState<Record<string, string>>({});
+  const [priceMin, setPriceMin] = useState<string>("");
+  const [priceMax, setPriceMax] = useState<string>("");
 
   // Pagination & Loading states
   const [pageSize, setPageSize] = useState<number>(12);
@@ -486,6 +488,40 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
       });
     }
 
+    // Price Range Filter
+    if (priceMin.trim()) {
+      const min = Number(priceMin);
+      if (!isNaN(min)) {
+        list = list.filter((rec: any) => {
+          const p = parseNumericPrice(
+            rec.dailyRate ??
+              rec.pricePerDay ??
+              rec.price_per_day ??
+              rec.$price ??
+              rec.price ??
+              0,
+          );
+          return p >= min;
+        });
+      }
+    }
+    if (priceMax.trim()) {
+      const max = Number(priceMax);
+      if (!isNaN(max)) {
+        list = list.filter((rec: any) => {
+          const p = parseNumericPrice(
+            rec.dailyRate ??
+              rec.pricePerDay ??
+              rec.price_per_day ??
+              rec.$price ??
+              rec.price ??
+              0,
+          );
+          return p <= max;
+        });
+      }
+    }
+
     // Sorting
     if (sortOption !== "default") {
       const sorted = [...list];
@@ -526,6 +562,8 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     categoryFacet?.tool,
     selectedFacets,
     searchTerm,
+    priceMin,
+    priceMax,
     sortOption,
   ]);
 
@@ -885,8 +923,180 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         </div>
       )}
 
-      {/* Category Pills (When no backend optionsTool exists, fallback to available in-record pills) */}
-      {!categoryFacet?.optionsTool && availableCategories.length > 1 && (
+      <div className={styles.catalogWrapper}>
+        {/* Left Filter Sidebar (Image 1) */}
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarField}>
+            <label className={styles.sidebarLabel}>Search</label>
+            <input
+              type="text"
+              className={styles.sidebarInput}
+              placeholder="Make, model, variant..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className={styles.sidebarField}>
+            <label className={styles.sidebarLabel}>City</label>
+            <select
+              className={styles.sidebarSelect}
+              value={selectedFacets["city"] || selectedFacets["location"] || "All"}
+              onChange={(e) =>
+                setSelectedFacets((prev) => {
+                  const next = { ...prev };
+                  if (e.target.value === "All") {
+                    delete next.city;
+                  } else {
+                    next.city = e.target.value;
+                  }
+                  return next;
+                })
+              }
+            >
+              <option value="All">Any city</option>
+              <option value="Karachi">Karachi</option>
+              <option value="Lahore">Lahore</option>
+              <option value="Islamabad">Islamabad</option>
+              <option value="Rawalpindi">Rawalpindi</option>
+              <option value="Faisalabad">Faisalabad</option>
+            </select>
+          </div>
+
+          <div className={styles.sidebarField}>
+            <label className={styles.sidebarLabel}>Pickup date</label>
+            <input type="date" className={styles.sidebarInput} />
+          </div>
+
+          <div className={styles.sidebarField}>
+            <label className={styles.sidebarLabel}>Return date</label>
+            <input type="date" className={styles.sidebarInput} />
+          </div>
+
+          <div className={styles.sidebarField}>
+            <label className={styles.sidebarLabel}>Make</label>
+            <select
+              className={styles.sidebarSelect}
+              value={selectedFacets["make"] || selectedFacets["brand"] || "All"}
+              onChange={(e) =>
+                setSelectedFacets((prev) => {
+                  const next = { ...prev };
+                  if (e.target.value === "All") {
+                    delete next.make;
+                  } else {
+                    next.make = e.target.value;
+                  }
+                  return next;
+                })
+              }
+            >
+              <option value="All">All makes</option>
+              <option value="Toyota">Toyota</option>
+              <option value="Hyundai">Hyundai</option>
+              <option value="Kia">Kia</option>
+              <option value="Suzuki">Suzuki</option>
+              <option value="Honda">Honda</option>
+            </select>
+          </div>
+
+          <div className={styles.sidebarField}>
+            <label className={styles.sidebarLabel}>Fuel type</label>
+            <select
+              className={styles.sidebarSelect}
+              value={selectedFacets["fuel"] || selectedFacets["fuelType"] || "All"}
+              onChange={(e) =>
+                setSelectedFacets((prev) => {
+                  const next = { ...prev };
+                  if (e.target.value === "All") {
+                    delete next.fuel;
+                  } else {
+                    next.fuel = e.target.value;
+                  }
+                  return next;
+                })
+              }
+            >
+              <option value="All">Any fuel</option>
+              <option value="petrol">Petrol</option>
+              <option value="diesel">Diesel</option>
+              <option value="hybrid">Hybrid</option>
+              <option value="electric">Electric</option>
+            </select>
+          </div>
+
+          <div className={styles.sidebarField}>
+            <label className={styles.sidebarLabel}>Transmission</label>
+            <select
+              className={styles.sidebarSelect}
+              value={selectedFacets["transmission"] || "All"}
+              onChange={(e) =>
+                setSelectedFacets((prev) => {
+                  const next = { ...prev };
+                  if (e.target.value === "All") {
+                    delete next.transmission;
+                  } else {
+                    next.transmission = e.target.value;
+                  }
+                  return next;
+                })
+              }
+            >
+              <option value="All">Any transmission</option>
+              <option value="automatic">Automatic</option>
+              <option value="manual">Manual</option>
+              <option value="cvt">CVT</option>
+            </select>
+          </div>
+
+          <div className={styles.sidebarField}>
+            <label className={styles.sidebarLabel}>Price per day (Rs.)</label>
+            <div className={styles.priceInputsRow}>
+              <input
+                type="number"
+                placeholder="Min"
+                className={styles.sidebarInput}
+                value={priceMin}
+                onChange={(e) => setPriceMin(e.target.value)}
+              />
+              <input
+                type="number"
+                placeholder="Max"
+                className={styles.sidebarInput}
+                value={priceMax}
+                onChange={(e) => setPriceMax(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className={styles.sidebarField}>
+            <label className={styles.sidebarLabel}>Minimum seats</label>
+            <select
+              className={styles.sidebarSelect}
+              value={selectedFacets["seats"] || "All"}
+              onChange={(e) =>
+                setSelectedFacets((prev) => {
+                  const next = { ...prev };
+                  if (e.target.value === "All") {
+                    delete next.seats;
+                  } else {
+                    next.seats = e.target.value;
+                  }
+                  return next;
+                })
+              }
+            >
+              <option value="All">Any</option>
+              <option value="4">4 seats</option>
+              <option value="5">5 seats</option>
+              <option value="7">7 seats</option>
+            </select>
+          </div>
+        </aside>
+
+        {/* Main Products Grid Area */}
+        <div className={styles.sidebarMain}>
+          {/* Category Pills (When no backend optionsTool exists, fallback to available in-record pills) */}
+          {!categoryFacet?.optionsTool && availableCategories.length > 1 && (
         <div className={styles.categoriesWrapper}>
           {availableCategories.map((cat) => {
             const isActive = selectedCategory === cat;
@@ -934,7 +1144,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
                   </strong>{" "}
                   of <strong>{filteredRecords.length}</strong> items
                 </span>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <div className={styles.pageSizeGroup}>
                   <span>Show:</span>
                   <select
                     className={styles.limitSelect}
@@ -977,12 +1187,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
                       return (
                         <React.Fragment key={`page-${p}`}>
                           {showEllipsisBefore && (
-                            <span
-                              style={{
-                                color: "var(--app-text-secondary)",
-                                padding: "0 4px",
-                              }}
-                            >
+                            <span className={styles.ellipsis}>
                               …
                             </span>
                           )}
@@ -1024,21 +1229,11 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
           {(searchTerm || selectedCategory !== "All") && (
             <button
               type="button"
+              className={styles.resetBtn}
               onClick={() => {
                 setSearchTerm("");
                 setSelectedCategory("All");
                 setSortOption("default");
-              }}
-              style={{
-                background: "transparent",
-                border: "1px solid var(--widget-card-border, rgba(255,255,255,0.2))",
-                borderRadius: "6px",
-                color: "var(--widget-accent, #6366f1)",
-                padding: "6px 12px",
-                fontSize: "13px",
-                fontWeight: 600,
-                cursor: "pointer",
-                marginTop: "8px",
               }}
             >
               Reset Filters
@@ -1046,6 +1241,8 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
           )}
         </div>
       )}
+        </div>
+      </div>
     </section>
   );
 };

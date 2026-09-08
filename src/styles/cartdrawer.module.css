@@ -306,3 +306,84 @@
 .clearCartBtn:hover {
   color: #ef4444;
 }
+
+.headerIcon {
+  font-size: 20px;
+}
+
+.emptyContainerPadding {
+  padding: 32px 16px;
+}
+
+.emptyIconLg {
+  font-size: 40px;
+}
+
+.emptyTitleSuccess {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.emptyTitleWarning {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+.continueShoppingBtn {
+  margin-top: 16px;
+  width: auto;
+  padding: 8px 24px;
+}
+
+.pendingBtnRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.reopenBtn {
+  flex: 1;
+  padding: 8px 16px;
+}
+
+.flexBtn {
+  flex: 1;
+}
+
+.itemPriceRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemPriceVal {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--app-text-primary, #ffffff);
+}
+
+.viewFullCartBtn {
+  background: var(--widget-cta-bg, rgba(99, 102, 241, 0.15));
+  color: var(--widget-cta-text, #818cf8);
+  text-decoration: none;
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.viewFullCartBtn:hover {
+  background: rgba(99, 102, 241, 0.25);
+}

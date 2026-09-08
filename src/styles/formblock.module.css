@@ -121,3 +121,23 @@
   font-size: 0.825rem;
   font-weight: 500;
 }
+
+.currencyWrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.currencyPrefix {
+  position: absolute;
+  left: 12px;
+  color: var(--app-text-secondary, #94a3b8);
+  font-weight: 700;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.currencyInput {
+  padding-left: 26px;
+}

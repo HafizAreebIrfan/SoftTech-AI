@@ -108,14 +108,23 @@ export const AQIBlock: React.FC<AQIBlockProps> = ({
             </h3>
             {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
           </div>
-          <span style={{ fontSize: "24px" }}>🍃</span>
+          <span className={styles.headerIcon}>🍃</span>
         </div>
 
         {/* AQI Gauge Display */}
         <div className={styles.gaugeSection}>
           <div
-            className={styles.aqiBadge}
-            style={{ background: config.color }}
+            className={`${styles.aqiBadge} ${
+              aqiIndex === 1
+                ? styles.aqiBadge1
+                : aqiIndex === 2
+                ? styles.aqiBadge2
+                : aqiIndex === 3
+                ? styles.aqiBadge3
+                : aqiIndex === 4
+                ? styles.aqiBadge4
+                : styles.aqiBadge5
+            }`}
           >
             <span className={styles.aqiNumber}>{aqiIndex}</span>
             <span className={styles.aqiLabelSmall}>AQI</span>
@@ -123,8 +132,17 @@ export const AQIBlock: React.FC<AQIBlockProps> = ({
 
           <div className={styles.statusInfo}>
             <div
-              className={styles.statusName}
-              style={{ color: config.color }}
+              className={`${styles.statusName} ${
+                aqiIndex === 1
+                  ? styles.statusName1
+                  : aqiIndex === 2
+                  ? styles.statusName2
+                  : aqiIndex === 3
+                  ? styles.statusName3
+                  : aqiIndex === 4
+                  ? styles.statusName4
+                  : styles.statusName5
+              }`}
             >
               {config.icon} {config.label}
             </div>
@@ -134,7 +152,7 @@ export const AQIBlock: React.FC<AQIBlockProps> = ({
 
         {/* Pollutants Breakdown */}
         {pollutantEntries.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div className={styles.pollutantsSection}>
             <h4 className={styles.pollutantsTitle}>Pollutant Breakdown</h4>
             <div className={styles.pollutantsGrid}>
               {pollutantEntries.map(([key, val]) => {

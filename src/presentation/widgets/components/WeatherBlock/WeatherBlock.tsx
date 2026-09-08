@@ -80,9 +80,7 @@ export const WeatherBlock: React.FC<WeatherBlockProps> = ({
             </div>
             <div className={styles.conditionText}>{currentCondition}</div>
             {feelsLike !== undefined && (
-              <div
-                style={{ fontSize: "12px", opacity: 0.75, marginTop: "2px" }}
-              >
+              <div className={styles.feelsLikeText}>
                 Feels like {feelsLike}°C
               </div>
             )}

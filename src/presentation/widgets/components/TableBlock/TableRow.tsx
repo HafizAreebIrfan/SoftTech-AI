@@ -18,7 +18,7 @@ const formatTableCell = (val: unknown, field: FieldSchema): React.ReactNode => {
 
   if (field.type === "image") {
     return (
-      <div style={{ width: "32px", height: "32px", borderRadius: "4px", overflow: "hidden" }}>
+      <div className={styles.imageCellWrapper}>
         {renderImage(val, field.label)}
       </div>
     );

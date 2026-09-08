@@ -1,6 +1,6 @@
 .container {
   padding: 1.25rem 1.25rem 100px 1.25rem;
-  background: var(--app-bg-primary, #0f1015);
+  background: var(--widget-container-bg, #09090b);
   color: var(--app-text-primary, #ffffff);
   border-radius: 16px;
   box-sizing: border-box;
@@ -58,4 +58,68 @@
   margin: 0;
   max-width: 18rem;
   line-height: 1.4;
+}
+
+.cartBackBtn {
+  background: transparent;
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  transition: all 0.15s ease;
+}
+
+.cartBackBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.cartEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 14px;
+  padding: 48px 24px;
+  color: #94a3b8;
+}
+
+.cartEmptyIcon {
+  font-size: 44px;
+}
+
+.cartEmptyTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cartEmptyDesc {
+  margin: 0;
+  font-size: 14px;
+  max-width: 320px;
+  line-height: 1.5;
+  color: #94a3b8;
+}
+
+.cartBrowseBtn {
+  background: var(--widget-accent, #3b82f6);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.cartBrowseBtn:hover {
+  opacity: 0.92;
 }

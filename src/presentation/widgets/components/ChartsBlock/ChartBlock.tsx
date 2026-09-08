@@ -5,6 +5,7 @@ import { renderCurrency } from "../../helper/RenderCurrency";
 import { renderNumber } from "../../helper/RenderNumber";
 import { renderDate } from "../../helper/RenderDate";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
+import styles from "../../../../styles/chartsblock.module.css";
 import type {
   ChartBlockProps,
   ChartDataPoint,
@@ -229,7 +230,7 @@ export const ChartBlock: React.FC<ChartBlockProps> = ({
   }
 
   return (
-    <div style={{ position: "relative", width: "100%" }}>
+    <div className={styles.container}>
       <ChartRenderer
         type={initialType}
         dataPoints={dataPoints}

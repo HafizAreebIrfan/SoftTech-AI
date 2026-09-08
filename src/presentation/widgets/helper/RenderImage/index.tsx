@@ -51,12 +51,11 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt, variant }) => {
 
   return (
     <div
-      className={styles.imageWrapper}
-      style={
+      className={`${styles.imageWrapper} ${
         variant === "cover" || variant === "contain"
-          ? { width: "100%", height: "100%" }
-          : undefined
-      }
+          ? styles.imageWrapperFull
+          : ""
+      }`}
     >
       <img
         src={currentSrc}
@@ -73,7 +72,7 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt, variant }) => {
 const ImageFallback: React.FC<{ alt?: string }> = ({ alt }) => {
   if (alt && /weather|rain|cloud|sun|clear|patchy|overcast|snow|drizzle|thunder/i.test(alt)) {
     return (
-      <div className={styles.imageFallback} style={{ background: "transparent", border: "none" }}>
+      <div className={`${styles.imageFallback} ${styles.imageFallbackTransparent}`}>
         {getWeatherConditionSvg(alt, 36)}
       </div>
     );

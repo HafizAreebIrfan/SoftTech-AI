@@ -72,24 +72,14 @@ export const FormField: React.FC<FormFieldProps> = ({
 
       case "currency":
         return (
-          <div style={{ display: "flex", alignItems: "center", position: "relative" }}>
-            <span
-              style={{
-                position: "absolute",
-                left: "12px",
-                color: "var(--app-text-secondary, #94a3b8)",
-                fontWeight: 700,
-                fontSize: "14px",
-                pointerEvents: "none",
-              }}
-            >
+          <div className={styles.currencyWrapper}>
+            <span className={styles.currencyPrefix}>
               $
             </span>
             <input
               id={inputId}
               type="text"
-              className={`${styles.input} ${error ? styles.inputError : ""}`}
-              style={{ paddingLeft: "26px" }}
+              className={`${styles.input} ${styles.currencyInput} ${error ? styles.inputError : ""}`}
               value={value !== undefined && value !== null ? String(value).replace(/^\$/, "") : ""}
               placeholder="0.00"
               onChange={(e) => {

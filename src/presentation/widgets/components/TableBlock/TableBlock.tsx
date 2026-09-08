@@ -710,30 +710,77 @@ function parseCreatedRecord(
       <div className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
           {title && <h3 className={styles.title}>{title}</h3>}
-          {(capabilities?.search || records.length > 3) && (
-            <div className={styles.searchContainer}>
-              <span className={styles.searchIcon}>🔍</span>
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={styles.searchInput}
-              />
-            </div>
-          )}
+          <div className={styles.searchContainer}>
+            <span className={styles.searchIcon}>🔍</span>
+            <input
+              type="text"
+              placeholder={`Search ${title ? title.toLowerCase() : "records"}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={styles.searchInput}
+            />
+          </div>
         </div>
 
         {canCreate && (
           <button
             type="button"
-            className={styles.createNewBtn}
+            className={styles.addBtn}
             onClick={() => updateModalState(null, null, true)}
           >
-            ⊕ Create New
+            + Add {title ? title.replace(/s$/i, "") : "Item"}
           </button>
         )}
       </div>
+
+      {/* Filter Bar Toolbar (Inspiration New Image 3) */}
+      {records.length > 2 && (
+        <div className={styles.filterBarWrapper}>
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Search</label>
+            <input
+              type="text"
+              placeholder="Name, email, phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className={styles.filterInput}
+            />
+          </div>
+
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Role</label>
+            <select className={styles.filterSelect}>
+              <option value="all">All roles</option>
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Status</label>
+            <select className={styles.filterSelect}>
+              <option value="all">All</option>
+              <option value="available">Available</option>
+              <option value="pending">Pending</option>
+              <option value="booked">Booked</option>
+            </select>
+          </div>
+
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Joined from</label>
+            <input type="date" className={styles.filterInput} />
+          </div>
+
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Joined to</label>
+            <input type="date" className={styles.filterInput} />
+          </div>
+
+          <button type="button" className={styles.applyBtn}>
+            Apply
+          </button>
+        </div>
+      )}
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
@@ -778,23 +825,33 @@ function parseCreatedRecord(
             </tr>
           </thead>
           <tbody>
-            {paginatedRecords.map((record, rowIndex) => (
-              <TableRow
-                key={`row-${rowIndex}`}
-                record={record}
-                fields={activeFields}
-                showActions={showActions}
-                canUpdate={canUpdate}
-                canDelete={canDelete}
-                onView={(rec) =>
-                  updateModalState(rec as Record<string, any>, null, false)
-                }
-                onEdit={(rec) =>
-                  updateModalState(null, rec as Record<string, any>, false)
-                }
-                onDelete={(rec) => handleDelete(rec as Record<string, any>)}
-              />
-            ))}
+            {paginatedRecords.length > 0 ? (
+              paginatedRecords.map((record, rowIndex) => (
+                <TableRow
+                  key={`row-${rowIndex}`}
+                  record={record}
+                  fields={activeFields}
+                  showActions={showActions}
+                  canUpdate={canUpdate}
+                  canDelete={canDelete}
+                  onView={(rec) =>
+                    updateModalState(rec as Record<string, any>, null, false)
+                  }
+                  onEdit={(rec) =>
+                    updateModalState(null, rec as Record<string, any>, false)
+                  }
+                  onDelete={(rec) => handleDelete(rec as Record<string, any>)}
+                />
+              ))
+            ) : (
+              <tr>
+                <td colSpan={activeFields.length + (showActions ? 1 : 0)}>
+                  <div className={styles.emptyTable}>
+                    <p>No records found.</p>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

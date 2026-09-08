@@ -311,7 +311,7 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
 
           <div className={styles.itemsList}>
             {lineItems.length === 0 ? (
-              <p style={{ color: "var(--app-text-secondary)", margin: "20px 0" }}>
+              <p className={styles.emptyCartText}>
                 No items found in this cart.
               </p>
             ) : (
@@ -328,7 +328,7 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
                     <div className={styles.itemMeta}>
                       <span>{renderCurrency(item.price)} each</span>
                       {item.discountPercentage ? (
-                        <span style={{ color: "#10b981", fontWeight: 600 }}>
+                        <span className={styles.discountBadge}>
                           -{item.discountPercentage}%
                         </span>
                       ) : null}
@@ -387,7 +387,7 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
             </div>
 
             {cartSummary.discountedTotal < cartSummary.totalAmount && (
-              <div className={styles.summaryRow} style={{ color: "#10b981" }}>
+              <div className={`${styles.summaryRow} ${styles.summaryRowDiscount}`}>
                 <span>Discounts Applied</span>
                 <span>
                   -
@@ -412,14 +412,8 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
             href={finalCheckoutUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={styles.checkoutButton}
+            className={`${styles.checkoutButton} ${styles.checkoutLink}`}
             onClick={handleCheckout}
-            style={{
-              textDecoration: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
           >
             <span>💳 Proceed to Checkout</span>
           </a>
