@@ -2,16 +2,49 @@ import React, { useState, useMemo } from "react";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import styles from "../../../styles/dashboardlayout.module.css";
 import { useCartStore } from "../../../infrastructure/store/cartStore";
+import { TableBlock } from "../components/TableBlock";
+import { ChartBlock } from "../components/ChartsBlock/ChartBlock";
 
 export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
   title,
   subtitle,
   data,
   records = [],
+  fields = [],
   collection,
+  capabilities,
+  pagination,
+  actions = [],
   audience,
+  presentationPlan,
 }) => {
-  // Extract user / account information from data or records
+  const entityName = String(
+    collection?.entity || (data as any)?.entity || title || "",
+  ).toLowerCase();
+
+  // Check if this is an Admin / Analytics / Multi-entity Dashboard
+  const hasCollectionMetrics = Boolean(
+    collection?.metrics &&
+      Array.isArray(collection.metrics) &&
+      collection.metrics.length > 0,
+  );
+
+  const hasCollectionCharts = Boolean(
+    collection?.charts &&
+      Array.isArray(collection.charts) &&
+      collection.charts.length > 0,
+  );
+
+  const isAdminDashboard =
+    audience === "admin" ||
+    hasCollectionMetrics ||
+    hasCollectionCharts ||
+    collection?.layout === "dashboard" ||
+    /orders|sales|revenue|inventory|companies|users|fleet|cars|vehicles/.test(
+      entityName,
+    );
+
+  // Extract user / account information for personal profile fallback
   const userRecord = useMemo(() => {
     if (data && typeof data === "object" && !Array.isArray(data)) {
       const obj = data as Record<string, any>;
@@ -34,41 +67,120 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
       const obj = data as Record<string, any>;
       if (Array.isArray(obj.bookings)) return obj.bookings;
       if (Array.isArray(obj.data)) return obj.data;
+      if (Array.isArray(obj.getorder)) return obj.getorder;
     }
-    const entity = String(collection?.entity || title || "").toLowerCase();
-    if (/booking|reservation|rental|\border\b/.test(entity)) {
-      return records;
-    }
-    return [];
-  }, [data, records, collection, title]);
+    return records;
+  }, [data, records]);
 
-  // Identify semantic mode
-  const entityName = String(
-    collection?.entity || (data as any)?.entity || title || "",
-  ).toLowerCase();
-
-  const isProfileRequest =
-    /user|profile|account|member|\bme\b|customer/.test(entityName) ||
-    Boolean(userRecord && !/booking|rental/.test(entityName));
-
-  const isBookingsRequest =
-    /booking|reservation|rental|\border\b/.test(entityName);
-
-  // Tab State: "overview" | "bookings" | "profile"
-  const [activeTab, setActiveTab] = useState<"overview" | "bookings" | "profile">(
-    () => {
-      if (isProfileRequest) return "profile";
-      if (isBookingsRequest) return "bookings";
-      return "overview";
-    },
-  );
-
+  // Customer Profile Tab States (Only used for customer personal profile mode)
+  const [activeTab, setActiveTab] = useState<"overview" | "bookings" | "profile">("overview");
   const [bookingStatusFilter, setBookingStatusFilter] = useState<string>("all");
   const [mfaEnabled, setMfaEnabled] = useState<boolean>(
     Boolean(userRecord?.mfaEnabled),
   );
 
-  // User details
+  const setViewFullCart = useCartStore((state) => state.setViewFullCart);
+
+  // --------------------------------------------------------------------------
+  // 1. ADMIN / BUSINESS ANALYTICS DASHBOARD (Orders, Sales, Cars, Metrics)
+  // --------------------------------------------------------------------------
+  if (isAdminDashboard) {
+    const applied = collection?.appliedQuery || {};
+    const dateRangeStr =
+      applied.datefrom && applied.dateto
+        ? `${applied.datefrom} – ${applied.dateto}`
+        : applied.date
+          ? String(applied.date)
+          : null;
+
+    const metricsList = collection?.metrics || [];
+
+    return (
+      <div className={styles.adminDashboardContainer}>
+        {/* Dashboard Header Bar */}
+        <div className={styles.dashboardHeader}>
+          <div className={styles.dashboardHeaderInfo}>
+            <div className={styles.dashboardTitleRow}>
+              <h2 className={styles.dashboardTitle}>
+                {title || (collection?.entity ? `${collection.entity.toUpperCase()} Dashboard` : "Analytics Dashboard")}
+              </h2>
+              {audience === "admin" && (
+                <span className={styles.adminBadge}>Admin Console</span>
+              )}
+            </div>
+            <p className={styles.dashboardSubtitle}>
+              {subtitle || "Live API response & management"}
+            </p>
+          </div>
+
+          {dateRangeStr && (
+            <div className={styles.dateRangeBadge}>
+              <span>📅</span>
+              <span>{dateRangeStr}</span>
+            </div>
+          )}
+        </div>
+
+        {/* KPI Metrics Cards Grid */}
+        {metricsList.length > 0 && (
+          <div className={styles.metricsGrid}>
+            {metricsList.map((m, idx) => {
+              const labelLower = m.label.toLowerCase();
+              const icon = labelLower.includes("amount") || labelLower.includes("sales") || labelLower.includes("revenue")
+                ? "💳"
+                : labelLower.includes("order") || labelLower.includes("booking")
+                  ? "📋"
+                  : labelLower.includes("user") || labelLower.includes("customer")
+                    ? "👥"
+                    : labelLower.includes("car") || labelLower.includes("vehicle")
+                      ? "🚗"
+                      : "📊";
+
+              return (
+                <div key={`metric-${idx}`} className={styles.metricCard}>
+                  <div className={styles.metricTop}>
+                    <p className={styles.metricLabel}>{m.label}</p>
+                    <div className={styles.metricIconBadge}>{icon}</div>
+                  </div>
+                  <p className={styles.metricValue}>{m.value}</p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Analytics Chart Block */}
+        {hasCollectionCharts && (
+          <div className={styles.chartSection}>
+            <ChartBlock
+              records={records}
+              fields={fields}
+              collection={collection}
+            />
+          </div>
+        )}
+
+        {/* Management Data Table Block */}
+        {records.length > 0 && (
+          <div className={styles.tableSection}>
+            <TableBlock
+              records={records}
+              fields={fields}
+              pagination={pagination}
+              capabilities={capabilities}
+              actions={actions}
+              audience={audience}
+              title={title}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // 2. CUSTOMER PERSONAL ACCOUNT / PROFILE (Fallback for personal user query)
+  // --------------------------------------------------------------------------
   const userName =
     userRecord?.fullName ||
     userRecord?.name ||
@@ -88,26 +200,20 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
 
   const userInitial = (userName.charAt(0) || "U").toUpperCase();
 
-  // Metrics calculation
-  const totalBookingsCount = bookingsList.length || (userRecord ? 11 : 0);
+  const totalBookingsCount = bookingsList.length;
   const activeBookingsCount = bookingsList.filter(
     (b: any) =>
       String(b.status).toUpperCase() === "CONFIRMED" ||
       String(b.status).toUpperCase() === "PENDING",
   ).length;
 
-  const totalSpentFormatted = "Rs. 0";
-
-  // Filtered bookings
-  const filteredBookings = useMemo(() => {
-    if (bookingStatusFilter === "all") return bookingsList;
-    return bookingsList.filter(
-      (b: any) =>
-        String(b.status).toLowerCase() === bookingStatusFilter.toLowerCase(),
-    );
-  }, [bookingsList, bookingStatusFilter]);
-
-  const setViewFullCart = useCartStore((state) => state.setViewFullCart);
+  const filteredBookings =
+    bookingStatusFilter === "all"
+      ? bookingsList
+      : bookingsList.filter(
+          (b: any) =>
+            String(b.status).toLowerCase() === bookingStatusFilter.toLowerCase(),
+        );
 
   return (
     <div className={styles.container}>
@@ -169,15 +275,15 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
             <div className={styles.headerRow}>
               <div className={styles.headerText}>
                 <h2 className={styles.title}>Overview</h2>
-                <p className={styles.subtitle}>Your rentals at a glance</p>
+                <p className={styles.subtitle}>Your account at a glance</p>
               </div>
             </div>
 
-            {/* 3 Metric Cards */}
+            {/* Metric Cards */}
             <div className={styles.metricsRow}>
               <div className={styles.metricCard}>
                 <div className={styles.metricTop}>
-                  <p className={styles.metricLabel}>Upcoming rentals</p>
+                  <p className={styles.metricLabel}>Active items</p>
                   <div className={styles.metricIconBadge}>🚗</div>
                 </div>
                 <p className={styles.metricValue}>{activeBookingsCount}</p>
@@ -185,25 +291,17 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
 
               <div className={styles.metricCard}>
                 <div className={styles.metricTop}>
-                  <p className={styles.metricLabel}>Total bookings</p>
+                  <p className={styles.metricLabel}>Total records</p>
                   <div className={styles.metricIconBadge}>📋</div>
                 </div>
                 <p className={styles.metricValue}>{totalBookingsCount}</p>
               </div>
-
-              <div className={styles.metricCard}>
-                <div className={styles.metricTop}>
-                  <p className={styles.metricLabel}>Total spent</p>
-                  <div className={styles.metricIconBadge}>💳</div>
-                </div>
-                <p className={styles.metricValue}>{totalSpentFormatted}</p>
-              </div>
             </div>
 
-            {/* Recent Bookings Section */}
+            {/* Records Section */}
             <div className={styles.section}>
               <div className={styles.sectionHeader}>
-                <h3 className={styles.sectionTitle}>Recent bookings</h3>
+                <h3 className={styles.sectionTitle}>Recent Activity</h3>
                 <button
                   type="button"
                   className={styles.sectionLink}
@@ -215,61 +313,35 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
 
               {bookingsList.length === 0 ? (
                 <div className={styles.emptyCard}>
-                  <h4 className={styles.emptyTitle}>No bookings yet</h4>
+                  <h4 className={styles.emptyTitle}>No activity yet</h4>
                   <p className={styles.emptyDesc}>
-                    Browse cars and book your first rental.
+                    Your account has no recent activity recorded.
                   </p>
-                  <button
-                    type="button"
-                    className={styles.actionBtn}
-                    onClick={() => setViewFullCart(false)}
-                  >
-                    Browse cars &rarr;
-                  </button>
                 </div>
               ) : (
                 <div className={styles.bookingsList}>
-                  {bookingsList.slice(0, 3).map((item: any, idx: number) => {
-                    const carName =
-                      item.car?.name ||
-                      item.carTitle ||
+                  {bookingsList.slice(0, 5).map((item: any, idx: number) => {
+                    const itemTitle =
+                      item.$title ||
+                      item.name ||
+                      item.username ||
                       item.title ||
-                      item.vehicle ||
-                      `Booking #${item.id || idx + 1}`;
-                    const pickup = item.pickupDate || item.startDate || "Upcoming";
-                    const dropoff = item.returnDate || item.endDate || "";
-                    const status = String(item.status || "CONFIRMED").toUpperCase();
-                    const amount = item.totalAmount
-                      ? `Rs. ${Number(item.totalAmount).toLocaleString()}`
-                      : "Rs. 18,000";
+                      `Item #${item.id || idx + 1}`;
+                    const status = String(item.status || item.orderstatus || "Active").toUpperCase();
 
                     return (
-                      <div key={`booking-${idx}`} className={styles.bookingItemCard}>
+                      <div key={`item-${idx}`} className={styles.bookingItemCard}>
                         <div className={styles.bookingMainInfo}>
-                          <div className={styles.bookingCarIcon}>🚗</div>
+                          <div className={styles.bookingCarIcon}>📄</div>
                           <div>
-                            <p className={styles.bookingCarName}>{carName}</p>
-                            <p className={styles.bookingMetaRow}>
-                              <span>
-                                {pickup} {dropoff ? `– ${dropoff}` : ""}
-                              </span>
-                            </p>
+                            <p className={styles.bookingCarName}>{itemTitle}</p>
                           </div>
                         </div>
 
                         <div className={styles.bookingRight}>
-                          <span
-                            className={`${styles.statusPill} ${
-                              status === "CONFIRMED" || status === "ACTIVE"
-                                ? styles.statusPillActive
-                                : status === "PENDING"
-                                  ? styles.statusPillPending
-                                  : styles.statusPillCancelled
-                            }`}
-                          >
+                          <span className={styles.statusPillActive}>
                             {status}
                           </span>
-                          <span className={styles.bookingAmount}>{amount}</span>
                         </div>
                       </div>
                     );
@@ -277,37 +349,15 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
                 </div>
               )}
             </div>
-
-            {/* Loyalty Perks Banner */}
-            <div className={styles.loyaltyBanner}>
-              <div className={styles.loyaltyStar}>⭐</div>
-              <div className={styles.loyaltyContent}>
-                <h4 className={styles.loyaltyTitle}>Earn loyalty perks</h4>
-                <p className={styles.loyaltyDesc}>
-                  Complete rentals to unlock discounts (up to 20%), free cancellation and priority support.
-                </p>
-              </div>
-            </div>
-
-            {/* Real-time Activity Feed */}
-            <div className={styles.feedCard}>
-              <div className={styles.feedHeader}>
-                <span className={styles.feedDot} />
-                <span>Real-time Feed</span>
-              </div>
-              <p className={styles.feedEmptyText}>
-                No recent activity — bookings and status updates will appear here in real-time.
-              </p>
-            </div>
           </>
         )}
 
-        {/* TAB 2: MY BOOKINGS */}
+        {/* TAB 2: BOOKINGS / RECORDS */}
         {activeTab === "bookings" && (
           <>
             <div className={styles.headerRow}>
               <div className={styles.headerText}>
-                <h2 className={styles.title}>My bookings</h2>
+                <h2 className={styles.title}>All Records</h2>
                 <p className={styles.subtitle}>{bookingsList.length} total</p>
               </div>
 
@@ -315,73 +365,37 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
                 className={styles.statusSelect}
                 value={bookingStatusFilter}
                 onChange={(e) => setBookingStatusFilter(e.target.value)}
-                aria-label="Filter bookings by status"
+                aria-label="Filter records by status"
               >
                 <option value="all">All statuses</option>
-                <option value="confirmed">Confirmed</option>
+                <option value="active">Active</option>
                 <option value="pending">Pending</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="completed">Completed</option>
               </select>
             </div>
 
             {filteredBookings.length === 0 ? (
               <div className={styles.emptyCard}>
-                <h4 className={styles.emptyTitle}>No bookings yet.</h4>
-                <p className={styles.emptyDesc}>
-                  You have not made any bookings yet. Browse our collection to reserve your first ride.
-                </p>
-                <button
-                  type="button"
-                  className={styles.actionBtn}
-                  onClick={() => setViewFullCart(false)}
-                >
-                  Browse cars &rarr;
-                </button>
+                <h4 className={styles.emptyTitle}>No records found</h4>
               </div>
             ) : (
               <div className={styles.bookingsList}>
                 {filteredBookings.map((item: any, idx: number) => {
-                  const carName =
-                    item.car?.name ||
-                    item.carTitle ||
-                    item.title ||
-                    item.vehicle ||
-                    `Rental #${item.id || idx + 1}`;
-                  const pickup = item.pickupDate || item.startDate || "Date specified";
-                  const dropoff = item.returnDate || item.endDate || "";
-                  const status = String(item.status || "CONFIRMED").toUpperCase();
-                  const amount = item.totalAmount
-                    ? `Rs. ${Number(item.totalAmount).toLocaleString()}`
-                    : "Rs. 36,000";
+                  const itemTitle =
+                    item.$title || item.name || item.username || `Record #${item.id || idx + 1}`;
+                  const status = String(item.status || item.orderstatus || "Active").toUpperCase();
 
                   return (
-                    <div key={`booking-item-${idx}`} className={styles.bookingItemCard}>
+                    <div key={`rec-item-${idx}`} className={styles.bookingItemCard}>
                       <div className={styles.bookingMainInfo}>
-                        <div className={styles.bookingCarIcon}>🚗</div>
+                        <div className={styles.bookingCarIcon}>📄</div>
                         <div>
-                          <p className={styles.bookingCarName}>{carName}</p>
-                          <p className={styles.bookingMetaRow}>
-                            <span>
-                              {pickup} {dropoff ? `– ${dropoff}` : ""}
-                            </span>
-                            {item.location && <span>• 📍 {item.location}</span>}
-                          </p>
+                          <p className={styles.bookingCarName}>{itemTitle}</p>
                         </div>
                       </div>
 
                       <div className={styles.bookingRight}>
-                        <span
-                          className={`${styles.statusPill} ${
-                            status === "CONFIRMED" || status === "ACTIVE"
-                              ? styles.statusPillActive
-                              : status === "PENDING"
-                                ? styles.statusPillPending
-                                : styles.statusPillCancelled
-                          }`}
-                        >
-                          {status}
-                        </span>
-                        <span className={styles.bookingAmount}>{amount}</span>
+                        <span className={styles.statusPillActive}>{status}</span>
                       </div>
                     </div>
                   );
@@ -401,17 +415,12 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
               </div>
             </div>
 
-            {/* Profile Form Card */}
             <div className={styles.profileCard}>
               <div className={styles.profileAvatarSection}>
                 <div className={styles.avatarLg}>{userInitial}</div>
                 <div>
-                  <h3 className={styles.profileHeaderName}>
-                    {userName}
-                  </h3>
-                  <p className={styles.profileHeaderEmail}>
-                    {userEmail}
-                  </p>
+                  <h3 className={styles.profileHeaderName}>{userName}</h3>
+                  <p className={styles.profileHeaderEmail}>{userEmail}</p>
                   <div className={styles.profileBadgesRow}>
                     <span className={`${styles.statusPill} ${styles.statusPillActive}`}>
                       {userStatus}
@@ -459,29 +468,16 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
                     value={userEmail}
                     readOnly
                   />
-                  <p className={styles.inputHelper}>
-                    Email cannot be changed once verified.
-                  </p>
                 </div>
-              </div>
-
-              <div>
-                <button type="button" className={styles.actionBtn}>
-                  Save changes
-                </button>
               </div>
             </div>
 
-            {/* Two-Factor Authentication Security Box */}
+            {/* Security / MFA */}
             <div className={styles.securityCard}>
               <div className={styles.securityHeader}>
                 <span className={styles.securityIcon}>🛡️</span>
                 <h4 className={styles.securityTitle}>Two-Factor Authentication</h4>
               </div>
-              <p className={styles.securityDesc}>
-                Add an extra layer of security to your account.
-              </p>
-
               <div className={styles.securityStatusRow}>
                 <span className={styles.inputLabel}>Status:</span>
                 <span
@@ -501,35 +497,6 @@ export const DashboardLayout: React.FC<WidgetLayoutProps> = ({
                 >
                   {mfaEnabled ? "Disable MFA" : "Enable MFA"}
                 </button>
-              </div>
-            </div>
-
-            {/* Stats & Restrictions Card (Inspiration New Image 4) */}
-            <div className={styles.metricsRow}>
-              <div className={styles.metricCard}>
-                <div className={styles.metricTop}>
-                  <p className={styles.metricLabel}>Total bookings</p>
-                  <div className={styles.metricIconBadge}>📋</div>
-                </div>
-                <p className={styles.metricValue}>{totalBookingsCount}</p>
-              </div>
-
-              <div className={styles.metricCard}>
-                <div className={styles.metricTop}>
-                  <p className={styles.metricLabel}>Total spent</p>
-                  <div className={styles.metricIconBadge}>💳</div>
-                </div>
-                <p className={styles.metricValue}>{totalSpentFormatted}</p>
-              </div>
-
-              <div className={styles.metricCard}>
-                <div className={styles.metricTop}>
-                  <p className={styles.metricLabel}>Member since</p>
-                  <div className={styles.metricIconBadge}>📅</div>
-                </div>
-                <p className={`${styles.metricValue} ${styles.metricValueSmall}`}>
-                  {joinedDate}
-                </p>
               </div>
             </div>
           </>

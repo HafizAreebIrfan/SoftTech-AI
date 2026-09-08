@@ -45,14 +45,28 @@ export const extractFirstImageUrl = (value: unknown): string | null => {
     const parts = trimmed.split(/,\s*(?=https?:\/\/|\/|data:|blob:)/i);
     for (const part of parts) {
       const clean = part.trim().replace(/^["']|["']$/g, "");
+      if (clean.startsWith("/")) {
+        try {
+          return new URL(clean, API_BASE_URL).href;
+        } catch {
+          return clean;
+        }
+      }
       if (
         clean.startsWith("data:") ||
         clean.startsWith("blob:") ||
         clean.startsWith("//") ||
-        clean.startsWith("/") ||
         /^https?:\/\//i.test(clean)
       ) {
         return clean;
+      }
+    }
+
+    if (trimmed.startsWith("/")) {
+      try {
+        return new URL(trimmed, API_BASE_URL).href;
+      } catch {
+        return trimmed;
       }
     }
 
@@ -60,7 +74,6 @@ export const extractFirstImageUrl = (value: unknown): string | null => {
       trimmed.startsWith("data:") ||
       trimmed.startsWith("blob:") ||
       trimmed.startsWith("//") ||
-      trimmed.startsWith("/") ||
       /^https?:\/\//i.test(trimmed)
     ) {
       return trimmed;
@@ -100,11 +113,16 @@ export const extractAllImageUrls = (value: unknown): string[] => {
     const urls: string[] = [];
     for (const part of parts) {
       const clean = part.trim().replace(/^["']|["']$/g, "");
-      if (
+      if (clean.startsWith("/")) {
+        try {
+          urls.push(new URL(clean, API_BASE_URL).href);
+        } catch {
+          urls.push(clean);
+        }
+      } else if (
         clean.startsWith("data:") ||
         clean.startsWith("blob:") ||
         clean.startsWith("//") ||
-        clean.startsWith("/") ||
         /^https?:\/\//i.test(clean)
       ) {
         urls.push(clean);
@@ -112,11 +130,18 @@ export const extractAllImageUrls = (value: unknown): string[] => {
     }
     if (urls.length > 0) return urls;
 
+    if (trimmed.startsWith("/")) {
+      try {
+        return [new URL(trimmed, API_BASE_URL).href];
+      } catch {
+        return [trimmed];
+      }
+    }
+
     if (
       trimmed.startsWith("data:") ||
       trimmed.startsWith("blob:") ||
       trimmed.startsWith("//") ||
-      trimmed.startsWith("/") ||
       /^https?:\/\//i.test(trimmed)
     ) {
       return [trimmed];

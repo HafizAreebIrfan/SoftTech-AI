@@ -18,7 +18,7 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt, variant }) => {
   const proxiedSrc = getProxiedImageUrl(value);
 
   const [currentSrc, setCurrentSrc] = useState<string | null>(
-    proxiedSrc || rawSrc,
+    rawSrc || proxiedSrc,
   );
   const [hasError, setHasError] = useState(false);
 
@@ -26,13 +26,13 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt, variant }) => {
   // main image). useState only seeds once, so without this the <img> keeps
   // the original source. Generic — applies to every company's images.
   useEffect(() => {
-    setCurrentSrc(proxiedSrc || rawSrc);
+    setCurrentSrc(rawSrc || proxiedSrc);
     setHasError(false);
-  }, [proxiedSrc, rawSrc]);
+  }, [rawSrc, proxiedSrc]);
 
   const handleError = () => {
-    if (currentSrc === proxiedSrc && rawSrc && rawSrc !== proxiedSrc) {
-      setCurrentSrc(rawSrc);
+    if (currentSrc === rawSrc && proxiedSrc && proxiedSrc !== rawSrc) {
+      setCurrentSrc(proxiedSrc);
     } else {
       setHasError(true);
     }
@@ -62,6 +62,7 @@ const ImageField: React.FC<RenderImageProps> = ({ value, alt, variant }) => {
         alt={alt}
         className={imageClass}
         loading="lazy"
+        referrerPolicy="no-referrer"
         onError={handleError}
       />
     </div>

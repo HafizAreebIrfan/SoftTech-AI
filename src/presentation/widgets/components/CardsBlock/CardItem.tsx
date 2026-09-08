@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import styles from "../../../../styles/cardsblock.module.css";
 import type { CardItemProps } from "../../../../interfaces/mcp/cardsblock.interface";
 import { extractFirstImageUrl } from "../../helper/RenderImage/getproxiedimageurl";
@@ -37,8 +37,17 @@ export const CardItem: React.FC<CardItemProps> = ({
 
   // Detect whether this item is a vehicle / rental car or an e-commerce / general product
   const isVehicle =
-    Boolean(rec.make && (rec.fuelType || rec.transmission || rec.licensePlate || rec.dailyRate || rec.pricePerDay)) ||
-    /car|vehicle|rental|fleet|auto/i.test(String(rec.category || "").toLowerCase());
+    Boolean(
+      rec.make &&
+      (rec.fuelType ||
+        rec.transmission ||
+        rec.licensePlate ||
+        rec.dailyRate ||
+        rec.pricePerDay),
+    ) ||
+    /car|vehicle|rental|fleet|auto/i.test(
+      String(rec.category || "").toLowerCase(),
+    );
 
   // Extract Titles
   const mainTitle =
@@ -72,7 +81,10 @@ export const CardItem: React.FC<CardItemProps> = ({
   const specs: Array<{ icon: string; text: string }> = [];
   if (isVehicle) {
     if (rec.fuel || rec.fuelType) {
-      specs.push({ icon: "⛽", text: String(rec.fuel || rec.fuelType).toLowerCase() });
+      specs.push({
+        icon: "⛽",
+        text: String(rec.fuel || rec.fuelType).toLowerCase(),
+      });
     }
     if (rec.transmission) {
       specs.push({ icon: "⚙️", text: String(rec.transmission).toLowerCase() });
@@ -122,10 +134,10 @@ export const CardItem: React.FC<CardItemProps> = ({
 
   const hasValidImage = Boolean(
     imageUrl &&
-      (imageUrl.startsWith("data:") ||
-        imageUrl.startsWith("blob:") ||
-        imageUrl.startsWith("/") ||
-        /^https?:\/\//i.test(imageUrl)),
+    (imageUrl.startsWith("data:") ||
+      imageUrl.startsWith("blob:") ||
+      imageUrl.startsWith("/") ||
+      /^https?:\/\//i.test(imageUrl)),
   );
 
   // Determine deterministic banner color based on name/id
@@ -136,7 +148,9 @@ export const CardItem: React.FC<CardItemProps> = ({
   const bannerClass = BANNER_CLASSES[bannerHash % BANNER_CLASSES.length];
 
   // Availability status
-  const statusStr = String(rec.status || rec.availabilityStatus || "").toUpperCase();
+  const statusStr = String(
+    rec.status || rec.availabilityStatus || "",
+  ).toUpperCase();
   const isAvailable =
     rec.isAvailable !== false &&
     statusStr !== "MAINTENANCE" &&
@@ -158,18 +172,29 @@ export const CardItem: React.FC<CardItemProps> = ({
         onClick: () => onSelect?.(rec),
       };
 
+  const [imgError, setImgError] = useState(false);
   const actionLabel = isVehicle ? "Book now" : "View details";
 
   return (
     <CardContainer {...containerProps}>
       {/* Top Banner with Image or Colored Theme + Silhouette */}
       <div className={`${styles.bannerWrapper} ${bannerClass}`}>
-        {hasValidImage ? (
+        {hasValidImage && !imgError ? (
           <img
             src={imageUrl!}
             alt={`${mainTitle} ${variantTitle}`}
             className={styles.bannerImage}
             loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.currentTarget;
+              if (!target.dataset.triedProxy) {
+                target.dataset.triedProxy = "true";
+                target.src = `https://softtech-ai.onrender.com/api/images/image-proxy?url=${encodeURIComponent(imageUrl!)}`;
+              } else {
+                setImgError(true);
+              }
+            }}
           />
         ) : isVehicle ? (
           <CarSilhouetteIcon />
@@ -192,7 +217,9 @@ export const CardItem: React.FC<CardItemProps> = ({
       <div className={styles.contentBody}>
         <div className={styles.titleRow}>
           <h3 className={styles.carTitle}>{mainTitle}</h3>
-          {variantTitle && <span className={styles.carVariant}>{variantTitle}</span>}
+          {variantTitle && (
+            <span className={styles.carVariant}>{variantTitle}</span>
+          )}
         </div>
 
         {locationStr && (

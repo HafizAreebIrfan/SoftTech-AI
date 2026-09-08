@@ -9,6 +9,8 @@ export interface CartItemData {
   tier?: string;
   specs?: Record<string, unknown>;
   options?: Record<string, string | number>;
+  checkoutUrl?: string;
+  productUrl?: string;
 }
 
 export interface CartStore {

@@ -91,8 +91,15 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   }, [targetRecord]);
 
   const activeImageUrl = allImages[activeImageIndex] || allImages[0] || "";
+  const [imageFailed, setImageFailed] = useState<boolean>(false);
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [activeImageUrl]);
+
   const hasValidImage = Boolean(
-    activeImageUrl &&
+    !imageFailed &&
+      activeImageUrl &&
       (activeImageUrl.startsWith("data:") ||
         activeImageUrl.startsWith("blob:") ||
         activeImageUrl.startsWith("/") ||
@@ -245,29 +252,79 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     targetRecord.itemUrl ||
     "";
 
+  // Derived company website URL
+  const extractCompanyWebsite = (): string => {
+    if (targetRecord?.checkoutUrl && /^https?:\/\//i.test(targetRecord.checkoutUrl)) return targetRecord.checkoutUrl;
+    if (targetRecord?.url && /^https?:\/\//i.test(targetRecord.url)) return targetRecord.url;
+    if (targetRecord?.link && /^https?:\/\//i.test(targetRecord.link)) return targetRecord.link;
+    if (metadata.webCheckoutUrl && /^https?:\/\//i.test(metadata.webCheckoutUrl)) return metadata.webCheckoutUrl;
+    if (metadata.globalCheckoutUrl && /^https?:\/\//i.test(metadata.globalCheckoutUrl)) return metadata.globalCheckoutUrl;
+    if (metadata.websiteURL) {
+      const u = metadata.websiteURL.trim();
+      return u.startsWith("http") ? u : `https://${u}`;
+    }
+    if (metadata.website) {
+      const u = metadata.website.trim();
+      return u.startsWith("http") ? u : `https://${u}`;
+    }
+    if (metadata.domain) {
+      const u = metadata.domain.trim();
+      return u.startsWith("http") ? u : `https://${u}`;
+    }
+    // Derive from company email if available (e.g. karachi@carrental.pro -> https://carrental.pro)
+    const email = targetRecord?.location?.email || targetRecord?.useremail || targetRecord?.email;
+    if (email && typeof email === "string" && email.includes("@")) {
+      const domain = email.split("@")[1]?.trim();
+      if (domain && !domain.includes("dummyjson") && !domain.includes("example") && !domain.includes("softtech")) {
+        return `https://${domain}`;
+      }
+    }
+    return "";
+  };
+
   const handleViewOnCompany = () => {
-    const url =
+    let url =
       singleProductUrl ||
+      extractCompanyWebsite() ||
       metadata.websiteURL ||
       metadata.website ||
       metadata.domain;
+
+    if (!url && companyName) {
+      url = `https://www.google.com/search?q=${encodeURIComponent(companyName)}`;
+    }
+
     if (url && typeof window !== "undefined") {
-      const finalUrl = appendChatUrlToCheckout(url);
+      const safeUrl = url.startsWith("http") ? url : `https://${url}`;
+      const finalUrl = appendChatUrlToCheckout(safeUrl);
       window.open(finalUrl, "_blank", "noopener,noreferrer");
     }
   };
 
   const handleContinueBooking = () => {
+    // 1. Check record-specific or metadata checkout URL
     let checkoutBase =
       targetRecord.checkoutUrl ||
+      targetRecord.checkout_url ||
       targetRecord.bookingUrl ||
+      targetRecord.booking_url ||
       metadata.webCheckoutUrl ||
-      metadata.websiteURL ||
+      metadata.globalCheckoutUrl ||
+      metadata.checkoutUrl ||
       "";
 
+    // 2. Fallback to company website checkout endpoint
+    if (!checkoutBase) {
+      const companyBase = extractCompanyWebsite();
+      if (companyBase) {
+        checkoutBase = `${companyBase.replace(/\/$/, "")}/checkout`;
+      }
+    }
+
     if (checkoutBase) {
+      const safeUrl = checkoutBase.startsWith("http") ? checkoutBase : `https://${checkoutBase}`;
       try {
-        const parsed = new URL(checkoutBase);
+        const parsed = new URL(safeUrl);
         parsed.searchParams.set("carId", String(targetRecord.id || ""));
         parsed.searchParams.set("days", String(rentalDays));
         parsed.searchParams.set("startDate", `2026-09-${selectedStartDay}`);
@@ -281,22 +338,26 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         );
         return;
       } catch {
-        // Fallback below
+        window.open(
+          appendChatUrlToCheckout(safeUrl),
+          "_blank",
+          "noopener,noreferrer",
+        );
+        return;
       }
     }
 
-    const checkoutParams = new URLSearchParams({
-      title: `${mainTitle} ${variantTitle}`.trim(),
-      price: grandTotal.toFixed(2),
-      qty: "1",
-      days: String(rentalDays),
-    });
-    const fallbackUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
-    window.open(
-      appendChatUrlToCheckout(fallbackUrl),
-      "_blank",
-      "noopener,noreferrer",
-    );
+    // 3. If no checkout URL is configured by the company, open the product link or inform user
+    if (singleProductUrl) {
+      window.open(
+        appendChatUrlToCheckout(singleProductUrl),
+        "_blank",
+        "noopener,noreferrer",
+      );
+      return;
+    }
+
+    alert(`Checkout URL is not configured for ${companyName}. Please configure webCheckoutUrl in company registration.`);
   };
 
   const handleAddToCart = () => {
@@ -307,6 +368,12 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         price: rawPrice,
         image: activeImageUrl || undefined,
         tier: targetRecord.category,
+        checkoutUrl:
+          targetRecord.checkoutUrl ||
+          targetRecord.checkout_url ||
+          targetRecord.bookingUrl ||
+          targetRecord.booking_url,
+        productUrl: singleProductUrl,
       },
       quantity,
     );
@@ -521,6 +588,16 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 src={activeImageUrl}
                 alt={`${mainTitle} ${variantTitle}`}
                 className={styles.heroImage}
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.dataset.triedProxy) {
+                    target.dataset.triedProxy = "true";
+                    target.src = `https://softtech-ai.onrender.com/api/images/image-proxy?url=${encodeURIComponent(activeImageUrl)}`;
+                  } else {
+                    setImageFailed(true);
+                  }
+                }}
               />
             ) : isVehicle ? (
               <DetailSilhouetteIcon />
@@ -559,6 +636,16 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     src={imgUrl}
                     alt={`Thumbnail ${idx + 1}`}
                     className={styles.galleryThumbImg}
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (!target.dataset.triedProxy) {
+                        target.dataset.triedProxy = "true";
+                        target.src = `https://softtech-ai.onrender.com/api/images/image-proxy?url=${encodeURIComponent(imgUrl)}`;
+                      } else {
+                        target.style.display = "none";
+                      }
+                    }}
                   />
                 </button>
               ))}

@@ -55,15 +55,6 @@ export const WeatherBlock: React.FC<WeatherBlockProps> = ({
 
   return (
     <div className={styles.container}>
-      <div className={styles.headerGroup}>
-        <h3 className={styles.mainTitle}>{title}</h3>
-        {subtitle && <p className={styles.subTitle}>{subtitle}</p>}
-      </div>
-
-      {textSummary && (
-        <div className={styles.summaryTextBanner}>{textSummary}</div>
-      )}
-
       {/* Hero Weather Card */}
       <div className={styles.heroCard}>
         <div className={styles.heroLeft}>
@@ -164,7 +155,6 @@ export const WeatherBlock: React.FC<WeatherBlockProps> = ({
           </div>
         </div>
       )}
-
     </div>
   );
 };

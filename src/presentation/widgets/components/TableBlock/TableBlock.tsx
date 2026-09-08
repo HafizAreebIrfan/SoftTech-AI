@@ -620,7 +620,11 @@ function parseCreatedRecord(
         <TableRecordDetail
           record={selectedRecord}
           fields={fieldsWithOptions}
+          actions={actions}
           onBack={() => updateModalState(null, null, false)}
+          onRefresh={() => {
+            showToast("✓ Record view refreshed");
+          }}
           onEdit={
             canUpdate
               ? (rec) => {
@@ -733,54 +737,7 @@ function parseCreatedRecord(
         )}
       </div>
 
-      {/* Filter Bar Toolbar (Inspiration New Image 3) */}
-      {records.length > 2 && (
-        <div className={styles.filterBarWrapper}>
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Search</label>
-            <input
-              type="text"
-              placeholder="Name, email, phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={styles.filterInput}
-            />
-          </div>
 
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Role</label>
-            <select className={styles.filterSelect}>
-              <option value="all">All roles</option>
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Status</label>
-            <select className={styles.filterSelect}>
-              <option value="all">All</option>
-              <option value="available">Available</option>
-              <option value="pending">Pending</option>
-              <option value="booked">Booked</option>
-            </select>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Joined from</label>
-            <input type="date" className={styles.filterInput} />
-          </div>
-
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Joined to</label>
-            <input type="date" className={styles.filterInput} />
-          </div>
-
-          <button type="button" className={styles.applyBtn}>
-            Apply
-          </button>
-        </div>
-      )}
 
       <div className={styles.tableWrapper}>
         <table className={styles.table}>

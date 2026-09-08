@@ -186,23 +186,32 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
       return checkoutAction.url || checkoutAction.href;
     }
 
-    // 2. Company metadata domain / webCheckoutUrl
+    // 2. Check items in cart for item-specific checkoutUrl
+    const itemWithCheckout = lineItems.find((it: any) => it.checkoutUrl);
+    if (itemWithCheckout?.checkoutUrl) {
+      return itemWithCheckout.checkoutUrl;
+    }
+
+    // 3. Company metadata domain / webCheckoutUrl
     const metadata = (window as any).__WIDGET_METADATA__ || {};
     const externalBase =
       metadata.webCheckoutUrl ||
+      metadata.globalCheckoutUrl ||
+      metadata.checkoutUrl ||
       metadata.websiteURL ||
       metadata.website ||
       metadata.domain ||
       "";
 
-    if (
-      externalBase &&
-      typeof externalBase === "string" &&
-      externalBase.startsWith("http")
-    ) {
+    if (externalBase && typeof externalBase === "string") {
+      const safeBase = externalBase.startsWith("http")
+        ? externalBase
+        : `https://${externalBase}`;
       try {
-        const parsed = new URL(externalBase);
-        parsed.pathname = parsed.pathname.replace(/\/$/, "") + "/checkout";
+        const parsed = new URL(safeBase);
+        if (!parsed.pathname.includes("checkout")) {
+          parsed.pathname = parsed.pathname.replace(/\/$/, "") + "/checkout";
+        }
         parsed.searchParams.set("qty", String(cartSummary.totalQuantity));
         parsed.searchParams.set(
           "total",
@@ -210,39 +219,29 @@ export const CartLayout: React.FC<WidgetLayoutProps> = ({
         );
         return parsed.toString();
       } catch {
-        return `${externalBase}/checkout`;
+        return `${safeBase}/checkout`;
       }
     }
 
-    // 3. Render fallback checkout URL
-    if (lineItems.length > 1) {
-      const itemsJson = JSON.stringify(
-        lineItems.map((item) => ({
-          name: item.title,
-          price: item.discountedTotal || item.total || item.price,
-          qty: item.quantity,
-          image: item.thumbnail || "",
-        })),
-      );
-      const checkoutParams = new URLSearchParams({
-        items: itemsJson,
-        total: (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2),
-      });
-      return `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
+    // 4. If line items have product URLs, redirect to company product page
+    const itemWithUrl = lineItems.find(
+      (it: any) => it.productUrl || it.url || it.link,
+    );
+    if (itemWithUrl?.productUrl || itemWithUrl?.url || itemWithUrl?.link) {
+      return itemWithUrl.productUrl || itemWithUrl.url || itemWithUrl.link;
     }
-    const firstItem = lineItems[0];
-    const checkoutParams = new URLSearchParams({
-      title: firstItem?.title || "Item",
-      price: (cartSummary.discountedTotal || cartSummary.totalAmount).toFixed(2),
-      qty: String(cartSummary.totalQuantity),
-      image: firstItem?.thumbnail || "",
-    });
-    return `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
+
+    return "";
   }, [data, actions, cartSummary, lineItems]);
 
-  const finalCheckoutUrl = appendChatUrlToCheckout(checkoutUrl);
+  const finalCheckoutUrl = checkoutUrl ? appendChatUrlToCheckout(checkoutUrl) : "";
 
   const handleCheckout = () => {
+    if (!finalCheckoutUrl) {
+      alert("Checkout URL is not configured for this company.");
+      return;
+    }
+
     markCheckoutPending();
     setPendingCheckout(true);
 

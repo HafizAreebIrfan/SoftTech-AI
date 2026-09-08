@@ -44,54 +44,50 @@ export const CartDrawer: React.FC = () => {
   const metadata = (window as any).__WIDGET_METADATA__ || {};
   const externalBase =
     metadata.webCheckoutUrl ||
+    metadata.globalCheckoutUrl ||
+    metadata.checkoutUrl ||
     metadata.websiteURL ||
     metadata.website ||
     metadata.domain ||
     "";
 
-  let rawCheckoutUrl = "";
-  if (
-    externalBase &&
-    typeof externalBase === "string" &&
-    externalBase.startsWith("http")
-  ) {
+  // Check item-specific checkout URL first
+  const itemWithCheckout = items.find((i) => i.checkoutUrl);
+  let rawCheckoutUrl = itemWithCheckout?.checkoutUrl || "";
+
+  if (!rawCheckoutUrl && externalBase && typeof externalBase === "string") {
+    const safeBase = externalBase.startsWith("http")
+      ? externalBase
+      : `https://${externalBase}`;
     try {
-      const parsed = new URL(externalBase);
-      parsed.pathname = parsed.pathname.replace(/\/$/, "") + "/checkout";
+      const parsed = new URL(safeBase);
+      if (!parsed.pathname.includes("checkout")) {
+        parsed.pathname = parsed.pathname.replace(/\/$/, "") + "/checkout";
+      }
       parsed.searchParams.set("qty", String(totalCount));
       parsed.searchParams.set("total", subtotal.toFixed(2));
       rawCheckoutUrl = parsed.toString();
     } catch {
-      rawCheckoutUrl = `${externalBase}/checkout`;
+      rawCheckoutUrl = `${safeBase}/checkout`;
     }
-  } else if (items.length > 1) {
-    const itemsJson = JSON.stringify(
-      items.map((item) => ({
-        name: item.title,
-        price: parseNumericPrice(item.price),
-        qty: item.quantity,
-        image: item.image || "",
-      })),
-    );
-    const checkoutParams = new URLSearchParams({
-      items: itemsJson,
-      total: subtotal.toFixed(2),
-    });
-    rawCheckoutUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
-  } else {
-    const firstItem = items[0];
-    const checkoutParams = new URLSearchParams({
-      title: firstItem?.title || "Item",
-      price: subtotal.toFixed(2),
-      qty: String(totalCount),
-      image: firstItem?.image || "",
-    });
-    rawCheckoutUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
   }
 
-  const checkoutUrl = appendChatUrlToCheckout(rawCheckoutUrl);
+  // Fallback to company product URL if available
+  if (!rawCheckoutUrl) {
+    const itemWithUrl = items.find((i) => i.productUrl);
+    if (itemWithUrl?.productUrl) {
+      rawCheckoutUrl = itemWithUrl.productUrl;
+    }
+  }
+
+  const checkoutUrl = rawCheckoutUrl ? appendChatUrlToCheckout(rawCheckoutUrl) : "";
 
   const handleCheckout = () => {
+    if (!checkoutUrl) {
+      alert("Checkout URL is not configured for this company.");
+      return;
+    }
+
     setIsCheckingOut(true);
     markCheckoutPending();
     setPendingCheckout(true);
