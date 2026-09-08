@@ -20,15 +20,19 @@ import { useRealtimeStream } from "../../hooks/useRealtimeStream";
  */
 const recordFromToolResult = (result: unknown): Record<string, any> | null => {
   const payload = extractToolResult(result);
-  let data: any = payload?.structuredContent?.data;
+  let data: any =
+    payload?.structuredContent?.data ?? (payload as any)?.data ?? payload;
 
-  if (
-    data &&
-    typeof data === "object" &&
-    !Array.isArray(data) &&
-    "data" in data
-  ) {
-    data = (data as Record<string, unknown>).data;
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    if ("product" in data && data.product && typeof data.product === "object") {
+      return data.product as Record<string, any>;
+    }
+    if ("car" in data && data.car && typeof data.car === "object") {
+      return data.car as Record<string, any>;
+    }
+    if ("data" in data && data.data && typeof data.data === "object") {
+      data = data.data;
+    }
   }
 
   if (Array.isArray(data)) {
@@ -160,15 +164,22 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
 
     if (detailTool?.tool && rawId !== undefined && rawId !== null) {
       const idStr = String(rawId);
-      console.log(`[CardsBlock] Card selected → calling detail tool "${detailTool.tool}" for id=${idStr}`);
+      const numId = Number(rawId);
+      const isNumeric = !isNaN(numId) && typeof rawId !== "boolean";
+      console.log(`[CardsBlock] Card selected → calling detail tool "${detailTool.tool}" for id=${rawId}`);
       try {
-        const result = await callMcpTool(detailTool.tool, {
-          id: idStr,
-          _id: idStr,
-          productId: idStr,
-          packageId: idStr,
-          itemId: idStr,
-        });
+        let result: unknown;
+        try {
+          // Attempt 1: clean single parameter with native type (handles strict Zod number/string schemas)
+          result = await callMcpTool(detailTool.tool, { id: isNumeric ? numId : idStr });
+        } catch {
+          // Attempt 2: fallback with alternate parameter keys
+          result = await callMcpTool(detailTool.tool, {
+            id: idStr,
+            productId: isNumeric ? numId : idStr,
+            itemId: isNumeric ? numId : idStr,
+          });
+        }
         console.log(`[CardsBlock] ✓ Detail tool "${detailTool.tool}" succeeded:`, result);
         // A widget-initiated callTool returns the result to us; the host does
         // NOT automatically re-render the widget with it. So apply it ourselves:

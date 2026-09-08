@@ -14,10 +14,10 @@ import type {
 
 export type ActionRole = "mutate" | "view" | "commerce" | "other";
 
-const MUTATE_ID_RE = /^(create|add|new|update|edit|save|delete|remove)$/i;
-const VIEW_ID_RE = /^(view|detail|select|single|show|open|get|read)$/i;
+const MUTATE_ID_RE = /^(create|add|new|update|edit|save|delete|remove|create_item|update_item|delete_item)$/i;
+const VIEW_ID_RE = /^(view|detail|select|single|show|open|get|read|select_item|view_item|get_item|item_detail|car_detail|product_detail)$/i;
 const COMMERCE_ID_RE =
-  /^(add_to_cart|checkout|proceed_checkout|buy|purchase|book|reserve|pay|subscribe)$/i;
+  /^(add_to_cart|checkout|proceed_checkout|buy|purchase|book|reserve|pay|subscribe|book_car|book_now|order)$/i;
 
 const MUTATE_RE = /(create|update|edit|delete|remove|add|save|new)/i;
 const VIEW_RE = /(view|detail|select|single|show|open|get|read)/i;

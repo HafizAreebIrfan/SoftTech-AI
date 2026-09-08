@@ -8,15 +8,10 @@
 
 .catalogWrapper {
   display: flex;
-  gap: 20px;
+  flex-direction: column;
+  gap: 16px;
   width: 100%;
   box-sizing: border-box;
-}
-
-@media (max-width: 820px) {
-  .catalogWrapper {
-    flex-direction: column;
-  }
 }
 
 .sidebar {
@@ -78,6 +73,7 @@
 }
 
 .sidebarMain {
+  width: 100%;
   flex: 1;
   min-width: 0;
   display: flex;

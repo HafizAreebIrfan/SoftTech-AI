@@ -3,6 +3,11 @@ import styles from "../../../../styles/detailblock.module.css";
 import type { DetailBlockProps } from "../../../../interfaces/mcp/detailblock.interface";
 import { useMcpWidgetStore } from "../../../../infrastructure/store/mcpWidgetStore";
 import { requestDisplayMode } from "../../../../utils/mcpBridge";
+import {
+  extractAllImageUrls,
+} from "../../helper/RenderImage/getproxiedimageurl";
+import { appendChatUrlToCheckout } from "../../../../utils/checkoutHelper";
+import { useCartStore } from "../../../../infrastructure/store/cartStore";
 
 // Silhouette SVG for vehicle placeholder
 const DetailSilhouetteIcon: React.FC = () => (
@@ -19,7 +24,6 @@ const DetailSilhouetteIcon: React.FC = () => (
 export const DetailBlock: React.FC<DetailBlockProps> = ({
   records = [],
   collection,
-  actions = [],
 }) => {
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
 
@@ -37,17 +41,113 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     };
   }, []);
 
-  // Booking Card State
-  const [selectedInsurance, setSelectedInsurance] = useState<"basic" | "standard" | "premium">("basic");
+  const metadata = useMemo(() => {
+    if (typeof window === "undefined") return {};
+    return (
+      (window as any).__WIDGET_METADATA__ ||
+      (window as any).__WIDGET_DATA__?.metadata ||
+      {}
+    );
+  }, []);
+
+  const companyName = metadata.companyName || collection?.entity || "Store";
+
+  // Entity Detection: Distinguish Vehicles from E-Commerce / General Products
+  const isVehicle = useMemo(() => {
+    if (!targetRecord) return false;
+    const entity = String(collection?.entity || "").toLowerCase();
+    const industry = String(metadata?.industry || "").toLowerCase();
+    if (
+      entity.includes("car") ||
+      entity.includes("vehicle") ||
+      entity.includes("fleet") ||
+      entity.includes("auto") ||
+      industry.includes("travel") ||
+      industry.includes("rental") ||
+      industry.includes("automotive")
+    ) {
+      return true;
+    }
+    if (
+      (targetRecord.fuelType || targetRecord.fuel || targetRecord.licensePlate) &&
+      !targetRecord.sku &&
+      !targetRecord.dimensions
+    ) {
+      return true;
+    }
+    return false;
+  }, [collection?.entity, metadata?.industry, targetRecord]);
+
+  // Gallery Images & Active Image Index
+  const allImages = useMemo(() => {
+    if (!targetRecord) return [];
+    return extractAllImageUrls(targetRecord);
+  }, [targetRecord]);
+
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [targetRecord]);
+
+  const activeImageUrl = allImages[activeImageIndex] || allImages[0] || "";
+  const hasValidImage = Boolean(
+    activeImageUrl &&
+      (activeImageUrl.startsWith("data:") ||
+        activeImageUrl.startsWith("blob:") ||
+        activeImageUrl.startsWith("/") ||
+        /^https?:\/\//i.test(activeImageUrl)),
+  );
+
+  // E-Commerce Quantity & Cart Store
+  const [quantity, setQuantity] = useState<number>(
+    targetRecord?.minimumOrderQuantity || 1,
+  );
+  const [addedToCartToast, setAddedToCartToast] = useState<boolean>(false);
+  const addItem = useCartStore((state) => state.addItem);
+  const openCart = useCartStore((state) => state.openCart);
+
+  const maxStock =
+    typeof targetRecord?.stock === "number" ? targetRecord.stock : 99;
+
+  // Car Rental Interactive Calendar Date Selection
   const [selectedStartDay, setSelectedStartDay] = useState<number>(7);
-  const [selectedEndDay, setSelectedEndDay] = useState<number>(9);
-  const [pickupLocation, setPickupLocation] = useState<string>("Islamabad Blue Area Branch — Islamabad");
+  const [selectedEndDay, setSelectedEndDay] = useState<number | null>(9);
+  const [selectedInsurance, setSelectedInsurance] = useState<
+    "basic" | "standard" | "premium"
+  >("basic");
+  const [pickupLocation, setPickupLocation] = useState<string>(
+    targetRecord?.location?.name ||
+      targetRecord?.city ||
+      "Karachi Airport Branch",
+  );
   const [dropoffLocation, setDropoffLocation] = useState<string>("same");
+
+  const handleDayClick = (day: number) => {
+    if (selectedStartDay === null || (selectedStartDay !== null && selectedEndDay !== null)) {
+      setSelectedStartDay(day);
+      setSelectedEndDay(null);
+    } else {
+      if (day > selectedStartDay) {
+        setSelectedEndDay(day);
+      } else {
+        setSelectedStartDay(day);
+        setSelectedEndDay(null);
+      }
+    }
+  };
+
+  const effectiveEndDay = selectedEndDay ?? selectedStartDay;
+  const rentalDays = Math.max(1, effectiveEndDay - selectedStartDay);
 
   if (!targetRecord) {
     return (
       <div className={styles.container}>
-        <button type="button" className={styles.backBtn} onClick={() => popSubView()}>
+        <button
+          type="button"
+          className={styles.backBtn}
+          onClick={() => popSubView()}
+        >
           &larr; Back
         </button>
         <div className={styles.emptyDetailState}>
@@ -59,103 +159,49 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   }
 
   // Titles
-  const mainTitle =
-    targetRecord.make ||
-    targetRecord.$title ||
-    targetRecord.title ||
-    targetRecord.name ||
-    "Vehicle Details";
+  const mainTitle = isVehicle
+    ? targetRecord.make ||
+      targetRecord.$title ||
+      targetRecord.title ||
+      targetRecord.name ||
+      "Vehicle Details"
+    : targetRecord.title ||
+      targetRecord.$title ||
+      targetRecord.name ||
+      "Product Details";
 
-  const variantTitle =
-    targetRecord.model ||
-    targetRecord.variant ||
-    targetRecord.subtitle ||
-    "GLS";
+  const variantTitle = isVehicle
+    ? targetRecord.model ||
+      targetRecord.variant ||
+      targetRecord.subtitle ||
+      (targetRecord.year ? String(targetRecord.year) : "")
+    : targetRecord.brand ||
+      targetRecord.subtitle ||
+      "";
 
-  const yearStr = targetRecord.year ? String(targetRecord.year) : "2024";
+  const locationStr = isVehicle
+    ? targetRecord.location?.name ||
+      targetRecord.location?.city ||
+      targetRecord.locationName ||
+      targetRecord.city ||
+      targetRecord.address ||
+      ""
+    : targetRecord.category ? String(targetRecord.category) : "";
 
-  const locationStr =
-    targetRecord.location?.name ||
-    targetRecord.location?.city ||
-    targetRecord.locationName ||
-    targetRecord.city ||
-    "Islamabad Blue Area Branch, Islamabad";
-
-  // Daily Rate
-  const dailyRate = Number(
+  // Pricing
+  const rawPrice =
     targetRecord.dailyRate ??
-      targetRecord.pricePerDay ??
-      targetRecord.price_per_day ??
-      targetRecord.$price ??
-      targetRecord.price ??
-      18000,
-  );
+    targetRecord.pricePerDay ??
+    targetRecord.price_per_day ??
+    targetRecord.$price ??
+    targetRecord.price ??
+    0;
 
+  const dailyRate = Number(rawPrice) || 0;
   const weeklyRate = Number(targetRecord.weeklyRate ?? dailyRate * 6);
   const monthlyRate = Number(targetRecord.monthlyRate ?? dailyRate * 23);
-  const depositAmount = Number(targetRecord.securityDeposit ?? 30000);
+  const depositAmount = Number(targetRecord.securityDeposit ?? 0);
 
-  // Specifications
-  const specs = [
-    {
-      label: "Fuel",
-      value: String(targetRecord.fuel || targetRecord.fuelType || "Petrol"),
-      icon: "⛽",
-    },
-    {
-      label: "Transmission",
-      value: String(targetRecord.transmission || "Automatic"),
-      icon: "⚙️",
-    },
-    {
-      label: "Seats",
-      value: `${targetRecord.seats || 5} Seats`,
-      icon: "👥",
-    },
-    {
-      label: "Year",
-      value: yearStr,
-      icon: "📅",
-    },
-    {
-      label: "Color",
-      value: String(targetRecord.color || "Blue"),
-      icon: "🎨",
-    },
-    {
-      label: "Doors",
-      value: `${targetRecord.doors || 5} Doors`,
-      icon: "🚪",
-    },
-  ];
-
-  // Features / Amenities
-  const rawFeatures = targetRecord.features || targetRecord.amenities || [
-    "Air Conditioning",
-    "Navigation",
-    "Blind Spot Monitor",
-    "Heated Seats",
-  ];
-  const featuresList = Array.isArray(rawFeatures) ? rawFeatures : [String(rawFeatures)];
-
-  // Description
-  const aboutText =
-    targetRecord.description ||
-    targetRecord.about ||
-    "Comfortable SUV with advanced safety features.";
-
-  // Image
-  const imageUrl =
-    targetRecord.images?.[0] ||
-    targetRecord.image ||
-    targetRecord.thumbnail ||
-    targetRecord.$image ||
-    "";
-  const hasValidImage =
-    typeof imageUrl === "string" && /^https?:\/\//i.test(imageUrl.trim());
-
-  // Date calculation
-  const rentalDays = Math.max(1, selectedEndDay - selectedStartDay);
   const insuranceRate =
     selectedInsurance === "premium"
       ? 2500
@@ -166,353 +212,901 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const rentalTotal = dailyRate * rentalDays;
   const grandTotal = rentalTotal + insuranceTotal + depositAmount;
 
-  const handleContinueBooking = () => {
-    const bookingUrl = targetRecord.url || targetRecord.link || targetRecord.checkoutUrl;
-    if (bookingUrl && typeof window !== "undefined") {
-      window.open(bookingUrl, "_blank", "noopener,noreferrer");
+  // Features / Amenities list
+  const rawFeatures =
+    targetRecord.features ||
+    targetRecord.amenities ||
+    targetRecord.tags ||
+    [];
+  const featuresList = Array.isArray(rawFeatures)
+    ? rawFeatures.map(String)
+    : typeof rawFeatures === "string"
+      ? rawFeatures.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+
+  // Description
+  const aboutText =
+    targetRecord.description ||
+    targetRecord.$description ||
+    targetRecord.about ||
+    "";
+
+  // Reviews
+  const reviewsList = Array.isArray(targetRecord.reviews)
+    ? targetRecord.reviews
+    : [];
+
+  // External product / single item URL
+  const singleProductUrl =
+    targetRecord.url ||
+    targetRecord.link ||
+    targetRecord.productUrl ||
+    targetRecord.webUrl ||
+    targetRecord.itemUrl ||
+    "";
+
+  const handleViewOnCompany = () => {
+    const url =
+      singleProductUrl ||
+      metadata.websiteURL ||
+      metadata.website ||
+      metadata.domain;
+    if (url && typeof window !== "undefined") {
+      const finalUrl = appendChatUrlToCheckout(url);
+      window.open(finalUrl, "_blank", "noopener,noreferrer");
     }
   };
 
+  const handleContinueBooking = () => {
+    let checkoutBase =
+      targetRecord.checkoutUrl ||
+      targetRecord.bookingUrl ||
+      metadata.webCheckoutUrl ||
+      metadata.websiteURL ||
+      "";
+
+    if (checkoutBase) {
+      try {
+        const parsed = new URL(checkoutBase);
+        parsed.searchParams.set("carId", String(targetRecord.id || ""));
+        parsed.searchParams.set("days", String(rentalDays));
+        parsed.searchParams.set("startDate", `2026-09-${selectedStartDay}`);
+        parsed.searchParams.set("endDate", `2026-09-${effectiveEndDay}`);
+        parsed.searchParams.set("insurance", selectedInsurance);
+        parsed.searchParams.set("total", grandTotal.toFixed(2));
+        window.open(
+          appendChatUrlToCheckout(parsed.toString()),
+          "_blank",
+          "noopener,noreferrer",
+        );
+        return;
+      } catch {
+        // Fallback below
+      }
+    }
+
+    const checkoutParams = new URLSearchParams({
+      title: `${mainTitle} ${variantTitle}`.trim(),
+      price: grandTotal.toFixed(2),
+      qty: "1",
+      days: String(rentalDays),
+    });
+    const fallbackUrl = `https://softtech-ai-app.onrender.com/checkout?${checkoutParams.toString()}`;
+    window.open(
+      appendChatUrlToCheckout(fallbackUrl),
+      "_blank",
+      "noopener,noreferrer",
+    );
+  };
+
+  const handleAddToCart = () => {
+    addItem(
+      {
+        id: targetRecord.id,
+        title: mainTitle,
+        price: rawPrice,
+        image: activeImageUrl || undefined,
+        tier: targetRecord.category,
+      },
+      quantity,
+    );
+    setAddedToCartToast(true);
+    setTimeout(() => setAddedToCartToast(false), 4000);
+  };
+
+  const handleBuyNow = () => {
+    handleAddToCart();
+    openCart();
+  };
+
+  // Back Button Label (dynamic and never forced to cars for products)
+  const rawItemLabel = collection?.itemLabel || collection?.entity || "item";
+  const itemLabelPlural = rawItemLabel.endsWith("s")
+    ? rawItemLabel
+    : `${rawItemLabel}s`;
+  const backBtnText = isVehicle ? "Back to cars" : `Back to ${itemLabelPlural.toLowerCase()}`;
+
+  // Vehicle Specifications
+  const vehicleSpecs = [
+    ...(targetRecord.fuel || targetRecord.fuelType
+      ? [
+          {
+            label: "Fuel",
+            value: String(targetRecord.fuel || targetRecord.fuelType),
+            icon: "⛽",
+          },
+        ]
+      : []),
+    ...(targetRecord.transmission
+      ? [
+          {
+            label: "Transmission",
+            value: String(targetRecord.transmission),
+            icon: "⚙️",
+          },
+        ]
+      : []),
+    ...(targetRecord.seats
+      ? [
+          {
+            label: "Seats",
+            value: `${targetRecord.seats} Seats`,
+            icon: "👥",
+          },
+        ]
+      : []),
+    ...(targetRecord.year
+      ? [
+          {
+            label: "Year",
+            value: String(targetRecord.year),
+            icon: "📅",
+          },
+        ]
+      : []),
+    ...(targetRecord.color
+      ? [
+          {
+            label: "Color",
+            value: String(targetRecord.color),
+            icon: "🎨",
+          },
+        ]
+      : []),
+    ...(targetRecord.doors
+      ? [
+          {
+            label: "Doors",
+            value: `${targetRecord.doors} Doors`,
+            icon: "🚪",
+          },
+        ]
+      : []),
+    ...(targetRecord.mileage
+      ? [
+          {
+            label: "Mileage",
+            value: `${Number(targetRecord.mileage).toLocaleString()} km`,
+            icon: "🛣️",
+          },
+        ]
+      : []),
+    ...(targetRecord.licensePlate
+      ? [
+          {
+            label: "License Plate",
+            value: String(targetRecord.licensePlate),
+            icon: "🚘",
+          },
+        ]
+      : []),
+  ];
+
+  // E-Commerce Product Specifications
+  const ecomSpecs = [
+    ...(targetRecord.category
+      ? [
+          {
+            label: "Category",
+            value: String(targetRecord.category),
+            icon: "🏷️",
+          },
+        ]
+      : []),
+    ...(targetRecord.brand
+      ? [
+          {
+            label: "Brand",
+            value: String(targetRecord.brand),
+            icon: "🏢",
+          },
+        ]
+      : []),
+    ...(targetRecord.sku
+      ? [
+          {
+            label: "SKU",
+            value: String(targetRecord.sku),
+            icon: "🔢",
+          },
+        ]
+      : []),
+    ...(targetRecord.stock !== undefined && targetRecord.stock !== null
+      ? [
+          {
+            label: "Stock",
+            value: `${targetRecord.stock} units`,
+            icon: "📦",
+          },
+        ]
+      : []),
+    ...(targetRecord.dimensions && typeof targetRecord.dimensions === "object"
+      ? [
+          {
+            label: "Dimensions",
+            value: `${targetRecord.dimensions.width ?? "-"} × ${targetRecord.dimensions.height ?? "-"} × ${targetRecord.dimensions.depth ?? "-"} cm`,
+            icon: "📐",
+          },
+        ]
+      : []),
+    ...(targetRecord.weight
+      ? [
+          {
+            label: "Weight",
+            value: `${targetRecord.weight} kg`,
+            icon: "⚖️",
+          },
+        ]
+      : []),
+    ...(targetRecord.warrantyInformation
+      ? [
+          {
+            label: "Warranty",
+            value: String(targetRecord.warrantyInformation),
+            icon: "🛡️",
+          },
+        ]
+      : []),
+    ...(targetRecord.shippingInformation
+      ? [
+          {
+            label: "Shipping",
+            value: String(targetRecord.shippingInformation),
+            icon: "🚚",
+          },
+        ]
+      : []),
+    ...(targetRecord.returnPolicy
+      ? [
+          {
+            label: "Return Policy",
+            value: String(targetRecord.returnPolicy),
+            icon: "🔄",
+          },
+        ]
+      : []),
+    ...(targetRecord.minimumOrderQuantity && targetRecord.minimumOrderQuantity > 1
+      ? [
+          {
+            label: "Min Order",
+            value: `${targetRecord.minimumOrderQuantity} items`,
+            icon: "📋",
+          },
+        ]
+      : []),
+  ];
+
+  const specsToRender = isVehicle ? vehicleSpecs : ecomSpecs;
+
   return (
     <div className={styles.container}>
-      {/* Back to catalog navigation */}
-      <button type="button" className={styles.backBtn} onClick={() => popSubView()}>
-        &larr; Back to cars
+      {/* Dynamic Back Navigation */}
+      <button
+        type="button"
+        className={styles.backBtn}
+        onClick={() => popSubView()}
+        aria-label={backBtnText}
+      >
+        &larr; {backBtnText}
       </button>
 
-      {/* Two Column Layout (Image 2) */}
+      {/* Two Column Detail Layout */}
       <div className={styles.layoutTwoCol}>
-        {/* Left Column: Hero, Specs, Features, About, Pricing, Reviews */}
+        {/* Left Column: Hero, Gallery, Header Info, Specs, Features, About, Reviews */}
         <div className={styles.mainCol}>
-          {/* Hero Banner */}
+          {/* Hero Banner with Dynamic Image or Fallback */}
           <div className={styles.heroBanner}>
             {hasValidImage ? (
               <img
-                src={imageUrl}
+                src={activeImageUrl}
                 alt={`${mainTitle} ${variantTitle}`}
                 className={styles.heroImage}
               />
-            ) : (
+            ) : isVehicle ? (
               <DetailSilhouetteIcon />
+            ) : (
+              <div className={styles.productPlaceholderBox}>
+                <span className={styles.productPlaceholderIcon}>🛍️</span>
+              </div>
             )}
-            <span className={styles.availableBadge}>Available</span>
+
+            {/* Status / Availability Badge */}
+            {targetRecord.availabilityStatus ? (
+              <span className={styles.availableBadge}>
+                {targetRecord.availabilityStatus}
+              </span>
+            ) : targetRecord.status ? (
+              <span className={styles.availableBadge}>
+                {String(targetRecord.status)}
+              </span>
+            ) : (
+              <span className={styles.availableBadge}>Available</span>
+            )}
           </div>
 
-          {/* Title & Location */}
+          {/* Multi-Image Gallery Thumbnails */}
+          {allImages.length > 1 && (
+            <div className={styles.galleryThumbnails}>
+              {allImages.map((imgUrl, idx) => (
+                <button
+                  key={`thumb-${idx}`}
+                  type="button"
+                  className={`${styles.galleryThumbBtn} ${idx === activeImageIndex ? styles.galleryThumbBtnActive : ""}`}
+                  onClick={() => setActiveImageIndex(idx)}
+                  aria-label={`View image ${idx + 1}`}
+                >
+                  <img
+                    src={imgUrl}
+                    alt={`Thumbnail ${idx + 1}`}
+                    className={styles.galleryThumbImg}
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Title & Metadata Header */}
           <div className={styles.headerInfo}>
             <div className={styles.titleRow}>
               <h1 className={styles.carTitle}>{mainTitle}</h1>
-              {variantTitle && <span className={styles.carVariant}>{variantTitle}</span>}
-            </div>
-            <p className={styles.locationRow}>
-              <span>📍</span>
-              <span>
-                {locationStr} • {yearStr}
-              </span>
-            </p>
-          </div>
-
-          {/* Specifications (2x3 Grid) */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Specifications</h3>
-            <div className={styles.specsGrid}>
-              {specs.map((s, idx) => (
-                <div key={`spec-${idx}`} className={styles.specBox}>
-                  <span className={styles.specIcon}>{s.icon}</span>
-                  <div className={styles.specContent}>
-                    <span className={styles.specLabel}>{s.label}</span>
-                    <span className={styles.specValue}>{s.value}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Features Checkmarks */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Features</h3>
-            <div className={styles.featuresGrid}>
-              {featuresList.map((f, idx) => (
-                <span key={`feat-${idx}`} className={styles.featurePill}>
-                  <span className={styles.checkIcon}>✓</span>
-                  <span>{f}</span>
+              {variantTitle && (
+                <span className={styles.carVariant}>{variantTitle}</span>
+              )}
+              {targetRecord.discountPercentage && (
+                <span className={styles.discountBadge}>
+                  {targetRecord.discountPercentage}% OFF
                 </span>
-              ))}
+              )}
             </div>
-          </div>
 
-          {/* About this car */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>About this car</h3>
-            <p className={styles.aboutText}>{aboutText}</p>
-          </div>
-
-          {/* Tiered Pricing Rates */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Pricing</h3>
-            <div className={styles.pricingGrid}>
-              <div className={styles.pricingCard}>
-                <span className={styles.pricingLabel}>Daily rate</span>
-                <span className={styles.pricingValue}>
-                  Rs. {dailyRate.toLocaleString()}
+            {/* Sub-header: Location (for vehicle) or Category / Rating (for product) */}
+            {isVehicle && (locationStr || targetRecord.year) && (
+              <p className={styles.locationRow}>
+                <span>📍</span>
+                <span>
+                  {locationStr}
+                  {targetRecord.year ? ` • ${targetRecord.year}` : ""}
                 </span>
-              </div>
-              <div className={styles.pricingCard}>
-                <span className={styles.pricingLabel}>Weekly rate</span>
-                <span className={styles.pricingValue}>
-                  Rs. {weeklyRate.toLocaleString()}
-                </span>
-              </div>
-              <div className={styles.pricingCard}>
-                <span className={styles.pricingLabel}>Monthly rate</span>
-                <span className={styles.pricingValue}>
-                  Rs. {monthlyRate.toLocaleString()}
-                </span>
-              </div>
-            </div>
-            <p className={styles.depositNote}>
-              Refundable security deposit: Rs. {depositAmount.toLocaleString()}
-            </p>
-          </div>
-
-          {/* Reviews Section */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Reviews</h3>
-            <div className={styles.reviewsBox}>
-              <p className={styles.emptyReviewText}>
-                No reviews yet — be the first to rent this car.
               </p>
+            )}
+
+            {!isVehicle && targetRecord.rating && (
+              <div className={styles.ratingRow}>
+                <span className={styles.ratingStar}>★</span>
+                <span className={styles.ratingNumber}>
+                  {targetRecord.rating}
+                </span>
+                <span className={styles.reviewsCountText}>
+                  ({reviewsList.length || targetRecord.totalReviews || 0} reviews)
+                </span>
+                {targetRecord.category && (
+                  <span>• {targetRecord.category}</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Specifications Grid */}
+          {specsToRender.length > 0 && (
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Specifications</h3>
+              <div className={styles.specsGrid}>
+                {specsToRender.map((s, idx) => (
+                  <div key={`spec-${idx}`} className={styles.specBox}>
+                    <span className={styles.specIcon}>{s.icon}</span>
+                    <div className={styles.specContent}>
+                      <span className={styles.specLabel}>{s.label}</span>
+                      <span className={styles.specValue}>{s.value}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* Features / Amenities / Tags Pills */}
+          {featuresList.length > 0 && (
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>
+                {isVehicle ? "Features" : "Tags & Highlights"}
+              </h3>
+              <div className={styles.featuresGrid}>
+                {featuresList.map((f, idx) => (
+                  <span key={`feat-${idx}`} className={styles.featurePill}>
+                    <span className={styles.checkIcon}>✓</span>
+                    <span>{f}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Description Section */}
+          {aboutText && (
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>
+                {isVehicle ? "About this vehicle" : "Product Description"}
+              </h3>
+              <p className={styles.aboutText}>{aboutText}</p>
+            </div>
+          )}
+
+          {/* Vehicle Rates Tier Section (Only for vehicles with dailyRate) */}
+          {isVehicle && dailyRate > 0 && (
+            <div className={styles.section}>
+              <h3 className={styles.sectionTitle}>Pricing Rates</h3>
+              <div className={styles.pricingGrid}>
+                <div className={styles.pricingCard}>
+                  <span className={styles.pricingLabel}>Daily rate</span>
+                  <span className={styles.pricingValue}>
+                    Rs. {dailyRate.toLocaleString()}
+                  </span>
+                </div>
+                <div className={styles.pricingCard}>
+                  <span className={styles.pricingLabel}>Weekly rate</span>
+                  <span className={styles.pricingValue}>
+                    Rs. {weeklyRate.toLocaleString()}
+                  </span>
+                </div>
+                <div className={styles.pricingCard}>
+                  <span className={styles.pricingLabel}>Monthly rate</span>
+                  <span className={styles.pricingValue}>
+                    Rs. {monthlyRate.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              {depositAmount > 0 && (
+                <p className={styles.depositNote}>
+                  Refundable security deposit: Rs. {depositAmount.toLocaleString()}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Customer Reviews Section */}
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>
+              Customer Reviews ({reviewsList.length})
+            </h3>
+            {reviewsList.length > 0 ? (
+              <div className={styles.reviewsList}>
+                {reviewsList.map((rev: any, idx: number) => (
+                  <div key={`rev-${idx}`} className={styles.reviewCard}>
+                    <div className={styles.reviewHeader}>
+                      <span className={styles.reviewerName}>
+                        {rev.reviewerName || rev.name || rev.author || "Verified Customer"}
+                      </span>
+                      {rev.rating && (
+                        <span className={styles.reviewStars}>
+                          {"★".repeat(Math.min(5, Math.max(1, Math.round(Number(rev.rating)))))}
+                        </span>
+                      )}
+                      {rev.date && (
+                        <span className={styles.reviewDate}>
+                          {new Date(rev.date).toLocaleDateString(undefined, {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      )}
+                    </div>
+                    {rev.comment && (
+                      <p className={styles.reviewComment}>{rev.comment}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={styles.reviewsBox}>
+                <p className={styles.emptyReviewText}>
+                  No reviews yet — be the first to share your experience.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column: Sticky Booking Card */}
+        {/* Right Column: Dynamic Action Sidebar */}
         <div className={styles.sidebarCol}>
-          <div className={styles.bookingBox}>
-            {/* Top Daily Rate */}
-            <div className={styles.bookingRateRow}>
-              <h2 className={styles.bookingRatePrice}>
-                Rs. {dailyRate.toLocaleString()}
-              </h2>
-              <span className={styles.bookingRatePeriod}>per day</span>
-            </div>
+          {isVehicle ? (
+            /* Vehicle Rental Booking Card */
+            <div className={styles.bookingBox}>
+              <div className={styles.bookingRateRow}>
+                <h2 className={styles.bookingRatePrice}>
+                  Rs. {dailyRate.toLocaleString()}
+                </h2>
+                <span className={styles.bookingRatePeriod}>per day</span>
+              </div>
 
-            {/* Calendar Mini-Widget */}
-            <div className={styles.calendarCard}>
-              <div className={styles.calendarMonthHeader}>
-                <button type="button" className={styles.calNavBtn}>
-                  &lt;
+              {/* Interactive Calendar Date Picker */}
+              <div className={styles.calendarCard}>
+                <div className={styles.calendarMonthHeader}>
+                  <button type="button" className={styles.calNavBtn} aria-label="Previous month">
+                    &lt;
+                  </button>
+                  <span>September 2026</span>
+                  <button type="button" className={styles.calNavBtn} aria-label="Next month">
+                    &gt;
+                  </button>
+                </div>
+
+                <div className={styles.calDaysHeader}>
+                  <span>Su</span>
+                  <span>Mo</span>
+                  <span>Tu</span>
+                  <span>We</span>
+                  <span>Th</span>
+                  <span>Fr</span>
+                  <span>Sa</span>
+                </div>
+
+                <div className={styles.calDaysGrid}>
+                  {/* Previous month padding days */}
+                  <button type="button" className={`${styles.calDay} ${styles.calDayDimmed}`} disabled>
+                    30
+                  </button>
+                  <button type="button" className={`${styles.calDay} ${styles.calDayDimmed}`} disabled>
+                    31
+                  </button>
+
+                  {/* Interactive Month Days 1 to 28 */}
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => {
+                    const isSelected =
+                      day === selectedStartDay ||
+                      (selectedEndDay !== null && day === selectedEndDay);
+                    const isInRange =
+                      selectedEndDay !== null &&
+                      day > selectedStartDay &&
+                      day < selectedEndDay;
+
+                    return (
+                      <button
+                        key={`cal-${day}`}
+                        type="button"
+                        className={`${styles.calDay} ${isSelected ? styles.calDaySelected : ""} ${isInRange ? styles.calDayInRange : ""}`}
+                        onClick={() => handleDayClick(day)}
+                        aria-label={`Select September ${day}`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className={styles.calStatusNote}>
+                  {rentalDays} {rentalDays === 1 ? "day" : "days"} selected (Sept{" "}
+                  {selectedStartDay}
+                  {selectedEndDay ? ` – ${selectedEndDay}` : ""})
+                </p>
+              </div>
+
+              {/* Pickup Location */}
+              <div className={styles.bookingField}>
+                <label className={styles.fieldLabel}>Pickup location</label>
+                <select
+                  className={styles.selectInput}
+                  value={pickupLocation}
+                  onChange={(e) => setPickupLocation(e.target.value)}
+                >
+                  <option value="Karachi Airport Branch — Karachi">
+                    Karachi Airport Branch — Karachi
+                  </option>
+                  <option value="Islamabad Blue Area Branch — Islamabad">
+                    Islamabad Blue Area Branch — Islamabad
+                  </option>
+                  <option value="Lahore Gulberg Branch — Lahore">
+                    Lahore Gulberg Branch — Lahore
+                  </option>
+                </select>
+              </div>
+
+              {/* Drop-off Location */}
+              <div className={styles.bookingField}>
+                <label className={styles.fieldLabel}>Drop-off location</label>
+                <select
+                  className={styles.selectInput}
+                  value={dropoffLocation}
+                  onChange={(e) => setDropoffLocation(e.target.value)}
+                >
+                  <option value="same">Same as pickup</option>
+                  <option value="Karachi Airport Branch — Karachi">
+                    Karachi Airport Branch — Karachi
+                  </option>
+                  <option value="Islamabad Blue Area Branch — Islamabad">
+                    Islamabad Blue Area Branch — Islamabad
+                  </option>
+                  <option value="Lahore Gulberg Branch — Lahore">
+                    Lahore Gulberg Branch — Lahore
+                  </option>
+                </select>
+              </div>
+
+              {/* Insurance Options */}
+              <div className={styles.insuranceSection}>
+                <label className={styles.fieldLabel}>🛡️ Insurance</label>
+
+                {/* Basic */}
+                <label
+                  className={`${styles.insuranceOption} ${
+                    selectedInsurance === "basic"
+                      ? styles.insuranceOptionSelected
+                      : ""
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="insurance"
+                    checked={selectedInsurance === "basic"}
+                    onChange={() => setSelectedInsurance("basic")}
+                    className={styles.insuranceRadio}
+                  />
+                  <div className={styles.insuranceContent}>
+                    <div className={styles.insuranceTitleRow}>
+                      <span className={styles.insuranceName}>Basic</span>
+                      <span className={styles.insurancePrice}>Rs. 500/day</span>
+                    </div>
+                    <p className={styles.insuranceDesc}>
+                      Third-party liability only
+                    </p>
+                  </div>
+                </label>
+
+                {/* Standard */}
+                <label
+                  className={`${styles.insuranceOption} ${
+                    selectedInsurance === "standard"
+                      ? styles.insuranceOptionSelected
+                      : ""
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="insurance"
+                    checked={selectedInsurance === "standard"}
+                    onChange={() => setSelectedInsurance("standard")}
+                    className={styles.insuranceRadio}
+                  />
+                  <div className={styles.insuranceContent}>
+                    <div className={styles.insuranceTitleRow}>
+                      <span className={styles.insuranceName}>Standard</span>
+                      <span className={styles.insurancePrice}>
+                        Rs. 1,200/day
+                      </span>
+                    </div>
+                    <p className={styles.insuranceDesc}>
+                      Collision damage waiver + theft protection
+                    </p>
+                  </div>
+                </label>
+
+                {/* Premium */}
+                <label
+                  className={`${styles.insuranceOption} ${
+                    selectedInsurance === "premium"
+                      ? styles.insuranceOptionSelected
+                      : ""
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="insurance"
+                    checked={selectedInsurance === "premium"}
+                    onChange={() => setSelectedInsurance("premium")}
+                    className={styles.insuranceRadio}
+                  />
+                  <div className={styles.insuranceContent}>
+                    <div className={styles.insuranceTitleRow}>
+                      <span className={styles.insuranceName}>Premium</span>
+                      <span className={styles.insurancePrice}>
+                        Rs. 2,500/day
+                      </span>
+                    </div>
+                    <p className={styles.insuranceDesc}>
+                      Full coverage with zero deductible
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Price Calculation Breakdown */}
+              <div className={styles.costBreakdown}>
+                <div className={styles.costRow}>
+                  <span>
+                    Rs. {dailyRate.toLocaleString()} × {rentalDays}{" "}
+                    {rentalDays === 1 ? "day" : "days"}
+                  </span>
+                  <span>Rs. {rentalTotal.toLocaleString()}</span>
+                </div>
+                <div className={styles.costRow}>
+                  <span>
+                    Insurance (
+                    {selectedInsurance.charAt(0).toUpperCase() +
+                      selectedInsurance.slice(1)}
+                    )
+                  </span>
+                  <span>Rs. {insuranceTotal.toLocaleString()}</span>
+                </div>
+                {depositAmount > 0 && (
+                  <div className={styles.costRow}>
+                    <span>Security deposit</span>
+                    <span>Rs. {depositAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className={styles.costTotalRow}>
+                  <span>Total</span>
+                  <span>Rs. {grandTotal.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Primary Action Button */}
+              <div className={styles.buttonGroup}>
+                <button
+                  type="button"
+                  className={styles.continueBookingBtn}
+                  onClick={handleContinueBooking}
+                >
+                  Continue to booking
                 </button>
-                <span>September 2026</span>
-                <button type="button" className={styles.calNavBtn}>
-                  &gt;
+
+                {/* Secondary Action Button: View on {companyName} */}
+                <button
+                  type="button"
+                  className={styles.viewOnCompanyBtn}
+                  onClick={handleViewOnCompany}
+                >
+                  <span>↗</span>
+                  <span>View on {companyName}</span>
                 </button>
               </div>
 
-              <div className={styles.calDaysHeader}>
-                <span>Su</span>
-                <span>Mo</span>
-                <span>Tu</span>
-                <span>We</span>
-                <span>Th</span>
-                <span>Fr</span>
-                <span>Sa</span>
-              </div>
-
-              <div className={styles.calDaysGrid}>
-                {/* Previous month padding days */}
-                <button type="button" className={`${styles.calDay} ${styles.calDayDimmed}`}>30</button>
-                <button type="button" className={`${styles.calDay} ${styles.calDayDimmed}`}>31</button>
-                <button type="button" className={styles.calDay}>1</button>
-                <button type="button" className={styles.calDay}>2</button>
-                <button type="button" className={styles.calDay}>3</button>
-                <button type="button" className={styles.calDay}>4</button>
-                <button type="button" className={styles.calDay}>5</button>
-                <button type="button" className={styles.calDay}>6</button>
-
-                {/* Selected Range: 7 to 9 */}
-                <button
-                  type="button"
-                  className={`${styles.calDay} ${selectedStartDay === 7 ? styles.calDaySelected : ""}`}
-                  onClick={() => setSelectedStartDay(7)}
-                >
-                  7
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.calDay} ${styles.calDaySelected}`}
-                >
-                  8
-                </button>
-                <button
-                  type="button"
-                  className={`${styles.calDay} ${selectedEndDay === 9 ? styles.calDaySelected : ""}`}
-                  onClick={() => setSelectedEndDay(9)}
-                >
-                  9
-                </button>
-
-                <button type="button" className={styles.calDay}>10</button>
-                <button type="button" className={styles.calDay}>11</button>
-                <button type="button" className={styles.calDay}>12</button>
-                <button type="button" className={styles.calDay}>13</button>
-                <button type="button" className={styles.calDay}>14</button>
-                <button type="button" className={styles.calDay}>15</button>
-                <button type="button" className={styles.calDay}>16</button>
-                <button type="button" className={styles.calDay}>17</button>
-                <button type="button" className={styles.calDay}>18</button>
-                <button type="button" className={styles.calDay}>19</button>
-              </div>
-
-              <p className={styles.calStatusNote}>
-                {rentalDays} {rentalDays === 1 ? "day" : "days"} selected (Sept {selectedStartDay} – {selectedEndDay})
+              <p className={styles.bookingNote}>
+                You won't be charged yet — review and pay on the next step.
               </p>
             </div>
+          ) : (
+            /* E-Commerce Product Purchase Card */
+            <div className={styles.bookingBox}>
+              <div className={styles.bookingRateRow}>
+                <h2 className={styles.bookingRatePrice}>
+                  ${Number(rawPrice).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </h2>
+              </div>
 
-            {/* Pickup Location */}
-            <div className={styles.bookingField}>
-              <label className={styles.fieldLabel}>Pickup location</label>
-              <select
-                className={styles.selectInput}
-                value={pickupLocation}
-                onChange={(e) => setPickupLocation(e.target.value)}
-              >
-                <option value="Islamabad Blue Area Branch — Islamabad">
-                  Islamabad Blue Area Branch — Islamabad
-                </option>
-                <option value="Karachi Airport Branch — Karachi">
-                  Karachi Airport Branch — Karachi
-                </option>
-                <option value="Lahore Gulberg Branch — Lahore">
-                  Lahore Gulberg Branch — Lahore
-                </option>
-              </select>
-            </div>
+              {/* Availability Status */}
+              <div>
+                {targetRecord.stock !== undefined && targetRecord.stock > 0 ? (
+                  <span className={styles.stockBadgeInStock}>
+                    In Stock ({targetRecord.stock} available)
+                  </span>
+                ) : targetRecord.stock === 0 ? (
+                  <span className={styles.stockBadgeOutOfStock}>
+                    Out of Stock
+                  </span>
+                ) : (
+                  <span className={styles.stockBadgeInStock}>
+                    {targetRecord.availabilityStatus || "Available"}
+                  </span>
+                )}
+              </div>
 
-            {/* Drop-off Location */}
-            <div className={styles.bookingField}>
-              <label className={styles.fieldLabel}>Drop-off location</label>
-              <select
-                className={styles.selectInput}
-                value={dropoffLocation}
-                onChange={(e) => setDropoffLocation(e.target.value)}
-              >
-                <option value="same">Same as pickup</option>
-                <option value="Karachi Airport Branch — Karachi">
-                  Karachi Airport Branch — Karachi
-                </option>
-                <option value="Lahore Gulberg Branch — Lahore">
-                  Lahore Gulberg Branch — Lahore
-                </option>
-              </select>
-            </div>
-
-            {/* Insurance Options */}
-            <div className={styles.insuranceSection}>
-              <label className={styles.fieldLabel}>🛡️ Insurance</label>
-
-              {/* Basic */}
-              <label
-                className={`${styles.insuranceOption} ${
-                  selectedInsurance === "basic" ? styles.insuranceOptionSelected : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="insurance"
-                  checked={selectedInsurance === "basic"}
-                  onChange={() => setSelectedInsurance("basic")}
-                  className={styles.insuranceRadio}
-                />
-                <div className={styles.insuranceContent}>
-                  <div className={styles.insuranceTitleRow}>
-                    <span className={styles.insuranceName}>Basic</span>
-                    <span className={styles.insurancePrice}>Rs. 500/day</span>
-                  </div>
-                  <p className={styles.insuranceDesc}>Third-party liability only</p>
+              {/* Quantity Stepper */}
+              <div className={styles.qtySection}>
+                <label className={styles.fieldLabel}>Quantity</label>
+                <div className={styles.qtyRow}>
+                  <button
+                    type="button"
+                    className={styles.qtyBtn}
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </button>
+                  <span className={styles.qtyDisplay}>{quantity}</span>
+                  <button
+                    type="button"
+                    className={styles.qtyBtn}
+                    onClick={() => setQuantity((q) => Math.min(maxStock, q + 1))}
+                    disabled={quantity >= maxStock}
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
                 </div>
-              </label>
+              </div>
 
-              {/* Standard */}
-              <label
-                className={`${styles.insuranceOption} ${
-                  selectedInsurance === "standard" ? styles.insuranceOptionSelected : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="insurance"
-                  checked={selectedInsurance === "standard"}
-                  onChange={() => setSelectedInsurance("standard")}
-                  className={styles.insuranceRadio}
-                />
-                <div className={styles.insuranceContent}>
-                  <div className={styles.insuranceTitleRow}>
-                    <span className={styles.insuranceName}>Standard</span>
-                    <span className={styles.insurancePrice}>Rs. 1,200/day</span>
-                  </div>
-                  <p className={styles.insuranceDesc}>Collision damage waiver + theft protection</p>
+              {/* Added to Cart Feedback Toast */}
+              {addedToCartToast && (
+                <div className={styles.toastNotice}>
+                  <span>✓ Added to cart ({quantity}x)</span>
+                  <button
+                    type="button"
+                    className={styles.toastViewCartBtn}
+                    onClick={openCart}
+                  >
+                    View Cart &rarr;
+                  </button>
                 </div>
-              </label>
+              )}
 
-              {/* Premium */}
-              <label
-                className={`${styles.insuranceOption} ${
-                  selectedInsurance === "premium" ? styles.insuranceOptionSelected : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="insurance"
-                  checked={selectedInsurance === "premium"}
-                  onChange={() => setSelectedInsurance("premium")}
-                  className={styles.insuranceRadio}
-                />
-                <div className={styles.insuranceContent}>
-                  <div className={styles.insuranceTitleRow}>
-                    <span className={styles.insuranceName}>Premium</span>
-                    <span className={styles.insurancePrice}>Rs. 2,500/day</span>
+              {/* Buttons Group */}
+              <div className={styles.buttonGroup}>
+                <button
+                  type="button"
+                  className={styles.addToCartBtn}
+                  onClick={handleAddToCart}
+                >
+                  <span>🛒</span>
+                  <span>Add to Cart</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={styles.buyNowBtn}
+                  onClick={handleBuyNow}
+                >
+                  <span>⚡</span>
+                  <span>Buy Now</span>
+                </button>
+
+                {/* View on {companyName} button */}
+                <button
+                  type="button"
+                  className={styles.viewOnCompanyBtn}
+                  onClick={handleViewOnCompany}
+                >
+                  <span>↗</span>
+                  <span>View on {companyName}</span>
+                </button>
+              </div>
+
+              {/* Trust Badges */}
+              <div className={styles.trustBadgesRow}>
+                {targetRecord.shippingInformation && (
+                  <div className={styles.trustBadge}>
+                    <span className={styles.trustIcon}>🚚</span>
+                    <span>{targetRecord.shippingInformation}</span>
                   </div>
-                  <p className={styles.insuranceDesc}>Full coverage with zero deductible</p>
-                </div>
-              </label>
-            </div>
-
-            {/* Cost Breakdown */}
-            <div className={styles.costBreakdown}>
-              <div className={styles.costRow}>
-                <span>
-                  Rs. {dailyRate.toLocaleString()} × {rentalDays} {rentalDays === 1 ? "day" : "days"}
-                </span>
-                <span>Rs. {rentalTotal.toLocaleString()}</span>
-              </div>
-              <div className={styles.costRow}>
-                <span>Insurance ({selectedInsurance.charAt(0).toUpperCase() + selectedInsurance.slice(1)})</span>
-                <span>Rs. {insuranceTotal.toLocaleString()}</span>
-              </div>
-              <div className={styles.costRow}>
-                <span>Security deposit</span>
-                <span>Rs. {depositAmount.toLocaleString()}</span>
-              </div>
-              <div className={styles.costTotalRow}>
-                <span>Total</span>
-                <span>Rs. {grandTotal.toLocaleString()}</span>
+                )}
+                {targetRecord.returnPolicy && (
+                  <div className={styles.trustBadge}>
+                    <span className={styles.trustIcon}>🔄</span>
+                    <span>{targetRecord.returnPolicy}</span>
+                  </div>
+                )}
+                {targetRecord.warrantyInformation && (
+                  <div className={styles.trustBadge}>
+                    <span className={styles.trustIcon}>🛡️</span>
+                    <span>{targetRecord.warrantyInformation}</span>
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* CTA Button */}
-            <button
-              type="button"
-              className={styles.continueBookingBtn}
-              onClick={handleContinueBooking}
-            >
-              Continue to booking
-            </button>
-
-            <p className={styles.bookingNote}>
-              You won't be charged yet — review and pay on the next step.
-            </p>
-          </div>
+          )}
         </div>
       </div>
     </div>

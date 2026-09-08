@@ -26,8 +26,120 @@ const IMAGE_KEYS = [
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
 
+export const extractFirstImageUrl = (value: unknown): string | null => {
+  if (!value) return null;
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const candidate = extractFirstImageUrl(item);
+      if (candidate) return candidate;
+    }
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    // Handle comma-separated list of image URLs (common in backend APIs)
+    const parts = trimmed.split(/,\s*(?=https?:\/\/|\/|data:|blob:)/i);
+    for (const part of parts) {
+      const clean = part.trim().replace(/^["']|["']$/g, "");
+      if (
+        clean.startsWith("data:") ||
+        clean.startsWith("blob:") ||
+        clean.startsWith("//") ||
+        clean.startsWith("/") ||
+        /^https?:\/\//i.test(clean)
+      ) {
+        return clean;
+      }
+    }
+
+    if (
+      trimmed.startsWith("data:") ||
+      trimmed.startsWith("blob:") ||
+      trimmed.startsWith("//") ||
+      trimmed.startsWith("/") ||
+      /^https?:\/\//i.test(trimmed)
+    ) {
+      return trimmed;
+    }
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    for (const key of ["thumbnail", "image", "$image", "url", "src", "photo", "avatar", "images"]) {
+      if (record[key]) {
+        const candidate = extractFirstImageUrl(record[key]);
+        if (candidate) return candidate;
+      }
+    }
+  }
+
+  return null;
+};
+
+export const extractAllImageUrls = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    const urls: string[] = [];
+    for (const item of value) {
+      urls.push(...extractAllImageUrls(item));
+    }
+    return Array.from(new Set(urls));
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    // Split on comma followed by URL prefix (common in backend APIs)
+    const parts = trimmed.split(/,\s*(?=https?:\/\/|\/|data:|blob:)/i);
+    const urls: string[] = [];
+    for (const part of parts) {
+      const clean = part.trim().replace(/^["']|["']$/g, "");
+      if (
+        clean.startsWith("data:") ||
+        clean.startsWith("blob:") ||
+        clean.startsWith("//") ||
+        clean.startsWith("/") ||
+        /^https?:\/\//i.test(clean)
+      ) {
+        urls.push(clean);
+      }
+    }
+    if (urls.length > 0) return urls;
+
+    if (
+      trimmed.startsWith("data:") ||
+      trimmed.startsWith("blob:") ||
+      trimmed.startsWith("//") ||
+      trimmed.startsWith("/") ||
+      /^https?:\/\//i.test(trimmed)
+    ) {
+      return [trimmed];
+    }
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const urls: string[] = [];
+    for (const key of ["images", "thumbnail", "image", "$image", "url", "src", "photo", "avatar"]) {
+      if (record[key]) {
+        urls.push(...extractAllImageUrls(record[key]));
+      }
+    }
+    return Array.from(new Set(urls));
+  }
+
+  return [];
+};
+
 const normalizeImageUrl = (value: string): string | null => {
-  let src = value.trim();
+  const single = extractFirstImageUrl(value) || value.trim();
+  let src = single.trim();
 
   if (src.startsWith("data:") || src.startsWith("blob:")) {
     return src;
@@ -85,8 +197,9 @@ const extractImageCandidate = (value: unknown, depth = 0): string | null => {
 };
 
 export const getRawImageUrl = (value: unknown): string | null => {
-  if (isNonEmptyString(value)) {
-    let src = value.trim();
+  const extracted = extractFirstImageUrl(value);
+  if (extracted) {
+    let src = extracted.trim();
     if (src.startsWith("//")) src = `https:${src}`;
     return src;
   }
@@ -98,10 +211,13 @@ export const getRawImageUrl = (value: unknown): string | null => {
   const record = value as Record<string, unknown>;
 
   for (const key of IMAGE_KEYS) {
-    if (isNonEmptyString(record[key])) {
-      let src = (record[key] as string).trim();
-      if (src.startsWith("//")) src = `https:${src}`;
-      return src;
+    if (record[key]) {
+      const candidate = extractFirstImageUrl(record[key]);
+      if (candidate) {
+        let src = candidate.trim();
+        if (src.startsWith("//")) src = `https:${src}`;
+        return src;
+      }
     }
   }
 

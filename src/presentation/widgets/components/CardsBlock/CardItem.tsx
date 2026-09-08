@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import styles from "../../../../styles/cardsblock.module.css";
 import type { CardItemProps } from "../../../../interfaces/mcp/cardsblock.interface";
-import { addToCartAndSync } from "../../../../utils/cartFlow";
+import { extractFirstImageUrl } from "../../helper/RenderImage/getproxiedimageurl";
 
 // Silhouette SVG for vehicle placeholder
 const CarSilhouetteIcon: React.FC = () => (
@@ -35,64 +35,98 @@ export const CardItem: React.FC<CardItemProps> = ({
 
   const rec = record as Record<string, any>;
 
+  // Detect whether this item is a vehicle / rental car or an e-commerce / general product
+  const isVehicle =
+    Boolean(rec.make && (rec.fuelType || rec.transmission || rec.licensePlate || rec.dailyRate || rec.pricePerDay)) ||
+    /car|vehicle|rental|fleet|auto/i.test(String(rec.category || "").toLowerCase());
+
   // Extract Titles
   const mainTitle =
-    rec.make ||
+    (isVehicle ? rec.make : null) ||
     rec.$title ||
     rec.title ||
     rec.name ||
-    "Vehicle";
+    rec.make ||
+    "Product";
 
   const variantTitle =
+    (isVehicle ? rec.model : null) ||
     rec.model ||
+    rec.brand ||
     rec.variant ||
     rec.subtitle ||
-    (rec.year ? String(rec.year) : "");
+    (isVehicle && rec.year ? String(rec.year) : "");
 
-  // Location string
-  const locationStr =
-    rec.location?.name ||
-    rec.location?.city ||
-    rec.locationName ||
-    rec.city ||
-    (rec.branch ? `${rec.branch}, ${rec.city || ""}` : "");
+  // Location or Category breadcrumb
+  const locationStr = isVehicle
+    ? rec.location?.name ||
+      rec.location?.city ||
+      rec.locationName ||
+      rec.city ||
+      (rec.branch ? `${rec.branch}, ${rec.city || ""}` : "")
+    : rec.category
+      ? String(rec.category)
+      : "";
 
   // Specs
   const specs: Array<{ icon: string; text: string }> = [];
-  if (rec.fuel || rec.fuelType) {
-    specs.push({ icon: "⛽", text: String(rec.fuel || rec.fuelType).toLowerCase() });
-  }
-  if (rec.transmission) {
-    specs.push({ icon: "⚙️", text: String(rec.transmission).toLowerCase() });
-  }
-  if (rec.seats) {
-    specs.push({ icon: "👥", text: `${rec.seats} seats` });
+  if (isVehicle) {
+    if (rec.fuel || rec.fuelType) {
+      specs.push({ icon: "⛽", text: String(rec.fuel || rec.fuelType).toLowerCase() });
+    }
+    if (rec.transmission) {
+      specs.push({ icon: "⚙️", text: String(rec.transmission).toLowerCase() });
+    }
+    if (rec.seats) {
+      specs.push({ icon: "👥", text: `${rec.seats} seats` });
+    }
+  } else {
+    // General / e-commerce specs
+    if (rec.rating) {
+      specs.push({ icon: "★", text: `${rec.rating}` });
+    }
+    if (rec.stock !== undefined && rec.stock !== null) {
+      specs.push({ icon: "📦", text: `${rec.stock} in stock` });
+    }
+    if (rec.brand && rec.brand !== variantTitle) {
+      specs.push({ icon: "🏷️", text: String(rec.brand) });
+    }
   }
 
-  // Price
+  // Price & Period
   const rawPrice =
     rec.dailyRate ??
     rec.pricePerDay ??
     rec.price_per_day ??
     rec.$price ??
-    rec.price ??
-    10500;
-  const formattedPrice =
-    typeof rawPrice === "number"
-      ? `Rs. ${rawPrice.toLocaleString()}`
-      : String(rawPrice).startsWith("Rs")
-        ? rawPrice
-        : `Rs. ${rawPrice}`;
+    rec.price;
 
-  // Image & Banner selection
+  let formattedPrice = "Price on request";
+  if (rawPrice !== undefined && rawPrice !== null) {
+    if (typeof rawPrice === "number") {
+      formattedPrice = isVehicle
+        ? `Rs. ${rawPrice.toLocaleString()}`
+        : `$${rawPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else {
+      formattedPrice = String(rawPrice);
+    }
+  }
+
+  // Robust Image candidate resolution (handling comma-separated lists, arrays, objects)
   const imageUrl =
-    rec.images?.[0] ||
-    rec.image ||
-    rec.thumbnail ||
-    rec.$image ||
-    "";
-  const hasValidImage =
-    typeof imageUrl === "string" && /^https?:\/\//i.test(imageUrl.trim());
+    extractFirstImageUrl(rec.thumbnail) ||
+    extractFirstImageUrl(rec.$image) ||
+    extractFirstImageUrl(rec.image) ||
+    extractFirstImageUrl(rec.images) ||
+    extractFirstImageUrl(rec);
+
+  const hasValidImage = Boolean(
+    imageUrl &&
+      (imageUrl.startsWith("data:") ||
+        imageUrl.startsWith("blob:") ||
+        imageUrl.startsWith("/") ||
+        /^https?:\/\//i.test(imageUrl)),
+  );
 
   // Determine deterministic banner color based on name/id
   const bannerHash = (rec.id || rec._id || mainTitle)
@@ -101,11 +135,13 @@ export const CardItem: React.FC<CardItemProps> = ({
     .reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
   const bannerClass = BANNER_CLASSES[bannerHash % BANNER_CLASSES.length];
 
-  // Availability
+  // Availability status
+  const statusStr = String(rec.status || rec.availabilityStatus || "").toUpperCase();
   const isAvailable =
     rec.isAvailable !== false &&
-    rec.status !== "MAINTENANCE" &&
-    rec.status !== "BOOKED" &&
+    statusStr !== "MAINTENANCE" &&
+    statusStr !== "BOOKED" &&
+    statusStr !== "OUT OF STOCK" &&
     rec.availability !== "Unavailable";
 
   const actionUrlStr = rec.url || rec.link;
@@ -122,25 +158,33 @@ export const CardItem: React.FC<CardItemProps> = ({
         onClick: () => onSelect?.(rec),
       };
 
+  const actionLabel = isVehicle ? "Book now" : "View details";
+
   return (
     <CardContainer {...containerProps}>
       {/* Top Banner with Image or Colored Theme + Silhouette */}
       <div className={`${styles.bannerWrapper} ${bannerClass}`}>
         {hasValidImage ? (
           <img
-            src={imageUrl}
+            src={imageUrl!}
             alt={`${mainTitle} ${variantTitle}`}
             className={styles.bannerImage}
             loading="lazy"
           />
-        ) : (
+        ) : isVehicle ? (
           <CarSilhouetteIcon />
+        ) : (
+          <div className={styles.productPlaceholderIcon}>🛍️</div>
         )}
 
         {isAvailable ? (
-          <span className={styles.availableBadge}>Available</span>
+          <span className={styles.availableBadge}>
+            {rec.availabilityStatus || "Available"}
+          </span>
         ) : (
-          <span className={styles.outOfStockBadge}>Booked</span>
+          <span className={styles.outOfStockBadge}>
+            {rec.availabilityStatus || (isVehicle ? "Booked" : "Out of Stock")}
+          </span>
         )}
       </div>
 
@@ -153,7 +197,7 @@ export const CardItem: React.FC<CardItemProps> = ({
 
         {locationStr && (
           <p className={styles.locationRow}>
-            <span>📍</span>
+            <span>{isVehicle ? "📍" : "🏷️"}</span>
             <span>{locationStr}</span>
           </p>
         )}
@@ -169,11 +213,11 @@ export const CardItem: React.FC<CardItemProps> = ({
           </div>
         )}
 
-        {/* Footer with Price and Book Now */}
+        {/* Footer with Price and CTA */}
         <div className={styles.cardFooterRow}>
           <div className={styles.priceGroup}>
             <span className={styles.priceValue}>{formattedPrice}</span>
-            <span className={styles.pricePeriod}>per day</span>
+            {isVehicle && <span className={styles.pricePeriod}>per day</span>}
           </div>
 
           <button
@@ -184,7 +228,7 @@ export const CardItem: React.FC<CardItemProps> = ({
               onSelect?.(rec);
             }}
           >
-            <span>Book now</span>
+            <span>{actionLabel}</span>
             <span>&rarr;</span>
           </button>
         </div>

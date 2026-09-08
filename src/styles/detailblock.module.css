@@ -546,3 +546,346 @@
   padding: 60px 20px;
   color: var(--app-text-secondary, #94a3b8);
 }
+
+/* Gallery Thumbnails */
+.galleryThumbnails {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.galleryThumbBtn {
+  width: 58px;
+  height: 58px;
+  border-radius: 8px;
+  border: 1px solid var(--widget-card-border, #22242a);
+  background: #09090b;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease;
+}
+
+.galleryThumbBtnActive {
+  border-color: var(--widget-accent, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+}
+
+.galleryThumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.productPlaceholderBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+}
+
+.productPlaceholderIcon {
+  font-size: 56px;
+  opacity: 0.85;
+  user-select: none;
+}
+
+/* Calendar Range */
+.calDayInRange {
+  background: rgba(59, 130, 246, 0.22) !important;
+  color: #93c5fd !important;
+  border-radius: 0 !important;
+}
+
+/* Rating */
+.ratingRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.ratingStar {
+  color: #f59e0b;
+  font-size: 14px;
+}
+
+.ratingNumber {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.reviewsCountText {
+  color: var(--app-text-secondary, #94a3b8);
+  font-size: 12px;
+}
+
+/* Discount Badge */
+.discountBadge {
+  background: #ef4444;
+  color: #ffffff;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Stock Status Badges */
+.stockBadgeInStock {
+  background: #10b981;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.stockBadgeLowStock {
+  background: #f59e0b;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.stockBadgeOutOfStock {
+  background: #64748b;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* Quantity Selector */
+.qtySection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.qtyRow {
+  display: inline-flex;
+  align-items: center;
+  background: #09090b;
+  border: 1px solid #22242a;
+  border-radius: 8px;
+  width: fit-content;
+  overflow: hidden;
+}
+
+.qtyBtn {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.qtyBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.qtyBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.qtyDisplay {
+  padding: 0 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Buttons */
+.buttonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.addToCartBtn {
+  background: var(--widget-accent, #6366f1);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.addToCartBtn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.buyNowBtn {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.buyNowBtn:hover {
+  opacity: 0.92;
+}
+
+.viewOnCompanyBtn {
+  background: transparent;
+  color: var(--app-text-secondary, #94a3b8);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.viewOnCompanyBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.toastNotice {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toastViewCartBtn {
+  background: transparent;
+  border: none;
+  color: #10b981;
+  text-decoration: underline;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Trust Badges */
+.trustBadgesRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #22242a;
+}
+
+.trustBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.trustIcon {
+  font-size: 14px;
+}
+
+/* Reviews List */
+.reviewsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reviewCard {
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reviewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.reviewerName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.reviewStars {
+  color: #f59e0b;
+  font-size: 12px;
+}
+
+.reviewDate {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+}
+
+.reviewComment {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  margin: 0;
+}
+
