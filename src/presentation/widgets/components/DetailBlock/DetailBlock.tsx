@@ -26,8 +26,8 @@ import { getValue } from "../../../../utils";
  * (never off entity/industry/company names), so the detail screen renders
  * for any company's records — products, packages, listings, vehicles, etc.
  * ------------------------------------------------------------------ */
-const TITLE_KEY_RE = /^\$?(title|name|label|heading)$/i;
-const SUBTITLE_KEY_RE = /^\$?(subtitle|tagline|variant)$/i;
+const TITLE_KEY_RE = /^\$?(title|name|label|heading|make|brand)$/i;
+const SUBTITLE_KEY_RE = /^\$?(subtitle|tagline|variant|model)$/i;
 const PRICE_KEY_RE = /(price|rate|cost|amount|fee|fare|premium|charge|subtotal|total)/i;
 const IMAGE_KEY_RE =
   /(image|img|photo|thumbnail|thumb|picture|avatar|logo|icon|banner|gallery|media)/i;
@@ -380,22 +380,34 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       }
       if (v === null || v === undefined || v === "") continue;
       if (typeof v === "boolean") continue; // → features
-      if (!isScalar(v)) continue; // objects / arrays skipped
-
-      const field = fieldMap.get(k);
-      if (field?.hidden) continue;
 
       let display: string;
-      if (field && (field.type === "date" || field.type === "datetime")) {
-        const d = new Date(String(v));
-        display = isNaN(d.getTime()) ? String(v) : d.toLocaleDateString();
-      } else if (typeof v === "number") {
-        display = v.toLocaleString();
+      if (typeof v === "object" && v !== null && !Array.isArray(v)) {
+        const obj = v as Record<string, any>;
+        const candidate = obj.name || obj.title || obj.city || obj.address || obj.label;
+        if (candidate && typeof candidate === "string") {
+          display = candidate;
+        } else {
+          continue;
+        }
+      } else if (!isScalar(v)) {
+        continue; // arrays skipped
       } else {
-        display = String(v);
+        const field = fieldMap.get(k);
+        if (field?.hidden) continue;
+
+        if (field && (field.type === "date" || field.type === "datetime")) {
+          const d = new Date(String(v));
+          display = isNaN(d.getTime()) ? String(v) : d.toLocaleDateString();
+        } else if (typeof v === "number") {
+          display = v.toLocaleString();
+        } else {
+          display = String(v);
+        }
       }
       if (display.length > 60) continue;
 
+      const field = fieldMap.get(k);
       out.push({ label: field?.label || humanizeKey(k), value: display });
     }
     return out.slice(0, 12);

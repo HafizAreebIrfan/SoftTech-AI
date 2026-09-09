@@ -67,11 +67,23 @@ export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
 
   const rec = record as Record<string, any>;
 
-  // Title / subtitle — generic field names only (no entity/industry keys).
+  // Title / subtitle — supports products, vehicles, bookings, listings universally
   const mainTitle =
-    rec.$title || rec.title || rec.name || rec.label || rec.heading || "Item";
+    rec.$title ||
+    rec.title ||
+    rec.name ||
+    rec.make ||
+    rec.brand ||
+    rec.label ||
+    rec.heading ||
+    "Item";
   const variantTitle =
-    rec.$subtitle || rec.subtitle || rec.variant || rec.tagline || "";
+    rec.$subtitle ||
+    rec.subtitle ||
+    rec.model ||
+    rec.variant ||
+    rec.tagline ||
+    (rec.year ? String(rec.year) : "");
 
   // Category / type breadcrumb (generic).
   const categoryStr = (() => {
@@ -79,7 +91,7 @@ export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
     return c && (typeof c === "string" || typeof c === "number") ? String(c) : "";
   })();
 
-  // Minimal generic spec pills: a rating, if the record carries one.
+  // Universal spec pills: rating, stock, vehicle specs, location
   const specs: Array<{ icon: string; text: string }> = [];
   const ratingNum =
     typeof rec.rating === "number"
@@ -92,6 +104,22 @@ export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
   }
   if (typeof rec.stock === "number" && rec.stock >= 0) {
     specs.push({ icon: "📦", text: `${rec.stock} in stock` });
+  }
+  if (rec.transmission) {
+    specs.push({ icon: "⚙️", text: String(rec.transmission).toLowerCase() });
+  }
+  if (rec.fuelType || rec.fuel) {
+    specs.push({ icon: "⛽", text: String(rec.fuelType || rec.fuel).toLowerCase() });
+  }
+  if (rec.seats || rec.capacity) {
+    specs.push({ icon: "👥", text: `${rec.seats || rec.capacity} seats` });
+  }
+  if (rec.mileage) {
+    specs.push({ icon: "🛣️", text: `${Number(rec.mileage).toLocaleString()} km` });
+  }
+  const locStr = rec.location?.city || rec.location?.name || rec.city;
+  if (locStr) {
+    specs.push({ icon: "📍", text: String(locStr) });
   }
 
   // Price — prefer $price/price, else the first price-ish scalar (skip
