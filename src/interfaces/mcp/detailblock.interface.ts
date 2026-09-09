@@ -18,4 +18,5 @@ export interface DetailBlockProps {
   actions?: any[];
   audience?: WidgetAudience;
   onBack?: () => void;
+  metadata?: Record<string, any>;
 }

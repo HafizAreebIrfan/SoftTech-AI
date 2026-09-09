@@ -200,25 +200,71 @@ export function openExternalUrl(href: string): void {
  * The href is a company-registered catalog URL passed by the caller.
  */
 export function setOpenInApp(href: string): void {
-  if (!href) return;
-  const openai =
-    typeof window !== "undefined" ? (window as any).openai : undefined;
-  try {
-    if (openai?.setOpenInAppUrl) {
-      openai.setOpenInAppUrl({ href });
+  if (!href || typeof href !== "string") return;
+  const safeHref = href.trim();
+  if (!safeHref.startsWith("http://") && !safeHref.startsWith("https://")) {
+    return;
+  }
+
+  const applyUrl = () => {
+    const openai =
+      typeof window !== "undefined"
+        ? (window as any).openai ||
+          (window.parent as any)?.openai ||
+          (window.top as any)?.openai
+        : undefined;
+
+    if (typeof window !== "undefined") {
+      (window as any).__OPEN_IN_APP_URL__ = safeHref;
     }
-  } catch (err) {
-    console.warn("[MCP Bridge] setOpenInAppUrl failed:", err);
+
+    try {
+      if (typeof openai?.setOpenInAppUrl === "function") {
+        try {
+          openai.setOpenInAppUrl({ href: safeHref });
+        } catch {
+          openai.setOpenInAppUrl(safeHref);
+        }
+      }
+      // Broadcast to parent frame across all standard host message conventions
+      if (typeof window !== "undefined" && window.parent && window.parent !== window) {
+        window.parent.postMessage(
+          { jsonrpc: "2.0", method: "ui/setOpenInAppUrl", params: { href: safeHref } },
+          "*",
+        );
+        window.parent.postMessage(
+          { jsonrpc: "2.0", method: "setOpenInAppUrl", params: { href: safeHref } },
+          "*",
+        );
+        window.parent.postMessage(
+          { type: "setOpenInAppUrl", href: safeHref },
+          "*",
+        );
+        window.parent.postMessage(
+          { action: "setOpenInAppUrl", url: safeHref },
+          "*",
+        );
+      }
+    } catch (err) {
+      console.warn("[MCP Bridge] setOpenInAppUrl failed:", err);
+    }
+  };
+
+  // Run immediately
+  applyUrl();
+
+  // Retry in case window.openai is injected asynchronously by ChatGPT/host
+  if (typeof window !== "undefined") {
+    setTimeout(applyUrl, 300);
+    setTimeout(applyUrl, 1000);
   }
 }
 
 /**
  * Pure string templating for registered redirect URLs. Replaces every `{key}`
- * token with `extra[key]` (e.g. a user-selected option) or, failing that,
- * `record[key]` — matched case-insensitively so `{insurancetier}` resolves an
- * `insuranceTier` field. Unknown tokens collapse to empty (the company's
- * destination page prompts for whatever it still needs). Values are
- * URL-encoded. Never keys off entity/company names.
+ * token with `extra[key]` (e.g. a user-selected option) or `record[key]` —
+ * matched context-aware and case-insensitively.
+ * Ensures location IDs, car/product IDs, dates, and insurance tiers never clash.
  */
 export function interpolateTemplate(
   template: string,
@@ -227,50 +273,107 @@ export function interpolateTemplate(
 ): string {
   if (!template) return "";
 
-  const lookup = (rawKey: string): unknown => {
-    const key = rawKey.trim();
-    if (key in extra && extra[key] !== undefined && extra[key] !== null) {
-      return extra[key];
-    }
-    if (key in record && record[key] !== undefined && record[key] !== null) {
-      return record[key];
-    }
+  return template.replace(/\{([^}]+)\}/g, (_match, rawKey, offset, fullString) => {
+    let key = String(rawKey).trim();
+    let lower = key.toLowerCase();
 
-    const lower = key.toLowerCase();
+    // Check query parameter context preceding this placeholder (e.g. "pickupLocationId={id}")
+    const preceding = fullString.slice(0, offset);
+    const paramMatch = preceding.match(/([a-zA-Z0-9_-]+)=$/);
+    const paramName = paramMatch ? paramMatch[1].toLowerCase() : "";
 
-    // 1. Case-insensitive exact search in extra & record
-    for (const src of [extra, record]) {
-      for (const k of Object.keys(src)) {
-        if (k.toLowerCase() === lower && src[k] !== undefined && src[k] !== null) {
-          return src[k];
-        }
+    // Contextual parameter inference: if key is generic "id", use the query param name
+    if (lower === "id" || lower === "itemid" || lower === "val") {
+      if (
+        paramName.includes("pickup") ||
+        (paramName.includes("location") && !paramName.includes("dropoff"))
+      ) {
+        key = "pickupLocationId";
+        lower = "pickuplocationid";
+      } else if (paramName.includes("dropoff") || paramName.includes("return")) {
+        key = "dropoffLocationId";
+        lower = "dropofflocationid";
+      } else if (paramName.includes("car") || paramName.includes("vehicle")) {
+        key = "carId";
+        lower = "carid";
+      } else if (paramName.includes("product") || paramName.includes("item")) {
+        key = "productId";
+        lower = "productid";
       }
     }
 
-    // 2. Generic Semantic Fallbacks
-    // Entity / Product / Item / Car IDs
-    if (lower === "id" || lower.endsWith("id")) {
-      const idVal = record.id ?? record._id ?? extra.id ?? extra._id;
-      if (idVal !== undefined && idVal !== null) return idVal;
+    // 1. Exact match in extra (user-selected options or explicit call params have highest priority)
+    if (key in extra && extra[key] !== undefined && extra[key] !== null) {
+      return encodeURIComponent(String(extra[key]));
+    }
+    for (const k of Object.keys(extra)) {
+      if (k.toLowerCase() === lower && extra[k] !== undefined && extra[k] !== null) {
+        return encodeURIComponent(String(extra[k]));
+      }
     }
 
-    // Location IDs
-    if (lower.includes("location")) {
+    // 2. Exact match in record (scalars only, not objects)
+    if (
+      key in record &&
+      record[key] !== undefined &&
+      record[key] !== null &&
+      typeof record[key] !== "object"
+    ) {
+      return encodeURIComponent(String(record[key]));
+    }
+    for (const k of Object.keys(record)) {
+      if (
+        k.toLowerCase() === lower &&
+        record[k] !== undefined &&
+        record[k] !== null &&
+        typeof record[k] !== "object"
+      ) {
+        return encodeURIComponent(String(record[k]));
+      }
+    }
+
+    // 3. Semantic Fallbacks (Specific checks FIRST so they are never shadowed)
+
+    // A. Locations (pickupLocationId, dropoffLocationId, locationId)
+    if (
+      lower.includes("location") ||
+      lower.includes("pickup") ||
+      lower.includes("dropoff") ||
+      lower.includes("branch")
+    ) {
       const locObj = (record.location || extra.location) as any;
-      const locVal =
-        extra[key] ??
-        record[key] ??
+      if (lower.includes("dropoff")) {
+        const dVal =
+          extra.dropoffLocationId ??
+          extra.dropoffLocation ??
+          extra.dropoffId ??
+          extra.pickupLocationId ??
+          extra.locationId ??
+          record.dropoffLocationId ??
+          record.locationId ??
+          locObj?.id ??
+          locObj?._id;
+        if (dVal !== undefined && dVal !== null) return encodeURIComponent(String(dVal));
+      }
+      const lVal =
+        extra.pickupLocationId ??
+        extra.locationId ??
+        extra.pickupLocation ??
+        extra.location ??
+        record.pickupLocationId ??
         record.locationId ??
         locObj?.id ??
-        locObj?._id ??
-        record.pickupLocationId ??
-        record.dropoffLocationId ??
-        record.id;
-      if (locVal !== undefined && locVal !== null) return locVal;
+        locObj?._id;
+      if (lVal !== undefined && lVal !== null) return encodeURIComponent(String(lVal));
     }
 
-    // Dates
-    if (lower.includes("pickup") || lower.includes("start") || lower === "date" || lower === "datefrom") {
+    // B. Dates (pickupDate, dropoffDate, startDate, endDate, date, dateto)
+    if (
+      lower.includes("pickup") ||
+      lower.includes("start") ||
+      lower === "date" ||
+      lower === "datefrom"
+    ) {
       const dVal =
         extra.pickupDate ??
         extra.startDate ??
@@ -280,10 +383,14 @@ export function interpolateTemplate(
         record.startDate ??
         record.date ??
         new Date().toISOString().split("T")[0];
-      if (dVal !== undefined && dVal !== null) return dVal;
+      if (dVal !== undefined && dVal !== null) return encodeURIComponent(String(dVal));
     }
 
-    if (lower.includes("dropoff") || lower.includes("end") || lower === "dateto") {
+    if (
+      lower.includes("dropoff") ||
+      lower.includes("end") ||
+      lower === "dateto"
+    ) {
       const dVal =
         extra.dropoffDate ??
         extra.endDate ??
@@ -291,10 +398,10 @@ export function interpolateTemplate(
         record.dropoffDate ??
         record.endDate ??
         record.dateto;
-      if (dVal !== undefined && dVal !== null && dVal !== "") return dVal;
+      if (dVal !== undefined && dVal !== null && dVal !== "") return encodeURIComponent(String(dVal));
     }
 
-    // Tier / Insurance
+    // C. Tier / Insurance
     if (lower.includes("insurance") || lower === "tier") {
       const tVal =
         extra.insuranceTier ??
@@ -303,35 +410,46 @@ export function interpolateTemplate(
         record.insuranceTier ??
         record.insurancetier ??
         record.tier;
-      if (tVal !== undefined && tVal !== null) return tVal;
+      if (tVal !== undefined && tVal !== null) return encodeURIComponent(String(tVal));
     }
 
-    // Quantity
+    // D. Quantity
     if (lower === "qty" || lower === "quantity" || lower === "count") {
-      return extra.quantity ?? extra.qty ?? record.quantity ?? record.qty ?? 1;
+      const qVal = extra.quantity ?? extra.qty ?? record.quantity ?? record.qty ?? 1;
+      return encodeURIComponent(String(qVal));
     }
 
-    // Price / Total
-    if (lower === "price" || lower === "total" || lower === "amount") {
-      return (
+    // E. Price / Total
+    if (
+      lower === "price" ||
+      lower === "total" ||
+      lower === "amount" ||
+      lower.includes("rate")
+    ) {
+      const pVal =
         extra.total ??
         extra.price ??
         record.$price ??
         record.price ??
+        record.pricePerDay ??
         record.dailyRate ??
-        record.amount
-      );
+        record.amount;
+      if (pVal !== undefined && pVal !== null) return encodeURIComponent(String(pVal));
     }
 
-    return undefined;
-  };
-
-  return template.replace(/\{([^}]+)\}/g, (_match, rawKey) => {
-    const value = lookup(String(rawKey));
-    if (value === undefined || value === null || typeof value === "object") {
-      return "";
+    // F. Entity / Car / Product ID (Strict check so it doesn't match location keys)
+    if (
+      lower === "id" ||
+      lower === "carid" ||
+      lower === "productid" ||
+      lower === "itemid" ||
+      lower === "_id"
+    ) {
+      const idVal = record.id ?? record._id ?? extra.carId ?? extra.productId ?? extra.id ?? extra._id;
+      if (idVal !== undefined && idVal !== null) return encodeURIComponent(String(idVal));
     }
-    return encodeURIComponent(String(value));
+
+    return "";
   });
 }
 

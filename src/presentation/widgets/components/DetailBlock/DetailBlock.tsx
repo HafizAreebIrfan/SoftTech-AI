@@ -8,6 +8,7 @@ import {
   openExternalUrl,
   interpolateTemplate,
   callMcpTool,
+  setOpenInApp,
 } from "../../../../utils/mcpBridge";
 import { extractAllImageUrls } from "../../helper/RenderImage/getproxiedimageurl";
 import { renderImage } from "../../helper/RenderImage";
@@ -144,6 +145,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   collection,
   actions = [],
   onBack,
+  metadata: propMetadata,
 }) => {
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
   const openCart = useCartStore((state) => state.openCart);
@@ -164,13 +166,16 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   }, []);
 
   const metadata = useMemo<Record<string, any>>(() => {
+    if (propMetadata && Object.keys(propMetadata).length > 0) {
+      return propMetadata;
+    }
     if (typeof window === "undefined") return {};
     return (
       (window as any).__WIDGET_METADATA__ ||
       (window as any).__WIDGET_DATA__?.metadata ||
       {}
     );
-  }, []);
+  }, [propMetadata]);
 
   const companyName = metadata.companyName || collection?.entity || "store";
 
@@ -199,33 +204,62 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
    * ------------------------------------------------------------------ */
   const isRental = useMemo(() => {
     if (!targetRecord) return false;
-    const entity = (collection?.entity || "").toLowerCase();
-    const industry = (metadata.industry || "").toLowerCase();
+    const entity = (collection?.entity || metadata.entity || "").toLowerCase();
+
+    // Packages, services, products, items are NEVER car rentals
+    if (
+      entity === "packages" ||
+      entity === "package" ||
+      entity === "services" ||
+      entity === "service" ||
+      entity === "products" ||
+      entity === "product" ||
+      entity === "items" ||
+      entity === "catalog"
+    ) {
+      return false;
+    }
+
+    // Explicit vehicle/car rental entities
     if (
       entity === "cars" ||
       entity === "car" ||
       entity === "vehicles" ||
-      entity === "rentals"
-    )
+      entity === "vehicle" ||
+      entity === "rentals" ||
+      entity === "rental" ||
+      entity === "car_rental"
+    ) {
       return true;
+    }
+
+    // Check for vehicle-specific hardware/rental attributes (and not a service package)
     if (
-      industry.includes("travel") ||
-      industry.includes("booking") ||
-      industry.includes("rental")
-    )
+      (targetRecord.licensePlate != null ||
+        (targetRecord.fuelType != null && targetRecord.transmission != null) ||
+        targetRecord.carId != null) &&
+      !targetRecord.packagename &&
+      !targetRecord.packageprice
+    ) {
       return true;
-    if (targetRecord.pricePerDay != null || targetRecord.dailyRate != null)
-      return true;
+    }
+
+    // Daily rate strictly for vehicles
     if (
-      targetRecord.licensePlate != null ||
-      targetRecord.fuelType != null ||
-      targetRecord.mileage != null
-    )
+      (targetRecord.pricePerDay != null || targetRecord.dailyRate != null) &&
+      !targetRecord.packagename &&
+      !targetRecord.packageprice
+    ) {
       return true;
+    }
+
+    // Explicit booking checkout template containing carId AND rental dates
     const checkoutUrlTpl =
       metadata.globalCheckoutUrl || metadata.webCheckoutUrl || "";
-    if (/{pickupDate}|{dropoffDate}|{insuranceTier}/i.test(checkoutUrlTpl))
+    if (/{carId}/i.test(checkoutUrlTpl) && /{pickupDate}/i.test(checkoutUrlTpl)) {
       return true;
+    }
+
     return false;
   }, [targetRecord, collection, metadata]);
 
@@ -241,20 +275,47 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       t = String(targetRecord.make);
       s = String(targetRecord.model);
     } else {
-      const titleField = fields.find((f) => f.uiRole === "title" || f.primary);
-      if (titleField) {
-        t = String(getValue(targetRecord, titleField.path || titleField.key) ?? "");
+      // 1. Check $title first (canonical display title attached by MCP pipeline)
+      if (targetRecord.$title && String(targetRecord.$title).trim()) {
+        t = String(targetRecord.$title).trim();
       }
+
+      // 2. Field with uiRole === "title" (CRITICAL: NEVER check f.primary because primary is DB ID!)
+      if (!t) {
+        const titleField = fields.find((f) => f.uiRole === "title");
+        if (titleField) {
+          const val = getValue(targetRecord, titleField.path || titleField.key);
+          if (val && isScalar(val)) t = String(val).trim();
+        }
+      }
+
+      // 3. Known generic title keys (strictly excluding ID)
+      if (!t) {
+        t = String(
+          targetRecord.title ||
+          targetRecord.packagename ||
+          targetRecord.name ||
+          targetRecord.label ||
+          targetRecord.heading ||
+          targetRecord.productName ||
+          targetRecord.serviceName ||
+          ""
+        ).trim();
+      }
+
+      // 4. Regex search on keys matching TITLE_KEY_RE, strictly excluding IDs
       if (!t) {
         for (const [k, v] of Object.entries(targetRecord)) {
-          if (TITLE_KEY_RE.test(k) && isScalar(v) && String(v).trim()) {
-            t = String(v);
+          if (TITLE_KEY_RE.test(k) && !looksLikeId(k) && isScalar(v) && String(v).trim()) {
+            t = String(v).trim();
             break;
           }
         }
       }
+
       if (!t) t = String(collection?.itemLabel || collection?.entity || "Details");
 
+      // Subtitle
       const subField = fields.find((f) => f.uiRole === "subtitle");
       if (subField) {
         s = String(getValue(targetRecord, subField.path || subField.key) ?? "");
@@ -263,11 +324,12 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         for (const [k, v] of Object.entries(targetRecord)) {
           if (
             SUBTITLE_KEY_RE.test(k) &&
+            !looksLikeId(k) &&
             isScalar(v) &&
             String(v).trim() &&
             String(v) !== t
           ) {
-            s = String(v);
+            s = String(v).trim();
             break;
           }
         }
@@ -279,10 +341,99 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       s =
         String(targetRecord.brand) +
         (targetRecord.category ? ` • ${targetRecord.category}` : "");
+    } else if (!s && targetRecord.category && targetRecord.category !== t) {
+      s = String(targetRecord.category);
     }
 
     return { title: t, subtitle: s };
   }, [targetRecord, fields, collection]);
+
+  /* -------------------------- Option groups ---------------------------- */
+  const optionGroups = useMemo(() => {
+    if (!targetRecord)
+      return [] as Array<{
+        key: string;
+        label: string;
+        values: string[];
+        priceMap?: Record<string, string>;
+      }>;
+
+    const groups: Array<{
+      key: string;
+      label: string;
+      values: string[];
+      priceMap?: Record<string, string>;
+    }> = [];
+
+    // Check if record provides a corresponding list of tier/package prices
+    let priceList: string[] = [];
+    const rawPriceVal =
+      targetRecord.packageprice ||
+      targetRecord.prices ||
+      targetRecord.tier_prices ||
+      targetRecord.$price;
+
+    if (Array.isArray(rawPriceVal)) {
+      priceList = rawPriceVal.map((p) => String(p).trim()).filter(Boolean);
+    } else if (typeof rawPriceVal === "string" && rawPriceVal.includes(",")) {
+      priceList = rawPriceVal.split(",").map((p) => p.trim()).filter(Boolean);
+    }
+
+    for (const [k, v] of Object.entries(targetRecord)) {
+      if (k.startsWith("$") && k !== "$description") continue;
+      if (OPTION_EXCLUDE_RE.test(k)) continue;
+      if (looksLikeId(k)) continue;
+
+      let values: string[] = [];
+      if (Array.isArray(v)) {
+        values = Array.from(
+          new Set(v.map((x) => String(x).trim()).filter(Boolean)),
+        );
+      } else if (
+        typeof v === "string" &&
+        v.includes(",") &&
+        (k.toLowerCase().includes("type") ||
+          k.toLowerCase().includes("tier") ||
+          k.toLowerCase().includes("size") ||
+          k.toLowerCase().includes("color") ||
+          k.toLowerCase().includes("variant") ||
+          k.toLowerCase().includes("option") ||
+          k.toLowerCase().includes("plan") ||
+          k.toLowerCase().includes("level") ||
+          fieldMap.get(k)?.type === "array")
+      ) {
+        values = Array.from(
+          new Set(v.split(",").map((x) => x.trim()).filter(Boolean)),
+        );
+      }
+
+      if (values.length < 2 || values.length > 10) continue;
+
+      let priceMap: Record<string, string> | undefined = undefined;
+      if (priceList.length === values.length) {
+        priceMap = {};
+        values.forEach((val, idx) => {
+          priceMap![val] = priceList[idx];
+        });
+      }
+
+      groups.push({
+        key: k,
+        label: fieldMap.get(k)?.label || humanizeKey(k),
+        values,
+        priceMap,
+      });
+    }
+
+    return groups;
+  }, [targetRecord, fieldMap]);
+
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const init: Record<string, string> = {};
+    for (const g of optionGroups) init[g.key] = g.values[0];
+    setSelectedOptions(init);
+  }, [optionGroups]);
 
   /* ------------------------------ Pricing ------------------------------ */
   const priceInfo = useMemo(() => {
@@ -298,15 +449,32 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     let value: unknown;
     let key = "";
 
-    // Prioritize daily rate for rentals
-    if (targetRecord.pricePerDay != null) {
-      value = targetRecord.pricePerDay;
-      key = "pricePerDay";
-    } else if (targetRecord.dailyRate != null) {
-      value = targetRecord.dailyRate;
-      key = "dailyRate";
+    // 1. Check if an active tier price is selected via option groups
+    for (const g of optionGroups) {
+      if (g.priceMap && selectedOptions[g.key]) {
+        const tierPrice = g.priceMap[selectedOptions[g.key]];
+        if (tierPrice) {
+          value = tierPrice;
+          key = "tierPrice";
+          break;
+        }
+      }
     }
 
+    // 2. Prioritize daily rate for rentals
+    if (value === undefined) {
+      if (isRental) {
+        if (targetRecord.pricePerDay != null) {
+          value = targetRecord.pricePerDay;
+          key = "pricePerDay";
+        } else if (targetRecord.dailyRate != null) {
+          value = targetRecord.dailyRate;
+          key = "dailyRate";
+        }
+      }
+    }
+
+    // 3. Check field schema for uiRole === "price"
     if (value === undefined || value === null || value === "") {
       const priceField = fields.find(
         (f) => f.uiRole === "price" || f.type === "currency",
@@ -316,6 +484,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         key = priceField.key;
       }
     }
+
+    // 4. Check $price
     if (
       (value === undefined || value === null || value === "") &&
       targetRecord.$price != null
@@ -323,6 +493,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       value = targetRecord.$price;
       key = "$price";
     }
+
+    // 5. Fallback scan for price keys
     if (value === undefined || value === null || value === "") {
       for (const [k, v] of Object.entries(targetRecord)) {
         if (/(percent|discount|qty|quantity|count|stock)/i.test(k)) continue;
@@ -337,17 +509,23 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       }
     }
 
-    const num = parseNumericPrice(value);
+    // If multiple prices exist in a string (e.g. "$40, $100, $250") and no option mapped it, take first
+    let displayVal = value;
+    if (typeof value === "string" && value.includes(",")) {
+      displayVal = value.split(",")[0].trim();
+    }
+
+    const num = parseNumericPrice(displayVal);
     const period = derivePricePeriod(key) || (isRental ? "per day" : "");
 
     return {
-      value,
+      value: displayVal,
       key,
       numeric: num,
-      display: formatPrice(value, targetRecord),
+      display: formatPrice(displayVal, targetRecord),
       period,
     };
-  }, [targetRecord, fields, isRental]);
+  }, [targetRecord, fields, isRental, optionGroups, selectedOptions]);
 
   /* --------------------------- Image gallery --------------------------- */
   const allImages = useMemo(
@@ -427,12 +605,17 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       candidate &&
       (candidate.toLowerCase() === title.toLowerCase() ||
         candidate.toLowerCase() === subtitle.toLowerCase() ||
-        (candidate.length < 15 && !candidate.includes(" ")))
+        (candidate.length < 15 && !candidate.includes(" ")) ||
+        optionGroups.some(
+          (g) =>
+            g.values.join(", ").toLowerCase() === candidate.toLowerCase() ||
+            g.values.join(",").toLowerCase() === candidate.replace(/\s+/g, "").toLowerCase()
+        ))
     ) {
       return "";
     }
     return candidate;
-  }, [targetRecord, fields, title, subtitle]);
+  }, [targetRecord, fields, title, subtitle, optionGroups]);
 
   /* ---------------------------- Features ------------------------------- */
   const features = useMemo(() => {
@@ -465,35 +648,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     }
     return Array.from(new Set(out)).slice(0, 24);
   }, [targetRecord, fieldMap]);
-
-  /* -------------------------- Option groups ---------------------------- */
-  const optionGroups = useMemo(() => {
-    if (!targetRecord)
-      return [] as Array<{ key: string; label: string; values: string[] }>;
-    const groups: Array<{ key: string; label: string; values: string[] }> = [];
-    for (const [k, v] of Object.entries(targetRecord)) {
-      if (!Array.isArray(v) || v.length < 2) continue;
-      if (OPTION_EXCLUDE_RE.test(k)) continue;
-      if (!v.every((x) => typeof x === "string" || typeof x === "number")) continue;
-      const uniq = Array.from(
-        new Set(v.map((x) => String(x).trim()).filter(Boolean)),
-      );
-      if (uniq.length < 2 || uniq.length > 8) continue;
-      groups.push({
-        key: k,
-        label: fieldMap.get(k)?.label || humanizeKey(k),
-        values: uniq,
-      });
-    }
-    return groups;
-  }, [targetRecord, fieldMap]);
-
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
-  useEffect(() => {
-    const init: Record<string, string> = {};
-    for (const g of optionGroups) init[g.key] = g.values[0];
-    setSelectedOptions(init);
-  }, [optionGroups]);
 
   /* ---------------------------- Spec grid ------------------------------ */
   const specs = useMemo(() => {
@@ -711,23 +865,122 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const totalRentalCost = subtotalCost + insuranceTotalCost;
 
   /* ----------------------- Location Picker ----------------------------- */
-  const locationObj = targetRecord?.location;
-  const locationName =
-    locationObj?.name && locationObj?.city
-      ? `${locationObj.name} — ${locationObj.city}`
-      : locationObj?.name ||
-        locationObj?.city ||
-        targetRecord?.city ||
-        "Main Terminal / Branch";
+  interface LocationOption {
+    id: string;
+    name: string;
+    city?: string;
+    displayName: string;
+  }
 
-  const locationId =
+  const availableLocations = useMemo<LocationOption[]>(() => {
+    const map = new Map<string, LocationOption>();
+
+    const addLoc = (loc: any, fallbackId?: string) => {
+      if (!loc) return;
+      const id = String(loc.id || loc._id || loc.locationId || fallbackId || "").trim();
+      if (!id) return;
+      const name = String(loc.name || loc.title || loc.address || "Branch").trim();
+      const city = String(loc.city || loc.state || "").trim();
+      const displayName = city && !name.includes(city) ? `${name} — ${city}` : name;
+      if (!map.has(id)) {
+        map.set(id, { id, name, city, displayName });
+      }
+    };
+
+    // 1. Current target record
+    if (targetRecord?.location) {
+      addLoc(targetRecord.location, targetRecord.locationId);
+    } else if (targetRecord?.locationId) {
+      addLoc(
+        {
+          id: targetRecord.locationId,
+          name: targetRecord.name || targetRecord.city || "Branch",
+          city: targetRecord.city,
+        },
+        targetRecord.locationId,
+      );
+    }
+
+    // 2. All records from the current tool response / catalog
+    const toolRes: any =
+      useMcpWidgetStore.getState().toolResult ||
+      (typeof window !== "undefined" ? (window as any).__WIDGET_DATA__ : null);
+    const rawData =
+      toolRes?.structuredContent?.data ??
+      toolRes?.data?.data ??
+      toolRes?.data ??
+      toolRes?.structuredContent ??
+      [];
+    const list = Array.isArray(rawData)
+      ? rawData
+      : Array.isArray(rawData?.data)
+        ? rawData.data
+        : Array.isArray(rawData?.cars)
+          ? rawData.cars
+          : [];
+
+    for (const item of list) {
+      if (item?.location) {
+        addLoc(item.location, item.locationId);
+      } else if (item?.locationId) {
+        addLoc(
+          {
+            id: item.locationId,
+            name: item.name || item.city || "Branch",
+            city: item.city,
+          },
+          item.locationId,
+        );
+      }
+    }
+
+    // 3. Fallback: if only 1 branch was returned in search results, include standard branches
+    if (
+      map.size <= 1 &&
+      (targetRecord?.location?.country === "Pakistan" ||
+        String(targetRecord?.location?.phone || "").startsWith("+92"))
+    ) {
+      if (!Array.from(map.values()).some((l) => l.city?.toLowerCase() === "islamabad")) {
+        addLoc({
+          id: "cmtjtc4rg0000517l566a2vg6",
+          name: "Islamabad Blue Area Branch",
+          city: "Islamabad",
+        });
+      }
+      if (!Array.from(map.values()).some((l) => l.city?.toLowerCase() === "lahore")) {
+        addLoc({
+          id: "cmtjtc4rg0000517l566a2vg7",
+          name: "Lahore Airport Branch",
+          city: "Lahore",
+        });
+      }
+    }
+
+    return Array.from(map.values());
+  }, [targetRecord]);
+
+  const defaultLocId =
     targetRecord?.locationId ||
-    locationObj?.id ||
-    locationObj?._id ||
-    targetRecord?.id;
+    targetRecord?.location?.id ||
+    targetRecord?.location?._id ||
+    availableLocations[0]?.id ||
+    "";
 
-  const [selectedPickupLoc, setSelectedPickupLoc] = useState(locationName);
-  const [selectedDropoffLoc, setSelectedDropoffLoc] = useState("same");
+  const [selectedPickupLocId, setSelectedPickupLocId] = useState(defaultLocId);
+  const [selectedDropoffLocId, setSelectedDropoffLocId] = useState("same");
+
+  useEffect(() => {
+    if (defaultLocId) {
+      setSelectedPickupLocId(defaultLocId);
+      setSelectedDropoffLocId("same");
+    }
+  }, [defaultLocId]);
+
+  const effectivePickupLocationId = selectedPickupLocId || defaultLocId;
+  const effectiveDropoffLocationId =
+    selectedDropoffLocId === "same"
+      ? effectivePickupLocationId
+      : selectedDropoffLocId || effectivePickupLocationId;
 
   /* ------------------------------ Handlers & State -------------------- */
   const [quantity, setQuantity] = useState(1);
@@ -745,6 +998,20 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     if (!tpl || !targetRecord) return "";
     return interpolateTemplate(String(tpl), targetRecord, selectedOptions);
   }, [metadata.productItemUrlTemplate, targetRecord, selectedOptions]);
+
+  // Keep ChatGPT / host header "Open in {Company}" button in sync with single product page
+  useEffect(() => {
+    const targetUrl =
+      productItemUrl || metadata.shopCatalogUrl || metadata.globalCheckoutUrl;
+    if (targetUrl) {
+      setOpenInApp(targetUrl);
+    }
+    return () => {
+      if (metadata.shopCatalogUrl) {
+        setOpenInApp(metadata.shopCatalogUrl);
+      }
+    };
+  }, [productItemUrl, metadata.shopCatalogUrl, metadata.globalCheckoutUrl]);
 
   const checkoutUrl = useMemo(() => {
     const tpl = metadata.globalCheckoutUrl || metadata.webCheckoutUrl;
@@ -764,12 +1031,14 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       dateto: dropoffDate,
       dropoffDate,
       endDate: dropoffDate,
-      locationId,
-      pickupLocationId: locationId,
-      dropoffLocationId: locationId,
-      insuranceTier: selectedInsurance,
-      insurancetier: selectedInsurance,
-      tier: selectedInsurance,
+      carId: targetRecord.id,
+      id: targetRecord.id,
+      locationId: effectivePickupLocationId,
+      pickupLocationId: effectivePickupLocationId,
+      dropoffLocationId: effectiveDropoffLocationId,
+      insuranceTier: selectedInsurance.toUpperCase(),
+      insurancetier: selectedInsurance.toUpperCase(),
+      tier: selectedInsurance.toUpperCase(),
     };
 
     return interpolateTemplate(String(tpl), targetRecord, extraParams);
@@ -786,7 +1055,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     priceInfo.value,
     pickupDate,
     dropoffDate,
-    locationId,
+    effectivePickupLocationId,
+    effectiveDropoffLocationId,
     selectedInsurance,
   ]);
 
@@ -839,6 +1109,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     if (!checkoutUrl) return;
     openExternalUrl(appendChatUrlToCheckout(checkoutUrl));
   }, [checkoutUrl]);
+
+  const handleBuyNowWithCart = useCallback(async () => {
+    await handleAddToCart();
+    openCart();
+  }, [handleAddToCart, openCart]);
 
   const handleViewOnCompany = useCallback(() => {
     if (!productItemUrl) return;
@@ -1223,10 +1498,14 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               <label className={styles.fieldLabel}>Pickup location</label>
               <select
                 className={styles.selectInput}
-                value={selectedPickupLoc}
-                onChange={(e) => setSelectedPickupLoc(e.target.value)}
+                value={selectedPickupLocId}
+                onChange={(e) => setSelectedPickupLocId(e.target.value)}
               >
-                <option value={locationName}>{locationName}</option>
+                {availableLocations.map((loc) => (
+                  <option key={`pick-${loc.id}`} value={loc.id}>
+                    {loc.displayName}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -1235,11 +1514,15 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               <label className={styles.fieldLabel}>Drop-off location</label>
               <select
                 className={styles.selectInput}
-                value={selectedDropoffLoc}
-                onChange={(e) => setSelectedDropoffLoc(e.target.value)}
+                value={selectedDropoffLocId}
+                onChange={(e) => setSelectedDropoffLocId(e.target.value)}
               >
                 <option value="same">Same as pickup</option>
-                <option value={locationName}>{locationName}</option>
+                {availableLocations.map((loc) => (
+                  <option key={`drop-${loc.id}`} value={loc.id}>
+                    {loc.displayName}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -1323,7 +1606,15 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               >
                 View on {companyName} &rarr;
               </button>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                className={styles.continueBookingBtn}
+                onClick={handleBuyNowWithCart}
+              >
+                Reserve now &rarr;
+              </button>
+            )}
 
             <p className={styles.bookingNote}>
               You won't be charged yet — review and confirm on the next step.
@@ -1344,27 +1635,31 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               )}
             </div>
 
-            {/* Option Chips (Size / Color / Variant) */}
+            {/* Option Chips (Size / Color / Variant / Tier) */}
             {optionGroups.map((g) => (
               <div key={`opt-${g.key}`} className={styles.optionGroup}>
                 <label className={styles.fieldLabel}>{g.label}</label>
                 <div className={styles.optionChips}>
-                  {g.values.map((val) => (
-                    <button
-                      key={`${g.key}-${val}`}
-                      type="button"
-                      className={`${styles.optionChip} ${
-                        selectedOptions[g.key] === val
-                          ? styles.optionChipSelected
-                          : ""
-                      }`}
-                      onClick={() =>
-                        setSelectedOptions((prev) => ({ ...prev, [g.key]: val }))
-                      }
-                    >
-                      {val}
-                    </button>
-                  ))}
+                  {g.values.map((val) => {
+                    const priceTag = g.priceMap?.[val];
+                    const label = priceTag ? `${val} • ${priceTag}` : val;
+                    return (
+                      <button
+                        key={`${g.key}-${val}`}
+                        type="button"
+                        className={`${styles.optionChip} ${
+                          selectedOptions[g.key] === val
+                            ? styles.optionChipSelected
+                            : ""
+                        }`}
+                        onClick={() =>
+                          setSelectedOptions((prev) => ({ ...prev, [g.key]: val }))
+                        }
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -1433,28 +1728,26 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               </div>
             )}
 
-            {/* Action Buttons */}
+            {/* Action Buttons: Add to Cart and Buy Now are always visible */}
             <div className={styles.buttonGroup}>
-              {canAddToCart && (
-                <button
-                  type="button"
-                  className={styles.addToCartBtn}
-                  onClick={handleAddToCart}
-                >
-                  <span>🛒</span>
-                  <span>Add to cart</span>
-                </button>
-              )}
-              {checkoutUrl && (
-                <button
-                  type="button"
-                  className={styles.buyNowBtn}
-                  onClick={handleBuyNowOrBook}
-                >
-                  <span>⚡</span>
-                  <span>Buy now</span>
-                </button>
-              )}
+              <button
+                type="button"
+                className={styles.addToCartBtn}
+                onClick={handleAddToCart}
+              >
+                <span>🛒</span>
+                <span>Add to cart</span>
+              </button>
+
+              <button
+                type="button"
+                className={styles.buyNowBtn}
+                onClick={checkoutUrl ? handleBuyNowOrBook : handleBuyNowWithCart}
+              >
+                <span>⚡</span>
+                <span>Buy now</span>
+              </button>
+
               {productItemUrl && (
                 <button
                   type="button"
@@ -1467,11 +1760,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               )}
             </div>
 
-            {(checkoutUrl || canAddToCart) && (
-              <p className={styles.bookingNote}>
-                You won't be charged yet — review and confirm on the next step.
-              </p>
-            )}
+            <p className={styles.bookingNote}>
+              You won't be charged yet — review and confirm on the next step.
+            </p>
           </>
         )}
       </div>

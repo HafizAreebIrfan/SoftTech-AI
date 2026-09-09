@@ -76,7 +76,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   if (!isOpen || !src) return null;
 
   const activeSrc = images[currentIndex] || src;
-  const proxied = getProxiedImageUrl(activeSrc) || getRawImageUrl(activeSrc) || activeSrc;
+  const proxied = getRawImageUrl(activeSrc) || getProxiedImageUrl(activeSrc) || activeSrc;
 
   const content = (
     <div
@@ -132,7 +132,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
         {hasMultiple && images.length <= 10 && (
           <div className={styles.thumbnailStrip}>
             {images.map((img, idx) => {
-              const thumbProxied = getProxiedImageUrl(img) || getRawImageUrl(img) || img;
+              const thumbProxied = getRawImageUrl(img) || getProxiedImageUrl(img) || img;
               return (
                 <button
                   key={`lb-thumb-${idx}`}

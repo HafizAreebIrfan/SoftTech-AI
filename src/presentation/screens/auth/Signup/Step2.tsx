@@ -911,31 +911,259 @@ const SignupStep2: FC = () => {
                       >
                         Checkout / Booking URL Template
                       </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. https://carrentalprostudio.com/checkout?id={id} or https://mybooking.com/book/{slug}"
-                        value={authStrategy?.globalCheckoutUrl || ""}
-                        onChange={(e) =>
-                          setAuthStrategy({
-                            globalCheckoutUrl: e.target.value,
-                          })
-                        }
-                        className={styles.urlInput}
+                      <div
                         style={{
-                          background: colors.Background,
-                          border: `1px solid ${colors.CardBorder}`,
-                          borderRadius: "0.5rem",
-                          color: colors.TextHeading,
-                          padding: "0.5rem 0.75rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.5rem",
                         }}
-                      />
-                      <span
-                        style={{ fontSize: "0.75rem", color: colors.TextBody }}
                       >
-                        Use <code>{"{id}"}</code> or <code>{"{slug}"}</code> as
-                        placeholders. ChatGPT/AI will automatically forward
-                        users to this link to complete payments or bookings.
-                      </span>
+                        <input
+                          type="text"
+                          placeholder="e.g. https://carrental.pro/book?carId={carId}&pickupLocationId={pickupLocationId}&dropoffLocationId={dropoffLocationId}&pickupDate={pickupDate}&dropoffDate={dropoffDate}&insuranceTier={insuranceTier}"
+                          value={authStrategy?.globalCheckoutUrl || ""}
+                          onChange={(e) =>
+                            setAuthStrategy({
+                              globalCheckoutUrl: e.target.value,
+                            })
+                          }
+                          className={styles.urlInput}
+                          style={{
+                            background: colors.Background,
+                            border: `1px solid ${colors.CardBorder}`,
+                            borderRadius: "0.5rem",
+                            color: colors.TextHeading,
+                            padding: "0.5rem 0.75rem",
+                            fontFamily: "monospace",
+                            fontSize: "0.8125rem",
+                          }}
+                        />
+
+                        {/* Parameter helper badges */}
+                        <div
+                          style={{
+                            background: colors.Card,
+                            border: `1px solid ${colors.CardBorder}`,
+                            borderRadius: "0.5rem",
+                            padding: "0.625rem 0.75rem",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "0.5rem",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                color: colors.TextHeading,
+                              }}
+                            >
+                              Supported Template Parameters (click to insert):
+                            </span>
+                          </div>
+
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "0.375rem",
+                            }}
+                          >
+                            {[
+                              { tag: "{id}", label: "Item / Car / Product ID" },
+                              { tag: "{carId}", label: "Car ID" },
+                              { tag: "{pickupLocationId}", label: "Pickup Location ID" },
+                              { tag: "{dropoffLocationId}", label: "Drop-off Location ID" },
+                              { tag: "{pickupDate}", label: "Pickup Date (YYYY-MM-DD)" },
+                              { tag: "{dropoffDate}", label: "Drop-off Date (YYYY-MM-DD)" },
+                              { tag: "{insuranceTier}", label: "Insurance (BASIC, STANDARD, PREMIUM)" },
+                              { tag: "{quantity}", label: "Quantity / Duration (days)" },
+                              { tag: "{price}", label: "Price / Daily Rate" },
+                              { tag: "{total}", label: "Total Amount" },
+                              { tag: "{slug}", label: "URL Slug" },
+                            ].map((p) => (
+                              <button
+                                key={p.tag}
+                                type="button"
+                                title={`Click to add ${p.tag} (${p.label})`}
+                                onClick={() => {
+                                  const cur = authStrategy?.globalCheckoutUrl || "";
+                                  const separator = cur.includes("?")
+                                    ? cur.endsWith("?") || cur.endsWith("&")
+                                      ? ""
+                                      : "&"
+                                    : "?";
+                                  const paramKey = p.tag.replace(/[{}]/g, "");
+                                  const toAdd = cur
+                                    ? cur.endsWith("=")
+                                      ? p.tag
+                                      : `${separator}${paramKey}=${p.tag}`
+                                    : `https://yourcompany.com/book?${paramKey}=${p.tag}`;
+                                  setAuthStrategy({
+                                    globalCheckoutUrl: cur ? `${cur}${toAdd}` : toAdd,
+                                  });
+                                }}
+                                style={{
+                                  background: colors.BackgroundSecondary,
+                                  border: `1px solid ${colors.CardBorder}`,
+                                  borderRadius: "0.375rem",
+                                  padding: "0.25rem 0.5rem",
+                                  fontSize: "0.7rem",
+                                  color: colors.BrandIndigo,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "0.25rem",
+                                }}
+                              >
+                                <code>{p.tag}</code>
+                                <span style={{ color: colors.TextBody, fontSize: "0.65rem" }}>
+                                  ({p.label})
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Quick Preset Templates */}
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "0.5rem",
+                              marginTop: "0.25rem",
+                              paddingTop: "0.375rem",
+                              borderTop: `1px solid ${colors.CardBorder}`,
+                            }}
+                          >
+                            <span style={{ fontSize: "0.7rem", color: colors.TextBody }}>
+                              Quick Presets:
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAuthStrategy({
+                                  globalCheckoutUrl:
+                                    "https://yourcarrental.com/book?carId={carId}&pickupLocationId={pickupLocationId}&dropoffLocationId={dropoffLocationId}&pickupDate={pickupDate}&dropoffDate={dropoffDate}&insuranceTier={insuranceTier}",
+                                })
+                              }
+                              style={{
+                                background: "transparent",
+                                border: `1px solid ${colors.BrandIndigo}`,
+                                borderRadius: "0.25rem",
+                                padding: "0.2rem 0.4rem",
+                                fontSize: "0.68rem",
+                                color: colors.BrandIndigo,
+                                cursor: "pointer",
+                                fontWeight: 600,
+                              }}
+                            >
+                              Car Rental / Booking URL
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAuthStrategy({
+                                  globalCheckoutUrl:
+                                    "https://yourstore.com/checkout?productId={id}&quantity={quantity}&price={price}",
+                                })
+                              }
+                              style={{
+                                background: "transparent",
+                                border: `1px solid ${colors.CardBorder}`,
+                                borderRadius: "0.25rem",
+                                padding: "0.2rem 0.4rem",
+                                fontSize: "0.68rem",
+                                color: colors.TextBody,
+                                cursor: "pointer",
+                                fontWeight: 600,
+                              }}
+                            >
+                              E-Commerce Checkout URL
+                            </button>
+                          </div>
+
+                          {/* Parameter Format & Validation Reference Table */}
+                          <div
+                            style={{
+                              marginTop: "0.5rem",
+                              background: colors.BackgroundSecondary,
+                              border: `1px solid ${colors.CardBorder}`,
+                              borderRadius: "0.375rem",
+                              padding: "0.5rem 0.75rem",
+                              fontSize: "0.68rem",
+                              color: colors.TextBody,
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontWeight: 700,
+                                color: colors.TextHeading,
+                                marginBottom: "0.375rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.375rem",
+                              }}
+                            >
+                              <span>ℹ️ Parameter Data Types & Validation Guide:</span>
+                            </div>
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "1.2fr 1fr 2.5fr",
+                                gap: "0.375rem 0.5rem",
+                                lineHeight: "1.35",
+                              }}
+                            >
+                              <span style={{ fontWeight: 600, color: colors.TextHeading }}>Token</span>
+                              <span style={{ fontWeight: 600, color: colors.TextHeading }}>Type</span>
+                              <span style={{ fontWeight: 600, color: colors.TextHeading }}>Description & Validation</span>
+
+                              <code>{"{carId}"} / {"{id}"}</code>
+                              <span>String</span>
+                              <span>Unique item/vehicle ID (e.g. <code>cmtjtc945...</code>).</span>
+
+                              <code>{"{pickupLocationId}"}</code>
+                              <span>String</span>
+                              <span>Pickup branch ID (e.g. <code>cmtjtc4rg...</code>). Validated by booking APIs.</span>
+
+                              <code>{"{dropoffLocationId}"}</code>
+                              <span>String</span>
+                              <span>Drop-off branch ID. Will use selected branch or same as pickup.</span>
+
+                              <code>{"{pickupDate}"}</code>
+                              <span>ISO / Date</span>
+                              <span>Booking start date (e.g. <code>2026-09-09T00:00:00.000Z</code> or <code>YYYY-MM-DD</code>).</span>
+
+                              <code>{"{dropoffDate}"}</code>
+                              <span>ISO / Date</span>
+                              <span>Booking return date (e.g. <code>2026-09-11T00:00:00.000Z</code> or <code>YYYY-MM-DD</code>).</span>
+
+                              <code>{"{insuranceTier}"}</code>
+                              <span>String Enum</span>
+                              <span>Selected tier: <code>BASIC</code>, <code>STANDARD</code>, or <code>PREMIUM</code>.</span>
+
+                              <code>{"{quantity}"}</code>
+                              <span>Number</span>
+                              <span>Total days (for rentals) or item quantity.</span>
+
+                              <code>{"{total}"}</code>
+                              <span>Number</span>
+                              <span>Calculated total order/rental amount in company currency.</span>
+                            </div>
+                            <p style={{ margin: "0.5rem 0 0", fontStyle: "italic", fontSize: "0.65rem", color: (colors as any).TextMuted || colors.TextBody }}>
+                              * You can map these tokens to any query parameter required by your system, e.g. <code>pickup_loc={"{"}pickupLocationId{"}"}&vehicle_id={"{"}carId{"}"}</code>.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

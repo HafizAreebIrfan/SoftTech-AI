@@ -183,11 +183,14 @@ const normalizeImageUrl = (value: string): string | null => {
   try {
     const url = new URL(src);
 
-    if (OWN_HOSTS.has(url.hostname)) {
+    // If it's an own host or a standard public image URL, return directly.
+    // HTML <img> tags load cross-origin images natively without CORS.
+    // Routing through a remote image-proxy causes CORS blocks when Render sleeps.
+    if (url.protocol === "http:" || url.protocol === "https:") {
       return src;
     }
 
-    return `${API_BASE_URL}/api/images/image-proxy?url=${encodeURIComponent(src)}`;
+    return src;
   } catch {
     return null;
   }

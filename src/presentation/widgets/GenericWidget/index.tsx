@@ -282,6 +282,7 @@ const GenericWidgetInner: React.FC = () => {
             collection={collection}
             actions={content.actions}
             audience={content.audience}
+            metadata={currentMetadata}
           />
         );
       }

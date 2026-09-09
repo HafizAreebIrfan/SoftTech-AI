@@ -25,8 +25,22 @@ export const TableBlock: React.FC<TableBlockProps> = ({
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(pagination?.limit || 8);
+  const PAGE_SIZE_OPTIONS = [5, 8, 10, 20, 50];
+  const initialPageSize =
+    pagination?.limit && PAGE_SIZE_OPTIONS.includes(Number(pagination.limit))
+      ? Number(pagination.limit)
+      : 5;
+  const [pageSize, setPageSize] = useState<number>(initialPageSize);
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (pagination?.limit) {
+      const lim = Number(pagination.limit);
+      if (PAGE_SIZE_OPTIONS.includes(lim)) {
+        setPageSize(lim);
+      }
+    }
+  }, [pagination?.limit]);
 
   // Storage key for persistent state
   const storageKey = useMemo(() => {
@@ -833,7 +847,11 @@ function parseCreatedRecord(
                 }}
                 aria-label="Items per page"
               >
+                {!PAGE_SIZE_OPTIONS.includes(pageSize) && (
+                  <option value={pageSize}>{pageSize} / page</option>
+                )}
                 <option value={5}>5 / page</option>
+                <option value={8}>8 / page</option>
                 <option value={10}>10 / page</option>
                 <option value={20}>20 / page</option>
                 <option value={50}>50 / page</option>

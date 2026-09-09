@@ -24,14 +24,22 @@ const recordFromToolResult = (result: unknown): Record<string, any> | null => {
     payload?.structuredContent?.data ?? (payload as any)?.data ?? payload;
 
   if (data && typeof data === "object" && !Array.isArray(data)) {
-    if ("product" in data && data.product && typeof data.product === "object") {
-      return data.product as Record<string, any>;
+    // Check known common wrapper keys or single-key envelopes generically
+    for (const key of ["product", "car", "package", "service", "item", "record", "result", "detail", "data"]) {
+      if (key in data && data[key] && typeof data[key] === "object" && !Array.isArray(data[key])) {
+        data = data[key];
+        break;
+      }
     }
-    if ("car" in data && data.car && typeof data.car === "object") {
-      return data.car as Record<string, any>;
-    }
-    if ("data" in data && data.data && typeof data.data === "object") {
-      data = data.data;
+    // If the object has only 1 property and that property is an object, unwrap it
+    const keys = Object.keys(data);
+    if (
+      keys.length === 1 &&
+      typeof data[keys[0]] === "object" &&
+      data[keys[0]] !== null &&
+      !Array.isArray(data[keys[0]])
+    ) {
+      data = data[keys[0]];
     }
   }
 
@@ -166,19 +174,29 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
       const idStr = String(rawId);
       const numId = Number(rawId);
       const isNumeric = !isNaN(numId) && typeof rawId !== "boolean";
+      const entitySingular = (collection?.entity || "").replace(/s$/, "").toLowerCase();
+      const entityIdKey = entitySingular ? `${entitySingular}Id` : "itemId";
       console.log(`[CardsBlock] Card selected → calling detail tool "${detailTool.tool}" for id=${rawId}`);
       try {
         let result: unknown;
         try {
-          // Attempt 1: clean single parameter with native type (handles strict Zod number/string schemas)
+          // Attempt 1: clean single parameter with native type (standard: { id: ... })
           result = await callMcpTool(detailTool.tool, { id: isNumeric ? numId : idStr });
         } catch {
-          // Attempt 2: fallback with alternate parameter keys
-          result = await callMcpTool(detailTool.tool, {
-            id: idStr,
-            productId: isNumeric ? numId : idStr,
-            itemId: isNumeric ? numId : idStr,
-          });
+          try {
+            // Attempt 2: entity-specific id key (e.g. { carId }, { packageId }, { productId })
+            result = await callMcpTool(detailTool.tool, { [entityIdKey]: isNumeric ? numId : idStr });
+          } catch {
+            // Attempt 3: combined multi-key payload for strict schemas
+            result = await callMcpTool(detailTool.tool, {
+              id: isNumeric ? numId : idStr,
+              [entityIdKey]: isNumeric ? numId : idStr,
+              productId: isNumeric ? numId : idStr,
+              carId: isNumeric ? numId : idStr,
+              packageId: isNumeric ? numId : idStr,
+              itemId: isNumeric ? numId : idStr,
+            });
+          }
         }
         console.log(`[CardsBlock] ✓ Detail tool "${detailTool.tool}" succeeded:`, result);
         // A widget-initiated callTool returns the result to us; the host does

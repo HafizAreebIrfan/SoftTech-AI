@@ -16,6 +16,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   fields = [],
   collection,
   capabilities,
+  pagination,
   actions = [],
   audience,
   presentationPlan,
@@ -201,9 +202,17 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   const [priceMax, setPriceMax] = useState<string>("");
 
   // Pagination & Loading states
-  const [pageSize, setPageSize] = useState<number>(12);
+  const PAGE_SIZE_OPTIONS = [5, 8, 10, 12, 20, 24, 48];
+  const initialPageSize = Number(pagination?.limit || collection?.limit || 12);
+  const [pageSize, setPageSize] = useState<number>(initialPageSize);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (pagination?.limit || collection?.limit) {
+      setPageSize(Number(pagination?.limit || collection?.limit));
+    }
+  }, [pagination?.limit, collection?.limit]);
 
   const handleCategorySelect = async (cat: string) => {
     setSelectedCategory(cat);
@@ -1024,8 +1033,8 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
             audience={audience}
           />
 
-          {/* Pagination Bar (Only show if more than 8 items) */}
-          {filteredRecords.length > 8 && (
+          {/* Pagination Bar */}
+          {(filteredRecords.length > 5 || filteredRecords.length > pageSize) && (
             <div className={styles.paginationBar}>
               <div className={styles.paginationInfo}>
                 <span>
@@ -1047,7 +1056,12 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
                     }}
                     aria-label="Items per page"
                   >
+                    {!PAGE_SIZE_OPTIONS.includes(pageSize) && (
+                      <option value={pageSize}>{pageSize} per page</option>
+                    )}
+                    <option value={5}>5 per page</option>
                     <option value={8}>8 per page</option>
+                    <option value={10}>10 per page</option>
                     <option value={12}>12 per page</option>
                     <option value={24}>24 per page</option>
                     <option value={48}>48 per page</option>

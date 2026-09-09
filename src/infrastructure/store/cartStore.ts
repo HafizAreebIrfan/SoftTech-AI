@@ -34,8 +34,10 @@ export interface CartStore {
 export const parseNumericPrice = (price: unknown): number => {
   if (typeof price === "number") return isNaN(price) ? 0 : price;
   if (typeof price === "string") {
+    // If a list of comma-separated prices was passed (e.g. "$40, $100, $250"), take the first value
+    const firstSegment = price.split(/,\s*/)[0] || price;
     // Strip currency symbols and whitespace
-    const cleaned = price.replace(/[^0-9.-]+/g, "");
+    const cleaned = firstSegment.replace(/[^0-9.-]+/g, "");
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 0 : parsed;
   }
