@@ -229,14 +229,100 @@ export function interpolateTemplate(
 
   const lookup = (rawKey: string): unknown => {
     const key = rawKey.trim();
-    if (key in extra) return (extra as Record<string, unknown>)[key];
-    if (key in record) return (record as Record<string, unknown>)[key];
+    if (key in extra && extra[key] !== undefined && extra[key] !== null) {
+      return extra[key];
+    }
+    if (key in record && record[key] !== undefined && record[key] !== null) {
+      return record[key];
+    }
+
     const lower = key.toLowerCase();
+
+    // 1. Case-insensitive exact search in extra & record
     for (const src of [extra, record]) {
       for (const k of Object.keys(src)) {
-        if (k.toLowerCase() === lower) return (src as Record<string, unknown>)[k];
+        if (k.toLowerCase() === lower && src[k] !== undefined && src[k] !== null) {
+          return src[k];
+        }
       }
     }
+
+    // 2. Generic Semantic Fallbacks
+    // Entity / Product / Item / Car IDs
+    if (lower === "id" || lower.endsWith("id")) {
+      const idVal = record.id ?? record._id ?? extra.id ?? extra._id;
+      if (idVal !== undefined && idVal !== null) return idVal;
+    }
+
+    // Location IDs
+    if (lower.includes("location")) {
+      const locObj = (record.location || extra.location) as any;
+      const locVal =
+        extra[key] ??
+        record[key] ??
+        record.locationId ??
+        locObj?.id ??
+        locObj?._id ??
+        record.pickupLocationId ??
+        record.dropoffLocationId ??
+        record.id;
+      if (locVal !== undefined && locVal !== null) return locVal;
+    }
+
+    // Dates
+    if (lower.includes("pickup") || lower.includes("start") || lower === "date" || lower === "datefrom") {
+      const dVal =
+        extra.pickupDate ??
+        extra.startDate ??
+        extra.date ??
+        extra.datefrom ??
+        record.pickupDate ??
+        record.startDate ??
+        record.date ??
+        new Date().toISOString().split("T")[0];
+      if (dVal !== undefined && dVal !== null) return dVal;
+    }
+
+    if (lower.includes("dropoff") || lower.includes("end") || lower === "dateto") {
+      const dVal =
+        extra.dropoffDate ??
+        extra.endDate ??
+        extra.dateto ??
+        record.dropoffDate ??
+        record.endDate ??
+        record.dateto;
+      if (dVal !== undefined && dVal !== null && dVal !== "") return dVal;
+    }
+
+    // Tier / Insurance
+    if (lower.includes("insurance") || lower === "tier") {
+      const tVal =
+        extra.insuranceTier ??
+        extra.insurancetier ??
+        extra.tier ??
+        record.insuranceTier ??
+        record.insurancetier ??
+        record.tier;
+      if (tVal !== undefined && tVal !== null) return tVal;
+    }
+
+    // Quantity
+    if (lower === "qty" || lower === "quantity" || lower === "count") {
+      return extra.quantity ?? extra.qty ?? record.quantity ?? record.qty ?? 1;
+    }
+
+    // Price / Total
+    if (lower === "price" || lower === "total" || lower === "amount") {
+      return (
+        extra.total ??
+        extra.price ??
+        record.$price ??
+        record.price ??
+        record.dailyRate ??
+        record.amount
+      );
+    }
+
     return undefined;
   };
 

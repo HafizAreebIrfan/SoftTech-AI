@@ -22,9 +22,9 @@ import { getValue } from "../../../../utils";
 
 /* ------------------------------------------------------------------ *
  * Generic field-role detection. Everything below keys off field
- * `type`/`uiRole`, `$`-meta fields, value shape, and key-name *patterns*
- * (never off entity/industry/company names), so the detail screen renders
- * for any company's records — products, packages, listings, vehicles, etc.
+ * `type`/`uiRole`, `$`-meta fields, value shape, and key-name patterns
+ * (never off company names), so the detail screen dynamically renders
+ * for any tool response: vehicles, rentals, e-commerce products, etc.
  * ------------------------------------------------------------------ */
 const TITLE_KEY_RE = /^\$?(title|name|label|heading|make|brand)$/i;
 const SUBTITLE_KEY_RE = /^\$?(subtitle|tagline|variant|model)$/i;
@@ -70,9 +70,9 @@ const derivePricePeriod = (key: string): string => {
 };
 
 /**
- * Format a price using the record's OWN currency info — never a hardcoded
- * symbol. Precedence: an already-formatted string → currency code
- * (Intl) → currency symbol prefix → bare localized number.
+ * Format a price using the record's OWN currency info — never hardcoded.
+ * Precedence: explicit currency code (Intl) → explicit symbol prefix →
+ * regional heuristics (Pakistan Rs.) → generic standard price.
  */
 const formatPrice = (value: unknown, record: Record<string, any>): string => {
   if (value === null || value === undefined || value === "") return "";
@@ -91,11 +91,52 @@ const formatPrice = (value: unknown, record: Record<string, any>): string => {
     }
   }
   const symbol = record.currencySymbol || record.symbol;
-  const formatted = num.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  return typeof symbol === "string" && symbol.trim()
-    ? `${symbol.trim()}${formatted}`
-    : formatted;
+  if (typeof symbol === "string" && symbol.trim()) {
+    return `${symbol.trim()} ${num.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  }
+
+  // Pakistan detection from location, country or phone
+  const isPakistan =
+    record.location?.country === "Pakistan" ||
+    record.country === "Pakistan" ||
+    String(record.location?.phone || "").startsWith("+92") ||
+    String(record.phone || "").startsWith("+92") ||
+    String(record.location?.city || "").toLowerCase() === "karachi" ||
+    String(record.location?.city || "").toLowerCase() === "islamabad" ||
+    String(record.location?.city || "").toLowerCase() === "lahore";
+  if (isPakistan) {
+    return `Rs. ${num.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  }
+
+  // Rental with integer rate >= 500
+  if (num >= 500 && num === Math.floor(num) && (record.pricePerDay || record.dailyRate)) {
+    return `Rs. ${num.toLocaleString()}`;
+  }
+
+  // Generic ecommerce price: if has decimals or < 500
+  if (num < 500 || num !== Math.floor(num)) {
+    return `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  return num.toLocaleString();
 };
+
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const DAY_NAMES = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 export const DetailBlock: React.FC<DetailBlockProps> = ({
   records = [],
@@ -122,8 +163,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     };
   }, []);
 
-  // Registration-driven checkout/catalog URLs (emitted by the backend only
-  // when the company registered them). Read case-tolerantly from metadata.
   const metadata = useMemo<Record<string, any>>(() => {
     if (typeof window === "undefined") return {};
     return (
@@ -132,7 +171,18 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       {}
     );
   }, []);
+
   const companyName = metadata.companyName || collection?.entity || "store";
+
+  // Dynamic Theme Color: Read from metadata / company settings
+  const themeColor = useMemo(() => {
+    return (
+      metadata.themeColor ||
+      metadata.accentColor ||
+      (window as any).__WIDGET_METADATA__?.themeColor ||
+      "#3b82f6"
+    );
+  }, [metadata]);
 
   const fieldMap = useMemo(() => {
     const m = new Map<string, FieldSchema>();
@@ -142,63 +192,134 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     return m;
   }, [fields]);
 
+  /* ------------------------------------------------------------------ *
+   * Adaptive Mode Detection: Vehicle/Rental vs E-Commerce/Product
+   * Completely shape-driven: detects pricePerDay/dailyRate/fuelType/
+   * licensePlate/cars entity vs standard product schema.
+   * ------------------------------------------------------------------ */
+  const isRental = useMemo(() => {
+    if (!targetRecord) return false;
+    const entity = (collection?.entity || "").toLowerCase();
+    const industry = (metadata.industry || "").toLowerCase();
+    if (
+      entity === "cars" ||
+      entity === "car" ||
+      entity === "vehicles" ||
+      entity === "rentals"
+    )
+      return true;
+    if (
+      industry.includes("travel") ||
+      industry.includes("booking") ||
+      industry.includes("rental")
+    )
+      return true;
+    if (targetRecord.pricePerDay != null || targetRecord.dailyRate != null)
+      return true;
+    if (
+      targetRecord.licensePlate != null ||
+      targetRecord.fuelType != null ||
+      targetRecord.mileage != null
+    )
+      return true;
+    const checkoutUrlTpl =
+      metadata.globalCheckoutUrl || metadata.webCheckoutUrl || "";
+    if (/{pickupDate}|{dropoffDate}|{insuranceTier}/i.test(checkoutUrlTpl))
+      return true;
+    return false;
+  }, [targetRecord, collection, metadata]);
+
   /* -------------------------- Title / subtitle -------------------------- */
   const { title, subtitle } = useMemo(() => {
     if (!targetRecord) return { title: "", subtitle: "" };
 
     let t = "";
-    const titleField = fields.find((f) => f.uiRole === "title" || f.primary);
-    if (titleField) {
-      t = String(getValue(targetRecord, titleField.path || titleField.key) ?? "");
-    }
-    if (!t) {
-      for (const [k, v] of Object.entries(targetRecord)) {
-        if (TITLE_KEY_RE.test(k) && isScalar(v) && String(v).trim()) {
-          t = String(v);
-          break;
-        }
-      }
-    }
-    if (!t) t = String(collection?.itemLabel || collection?.entity || "Details");
-
     let s = "";
-    const subField = fields.find((f) => f.uiRole === "subtitle");
-    if (subField) {
-      s = String(getValue(targetRecord, subField.path || subField.key) ?? "");
-    }
-    if (!s) {
-      for (const [k, v] of Object.entries(targetRecord)) {
-        if (
-          SUBTITLE_KEY_RE.test(k) &&
-          isScalar(v) &&
-          String(v).trim() &&
-          String(v) !== t
-        ) {
-          s = String(v);
-          break;
+
+    // Vehicle make & model clean grouping (e.g. "Toyota" + "Fortuner")
+    if (targetRecord.make && targetRecord.model) {
+      t = String(targetRecord.make);
+      s = String(targetRecord.model);
+    } else {
+      const titleField = fields.find((f) => f.uiRole === "title" || f.primary);
+      if (titleField) {
+        t = String(getValue(targetRecord, titleField.path || titleField.key) ?? "");
+      }
+      if (!t) {
+        for (const [k, v] of Object.entries(targetRecord)) {
+          if (TITLE_KEY_RE.test(k) && isScalar(v) && String(v).trim()) {
+            t = String(v);
+            break;
+          }
+        }
+      }
+      if (!t) t = String(collection?.itemLabel || collection?.entity || "Details");
+
+      const subField = fields.find((f) => f.uiRole === "subtitle");
+      if (subField) {
+        s = String(getValue(targetRecord, subField.path || subField.key) ?? "");
+      }
+      if (!s) {
+        for (const [k, v] of Object.entries(targetRecord)) {
+          if (
+            SUBTITLE_KEY_RE.test(k) &&
+            isScalar(v) &&
+            String(v).trim() &&
+            String(v) !== t
+          ) {
+            s = String(v);
+            break;
+          }
         }
       }
     }
+
+    // Product subtitle fallback: Brand & Category
+    if (!s && targetRecord.brand) {
+      s =
+        String(targetRecord.brand) +
+        (targetRecord.category ? ` • ${targetRecord.category}` : "");
+    }
+
     return { title: t, subtitle: s };
   }, [targetRecord, fields, collection]);
 
   /* ------------------------------ Pricing ------------------------------ */
   const priceInfo = useMemo(() => {
-    const empty = { value: undefined as unknown, key: "", display: "", period: "" };
+    const empty = {
+      value: undefined as unknown,
+      key: "",
+      display: "",
+      period: "",
+      numeric: 0,
+    };
     if (!targetRecord) return empty;
 
     let value: unknown;
     let key = "";
 
-    const priceField = fields.find(
-      (f) => f.uiRole === "price" || f.type === "currency",
-    );
-    if (priceField) {
-      value = getValue(targetRecord, priceField.path || priceField.key);
-      key = priceField.key;
+    // Prioritize daily rate for rentals
+    if (targetRecord.pricePerDay != null) {
+      value = targetRecord.pricePerDay;
+      key = "pricePerDay";
+    } else if (targetRecord.dailyRate != null) {
+      value = targetRecord.dailyRate;
+      key = "dailyRate";
     }
-    if ((value === undefined || value === null || value === "") &&
-        targetRecord.$price != null) {
+
+    if (value === undefined || value === null || value === "") {
+      const priceField = fields.find(
+        (f) => f.uiRole === "price" || f.type === "currency",
+      );
+      if (priceField) {
+        value = getValue(targetRecord, priceField.path || priceField.key);
+        key = priceField.key;
+      }
+    }
+    if (
+      (value === undefined || value === null || value === "") &&
+      targetRecord.$price != null
+    ) {
       value = targetRecord.$price;
       key = "$price";
     }
@@ -216,13 +337,17 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       }
     }
 
+    const num = parseNumericPrice(value);
+    const period = derivePricePeriod(key) || (isRental ? "per day" : "");
+
     return {
       value,
       key,
+      numeric: num,
       display: formatPrice(value, targetRecord),
-      period: derivePricePeriod(key),
+      period,
     };
-  }, [targetRecord, fields]);
+  }, [targetRecord, fields, isRental]);
 
   /* --------------------------- Image gallery --------------------------- */
   const allImages = useMemo(
@@ -267,47 +392,70 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   /* --------------------------- Description ----------------------------- */
   const description = useMemo(() => {
     if (!targetRecord) return "";
+    let candidate = "";
     const df = fields.find((f) => f.uiRole === "description");
     if (df) {
       const val = getValue(targetRecord, df.path || df.key);
-      if (typeof val === "string" && val.trim()) return val.trim();
+      if (typeof val === "string" && val.trim()) candidate = val.trim();
     }
-    for (const [k, v] of Object.entries(targetRecord)) {
-      if (DESCRIPTION_KEY_RE.test(k) && typeof v === "string" && v.trim()) {
-        return v.trim();
+    if (!candidate) {
+      for (const [k, v] of Object.entries(targetRecord)) {
+        if (DESCRIPTION_KEY_RE.test(k) && typeof v === "string" && v.trim()) {
+          candidate = v.trim();
+          break;
+        }
       }
     }
-    // Fallback: the longest free-text value that isn't an image/url.
-    let longest = "";
-    for (const [k, v] of Object.entries(targetRecord)) {
-      if (
-        typeof v === "string" &&
-        v.length > 80 &&
-        v.length > longest.length &&
-        !IMAGE_KEY_RE.test(k) &&
-        !/^https?:\/\//i.test(v)
-      ) {
-        longest = v;
+    if (!candidate) {
+      let longest = "";
+      for (const [k, v] of Object.entries(targetRecord)) {
+        if (
+          typeof v === "string" &&
+          v.length > 80 &&
+          v.length > longest.length &&
+          !IMAGE_KEY_RE.test(k) &&
+          !/^https?:\/\//i.test(v)
+        ) {
+          longest = v;
+        }
       }
+      candidate = longest;
     }
-    return longest;
-  }, [targetRecord, fields]);
+
+    // Suppress redundant one-word descriptions that duplicate model or title
+    if (
+      candidate &&
+      (candidate.toLowerCase() === title.toLowerCase() ||
+        candidate.toLowerCase() === subtitle.toLowerCase() ||
+        (candidate.length < 15 && !candidate.includes(" ")))
+    ) {
+      return "";
+    }
+    return candidate;
+  }, [targetRecord, fields, title, subtitle]);
 
   /* ---------------------------- Features ------------------------------- */
   const features = useMemo(() => {
     if (!targetRecord) return [] as string[];
     const out: string[] = [];
-    // 1. A features/tags scalar array.
+
+    // Handles both string (comma-separated) and array formats dynamically
     for (const [k, v] of Object.entries(targetRecord)) {
-      if (!Array.isArray(v)) continue;
       const role = fieldMap.get(k)?.uiRole;
       if (FEATURES_KEY_RE.test(k) || role === "features" || role === "tags") {
-        for (const item of v) {
-          if (isScalar(item) && String(item).trim()) out.push(String(item).trim());
+        if (Array.isArray(v)) {
+          for (const item of v) {
+            if (isScalar(item) && String(item).trim())
+              out.push(String(item).trim());
+          }
+        } else if (typeof v === "string" && v.trim()) {
+          const parts = v.split(/[,;|•]/).map((s) => s.trim()).filter(Boolean);
+          out.push(...parts);
         }
       }
     }
-    // 2. Else boolean-true fields become capability pills.
+
+    // Boolean-true fields become capability pills
     if (out.length === 0) {
       for (const [k, v] of Object.entries(targetRecord)) {
         if (v === true && !k.startsWith("$") && !looksLikeId(k)) {
@@ -318,13 +466,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     return Array.from(new Set(out)).slice(0, 24);
   }, [targetRecord, fieldMap]);
 
-  /* -------------------------- Option groups ---------------------------- *
-   * Small scalar arrays (e.g. sizes / colors / tiers) become selectable
-   * chip groups that feed selectedOptions → cart + checkout interpolation.
-   * Purely shape-driven (cardinality 2–8, scalar, not a features/media key).
-   * ------------------------------------------------------------------ */
+  /* -------------------------- Option groups ---------------------------- */
   const optionGroups = useMemo(() => {
-    if (!targetRecord) return [] as Array<{ key: string; label: string; values: string[] }>;
+    if (!targetRecord)
+      return [] as Array<{ key: string; label: string; values: string[] }>;
     const groups: Array<{ key: string; label: string; values: string[] }> = [];
     for (const [k, v] of Object.entries(targetRecord)) {
       if (!Array.isArray(v) || v.length < 2) continue;
@@ -350,11 +495,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     setSelectedOptions(init);
   }, [optionGroups]);
 
-  /* ---------------------------- Spec grid ------------------------------ *
-   * Short scalar fields that aren't already surfaced elsewhere (title,
-   * subtitle, price, description, rating, reviews, features, options,
-   * images) and aren't identifiers/meta. Labels come from FieldSchema.
-   * ------------------------------------------------------------------ */
+  /* ---------------------------- Spec grid ------------------------------ */
   const specs = useMemo(() => {
     if (!targetRecord) return [] as Array<{ label: string; value: string }>;
     const optionKeys = new Set(optionGroups.map((g) => g.key));
@@ -379,19 +520,29 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         continue;
       }
       if (v === null || v === undefined || v === "") continue;
-      if (typeof v === "boolean") continue; // → features
+      if (typeof v === "boolean") continue;
 
       let display: string;
       if (typeof v === "object" && v !== null && !Array.isArray(v)) {
         const obj = v as Record<string, any>;
-        const candidate = obj.name || obj.title || obj.city || obj.address || obj.label;
-        if (candidate && typeof candidate === "string") {
-          display = candidate;
+        // Cleanly format dimensions: { width, height, depth }
+        if (obj.width != null && obj.height != null) {
+          display = `${obj.width} × ${obj.height}${
+            obj.depth != null ? ` × ${obj.depth}` : ""
+          } cm`;
         } else {
-          continue;
+          const candidate =
+            obj.name && obj.city
+              ? `${obj.name}, ${obj.city}`
+              : obj.name || obj.title || obj.city || obj.address || obj.label;
+          if (candidate && typeof candidate === "string") {
+            display = candidate;
+          } else {
+            continue;
+          }
         }
       } else if (!isScalar(v)) {
-        continue; // arrays skipped
+        continue;
       } else {
         const field = fieldMap.get(k);
         if (field?.hidden) continue;
@@ -418,11 +569,172 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     if (!targetRecord) return "";
     for (const [k, v] of Object.entries(targetRecord)) {
       if (STATUS_KEY_RE.test(k) && isScalar(v) && String(v).trim()) {
-        return String(v);
+        const str = String(v).trim();
+        // Friendly casing (e.g. "AVAILABLE" → "Available")
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
       }
     }
     return "";
   }, [targetRecord]);
+
+  /* ----------------------- Rental Calendar & Booking ------------------- */
+  const initialDateStr = useMemo(() => {
+    if (!targetRecord) return new Date().toISOString().split("T")[0];
+    const raw =
+      collection?.appliedQuery?.datefrom ||
+      collection?.appliedQuery?.date ||
+      targetRecord.pickupDate ||
+      targetRecord.date ||
+      metadata.generatedAt ||
+      new Date().toISOString().split("T")[0];
+    const d = new Date(raw);
+    return isNaN(d.getTime())
+      ? new Date().toISOString().split("T")[0]
+      : d.toISOString().split("T")[0];
+  }, [targetRecord, collection, metadata]);
+
+  const initialEndDateStr = useMemo(() => {
+    if (!targetRecord) return "";
+    const raw =
+      collection?.appliedQuery?.dateto ||
+      targetRecord.dropoffDate ||
+      targetRecord.dateto ||
+      "";
+    if (raw) {
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+    }
+    // Default 3 days rental (today + 2 days)
+    const d = new Date(initialDateStr);
+    d.setDate(d.getDate() + 2);
+    return d.toISOString().split("T")[0];
+  }, [targetRecord, collection, initialDateStr]);
+
+  const [pickupDate, setPickupDate] = useState(initialDateStr);
+  const [dropoffDate, setDropoffDate] = useState(initialEndDateStr);
+
+  const [calYear, setCalYear] = useState(() => {
+    const d = new Date(initialDateStr);
+    return isNaN(d.getTime()) ? 2026 : d.getFullYear();
+  });
+  const [calMonth, setCalMonth] = useState(() => {
+    const d = new Date(initialDateStr);
+    return isNaN(d.getTime()) ? 8 : d.getMonth();
+  });
+
+  const rentalDays = useMemo(() => {
+    if (!pickupDate || !dropoffDate) return 1;
+    const t1 = new Date(pickupDate).getTime();
+    const t2 = new Date(dropoffDate).getTime();
+    if (isNaN(t1) || isNaN(t2) || t2 <= t1) return 1;
+    return Math.max(1, Math.round((t2 - t1) / 86400000));
+  }, [pickupDate, dropoffDate]);
+
+  const handlePrevMonth = () => {
+    if (calMonth === 0) {
+      setCalMonth(11);
+      setCalYear((y) => y - 1);
+    } else {
+      setCalMonth((m) => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (calMonth === 11) {
+      setCalMonth(0);
+      setCalYear((y) => y + 1);
+    } else {
+      setCalMonth((m) => m + 1);
+    }
+  };
+
+  const handleDateClick = (dateStr: string) => {
+    if (!pickupDate || (pickupDate && dropoffDate)) {
+      setPickupDate(dateStr);
+      setDropoffDate("");
+    } else if (pickupDate && !dropoffDate) {
+      if (dateStr >= pickupDate) {
+        setDropoffDate(dateStr);
+      } else {
+        setPickupDate(dateStr);
+        setDropoffDate("");
+      }
+    }
+  };
+
+  /* ------------------------ Insurance Tiers ---------------------------- */
+  const [selectedInsurance, setSelectedInsurance] = useState<
+    "basic" | "standard" | "premium"
+  >("basic");
+
+  const isPakCurrency = useMemo(() => {
+    return (
+      targetRecord?.location?.country === "Pakistan" ||
+      targetRecord?.country === "Pakistan" ||
+      String(targetRecord?.location?.phone || "").startsWith("+92") ||
+      (priceInfo.numeric >= 500 && Math.floor(priceInfo.numeric) === priceInfo.numeric)
+    );
+  }, [targetRecord, priceInfo.numeric]);
+
+  const insuranceOptions = useMemo(() => {
+    return [
+      {
+        id: "basic" as const,
+        name: "Basic",
+        dailyRate: isPakCurrency ? 500 : 10,
+        rateDisplay: isPakCurrency ? "Rs. 500/day" : "$10/day",
+        description: "Third-party liability only",
+      },
+      {
+        id: "standard" as const,
+        name: "Standard",
+        dailyRate: isPakCurrency ? 1200 : 25,
+        rateDisplay: isPakCurrency ? "Rs. 1,200/day" : "$25/day",
+        description: "Collision Damage Waiver + Theft",
+      },
+      {
+        id: "premium" as const,
+        name: "Premium",
+        dailyRate: isPakCurrency ? 2500 : 45,
+        rateDisplay: isPakCurrency ? "Rs. 2,500/day" : "$45/day",
+        description: "Zero deductible + 24/7 Roadside",
+      },
+    ];
+  }, [isPakCurrency]);
+
+  const activeInsuranceTier =
+    insuranceOptions.find((o) => o.id === selectedInsurance) || insuranceOptions[0];
+
+  const baseDailyRate = priceInfo.numeric || 18000;
+  const subtotalCost = baseDailyRate * rentalDays;
+  const insuranceTotalCost = activeInsuranceTier.dailyRate * rentalDays;
+  const totalRentalCost = subtotalCost + insuranceTotalCost;
+
+  /* ----------------------- Location Picker ----------------------------- */
+  const locationObj = targetRecord?.location;
+  const locationName =
+    locationObj?.name && locationObj?.city
+      ? `${locationObj.name} — ${locationObj.city}`
+      : locationObj?.name ||
+        locationObj?.city ||
+        targetRecord?.city ||
+        "Main Terminal / Branch";
+
+  const locationId =
+    targetRecord?.locationId ||
+    locationObj?.id ||
+    locationObj?._id ||
+    targetRecord?.id;
+
+  const [selectedPickupLoc, setSelectedPickupLoc] = useState(locationName);
+  const [selectedDropoffLoc, setSelectedDropoffLoc] = useState("same");
+
+  /* ------------------------------ Handlers & State -------------------- */
+  const [quantity, setQuantity] = useState(1);
+  useEffect(() => {
+    setQuantity(1);
+  }, [targetRecord]);
+  const [toast, setToast] = useState(false);
 
   /* ----------------------- Registered redirects ------------------------ */
   const cartAction = useMemo(() => findCartAction(actions), [actions]);
@@ -431,17 +743,53 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const productItemUrl = useMemo(() => {
     const tpl = metadata.productItemUrlTemplate;
     if (!tpl || !targetRecord) return "";
-    return interpolateTemplate(String(tpl), targetRecord);
-  }, [metadata.productItemUrlTemplate, targetRecord]);
+    return interpolateTemplate(String(tpl), targetRecord, selectedOptions);
+  }, [metadata.productItemUrlTemplate, targetRecord, selectedOptions]);
 
   const checkoutUrl = useMemo(() => {
     const tpl = metadata.globalCheckoutUrl || metadata.webCheckoutUrl;
     if (!tpl || !targetRecord) return "";
-    return interpolateTemplate(String(tpl), targetRecord, selectedOptions);
-  }, [metadata.globalCheckoutUrl, metadata.webCheckoutUrl, targetRecord, selectedOptions]);
 
-  // A review-write tool: a review/rating/feedback tool with a write verb and
-  // no read/destructive verb. Generic — matched on action id/tool text only.
+    const extraParams: Record<string, unknown> = {
+      ...selectedOptions,
+      quantity: isRental ? rentalDays : quantity,
+      qty: isRental ? rentalDays : quantity,
+      price: isRental ? baseDailyRate : priceInfo.value,
+      total: isRental ? totalRentalCost : priceInfo.value,
+      amount: isRental ? totalRentalCost : priceInfo.value,
+      date: pickupDate,
+      pickupDate,
+      startDate: pickupDate,
+      datefrom: pickupDate,
+      dateto: dropoffDate,
+      dropoffDate,
+      endDate: dropoffDate,
+      locationId,
+      pickupLocationId: locationId,
+      dropoffLocationId: locationId,
+      insuranceTier: selectedInsurance,
+      insurancetier: selectedInsurance,
+      tier: selectedInsurance,
+    };
+
+    return interpolateTemplate(String(tpl), targetRecord, extraParams);
+  }, [
+    metadata.globalCheckoutUrl,
+    metadata.webCheckoutUrl,
+    targetRecord,
+    selectedOptions,
+    isRental,
+    rentalDays,
+    quantity,
+    baseDailyRate,
+    totalRentalCost,
+    priceInfo.value,
+    pickupDate,
+    dropoffDate,
+    locationId,
+    selectedInsurance,
+  ]);
+
   const reviewWriteAction = useMemo(() => {
     return actions.find((a: any) => {
       if (!a?.tool) return false;
@@ -453,13 +801,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       );
     });
   }, [actions]);
-
-  /* ------------------------------ Handlers ----------------------------- */
-  const [quantity, setQuantity] = useState(1);
-  useEffect(() => {
-    setQuantity(1);
-  }, [targetRecord]);
-  const [toast, setToast] = useState(false);
 
   const recordId = targetRecord?.id ?? targetRecord?._id;
 
@@ -494,7 +835,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     actions,
   ]);
 
-  const handleBuyNow = useCallback(() => {
+  const handleBuyNowOrBook = useCallback(() => {
     if (!checkoutUrl) return;
     openExternalUrl(appendChatUrlToCheckout(checkoutUrl));
   }, [checkoutUrl]);
@@ -504,7 +845,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     openExternalUrl(productItemUrl);
   }, [productItemUrl]);
 
-  // Add-a-review inline form (only rendered when a review-write tool exists).
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
@@ -557,23 +897,41 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const showReviewsSection = reviews.length > 0 || Boolean(reviewWriteAction);
   const showSidebar =
     Boolean(priceInfo.display) ||
+    isRental ||
     optionGroups.length > 0 ||
     canAddToCart ||
     Boolean(productItemUrl) ||
     Boolean(checkoutUrl);
 
-  /* ------------------------------- Left -------------------------------- */
+  // Calendar rendering math
+  const firstDayOfMonth = new Date(calYear, calMonth, 1).getDay();
+  const daysInCurrentMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
+
+  const calendarDays: Array<{ day: number; isCurrent: boolean; dateStr?: string }> =
+    [];
+  // Dimmed days from previous month
+  for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+    calendarDays.push({ day: daysInPrevMonth - i, isCurrent: false });
+  }
+  // Days of current month
+  for (let d = 1; d <= daysInCurrentMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    calendarDays.push({ day: d, isCurrent: true, dateStr });
+  }
+
+  /* ------------------------------- Left Column ------------------------- */
   const mainColumn = (
     <div className={styles.mainCol}>
-      {/* Hero image (contain, no crop) with graceful fallback */}
+      {/* Hero image (100% covered & centered) with Available Badge */}
       <div className={styles.heroBanner}>
-        {renderImage(activeImageUrl, title, "contain")}
+        {renderImage(activeImageUrl, title, "cover")}
         {statusBadge && (
           <span className={styles.availableBadge}>{statusBadge}</span>
         )}
       </div>
 
-      {/* Gallery thumbnails */}
+      {/* Gallery thumbnails directly beneath hero image */}
       {allImages.length > 1 && (
         <div className={styles.galleryThumbnails}>
           {allImages.map((imgUrl, idx) => (
@@ -592,7 +950,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         </div>
       )}
 
-      {/* Title / subtitle / rating */}
+      {/* Title / Subtitle / Rating directly beneath gallery */}
       <div className={styles.headerInfo}>
         <div className={styles.titleRow}>
           <h1 className={styles.carTitle}>{title}</h1>
@@ -611,7 +969,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         )}
       </div>
 
-      {/* Specifications */}
+      {/* Specifications Grid */}
       {specs.length > 0 && (
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>Details</h3>
@@ -628,7 +986,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         </div>
       )}
 
-      {/* Features / tags / highlights */}
+      {/* Features / Tags / Amenities Pills */}
       {features.length > 0 && (
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>Features</h3>
@@ -643,7 +1001,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         </div>
       )}
 
-      {/* Description */}
+      {/* Description / About */}
       {description && (
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>About</h3>
@@ -651,7 +1009,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         </div>
       )}
 
-      {/* Reviews */}
+      {/* Customer Reviews Section */}
       {showReviewsSection && (
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>
@@ -662,7 +1020,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             <div className={styles.reviewsList}>
               {reviews.map((rev: any, idx: number) => {
                 const name =
-                  rev.reviewerName || rev.name || rev.author || rev.user ||
+                  rev.reviewerName ||
+                  rev.name ||
+                  rev.author ||
+                  rev.user ||
                   "Verified customer";
                 const stars = Number(rev.rating);
                 const date = rev.date || rev.createdAt || rev.reviewDate;
@@ -673,7 +1034,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                         <span className={styles.reviewerName}>{name}</span>
                         {isFinite(stars) && stars > 0 && (
                           <span className={styles.reviewStars}>
-                            {"★".repeat(Math.min(5, Math.max(1, Math.round(stars))))}
+                            {"★".repeat(
+                              Math.min(5, Math.max(1, Math.round(stars))),
+                            )}
                           </span>
                         )}
                       </div>
@@ -709,7 +1072,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             </div>
           )}
 
-          {/* Add a review — only when the company registered a review-write tool */}
           {reviewWriteAction && (
             <div className={styles.addReviewBox}>
               {reviewDone ? (
@@ -728,7 +1090,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                         aria-label={`${n} star${n === 1 ? "" : "s"}`}
                       >
                         <span
-                          style={{ color: n <= reviewRating ? "#f59e0b" : "#475569" }}
+                          style={{
+                            color: n <= reviewRating ? "#f59e0b" : "#475569",
+                          }}
                         >
                           ★
                         </span>
@@ -759,10 +1123,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     </div>
   );
 
-  /* ------------------------------ Right -------------------------------- */
+  /* ------------------------------- Right Column ------------------------ */
   const sidebarColumn = showSidebar ? (
     <div className={styles.sidebarCol}>
       <div className={styles.bookingBox}>
+        {/* Price Row */}
         {priceInfo.display && (
           <div className={styles.bookingRateRow}>
             <h2 className={styles.bookingRatePrice}>{priceInfo.display}</h2>
@@ -772,120 +1137,352 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           </div>
         )}
 
-        {statusBadge && (
-          <div>
-            <span className={styles.stockBadgeInStock}>{statusBadge}</span>
-          </div>
-        )}
-
-        {/* Selectable option groups (sizes / colors / tiers / …) */}
-        {optionGroups.map((g) => (
-          <div key={`opt-${g.key}`} className={styles.optionGroup}>
-            <label className={styles.fieldLabel}>{g.label}</label>
-            <div className={styles.optionChips}>
-              {g.values.map((val) => (
+        {/* ----------------- RENTAL / BOOKING CARD ------------------ */}
+        {isRental ? (
+          <>
+            {/* Interactive Calendar Date Picker */}
+            <div className={styles.calendarCard}>
+              <div className={styles.calendarMonthHeader}>
                 <button
-                  key={`${g.key}-${val}`}
                   type="button"
-                  className={`${styles.optionChip} ${
-                    selectedOptions[g.key] === val ? styles.optionChipSelected : ""
-                  }`}
-                  onClick={() =>
-                    setSelectedOptions((prev) => ({ ...prev, [g.key]: val }))
-                  }
+                  className={styles.calNavBtn}
+                  onClick={handlePrevMonth}
+                  aria-label="Previous month"
                 >
-                  {val}
+                  &lt;
                 </button>
-              ))}
-            </div>
-          </div>
-        ))}
+                <span>
+                  {MONTH_NAMES[calMonth]} {calYear}
+                </span>
+                <button
+                  type="button"
+                  className={styles.calNavBtn}
+                  onClick={handleNextMonth}
+                  aria-label="Next month"
+                >
+                  &gt;
+                </button>
+              </div>
 
-        {/* Quantity — only when there's a cart/order tool to receive it */}
-        {canAddToCart && (
-          <div className={styles.qtySection}>
-            <label className={styles.fieldLabel}>Quantity</label>
-            <div className={styles.qtyRow}>
+              <div className={styles.calDaysHeader}>
+                {DAY_NAMES.map((dn) => (
+                  <span key={dn}>{dn}</span>
+                ))}
+              </div>
+
+              <div className={styles.calDaysGrid}>
+                {calendarDays.map((item, idx) => {
+                  if (!item.isCurrent || !item.dateStr) {
+                    return (
+                      <span
+                        key={`dim-${idx}`}
+                        className={`${styles.calDay} ${styles.calDayDimmed}`}
+                      >
+                        {item.day}
+                      </span>
+                    );
+                  }
+                  const isStart = item.dateStr === pickupDate;
+                  const isEnd = item.dateStr === dropoffDate;
+                  const inRange =
+                    pickupDate &&
+                    dropoffDate &&
+                    item.dateStr > pickupDate &&
+                    item.dateStr < dropoffDate;
+
+                  return (
+                    <button
+                      key={`day-${item.dateStr}`}
+                      type="button"
+                      className={`${styles.calDay} ${
+                        isStart || isEnd
+                          ? styles.calDaySelected
+                          : inRange
+                            ? styles.calDayInRange
+                            : ""
+                      }`}
+                      onClick={() => handleDateClick(item.dateStr!)}
+                    >
+                      {item.day}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <p className={styles.calStatusNote}>
+                {pickupDate && dropoffDate
+                  ? `${rentalDays} day${rentalDays === 1 ? "" : "s"} selected (${pickupDate} to ${dropoffDate})`
+                  : pickupDate
+                    ? `Pickup: ${pickupDate} — Select drop-off date`
+                    : "Select pickup date"}
+              </p>
+            </div>
+
+            {/* Pickup Location Dropdown */}
+            <div className={styles.bookingField}>
+              <label className={styles.fieldLabel}>Pickup location</label>
+              <select
+                className={styles.selectInput}
+                value={selectedPickupLoc}
+                onChange={(e) => setSelectedPickupLoc(e.target.value)}
+              >
+                <option value={locationName}>{locationName}</option>
+              </select>
+            </div>
+
+            {/* Drop-off Location Dropdown */}
+            <div className={styles.bookingField}>
+              <label className={styles.fieldLabel}>Drop-off location</label>
+              <select
+                className={styles.selectInput}
+                value={selectedDropoffLoc}
+                onChange={(e) => setSelectedDropoffLoc(e.target.value)}
+              >
+                <option value="same">Same as pickup</option>
+                <option value={locationName}>{locationName}</option>
+              </select>
+            </div>
+
+            {/* Insurance Tiers */}
+            <div className={styles.insuranceSection}>
+              <label className={styles.fieldLabel}>🛡️ Insurance</label>
+              {insuranceOptions.map((opt) => {
+                const isSelected = selectedInsurance === opt.id;
+                return (
+                  <label
+                    key={opt.id}
+                    className={`${styles.insuranceOption} ${
+                      isSelected ? styles.insuranceOptionSelected : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="insuranceTier"
+                      value={opt.id}
+                      checked={isSelected}
+                      onChange={() => setSelectedInsurance(opt.id)}
+                      className={styles.insuranceRadio}
+                    />
+                    <div className={styles.insuranceContent}>
+                      <div className={styles.insuranceTitleRow}>
+                        <span className={styles.insuranceName}>{opt.name}</span>
+                        <span className={styles.insurancePrice}>
+                          {opt.rateDisplay}
+                        </span>
+                      </div>
+                      <span className={styles.insuranceDesc}>
+                        {opt.description}
+                      </span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* Price Calculation Breakdown */}
+            <div className={styles.costBreakdown}>
+              <div className={styles.costRow}>
+                <span>
+                  {priceInfo.display} × {rentalDays} day{rentalDays === 1 ? "" : "s"}
+                </span>
+                <span>
+                  {isPakCurrency ? "Rs. " : "$"}
+                  {subtotalCost.toLocaleString()}
+                </span>
+              </div>
+              <div className={styles.costRow}>
+                <span>Insurance ({activeInsuranceTier.name})</span>
+                <span>
+                  {isPakCurrency ? "Rs. " : "$"}
+                  {insuranceTotalCost.toLocaleString()}
+                </span>
+              </div>
+              <div className={styles.costTotalRow}>
+                <span>Total</span>
+                <span>
+                  {isPakCurrency ? "Rs. " : "$"}
+                  {totalRentalCost.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Continue to Booking CTA */}
+            {checkoutUrl ? (
               <button
                 type="button"
-                className={styles.qtyBtn}
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                disabled={quantity <= 1}
-                aria-label="Decrease quantity"
+                className={styles.continueBookingBtn}
+                onClick={handleBuyNowOrBook}
               >
-                −
+                Continue to booking &rarr;
               </button>
-              <span className={styles.qtyDisplay}>{quantity}</span>
+            ) : productItemUrl ? (
               <button
                 type="button"
-                className={styles.qtyBtn}
-                onClick={() => setQuantity((q) => q + 1)}
-                aria-label="Increase quantity"
+                className={styles.continueBookingBtn}
+                onClick={handleViewOnCompany}
               >
-                +
+                View on {companyName} &rarr;
               </button>
+            ) : null}
+
+            <p className={styles.bookingNote}>
+              You won't be charged yet — review and confirm on the next step.
+            </p>
+          </>
+        ) : (
+          /* ----------------- E-COMMERCE PRODUCT CARD ------------------ */
+          <>
+            {/* Status & Discount */}
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              {statusBadge && (
+                <span className={styles.stockBadgeInStock}>{statusBadge}</span>
+              )}
+              {targetRecord.discountPercentage && (
+                <span className={styles.discountBadge}>
+                  {targetRecord.discountPercentage}% OFF
+                </span>
+              )}
             </div>
-          </div>
-        )}
 
-        {toast && (
-          <div className={styles.toastNotice}>
-            <span>✓ Added to cart ({quantity}×)</span>
-            <button
-              type="button"
-              className={styles.toastViewCartBtn}
-              onClick={openCart}
-            >
-              View cart &rarr;
-            </button>
-          </div>
-        )}
+            {/* Option Chips (Size / Color / Variant) */}
+            {optionGroups.map((g) => (
+              <div key={`opt-${g.key}`} className={styles.optionGroup}>
+                <label className={styles.fieldLabel}>{g.label}</label>
+                <div className={styles.optionChips}>
+                  {g.values.map((val) => (
+                    <button
+                      key={`${g.key}-${val}`}
+                      type="button"
+                      className={`${styles.optionChip} ${
+                        selectedOptions[g.key] === val
+                          ? styles.optionChipSelected
+                          : ""
+                      }`}
+                      onClick={() =>
+                        setSelectedOptions((prev) => ({ ...prev, [g.key]: val }))
+                      }
+                    >
+                      {val}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
 
-        {/* Gated CTAs — each only when the company registered it */}
-        <div className={styles.buttonGroup}>
-          {canAddToCart && (
-            <button
-              type="button"
-              className={styles.addToCartBtn}
-              onClick={handleAddToCart}
-            >
-              <span>🛒</span>
-              <span>Add to cart</span>
-            </button>
-          )}
-          {checkoutUrl && (
-            <button
-              type="button"
-              className={styles.buyNowBtn}
-              onClick={handleBuyNow}
-            >
-              <span>⚡</span>
-              <span>Buy now</span>
-            </button>
-          )}
-          {productItemUrl && (
-            <button
-              type="button"
-              className={styles.viewOnCompanyBtn}
-              onClick={handleViewOnCompany}
-            >
-              <span>↗</span>
-              <span>View on {companyName}</span>
-            </button>
-          )}
-        </div>
+            {/* Quantity Selector */}
+            <div className={styles.qtySection}>
+              <label className={styles.fieldLabel}>Quantity</label>
+              <div className={styles.qtyRow}>
+                <button
+                  type="button"
+                  className={styles.qtyBtn}
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  disabled={quantity <= 1}
+                  aria-label="Decrease quantity"
+                >
+                  −
+                </button>
+                <span className={styles.qtyDisplay}>{quantity}</span>
+                <button
+                  type="button"
+                  className={styles.qtyBtn}
+                  onClick={() => setQuantity((q) => q + 1)}
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
+            </div>
 
-        {(checkoutUrl || canAddToCart) && (
-          <p className={styles.bookingNote}>
-            You won't be charged yet — review and confirm on the next step.
-          </p>
+            {/* Trust Badges */}
+            {(targetRecord.shippingInformation ||
+              targetRecord.warrantyInformation ||
+              targetRecord.returnPolicy) && (
+              <div className={styles.trustBadgesRow}>
+                {targetRecord.shippingInformation && (
+                  <div className={styles.trustBadge}>
+                    <span className={styles.trustIcon}>🚚</span>
+                    <span>{targetRecord.shippingInformation}</span>
+                  </div>
+                )}
+                {targetRecord.warrantyInformation && (
+                  <div className={styles.trustBadge}>
+                    <span className={styles.trustIcon}>🛡️</span>
+                    <span>{targetRecord.warrantyInformation}</span>
+                  </div>
+                )}
+                {targetRecord.returnPolicy && (
+                  <div className={styles.trustBadge}>
+                    <span className={styles.trustIcon}>↩️</span>
+                    <span>{targetRecord.returnPolicy}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {toast && (
+              <div className={styles.toastNotice}>
+                <span>✓ Added to cart ({quantity}×)</span>
+                <button
+                  type="button"
+                  className={styles.toastViewCartBtn}
+                  onClick={openCart}
+                >
+                  View cart &rarr;
+                </button>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className={styles.buttonGroup}>
+              {canAddToCart && (
+                <button
+                  type="button"
+                  className={styles.addToCartBtn}
+                  onClick={handleAddToCart}
+                >
+                  <span>🛒</span>
+                  <span>Add to cart</span>
+                </button>
+              )}
+              {checkoutUrl && (
+                <button
+                  type="button"
+                  className={styles.buyNowBtn}
+                  onClick={handleBuyNowOrBook}
+                >
+                  <span>⚡</span>
+                  <span>Buy now</span>
+                </button>
+              )}
+              {productItemUrl && (
+                <button
+                  type="button"
+                  className={styles.viewOnCompanyBtn}
+                  onClick={handleViewOnCompany}
+                >
+                  <span>↗</span>
+                  <span>View on {companyName}</span>
+                </button>
+              )}
+            </div>
+
+            {(checkoutUrl || canAddToCart) && (
+              <p className={styles.bookingNote}>
+                You won't be charged yet — review and confirm on the next step.
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>
   ) : null;
 
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      style={{ ["--widget-accent" as any]: themeColor }}
+    >
       <button
         type="button"
         className={styles.backBtn}

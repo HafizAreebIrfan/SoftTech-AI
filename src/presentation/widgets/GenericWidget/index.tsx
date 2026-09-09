@@ -43,30 +43,80 @@ const GenericWidgetInner: React.FC = () => {
     (structuredContent as any)?.themeColor;
   useApplyGlobalThemeVars(themeColor);
 
-  const companyName = (structuredContent as any)?.metadata?.companyName;
+  // Extract company authStrategy and URLs from current tool response
+  const rawAuthStrategy =
+    (structuredContent as any)?.authStrategy ||
+    (structuredContent as any)?.metadata?.authStrategy ||
+    (structuredContent as any)?.data?.authStrategy ||
+    (toolResult as any)?.authStrategy;
+
+  const rawMetadata = (structuredContent as any)?.metadata || {};
+
+  const currentGlobalCheckoutUrl =
+    rawAuthStrategy?.hasGlobalCheckout !== false && rawAuthStrategy?.globalCheckoutUrl
+      ? rawAuthStrategy.globalCheckoutUrl
+      : rawMetadata?.hasGlobalCheckout !== false &&
+          (rawMetadata?.globalCheckoutUrl || rawMetadata?.webCheckoutUrl)
+        ? rawMetadata.globalCheckoutUrl || rawMetadata.webCheckoutUrl
+        : undefined;
+
+  const currentProductItemUrlTemplate =
+    rawAuthStrategy?.hasProductPages !== false &&
+    rawAuthStrategy?.productItemUrlTemplate
+      ? rawAuthStrategy.productItemUrlTemplate
+      : rawMetadata?.hasProductPages !== false &&
+          rawMetadata?.productItemUrlTemplate
+        ? rawMetadata.productItemUrlTemplate
+        : undefined;
+
+  const currentShopCatalogUrl =
+    rawAuthStrategy?.shopCatalogUrl || rawMetadata?.shopCatalogUrl;
+
+  const companyName =
+    rawMetadata?.companyName ||
+    rawAuthStrategy?.companyName ||
+    (structuredContent as any)?.companyName;
+
   useEffect(() => {
     if (companyName) {
       useCartStore.getState().setCompanyName(companyName);
     }
   }, [companyName]);
 
-  const metadata = (structuredContent as any)?.metadata;
-  if (metadata && typeof window !== "undefined") {
-    (window as any).__WIDGET_METADATA__ = {
-      ...((window as any).__WIDGET_METADATA__ || {}),
-      ...metadata,
-    };
+  // Clean, fresh metadata per tool call (prevents previous company's URLs leaking)
+  const currentMetadata = useMemo(
+    () => ({
+      ...rawMetadata,
+      authStrategy: rawAuthStrategy,
+      globalCheckoutUrl: currentGlobalCheckoutUrl,
+      webCheckoutUrl: currentGlobalCheckoutUrl,
+      productItemUrlTemplate: currentProductItemUrlTemplate,
+      shopCatalogUrl: currentShopCatalogUrl,
+      companyName,
+      themeColor:
+        themeColor || rawMetadata?.themeColor || rawAuthStrategy?.themeColor,
+    }),
+    [
+      rawMetadata,
+      rawAuthStrategy,
+      currentGlobalCheckoutUrl,
+      currentProductItemUrlTemplate,
+      currentShopCatalogUrl,
+      companyName,
+      themeColor,
+    ],
+  );
+
+  if (typeof window !== "undefined") {
+    (window as any).__WIDGET_METADATA__ = currentMetadata;
   }
 
-  // Registration-gated: point the ChatGPT fullscreen "Open in {company}" header
-  // button at the company's catalog page. Emitted by the backend only when the
-  // company registered a catalog URL, so presence alone means "use it".
-  const shopCatalogUrl = (metadata as any)?.shopCatalogUrl as string | undefined;
+  // Point ChatGPT fullscreen "Open in {company}" header button to current company catalog
   useEffect(() => {
-    if (shopCatalogUrl) {
-      setOpenInApp(shopCatalogUrl);
+    if (currentShopCatalogUrl) {
+      setOpenInApp(currentShopCatalogUrl);
     }
-  }, [shopCatalogUrl]);
+  }, [currentShopCatalogUrl]);
 
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
     const content = structuredContent as Record<string, unknown>;
@@ -399,7 +449,14 @@ const GenericWidgetInner: React.FC = () => {
   };
 
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      style={
+        themeColor
+          ? ({ ["--widget-accent" as any]: themeColor } as React.CSSProperties)
+          : undefined
+      }
+    >
       {viewFullCart ? (
         <div>
           <button

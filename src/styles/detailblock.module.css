@@ -55,21 +55,21 @@
 
 .heroBanner {
   position: relative;
-  height: 480px;
-  max-height: 60vh;
+  height: 380px;
+  max-height: 52vh;
   width: 100%;
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #18191e 0%, #101114 100%);
+  background: #09090b;
   border: 1px solid var(--widget-card-border, #22242a);
 }
 
 @media (max-width: 640px) {
   .heroBanner {
-    height: 300px;
+    height: 260px;
   }
 }
 
@@ -453,10 +453,11 @@
 
 .insuranceOptionSelected {
   border-color: var(--widget-accent, #3b82f6);
-  background: rgba(59, 130, 246, 0.06);
+  background: color-mix(in srgb, var(--widget-accent, #3b82f6) 8%, transparent);
 }
 
 .insuranceRadio {
+  accent-color: var(--widget-accent, #3b82f6);
   margin-top: 2px;
   cursor: pointer;
 }
@@ -533,7 +534,11 @@
   cursor: pointer;
   width: 100%;
   transition: opacity 0.15s ease;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--widget-accent, #3b82f6) 30%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .continueBookingBtn:hover {
@@ -557,28 +562,32 @@
 /* Gallery Thumbnails */
 .galleryThumbnails {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 4px;
   overflow-x: auto;
   padding-bottom: 4px;
 }
 
 .galleryThumbBtn {
-  width: 58px;
-  height: 58px;
+  width: 72px;
+  height: 52px;
   border-radius: 8px;
-  border: 1px solid var(--widget-card-border, #22242a);
+  border: 1.5px solid var(--widget-card-border, #22242a);
   background: #09090b;
   padding: 0;
   overflow: hidden;
   cursor: pointer;
   flex-shrink: 0;
-  transition: border-color 0.15s ease;
+  transition: all 0.15s ease;
+}
+
+.galleryThumbBtn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .galleryThumbBtnActive {
-  border-color: var(--widget-accent, #3b82f6);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+  border-color: var(--widget-accent, #3b82f6) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-accent, #3b82f6) 40%, transparent);
 }
 
 .galleryThumbImg {
@@ -605,8 +614,8 @@
 
 /* Calendar Range */
 .calDayInRange {
-  background: rgba(59, 130, 246, 0.22) !important;
-  color: #93c5fd !important;
+  background: color-mix(in srgb, var(--widget-accent, #3b82f6) 25%, transparent) !important;
+  color: #ffffff !important;
   border-radius: 0 !important;
 }
 
@@ -937,8 +946,8 @@
 }
 
 .optionChipSelected {
-  border-color: var(--widget-accent, #3b82f6);
-  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--widget-accent, #3b82f6) !important;
+  background: color-mix(in srgb, var(--widget-accent, #3b82f6) 12%, transparent) !important;
   color: #ffffff;
 }
 

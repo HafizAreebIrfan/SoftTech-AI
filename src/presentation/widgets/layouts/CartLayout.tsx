@@ -21,6 +21,10 @@ interface CartLineItem {
   discountPercentage?: number;
   discountedTotal?: number;
   thumbnail?: string;
+  checkoutUrl?: string;
+  productUrl?: string;
+  url?: string;
+  link?: string;
 }
 
 export const CartLayout: React.FC<WidgetLayoutProps> = ({
