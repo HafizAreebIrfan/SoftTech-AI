@@ -46,6 +46,13 @@ export const normalizeApiResponseToWidget = (
   toolName?: string,
   inputArgs?: Record<string, any>,
   streamUrl?: string,
+  checkoutLinks?: {
+    hasGlobalCheckout?: boolean;
+    globalCheckoutUrl?: string;
+    hasProductPages?: boolean;
+    shopCatalogUrl?: string;
+    productItemUrlTemplate?: string;
+  },
 ): GenericWidgetResult => {
   const rawData = normalizeJsonValue(response);
 
@@ -151,6 +158,18 @@ export const normalizeApiResponseToWidget = (
       ...(inferredIntent ? { inferred_intent: inferredIntent } : {}),
       ...(webCheckoutUrl ? { webCheckoutUrl } : {}),
       ...(streamUrl ? { streamUrl } : {}),
+      // Registration-gated deep links: each URL is emitted only when the
+      // company both enabled the flag and provided the URL, so the widget can
+      // treat "URL present in metadata" as "render this redirect button".
+      ...(checkoutLinks?.hasGlobalCheckout && checkoutLinks?.globalCheckoutUrl
+        ? { globalCheckoutUrl: checkoutLinks.globalCheckoutUrl }
+        : {}),
+      ...(checkoutLinks?.hasProductPages && checkoutLinks?.shopCatalogUrl
+        ? { shopCatalogUrl: checkoutLinks.shopCatalogUrl }
+        : {}),
+      ...(checkoutLinks?.hasProductPages && checkoutLinks?.productItemUrlTemplate
+        ? { productItemUrlTemplate: checkoutLinks.productItemUrlTemplate }
+        : {}),
       generatedAt: new Date().toISOString(),
     },
   };

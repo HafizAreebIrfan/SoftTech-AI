@@ -20,6 +20,15 @@ export interface ICompanyAuthStrategy {
   clientId?: string;
   clientSecret?: string;
   scopes?: string[];
+  // Optional deep links the company opted into at registration. Each governs a
+  // widget redirect button and is only emitted (and only rendered) when set, so
+  // a company that did not register a link never shows that button. URL values
+  // may carry {placeholder} tokens (e.g. {id}, {date}) interpolated per record.
+  hasGlobalCheckout?: boolean;
+  globalCheckoutUrl?: string; // "Buy now / Continue to checkout" target
+  hasProductPages?: boolean;
+  shopCatalogUrl?: string; // fullscreen "Open in {company}" → catalog page
+  productItemUrlTemplate?: string; // "View on {company}" → single item page
 }
 
 export interface IApi {

@@ -152,6 +152,28 @@ export const registerGenericWidgetResources = (
         ]),
       );
 
+      // Origins the widget is allowed to navigate to via window.openai
+      // openExternal / setOpenInAppUrl. Only the company's registered deep
+      // links are allow-listed; templates may contain {placeholder} tokens,
+      // which the WHATWG URL parser tolerates in the path/query.
+      const authStrategy = (company as any).authStrategy || {};
+      const redirectDomains = Array.from(
+        new Set(
+          [
+            authStrategy.shopCatalogUrl,
+            authStrategy.productItemUrlTemplate,
+            authStrategy.globalCheckoutUrl,
+          ].reduce<string[]>((acc, raw) => {
+            if (typeof raw === "string" && raw) {
+              try {
+                acc.push(new URL(raw).origin);
+              } catch {}
+            }
+            return acc;
+          }, []),
+        ),
+      );
+
       return {
         contents: [
           {
@@ -172,6 +194,19 @@ export const registerGenericWidgetResources = (
                   resourceDomains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
                 },
               },
+              // Legacy ChatGPT CSP key: the only place redirect_domains is
+              // honored (ui.csp does not support it). Emitted only when the
+              // company registered at least one deep link. connect/resource are
+              // mirrored so nothing is lost if the host reads this key instead.
+              ...(redirectDomains.length > 0
+                ? {
+                    "openai/widgetCSP": {
+                      connect_domains: connectDomains,
+                      resource_domains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
+                      redirect_domains: redirectDomains,
+                    },
+                  }
+                : {}),
             },
           },
         ],

@@ -109,6 +109,19 @@ export const registerCompanyApiTools = (
       ? (isToolAuthRequired ? [{ type: "oauth2", scopes }] : [{ type: "noauth" }, { type: "oauth2", scopes }])
       : [{ type: "noauth" }];
 
+    // Registration-gated deep links the company opted into. Passed to the
+    // normalizer so it can surface the enabled ones in widget metadata; the
+    // widget renders each redirect button only when its URL is present.
+    const checkoutLinks = authStrategy
+      ? {
+          hasGlobalCheckout: authStrategy.hasGlobalCheckout,
+          globalCheckoutUrl: authStrategy.globalCheckoutUrl,
+          hasProductPages: authStrategy.hasProductPages,
+          shopCatalogUrl: authStrategy.shopCatalogUrl,
+          productItemUrlTemplate: authStrategy.productItemUrlTemplate,
+        }
+      : undefined;
+
     registerAppTool(
       server,
       toolName,
@@ -219,6 +232,7 @@ export const registerCompanyApiTools = (
             toolName,
             input,
             (api as any).streamUrl,
+            checkoutLinks,
           );
 
           // If the search was empty and we relaxed the query (or still found
@@ -271,20 +285,26 @@ export const registerCompanyApiTools = (
             sanitizedErrorMessage,
             api.name || "service",
           );
-          const errorWidget = buildErrorWidget(
-            api,
-            company,
-            method,
-            translation,
-          );
 
-          return buildMcpSuccessResult(
-            errorWidget,
-            api.name || `API ${index + 1}`,
-            company,
-            resourceUri,
-            method,
-          );
+          // Fail-safe: on a genuine service failure, return a TEXT-ONLY result
+          // with no structuredContent and no widget template. With nothing to
+          // render, the host hides the widget and shows this text instead of a
+          // broken/empty UI (Apps SDK: "with none, there's nothing to render").
+          const errorText = [translation.userMessage, translation.actionSuggestion]
+            .filter(Boolean)
+            .join(" ");
+
+          return {
+            content: [
+              {
+                type: "text" as const,
+                text:
+                  errorText ||
+                  "The service is temporarily unavailable. Please try again shortly.",
+              },
+            ],
+            isError: true,
+          };
         }
       },
     );
@@ -314,40 +334,6 @@ const buildAuthWidget = (
       keyValueItems: [
         { key: "Status", value: "Account Not Connected" },
         { key: "Connect Account", value: connectUrl },
-      ],
-    },
-  ],
-  metadata: {
-    companyName: company.companyName,
-    apiName: api.name,
-    httpMethod: method,
-    isAction: method !== "GET",
-    generatedAt: new Date().toISOString(),
-  },
-});
-
-const buildErrorWidget = (
-  api: any,
-  company: ICompany,
-  method: string,
-  translation: any,
-) => ({
-  title: api.name || "Service Notice",
-  subtitle: translation.userMessage,
-  data: {
-    status: "Service Notice",
-    message: translation.userMessage,
-    actionSuggestion: translation.actionSuggestion,
-  },
-  layout: company.uiPreference?.layout ?? "dashboard",
-  industry: company.industry ?? "general",
-  blocks: [
-    {
-      type: "keyValue",
-      title: "Service Status",
-      keyValueItems: [
-        { key: "Status", value: "Unable to retrieve records" },
-        { key: "Action", value: translation.actionSuggestion },
       ],
     },
   ],
