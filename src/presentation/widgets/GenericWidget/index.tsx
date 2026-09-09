@@ -7,7 +7,6 @@ import { CatalogLayout } from "../layouts/CatalogLayout";
 import { TableLayout } from "../layouts/TableLayout";
 import { GeneralLayout } from "../layouts/GeneralLayout";
 import { CartLayout } from "../layouts/CartLayout";
-import { EmptyStateBlock } from "../components/EmptyStateBlock";
 import { WeatherBlock } from "../components/WeatherBlock/WeatherBlock";
 import { AQIBlock } from "../components/AQIBlock";
 import { OptionPickerBlock } from "../components/OptionPickerBlock/OptionPickerBlock";
@@ -17,8 +16,9 @@ import { getValue } from "../../../utils";
 import type { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
 import styles from "../../../styles/genericwidgetrenderer.module.css";
 import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
+import { setOpenInApp } from "../../../utils/mcpBridge";
 
-export const GenericWidgetRenderer: React.FC = () => {
+const GenericWidgetInner: React.FC = () => {
   const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
   const viewFullCart = useCartStore((state) => state.viewFullCart);
@@ -57,6 +57,16 @@ export const GenericWidgetRenderer: React.FC = () => {
       ...metadata,
     };
   }
+
+  // Registration-gated: point the ChatGPT fullscreen "Open in {company}" header
+  // button at the company's catalog page. Emitted by the backend only when the
+  // company registered a catalog URL, so presence alone means "use it".
+  const shopCatalogUrl = (metadata as any)?.shopCatalogUrl as string | undefined;
+  useEffect(() => {
+    if (shopCatalogUrl) {
+      setOpenInApp(shopCatalogUrl);
+    }
+  }, [shopCatalogUrl]);
 
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
     const content = structuredContent as Record<string, unknown>;
@@ -153,18 +163,23 @@ export const GenericWidgetRenderer: React.FC = () => {
     });
   }, [normalizedData]);
 
+  // Fail-safe fallback (#1): when the tool result can't be loaded or there's
+  // nothing renderable, collapse the widget to nothing rather than showing a
+  // "random fallback UI". The host then falls back to the model's text answer
+  // (the backend already sends text-only on service errors, so the widget
+  // simply never mounts in that case).
   if (hasLoadError) {
-    return <div className={styles.errorState}>Failed to load UI.</div>;
+    return null;
   }
 
   if (!structuredContent || !normalizedData || !presentationPlan) {
-    return <EmptyStateBlock />;
+    return null;
   }
 
   const { content, collection, fields, records, rawData } = normalizedData;
 
   if (!collection && !rawData) {
-    return <EmptyStateBlock />;
+    return null;
   }
 
   const entityName = String(
@@ -431,4 +446,38 @@ export const GenericWidgetRenderer: React.FC = () => {
     </div>
   );
 };
+
+/**
+ * Fail-safe boundary (#1): if anything in the widget tree throws while
+ * rendering, collapse to `null` instead of surfacing a broken UI. Combined
+ * with the null fallbacks in GenericWidgetInner and the backend's text-only
+ * error path, an unrenderable result means the host shows the model's text.
+ */
+class WidgetErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error("[MCP Widget] render failed, collapsing widget:", error);
+  }
+
+  render() {
+    return this.state.hasError ? null : this.props.children;
+  }
+}
+
+export const GenericWidgetRenderer: React.FC = () => (
+  <WidgetErrorBoundary>
+    <GenericWidgetInner />
+  </WidgetErrorBoundary>
+);
 

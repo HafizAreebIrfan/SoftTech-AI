@@ -7,6 +7,7 @@ import { callMcpTool, applyReQueryResult, getToolInput } from "../../../utils/mc
 import { extractToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import styles from "../../../styles/cataloglayout.module.css";
 import { useRealtimeStream } from "../hooks/useRealtimeStream";
+import { capOn } from "../helper/AudienceHelper";
 
 export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   title,
@@ -355,7 +356,58 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
       "passwordhash",
       "hash",
       "licenseplate",
+      "sku",
+      "barcode",
+      "upc",
+      "ean",
+      "isbn",
+      "slug",
+      "uuid",
+      "guid",
+      "width",
+      "height",
+      "depth",
+      "length",
+      "weight",
+      "dimensions",
     ]);
+
+    // Relevance gate (#5): identifier/measurement key patterns are never useful
+    // filter facets; categorical-sounding names/roles are good candidates. When
+    // the backend marks any field `filterable`, trust that set exactly;
+    // otherwise fall back to these heuristics. All data-driven — behaviour keys
+    // off schema flags/types and key shape, never entity/company/industry names.
+    const MEASURE_ID_RE =
+      /(^|_)(id|sku|barcode|upc|ean|isbn|gtin|code|slug|uuid|guid|ref|serial|vin|imei|plate|width|height|depth|length|weight|diameter|dimension|dimensions|volume|mileage|odometer|hash|token|lat|lng|lon)(_|$)/i;
+    const CATEGORICAL_NAME_RE =
+      /(categor|type|kind|status|state|brand|make|manufacturer|colou?r|size|material|style|genre|department|group|collection|tier|plan|class|condition|gender|fuel|transmission|region|country|city|location|availab|tag|label|format|edition|variant|model|series|level|grade)/i;
+    const NON_FACET_TYPES = new Set([
+      "number",
+      "currency",
+      "date",
+      "datetime",
+      "image",
+      "url",
+      "email",
+      "phone",
+      "latitude",
+      "longitude",
+      "object",
+      "array",
+    ]);
+    const strictFilterable = fields.some((f) => f.filterable === true);
+    const isRelevantFacet = (key: string, schema?: any): boolean => {
+      const kLower = key.toLowerCase();
+      if (MEASURE_ID_RE.test(kLower)) return false;
+      if (schema?.hidden) return false;
+      if (schema && NON_FACET_TYPES.has(schema.type)) return false;
+      if (strictFilterable) return schema?.filterable === true;
+      if (schema?.filterable === true) return true;
+      if (schema?.type === "status" || schema?.type === "boolean") return true;
+      if (schema?.uiRole && CATEGORICAL_NAME_RE.test(String(schema.uiRole)))
+        return true;
+      return CATEGORICAL_NAME_RE.test(kLower);
+    };
 
     const facetMap: Record<string, { label: string; values: Set<string> }> = {};
 
@@ -376,6 +428,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
             .replace(/\b\w/g, (c) => c.toUpperCase());
 
         if (typeof rawVal === "string" || typeof rawVal === "number" || typeof rawVal === "boolean") {
+          if (!isRelevantFacet(key, fieldSchema)) continue;
           const strVal = String(rawVal).trim();
           if (strVal && strVal.length <= 30 && !strVal.startsWith("http")) {
             if (!facetMap[key]) {
@@ -384,6 +437,7 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
             facetMap[key].values.add(strVal);
           }
         } else if (Array.isArray(rawVal) && rawVal.length > 0 && rawVal.length <= 15) {
+          if (!isRelevantFacet(key, fieldSchema)) continue;
           rawVal.forEach((item) => {
             if (typeof item === "string" && item.trim() && item.length <= 30 && !item.startsWith("http")) {
               if (!facetMap[key]) {
@@ -567,6 +621,11 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     sortOption,
   ]);
 
+  // Search bar shows only when the connector declares search as a capability
+  // (#4): client-side filtering alone searches just the loaded page of records,
+  // which is misleading, so we key strictly off the capability flag.
+  const canSearch = capOn(capabilities, "search");
+
   const showToolbar =
     localRecords.length > 1 ||
     availableCategories.length > 0 ||
@@ -617,26 +676,28 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
       {/* Dynamic Catalog Toolbar (Search, Filter Sidebar Trigger & Cart Button) */}
       {showToolbar && (
         <div className={styles.toolbar}>
-          <div className={styles.searchContainer}>
-            <span className={styles.searchIcon}>🔍</span>
-            <input
-              type="text"
-              className={styles.searchInput}
-              placeholder={searchPlaceholder}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className={styles.searchClearBtn}
-                aria-label="Clear search"
-              >
-                ✕
-              </button>
-            )}
-          </div>
+          {canSearch && (
+            <div className={styles.searchContainer}>
+              <span className={styles.searchIcon}>🔍</span>
+              <input
+                type="text"
+                className={styles.searchInput}
+                placeholder={searchPlaceholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className={styles.searchClearBtn}
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )}
 
           <div className={styles.toolbarActions}>
             <button
@@ -1054,8 +1115,8 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
         <div className={styles.noResults}>
           <p>
             {searchTerm || selectedCategory !== "All"
-              ? "No products match your current filters."
-              : "No products available."}
+              ? `No ${itemLabelPlural.toLowerCase()} match your current filters.`
+              : `No ${itemLabelPlural.toLowerCase()} available.`}
           </p>
           {(searchTerm || selectedCategory !== "All") && (
             <button

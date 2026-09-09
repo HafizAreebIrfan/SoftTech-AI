@@ -42,12 +42,26 @@
 /* Banner Colors matching Image 1 */
 .bannerWrapper {
   position: relative;
-  height: 145px;
+  height: 180px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+
+/* Plain wrapper for real images: NO gradient/background behind the image,
+   fixed height so very tall images are capped, `contain` (via renderImage)
+   so nothing is cropped. */
+.bannerWrapperPlain {
+  position: relative;
+  height: 180px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: transparent;
 }
 
 .bannerOlive {
@@ -85,9 +99,10 @@
 }
 
 .bannerSilhouette {
-  width: 70px;
-  height: 40px;
-  opacity: 0.35;
+  width: 52px;
+  height: 52px;
+  opacity: 0.4;
+  color: #ffffff;
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
 }
 

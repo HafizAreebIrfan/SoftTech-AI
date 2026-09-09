@@ -103,6 +103,29 @@ export interface Pagination {
   [key: string]: JsonValue | undefined;
 }
 
+/**
+ * Widget-level metadata emitted by the backend. Open-ended (index signature)
+ * so any company field flows through, with the registration-driven
+ * checkout/catalog redirect URLs typed for the widget to read them safely.
+ * A URL is present here only when the company registered it AND enabled the
+ * matching capability (the backend gates emission), so "URL present" ⇒ "show".
+ */
+export interface WidgetMetadata {
+  [key: string]: JsonValue | undefined;
+  companyName?: string;
+  themeColor?: string;
+  streamUrl?: string;
+  /** Fullscreen "Open in {company}" → catalog page. */
+  hasProductPages?: boolean;
+  shopCatalogUrl?: string;
+  /** "View on {company}" → single item page (has {id}/etc. placeholders). */
+  productItemUrlTemplate?: string;
+  /** "Buy now / Continue to checkout" → checkout (has placeholders). */
+  hasGlobalCheckout?: boolean;
+  globalCheckoutUrl?: string;
+  webCheckoutUrl?: string;
+}
+
 export interface GenericWidgetContent {
   title: string;
   subtitle?: string;
@@ -111,7 +134,7 @@ export interface GenericWidgetContent {
   capabilities?: Capabilities;
   pagination?: Pagination;
   actions?: WidgetAction[];
-  metadata?: Record<string, JsonValue>;
+  metadata?: WidgetMetadata;
   audience?: WidgetAudience;
   platformType?: PlatformType;
   intent?: string;

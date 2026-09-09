@@ -1,39 +1,120 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import styles from "../../../../styles/detailblock.module.css";
 import type { DetailBlockProps } from "../../../../interfaces/mcp/detailblock.interface";
+import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 import { useMcpWidgetStore } from "../../../../infrastructure/store/mcpWidgetStore";
-import { requestDisplayMode } from "../../../../utils/mcpBridge";
 import {
-  extractAllImageUrls,
-} from "../../helper/RenderImage/getproxiedimageurl";
+  requestDisplayMode,
+  openExternalUrl,
+  interpolateTemplate,
+  callMcpTool,
+} from "../../../../utils/mcpBridge";
+import { extractAllImageUrls } from "../../helper/RenderImage/getproxiedimageurl";
+import { renderImage } from "../../helper/RenderImage";
 import { appendChatUrlToCheckout } from "../../../../utils/checkoutHelper";
-import { useCartStore } from "../../../../infrastructure/store/cartStore";
+import {
+  useCartStore,
+  findCartAction,
+  parseNumericPrice,
+} from "../../../../infrastructure/store/cartStore";
+import { addToCartAndSync } from "../../../../utils/cartFlow";
+import { getValue } from "../../../../utils";
 
-// Silhouette SVG for vehicle placeholder
-const DetailSilhouetteIcon: React.FC = () => (
-  <svg
-    viewBox="0 0 100 50"
-    fill="currentColor"
-    className={styles.heroSilhouette}
-    aria-hidden="true"
-  >
-    <path d="M15 32c-3.3 0-6-2.7-6-6 0-3.3 2.7-6 6-6s6 2.7 6 6c0 3.3-2.7 6-6 6zm70 0c-3.3 0-6-2.7-6-6 0-3.3 2.7-6 6-6s6 2.7 6 6c0 3.3-2.7 6-6 6zm10-12l-7-8c-2-2.3-5-3.6-8-3.6H42c-2.4 0-4.7.9-6.4 2.5L25 18H10c-3.3 0-6 2.7-6 6v8c0 1.1.9 2 2 2h3.5c1.2-4.6 5.4-8 10.5-8s9.3 3.4 10.5 8h39c1.2-4.6 5.4-8 10.5-8s9.3 3.4 10.5 8H96c1.1 0 2-.9 2-2v-9c0-1.7-.7-3.3-2-4.5zM38 18l7.5-6h23.5l5 6H38z" />
-  </svg>
-);
+/* ------------------------------------------------------------------ *
+ * Generic field-role detection. Everything below keys off field
+ * `type`/`uiRole`, `$`-meta fields, value shape, and key-name *patterns*
+ * (never off entity/industry/company names), so the detail screen renders
+ * for any company's records — products, packages, listings, vehicles, etc.
+ * ------------------------------------------------------------------ */
+const TITLE_KEY_RE = /^\$?(title|name|label|heading)$/i;
+const SUBTITLE_KEY_RE = /^\$?(subtitle|tagline|variant)$/i;
+const PRICE_KEY_RE = /(price|rate|cost|amount|fee|fare|premium|charge|subtotal|total)/i;
+const IMAGE_KEY_RE =
+  /(image|img|photo|thumbnail|thumb|picture|avatar|logo|icon|banner|gallery|media)/i;
+const DESCRIPTION_KEY_RE =
+  /^\$?(description|about|summary|overview|details|bio|content|body)$/i;
+const RATING_KEY_RE = /^(rating|stars|score|avgrating|averagerating)$/i;
+const REVIEWS_KEY_RE = /(reviews?|ratings?|feedback|testimonials?)/i;
+const FEATURES_KEY_RE =
+  /^(features?|amenities|tags|highlights|includes|perks|benefits)$/i;
+const OPTION_EXCLUDE_RE =
+  /(feature|amenit|tag|highlight|include|perk|benefit|image|img|photo|thumbnail|picture|gallery|media|review|rating|comment|spec)/i;
+const STATUS_KEY_RE = /^(availabilitystatus|availability|status|state)$/i;
+
+const isScalar = (v: unknown): v is string | number | boolean =>
+  typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+
+const looksLikeId = (k: string): boolean =>
+  /^(id|_id|__v|uuid|guid|slug)$/i.test(k) || /(^|_)ids?$|Ids?$/.test(k);
+
+/** camelCase / snake_case / $prefixed → "Title Case". */
+const humanizeKey = (key: string): string =>
+  key
+    .replace(/^\$/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+/** Period suffix inferred from a rate key's shape (generic param-shape read). */
+const derivePricePeriod = (key: string): string => {
+  const k = key.toLowerCase();
+  if (/(daily|per_?day|\bday\b)/.test(k)) return "per day";
+  if (/(nightly|per_?night|\bnight\b)/.test(k)) return "per night";
+  if (/(hourly|per_?hour|\bhour\b)/.test(k)) return "per hour";
+  if (/(weekly|per_?week|\bweek\b)/.test(k)) return "per week";
+  if (/(monthly|per_?month|\bmonth\b)/.test(k)) return "per month";
+  if (/(yearly|annual|per_?year|\byear\b)/.test(k)) return "per year";
+  return "";
+};
+
+/**
+ * Format a price using the record's OWN currency info — never a hardcoded
+ * symbol. Precedence: an already-formatted string → currency code
+ * (Intl) → currency symbol prefix → bare localized number.
+ */
+const formatPrice = (value: unknown, record: Record<string, any>): string => {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value === "string" && /[^\d.,\s-]/.test(value)) return value.trim();
+
+  const num = parseNumericPrice(value);
+  const code = record.currency || record.currencyCode || record.priceCurrency;
+  if (typeof code === "string" && /^[A-Za-z]{3}$/.test(code)) {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: code.toUpperCase(),
+      }).format(num);
+    } catch {
+      /* unknown code — fall through */
+    }
+  }
+  const symbol = record.currencySymbol || record.symbol;
+  const formatted = num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return typeof symbol === "string" && symbol.trim()
+    ? `${symbol.trim()}${formatted}`
+    : formatted;
+};
 
 export const DetailBlock: React.FC<DetailBlockProps> = ({
   records = [],
+  fields = [],
   collection,
+  actions = [],
+  onBack,
 }) => {
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
+  const openCart = useCartStore((state) => state.openCart);
 
-  const targetRecord = useMemo(() => {
+  const targetRecord = useMemo<Record<string, any> | null>(() => {
     if (records.length > 0 && records[0] && typeof records[0] === "object") {
       return records[0] as Record<string, any>;
     }
     return null;
   }, [records]);
 
+  // Fullscreen while a detail is open; restore inline when it closes.
   useEffect(() => {
     requestDisplayMode("fullscreen");
     return () => {
@@ -41,7 +122,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     };
   }, []);
 
-  const metadata = useMemo(() => {
+  // Registration-driven checkout/catalog URLs (emitted by the backend only
+  // when the company registered them). Read case-tolerantly from metadata.
+  const metadata = useMemo<Record<string, any>>(() => {
     if (typeof window === "undefined") return {};
     return (
       (window as any).__WIDGET_METADATA__ ||
@@ -49,1153 +132,765 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       {}
     );
   }, []);
+  const companyName = metadata.companyName || collection?.entity || "store";
 
-  const companyName = metadata.companyName || collection?.entity || "Store";
-
-  // Entity Detection: Distinguish Vehicles from E-Commerce / General Products
-  const isVehicle = useMemo(() => {
-    if (!targetRecord) return false;
-    const entity = String(collection?.entity || "").toLowerCase();
-    const industry = String(metadata?.industry || "").toLowerCase();
-    if (
-      entity.includes("car") ||
-      entity.includes("vehicle") ||
-      entity.includes("fleet") ||
-      entity.includes("auto") ||
-      industry.includes("travel") ||
-      industry.includes("rental") ||
-      industry.includes("automotive")
-    ) {
-      return true;
+  const fieldMap = useMemo(() => {
+    const m = new Map<string, FieldSchema>();
+    for (const f of fields) {
+      if (f?.key) m.set(f.key, f);
     }
-    if (
-      (targetRecord.fuelType || targetRecord.fuel || targetRecord.licensePlate) &&
-      !targetRecord.sku &&
-      !targetRecord.dimensions
-    ) {
-      return true;
+    return m;
+  }, [fields]);
+
+  /* -------------------------- Title / subtitle -------------------------- */
+  const { title, subtitle } = useMemo(() => {
+    if (!targetRecord) return { title: "", subtitle: "" };
+
+    let t = "";
+    const titleField = fields.find((f) => f.uiRole === "title" || f.primary);
+    if (titleField) {
+      t = String(getValue(targetRecord, titleField.path || titleField.key) ?? "");
     }
-    return false;
-  }, [collection?.entity, metadata?.industry, targetRecord]);
+    if (!t) {
+      for (const [k, v] of Object.entries(targetRecord)) {
+        if (TITLE_KEY_RE.test(k) && isScalar(v) && String(v).trim()) {
+          t = String(v);
+          break;
+        }
+      }
+    }
+    if (!t) t = String(collection?.itemLabel || collection?.entity || "Details");
 
-  // Gallery Images & Active Image Index
-  const allImages = useMemo(() => {
-    if (!targetRecord) return [];
-    return extractAllImageUrls(targetRecord);
-  }, [targetRecord]);
+    let s = "";
+    const subField = fields.find((f) => f.uiRole === "subtitle");
+    if (subField) {
+      s = String(getValue(targetRecord, subField.path || subField.key) ?? "");
+    }
+    if (!s) {
+      for (const [k, v] of Object.entries(targetRecord)) {
+        if (
+          SUBTITLE_KEY_RE.test(k) &&
+          isScalar(v) &&
+          String(v).trim() &&
+          String(v) !== t
+        ) {
+          s = String(v);
+          break;
+        }
+      }
+    }
+    return { title: t, subtitle: s };
+  }, [targetRecord, fields, collection]);
 
-  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  /* ------------------------------ Pricing ------------------------------ */
+  const priceInfo = useMemo(() => {
+    const empty = { value: undefined as unknown, key: "", display: "", period: "" };
+    if (!targetRecord) return empty;
 
+    let value: unknown;
+    let key = "";
+
+    const priceField = fields.find(
+      (f) => f.uiRole === "price" || f.type === "currency",
+    );
+    if (priceField) {
+      value = getValue(targetRecord, priceField.path || priceField.key);
+      key = priceField.key;
+    }
+    if ((value === undefined || value === null || value === "") &&
+        targetRecord.$price != null) {
+      value = targetRecord.$price;
+      key = "$price";
+    }
+    if (value === undefined || value === null || value === "") {
+      for (const [k, v] of Object.entries(targetRecord)) {
+        if (/(percent|discount|qty|quantity|count|stock)/i.test(k)) continue;
+        if (
+          PRICE_KEY_RE.test(k) &&
+          (typeof v === "number" || (typeof v === "string" && /\d/.test(v)))
+        ) {
+          value = v;
+          key = k;
+          break;
+        }
+      }
+    }
+
+    return {
+      value,
+      key,
+      display: formatPrice(value, targetRecord),
+      period: derivePricePeriod(key),
+    };
+  }, [targetRecord, fields]);
+
+  /* --------------------------- Image gallery --------------------------- */
+  const allImages = useMemo(
+    () => (targetRecord ? extractAllImageUrls(targetRecord).slice(0, 12) : []),
+    [targetRecord],
+  );
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   useEffect(() => {
     setActiveImageIndex(0);
   }, [targetRecord]);
-
   const activeImageUrl = allImages[activeImageIndex] || allImages[0] || "";
-  const [imageFailed, setImageFailed] = useState<boolean>(false);
 
-  useEffect(() => {
-    setImageFailed(false);
-  }, [activeImageUrl]);
+  /* ------------------------------ Rating ------------------------------- */
+  const ratingValue = useMemo(() => {
+    if (!targetRecord) return null;
+    const rf = fields.find((f) => f.uiRole === "rating");
+    let raw: unknown = rf
+      ? getValue(targetRecord, rf.path || rf.key)
+      : undefined;
+    if (raw === undefined) {
+      const hit = Object.entries(targetRecord).find(
+        ([k, v]) => RATING_KEY_RE.test(k) && typeof v === "number",
+      );
+      raw = hit?.[1];
+    }
+    const num = typeof raw === "number" ? raw : Number(raw);
+    return isFinite(num) && num > 0 ? num : null;
+  }, [targetRecord, fields]);
 
-  const hasValidImage = Boolean(
-    !imageFailed &&
-      activeImageUrl &&
-      (activeImageUrl.startsWith("data:") ||
-        activeImageUrl.startsWith("blob:") ||
-        activeImageUrl.startsWith("/") ||
-        /^https?:\/\//i.test(activeImageUrl)),
-  );
+  /* ----------------------------- Reviews ------------------------------- */
+  const reviews = useMemo(() => {
+    if (!targetRecord) return [] as any[];
+    for (const [k, v] of Object.entries(targetRecord)) {
+      if (!Array.isArray(v) || v.length === 0) continue;
+      const looksReviews =
+        REVIEWS_KEY_RE.test(k) || fieldMap.get(k)?.uiRole === "reviews";
+      if (looksReviews && typeof v[0] === "object") return v as any[];
+    }
+    return [];
+  }, [targetRecord, fieldMap]);
 
-  // E-Commerce Quantity & Cart Store
-  const [quantity, setQuantity] = useState<number>(
-    targetRecord?.minimumOrderQuantity || 1,
-  );
-  const [addedToCartToast, setAddedToCartToast] = useState<boolean>(false);
-  const addItem = useCartStore((state) => state.addItem);
-  const openCart = useCartStore((state) => state.openCart);
-
-  const maxStock =
-    typeof targetRecord?.stock === "number" ? targetRecord.stock : 99;
-
-  // Car Rental Interactive Calendar Date Selection
-  const [selectedStartDay, setSelectedStartDay] = useState<number>(7);
-  const [selectedEndDay, setSelectedEndDay] = useState<number | null>(9);
-  const [selectedInsurance, setSelectedInsurance] = useState<
-    "basic" | "standard" | "premium"
-  >("basic");
-  const [pickupLocation, setPickupLocation] = useState<string>(
-    targetRecord?.location?.name ||
-      targetRecord?.city ||
-      "Karachi Airport Branch",
-  );
-  const [dropoffLocation, setDropoffLocation] = useState<string>("same");
-
-  const handleDayClick = (day: number) => {
-    if (selectedStartDay === null || (selectedStartDay !== null && selectedEndDay !== null)) {
-      setSelectedStartDay(day);
-      setSelectedEndDay(null);
-    } else {
-      if (day > selectedStartDay) {
-        setSelectedEndDay(day);
-      } else {
-        setSelectedStartDay(day);
-        setSelectedEndDay(null);
+  /* --------------------------- Description ----------------------------- */
+  const description = useMemo(() => {
+    if (!targetRecord) return "";
+    const df = fields.find((f) => f.uiRole === "description");
+    if (df) {
+      const val = getValue(targetRecord, df.path || df.key);
+      if (typeof val === "string" && val.trim()) return val.trim();
+    }
+    for (const [k, v] of Object.entries(targetRecord)) {
+      if (DESCRIPTION_KEY_RE.test(k) && typeof v === "string" && v.trim()) {
+        return v.trim();
       }
     }
-  };
+    // Fallback: the longest free-text value that isn't an image/url.
+    let longest = "";
+    for (const [k, v] of Object.entries(targetRecord)) {
+      if (
+        typeof v === "string" &&
+        v.length > 80 &&
+        v.length > longest.length &&
+        !IMAGE_KEY_RE.test(k) &&
+        !/^https?:\/\//i.test(v)
+      ) {
+        longest = v;
+      }
+    }
+    return longest;
+  }, [targetRecord, fields]);
 
-  const effectiveEndDay = selectedEndDay ?? selectedStartDay;
-  const rentalDays = Math.max(1, effectiveEndDay - selectedStartDay);
+  /* ---------------------------- Features ------------------------------- */
+  const features = useMemo(() => {
+    if (!targetRecord) return [] as string[];
+    const out: string[] = [];
+    // 1. A features/tags scalar array.
+    for (const [k, v] of Object.entries(targetRecord)) {
+      if (!Array.isArray(v)) continue;
+      const role = fieldMap.get(k)?.uiRole;
+      if (FEATURES_KEY_RE.test(k) || role === "features" || role === "tags") {
+        for (const item of v) {
+          if (isScalar(item) && String(item).trim()) out.push(String(item).trim());
+        }
+      }
+    }
+    // 2. Else boolean-true fields become capability pills.
+    if (out.length === 0) {
+      for (const [k, v] of Object.entries(targetRecord)) {
+        if (v === true && !k.startsWith("$") && !looksLikeId(k)) {
+          out.push(humanizeKey(k));
+        }
+      }
+    }
+    return Array.from(new Set(out)).slice(0, 24);
+  }, [targetRecord, fieldMap]);
 
+  /* -------------------------- Option groups ---------------------------- *
+   * Small scalar arrays (e.g. sizes / colors / tiers) become selectable
+   * chip groups that feed selectedOptions → cart + checkout interpolation.
+   * Purely shape-driven (cardinality 2–8, scalar, not a features/media key).
+   * ------------------------------------------------------------------ */
+  const optionGroups = useMemo(() => {
+    if (!targetRecord) return [] as Array<{ key: string; label: string; values: string[] }>;
+    const groups: Array<{ key: string; label: string; values: string[] }> = [];
+    for (const [k, v] of Object.entries(targetRecord)) {
+      if (!Array.isArray(v) || v.length < 2) continue;
+      if (OPTION_EXCLUDE_RE.test(k)) continue;
+      if (!v.every((x) => typeof x === "string" || typeof x === "number")) continue;
+      const uniq = Array.from(
+        new Set(v.map((x) => String(x).trim()).filter(Boolean)),
+      );
+      if (uniq.length < 2 || uniq.length > 8) continue;
+      groups.push({
+        key: k,
+        label: fieldMap.get(k)?.label || humanizeKey(k),
+        values: uniq,
+      });
+    }
+    return groups;
+  }, [targetRecord, fieldMap]);
+
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const init: Record<string, string> = {};
+    for (const g of optionGroups) init[g.key] = g.values[0];
+    setSelectedOptions(init);
+  }, [optionGroups]);
+
+  /* ---------------------------- Spec grid ------------------------------ *
+   * Short scalar fields that aren't already surfaced elsewhere (title,
+   * subtitle, price, description, rating, reviews, features, options,
+   * images) and aren't identifiers/meta. Labels come from FieldSchema.
+   * ------------------------------------------------------------------ */
+  const specs = useMemo(() => {
+    if (!targetRecord) return [] as Array<{ label: string; value: string }>;
+    const optionKeys = new Set(optionGroups.map((g) => g.key));
+    const out: Array<{ label: string; value: string }> = [];
+
+    for (const [k, v] of Object.entries(targetRecord)) {
+      if (k.startsWith("$")) continue;
+      if (looksLikeId(k)) continue;
+      if (optionKeys.has(k)) continue;
+      if (priceInfo.key && k === priceInfo.key) continue;
+      if (
+        TITLE_KEY_RE.test(k) ||
+        SUBTITLE_KEY_RE.test(k) ||
+        PRICE_KEY_RE.test(k) ||
+        IMAGE_KEY_RE.test(k) ||
+        DESCRIPTION_KEY_RE.test(k) ||
+        REVIEWS_KEY_RE.test(k) ||
+        RATING_KEY_RE.test(k) ||
+        FEATURES_KEY_RE.test(k) ||
+        STATUS_KEY_RE.test(k)
+      ) {
+        continue;
+      }
+      if (v === null || v === undefined || v === "") continue;
+      if (typeof v === "boolean") continue; // → features
+      if (!isScalar(v)) continue; // objects / arrays skipped
+
+      const field = fieldMap.get(k);
+      if (field?.hidden) continue;
+
+      let display: string;
+      if (field && (field.type === "date" || field.type === "datetime")) {
+        const d = new Date(String(v));
+        display = isNaN(d.getTime()) ? String(v) : d.toLocaleDateString();
+      } else if (typeof v === "number") {
+        display = v.toLocaleString();
+      } else {
+        display = String(v);
+      }
+      if (display.length > 60) continue;
+
+      out.push({ label: field?.label || humanizeKey(k), value: display });
+    }
+    return out.slice(0, 12);
+  }, [targetRecord, fieldMap, optionGroups, priceInfo.key]);
+
+  /* ---------------------- Status / availability ------------------------ */
+  const statusBadge = useMemo(() => {
+    if (!targetRecord) return "";
+    for (const [k, v] of Object.entries(targetRecord)) {
+      if (STATUS_KEY_RE.test(k) && isScalar(v) && String(v).trim()) {
+        return String(v);
+      }
+    }
+    return "";
+  }, [targetRecord]);
+
+  /* ----------------------- Registered redirects ------------------------ */
+  const cartAction = useMemo(() => findCartAction(actions), [actions]);
+  const canAddToCart = Boolean(cartAction);
+
+  const productItemUrl = useMemo(() => {
+    const tpl = metadata.productItemUrlTemplate;
+    if (!tpl || !targetRecord) return "";
+    return interpolateTemplate(String(tpl), targetRecord);
+  }, [metadata.productItemUrlTemplate, targetRecord]);
+
+  const checkoutUrl = useMemo(() => {
+    const tpl = metadata.globalCheckoutUrl || metadata.webCheckoutUrl;
+    if (!tpl || !targetRecord) return "";
+    return interpolateTemplate(String(tpl), targetRecord, selectedOptions);
+  }, [metadata.globalCheckoutUrl, metadata.webCheckoutUrl, targetRecord, selectedOptions]);
+
+  // A review-write tool: a review/rating/feedback tool with a write verb and
+  // no read/destructive verb. Generic — matched on action id/tool text only.
+  const reviewWriteAction = useMemo(() => {
+    return actions.find((a: any) => {
+      if (!a?.tool) return false;
+      const text = `${a.id ?? ""} ${a.tool ?? ""}`;
+      return (
+        /review|rating|feedback|testimonial/i.test(text) &&
+        /(add|create|post|submit|write|leave|new|save)/i.test(text) &&
+        !/(get|list|fetch|read|delete|remove|all)/i.test(text)
+      );
+    });
+  }, [actions]);
+
+  /* ------------------------------ Handlers ----------------------------- */
+  const [quantity, setQuantity] = useState(1);
+  useEffect(() => {
+    setQuantity(1);
+  }, [targetRecord]);
+  const [toast, setToast] = useState(false);
+
+  const recordId = targetRecord?.id ?? targetRecord?._id;
+
+  const handleAddToCart = useCallback(async () => {
+    if (!targetRecord) return;
+    await addToCartAndSync({
+      item: {
+        id: recordId ?? title,
+        title,
+        price: (priceInfo.value as number | string) ?? 0,
+        image: activeImageUrl || undefined,
+        ...(Object.keys(selectedOptions).length ? { options: selectedOptions } : {}),
+        ...(productItemUrl ? { productUrl: productItemUrl } : {}),
+        ...(checkoutUrl ? { checkoutUrl } : {}),
+      },
+      quantity,
+      actions,
+      recordId,
+    });
+    setToast(true);
+    setTimeout(() => setToast(false), 4000);
+  }, [
+    targetRecord,
+    recordId,
+    title,
+    priceInfo.value,
+    activeImageUrl,
+    selectedOptions,
+    productItemUrl,
+    checkoutUrl,
+    quantity,
+    actions,
+  ]);
+
+  const handleBuyNow = useCallback(() => {
+    if (!checkoutUrl) return;
+    openExternalUrl(appendChatUrlToCheckout(checkoutUrl));
+  }, [checkoutUrl]);
+
+  const handleViewOnCompany = useCallback(() => {
+    if (!productItemUrl) return;
+    openExternalUrl(productItemUrl);
+  }, [productItemUrl]);
+
+  // Add-a-review inline form (only rendered when a review-write tool exists).
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewDone, setReviewDone] = useState(false);
+
+  const handleSubmitReview = useCallback(async () => {
+    if (!reviewWriteAction?.tool || !reviewComment.trim()) return;
+    setReviewSubmitting(true);
+    try {
+      await callMcpTool(reviewWriteAction.tool, {
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+        id: recordId,
+        productId: recordId,
+      });
+      setReviewDone(true);
+      setReviewComment("");
+    } catch (err) {
+      console.warn("[DetailBlock] review submit failed:", err);
+    } finally {
+      setReviewSubmitting(false);
+    }
+  }, [reviewWriteAction, reviewRating, reviewComment, recordId]);
+
+  const handleBack = useCallback(() => {
+    if (onBack) onBack();
+    else popSubView();
+  }, [onBack, popSubView]);
+
+  /* ------------------------------ Guards ------------------------------- */
   if (!targetRecord) {
     return (
       <div className={styles.container}>
-        <button
-          type="button"
-          className={styles.backBtn}
-          onClick={() => popSubView()}
-        >
+        <button type="button" className={styles.backBtn} onClick={handleBack}>
           &larr; Back
         </button>
         <div className={styles.emptyDetailState}>
-          <h3>No item details found</h3>
+          <h3>No details available</h3>
           <p>The requested record could not be loaded.</p>
         </div>
       </div>
     );
   }
 
-  // Titles
-  const mainTitle = isVehicle
-    ? targetRecord.make ||
-      targetRecord.$title ||
-      targetRecord.title ||
-      targetRecord.name ||
-      "Vehicle Details"
-    : targetRecord.title ||
-      targetRecord.$title ||
-      targetRecord.name ||
-      "Product Details";
+  const itemLabel = collection?.itemLabel || collection?.entity || "";
+  const backText = itemLabel
+    ? `Back to ${itemLabel.endsWith("s") ? itemLabel : `${itemLabel}s`}`
+    : "Back";
 
-  const variantTitle = isVehicle
-    ? targetRecord.model ||
-      targetRecord.variant ||
-      targetRecord.subtitle ||
-      (targetRecord.year ? String(targetRecord.year) : "")
-    : targetRecord.brand ||
-      targetRecord.subtitle ||
-      "";
+  const showReviewsSection = reviews.length > 0 || Boolean(reviewWriteAction);
+  const showSidebar =
+    Boolean(priceInfo.display) ||
+    optionGroups.length > 0 ||
+    canAddToCart ||
+    Boolean(productItemUrl) ||
+    Boolean(checkoutUrl);
 
-  const locationStr = isVehicle
-    ? targetRecord.location?.name ||
-      targetRecord.location?.city ||
-      targetRecord.locationName ||
-      targetRecord.city ||
-      targetRecord.address ||
-      ""
-    : targetRecord.category ? String(targetRecord.category) : "";
+  /* ------------------------------- Left -------------------------------- */
+  const mainColumn = (
+    <div className={styles.mainCol}>
+      {/* Hero image (contain, no crop) with graceful fallback */}
+      <div className={styles.heroBanner}>
+        {renderImage(activeImageUrl, title, "contain")}
+        {statusBadge && (
+          <span className={styles.availableBadge}>{statusBadge}</span>
+        )}
+      </div>
 
-  // Pricing
-  const rawPrice =
-    targetRecord.dailyRate ??
-    targetRecord.pricePerDay ??
-    targetRecord.price_per_day ??
-    targetRecord.$price ??
-    targetRecord.price ??
-    0;
+      {/* Gallery thumbnails */}
+      {allImages.length > 1 && (
+        <div className={styles.galleryThumbnails}>
+          {allImages.map((imgUrl, idx) => (
+            <button
+              key={`thumb-${idx}`}
+              type="button"
+              className={`${styles.galleryThumbBtn} ${
+                idx === activeImageIndex ? styles.galleryThumbBtnActive : ""
+              }`}
+              onClick={() => setActiveImageIndex(idx)}
+              aria-label={`View image ${idx + 1}`}
+            >
+              {renderImage(imgUrl, `Thumbnail ${idx + 1}`, "cover")}
+            </button>
+          ))}
+        </div>
+      )}
 
-  const dailyRate = Number(rawPrice) || 0;
-  const weeklyRate = Number(targetRecord.weeklyRate ?? dailyRate * 6);
-  const monthlyRate = Number(targetRecord.monthlyRate ?? dailyRate * 23);
-  const depositAmount = Number(targetRecord.securityDeposit ?? 0);
-
-  const insuranceRate =
-    selectedInsurance === "premium"
-      ? 2500
-      : selectedInsurance === "standard"
-        ? 1200
-        : 500;
-  const insuranceTotal = insuranceRate * rentalDays;
-  const rentalTotal = dailyRate * rentalDays;
-  const grandTotal = rentalTotal + insuranceTotal + depositAmount;
-
-  // Features / Amenities list
-  const rawFeatures =
-    targetRecord.features ||
-    targetRecord.amenities ||
-    targetRecord.tags ||
-    [];
-  const featuresList = Array.isArray(rawFeatures)
-    ? rawFeatures.map(String)
-    : typeof rawFeatures === "string"
-      ? rawFeatures.split(",").map((s) => s.trim()).filter(Boolean)
-      : [];
-
-  // Description
-  const aboutText =
-    targetRecord.description ||
-    targetRecord.$description ||
-    targetRecord.about ||
-    "";
-
-  // Reviews
-  const reviewsList = Array.isArray(targetRecord.reviews)
-    ? targetRecord.reviews
-    : [];
-
-  // External product / single item URL
-  const singleProductUrl =
-    targetRecord.url ||
-    targetRecord.link ||
-    targetRecord.productUrl ||
-    targetRecord.webUrl ||
-    targetRecord.itemUrl ||
-    "";
-
-  // Derived company website URL
-  const extractCompanyWebsite = (): string => {
-    if (targetRecord?.checkoutUrl && /^https?:\/\//i.test(targetRecord.checkoutUrl)) return targetRecord.checkoutUrl;
-    if (targetRecord?.url && /^https?:\/\//i.test(targetRecord.url)) return targetRecord.url;
-    if (targetRecord?.link && /^https?:\/\//i.test(targetRecord.link)) return targetRecord.link;
-    if (metadata.webCheckoutUrl && /^https?:\/\//i.test(metadata.webCheckoutUrl)) return metadata.webCheckoutUrl;
-    if (metadata.globalCheckoutUrl && /^https?:\/\//i.test(metadata.globalCheckoutUrl)) return metadata.globalCheckoutUrl;
-    if (metadata.websiteURL) {
-      const u = metadata.websiteURL.trim();
-      return u.startsWith("http") ? u : `https://${u}`;
-    }
-    if (metadata.website) {
-      const u = metadata.website.trim();
-      return u.startsWith("http") ? u : `https://${u}`;
-    }
-    if (metadata.domain) {
-      const u = metadata.domain.trim();
-      return u.startsWith("http") ? u : `https://${u}`;
-    }
-    // Derive from company email if available (e.g. karachi@carrental.pro -> https://carrental.pro)
-    const email = targetRecord?.location?.email || targetRecord?.useremail || targetRecord?.email;
-    if (email && typeof email === "string" && email.includes("@")) {
-      const domain = email.split("@")[1]?.trim();
-      if (domain && !domain.includes("dummyjson") && !domain.includes("example") && !domain.includes("softtech")) {
-        return `https://${domain}`;
-      }
-    }
-    return "";
-  };
-
-  const handleViewOnCompany = () => {
-    let url =
-      singleProductUrl ||
-      extractCompanyWebsite() ||
-      metadata.websiteURL ||
-      metadata.website ||
-      metadata.domain;
-
-    if (!url && companyName) {
-      url = `https://www.google.com/search?q=${encodeURIComponent(companyName)}`;
-    }
-
-    if (url && typeof window !== "undefined") {
-      const safeUrl = url.startsWith("http") ? url : `https://${url}`;
-      const finalUrl = appendChatUrlToCheckout(safeUrl);
-      window.open(finalUrl, "_blank", "noopener,noreferrer");
-    }
-  };
-
-  const handleContinueBooking = () => {
-    // 1. Check record-specific or metadata checkout URL
-    let checkoutBase =
-      targetRecord.checkoutUrl ||
-      targetRecord.checkout_url ||
-      targetRecord.bookingUrl ||
-      targetRecord.booking_url ||
-      metadata.webCheckoutUrl ||
-      metadata.globalCheckoutUrl ||
-      metadata.checkoutUrl ||
-      "";
-
-    // 2. Fallback to company website checkout endpoint
-    if (!checkoutBase) {
-      const companyBase = extractCompanyWebsite();
-      if (companyBase) {
-        checkoutBase = `${companyBase.replace(/\/$/, "")}/checkout`;
-      }
-    }
-
-    if (checkoutBase) {
-      const safeUrl = checkoutBase.startsWith("http") ? checkoutBase : `https://${checkoutBase}`;
-      try {
-        const parsed = new URL(safeUrl);
-        parsed.searchParams.set("carId", String(targetRecord.id || ""));
-        parsed.searchParams.set("days", String(rentalDays));
-        parsed.searchParams.set("startDate", `2026-09-${selectedStartDay}`);
-        parsed.searchParams.set("endDate", `2026-09-${effectiveEndDay}`);
-        parsed.searchParams.set("insurance", selectedInsurance);
-        parsed.searchParams.set("total", grandTotal.toFixed(2));
-        window.open(
-          appendChatUrlToCheckout(parsed.toString()),
-          "_blank",
-          "noopener,noreferrer",
-        );
-        return;
-      } catch {
-        window.open(
-          appendChatUrlToCheckout(safeUrl),
-          "_blank",
-          "noopener,noreferrer",
-        );
-        return;
-      }
-    }
-
-    // 3. If no checkout URL is configured by the company, open the product link or inform user
-    if (singleProductUrl) {
-      window.open(
-        appendChatUrlToCheckout(singleProductUrl),
-        "_blank",
-        "noopener,noreferrer",
-      );
-      return;
-    }
-
-    alert(`Checkout URL is not configured for ${companyName}. Please configure webCheckoutUrl in company registration.`);
-  };
-
-  const handleAddToCart = () => {
-    addItem(
-      {
-        id: targetRecord.id,
-        title: mainTitle,
-        price: rawPrice,
-        image: activeImageUrl || undefined,
-        tier: targetRecord.category,
-        checkoutUrl:
-          targetRecord.checkoutUrl ||
-          targetRecord.checkout_url ||
-          targetRecord.bookingUrl ||
-          targetRecord.booking_url,
-        productUrl: singleProductUrl,
-      },
-      quantity,
-    );
-    setAddedToCartToast(true);
-    setTimeout(() => setAddedToCartToast(false), 4000);
-  };
-
-  const handleBuyNow = () => {
-    handleAddToCart();
-    openCart();
-  };
-
-  // Back Button Label (dynamic and never forced to cars for products)
-  const rawItemLabel = collection?.itemLabel || collection?.entity || "item";
-  const itemLabelPlural = rawItemLabel.endsWith("s")
-    ? rawItemLabel
-    : `${rawItemLabel}s`;
-  const backBtnText = isVehicle ? "Back to cars" : `Back to ${itemLabelPlural.toLowerCase()}`;
-
-  // Vehicle Specifications
-  const vehicleSpecs = [
-    ...(targetRecord.fuel || targetRecord.fuelType
-      ? [
-          {
-            label: "Fuel",
-            value: String(targetRecord.fuel || targetRecord.fuelType),
-            icon: "⛽",
-          },
-        ]
-      : []),
-    ...(targetRecord.transmission
-      ? [
-          {
-            label: "Transmission",
-            value: String(targetRecord.transmission),
-            icon: "⚙️",
-          },
-        ]
-      : []),
-    ...(targetRecord.seats
-      ? [
-          {
-            label: "Seats",
-            value: `${targetRecord.seats} Seats`,
-            icon: "👥",
-          },
-        ]
-      : []),
-    ...(targetRecord.year
-      ? [
-          {
-            label: "Year",
-            value: String(targetRecord.year),
-            icon: "📅",
-          },
-        ]
-      : []),
-    ...(targetRecord.color
-      ? [
-          {
-            label: "Color",
-            value: String(targetRecord.color),
-            icon: "🎨",
-          },
-        ]
-      : []),
-    ...(targetRecord.doors
-      ? [
-          {
-            label: "Doors",
-            value: `${targetRecord.doors} Doors`,
-            icon: "🚪",
-          },
-        ]
-      : []),
-    ...(targetRecord.mileage
-      ? [
-          {
-            label: "Mileage",
-            value: `${Number(targetRecord.mileage).toLocaleString()} km`,
-            icon: "🛣️",
-          },
-        ]
-      : []),
-    ...(targetRecord.licensePlate
-      ? [
-          {
-            label: "License Plate",
-            value: String(targetRecord.licensePlate),
-            icon: "🚘",
-          },
-        ]
-      : []),
-  ];
-
-  // E-Commerce Product Specifications
-  const ecomSpecs = [
-    ...(targetRecord.category
-      ? [
-          {
-            label: "Category",
-            value: String(targetRecord.category),
-            icon: "🏷️",
-          },
-        ]
-      : []),
-    ...(targetRecord.brand
-      ? [
-          {
-            label: "Brand",
-            value: String(targetRecord.brand),
-            icon: "🏢",
-          },
-        ]
-      : []),
-    ...(targetRecord.sku
-      ? [
-          {
-            label: "SKU",
-            value: String(targetRecord.sku),
-            icon: "🔢",
-          },
-        ]
-      : []),
-    ...(targetRecord.stock !== undefined && targetRecord.stock !== null
-      ? [
-          {
-            label: "Stock",
-            value: `${targetRecord.stock} units`,
-            icon: "📦",
-          },
-        ]
-      : []),
-    ...(targetRecord.dimensions && typeof targetRecord.dimensions === "object"
-      ? [
-          {
-            label: "Dimensions",
-            value: `${targetRecord.dimensions.width ?? "-"} × ${targetRecord.dimensions.height ?? "-"} × ${targetRecord.dimensions.depth ?? "-"} cm`,
-            icon: "📐",
-          },
-        ]
-      : []),
-    ...(targetRecord.weight
-      ? [
-          {
-            label: "Weight",
-            value: `${targetRecord.weight} kg`,
-            icon: "⚖️",
-          },
-        ]
-      : []),
-    ...(targetRecord.warrantyInformation
-      ? [
-          {
-            label: "Warranty",
-            value: String(targetRecord.warrantyInformation),
-            icon: "🛡️",
-          },
-        ]
-      : []),
-    ...(targetRecord.shippingInformation
-      ? [
-          {
-            label: "Shipping",
-            value: String(targetRecord.shippingInformation),
-            icon: "🚚",
-          },
-        ]
-      : []),
-    ...(targetRecord.returnPolicy
-      ? [
-          {
-            label: "Return Policy",
-            value: String(targetRecord.returnPolicy),
-            icon: "🔄",
-          },
-        ]
-      : []),
-    ...(targetRecord.minimumOrderQuantity && targetRecord.minimumOrderQuantity > 1
-      ? [
-          {
-            label: "Min Order",
-            value: `${targetRecord.minimumOrderQuantity} items`,
-            icon: "📋",
-          },
-        ]
-      : []),
-  ];
-
-  const specsToRender = isVehicle ? vehicleSpecs : ecomSpecs;
-
-  return (
-    <div className={styles.container}>
-      {/* Dynamic Back Navigation */}
-      <button
-        type="button"
-        className={styles.backBtn}
-        onClick={() => popSubView()}
-        aria-label={backBtnText}
-      >
-        &larr; {backBtnText}
-      </button>
-
-      {/* Two Column Detail Layout */}
-      <div className={styles.layoutTwoCol}>
-        {/* Left Column: Hero, Gallery, Header Info, Specs, Features, About, Reviews */}
-        <div className={styles.mainCol}>
-          {/* Hero Banner with Dynamic Image or Fallback */}
-          <div className={styles.heroBanner}>
-            {hasValidImage ? (
-              <img
-                src={activeImageUrl}
-                alt={`${mainTitle} ${variantTitle}`}
-                className={styles.heroImage}
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  if (!target.dataset.triedProxy) {
-                    target.dataset.triedProxy = "true";
-                    target.src = `https://softtech-ai.onrender.com/api/images/image-proxy?url=${encodeURIComponent(activeImageUrl)}`;
-                  } else {
-                    setImageFailed(true);
-                  }
-                }}
-              />
-            ) : isVehicle ? (
-              <DetailSilhouetteIcon />
-            ) : (
-              <div className={styles.productPlaceholderBox}>
-                <span className={styles.productPlaceholderIcon}>🛍️</span>
-              </div>
-            )}
-
-            {/* Status / Availability Badge */}
-            {targetRecord.availabilityStatus ? (
-              <span className={styles.availableBadge}>
-                {targetRecord.availabilityStatus}
+      {/* Title / subtitle / rating */}
+      <div className={styles.headerInfo}>
+        <div className={styles.titleRow}>
+          <h1 className={styles.carTitle}>{title}</h1>
+          {subtitle && <span className={styles.carVariant}>{subtitle}</span>}
+        </div>
+        {ratingValue !== null && (
+          <div className={styles.ratingRow}>
+            <span className={styles.ratingStar}>★</span>
+            <span className={styles.ratingNumber}>{ratingValue.toFixed(1)}</span>
+            {reviews.length > 0 && (
+              <span className={styles.reviewsCountText}>
+                ({reviews.length} {reviews.length === 1 ? "review" : "reviews"})
               </span>
-            ) : targetRecord.status ? (
-              <span className={styles.availableBadge}>
-                {String(targetRecord.status)}
-              </span>
-            ) : (
-              <span className={styles.availableBadge}>Available</span>
             )}
           </div>
+        )}
+      </div>
 
-          {/* Multi-Image Gallery Thumbnails */}
-          {allImages.length > 1 && (
-            <div className={styles.galleryThumbnails}>
-              {allImages.map((imgUrl, idx) => (
-                <button
-                  key={`thumb-${idx}`}
-                  type="button"
-                  className={`${styles.galleryThumbBtn} ${idx === activeImageIndex ? styles.galleryThumbBtnActive : ""}`}
-                  onClick={() => setActiveImageIndex(idx)}
-                  aria-label={`View image ${idx + 1}`}
-                >
-                  <img
-                    src={imgUrl}
-                    alt={`Thumbnail ${idx + 1}`}
-                    className={styles.galleryThumbImg}
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      const target = e.currentTarget;
-                      if (!target.dataset.triedProxy) {
-                        target.dataset.triedProxy = "true";
-                        target.src = `https://softtech-ai.onrender.com/api/images/image-proxy?url=${encodeURIComponent(imgUrl)}`;
-                      } else {
-                        target.style.display = "none";
-                      }
-                    }}
+      {/* Specifications */}
+      {specs.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>Details</h3>
+          <div className={styles.specsGrid}>
+            {specs.map((s, idx) => (
+              <div key={`spec-${idx}`} className={styles.specBox}>
+                <div className={styles.specContent}>
+                  <span className={styles.specLabel}>{s.label}</span>
+                  <span className={styles.specValue}>{s.value}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Features / tags / highlights */}
+      {features.length > 0 && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>Features</h3>
+          <div className={styles.featuresGrid}>
+            {features.map((f, idx) => (
+              <span key={`feat-${idx}`} className={styles.featurePill}>
+                <span className={styles.checkIcon}>✓</span>
+                <span>{f}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Description */}
+      {description && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>About</h3>
+          <p className={styles.aboutText}>{description}</p>
+        </div>
+      )}
+
+      {/* Reviews */}
+      {showReviewsSection && (
+        <div className={styles.section}>
+          <h3 className={styles.sectionTitle}>
+            Reviews{reviews.length > 0 ? ` (${reviews.length})` : ""}
+          </h3>
+
+          {reviews.length > 0 ? (
+            <div className={styles.reviewsList}>
+              {reviews.map((rev: any, idx: number) => {
+                const name =
+                  rev.reviewerName || rev.name || rev.author || rev.user ||
+                  "Verified customer";
+                const stars = Number(rev.rating);
+                const date = rev.date || rev.createdAt || rev.reviewDate;
+                return (
+                  <div key={`rev-${idx}`} className={styles.reviewCard}>
+                    <div className={styles.reviewHeader}>
+                      <div className={styles.reviewHeaderLeft}>
+                        <span className={styles.reviewerName}>{name}</span>
+                        {isFinite(stars) && stars > 0 && (
+                          <span className={styles.reviewStars}>
+                            {"★".repeat(Math.min(5, Math.max(1, Math.round(stars))))}
+                          </span>
+                        )}
+                      </div>
+                      {date && (
+                        <span className={styles.reviewDate}>
+                          {(() => {
+                            const d = new Date(date);
+                            return isNaN(d.getTime())
+                              ? String(date)
+                              : d.toLocaleDateString(undefined, {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                });
+                          })()}
+                        </span>
+                      )}
+                    </div>
+                    {(rev.comment || rev.text || rev.body) && (
+                      <p className={styles.reviewComment}>
+                        {rev.comment || rev.text || rev.body}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className={styles.reviewsBox}>
+              <p className={styles.emptyReviewText}>
+                No reviews yet — be the first to share your experience.
+              </p>
+            </div>
+          )}
+
+          {/* Add a review — only when the company registered a review-write tool */}
+          {reviewWriteAction && (
+            <div className={styles.addReviewBox}>
+              {reviewDone ? (
+                <p className={styles.emptyReviewText}>
+                  Thanks! Your review has been submitted.
+                </p>
+              ) : (
+                <>
+                  <div className={styles.starPicker}>
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <button
+                        key={`star-${n}`}
+                        type="button"
+                        className={styles.starPickBtn}
+                        onClick={() => setReviewRating(n)}
+                        aria-label={`${n} star${n === 1 ? "" : "s"}`}
+                      >
+                        <span
+                          style={{ color: n <= reviewRating ? "#f59e0b" : "#475569" }}
+                        >
+                          ★
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    className={styles.reviewTextarea}
+                    placeholder="Share your experience…"
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    rows={3}
                   />
+                  <button
+                    type="button"
+                    className={styles.submitReviewBtn}
+                    onClick={handleSubmitReview}
+                    disabled={reviewSubmitting || !reviewComment.trim()}
+                  >
+                    {reviewSubmitting ? "Submitting…" : "Submit review"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  /* ------------------------------ Right -------------------------------- */
+  const sidebarColumn = showSidebar ? (
+    <div className={styles.sidebarCol}>
+      <div className={styles.bookingBox}>
+        {priceInfo.display && (
+          <div className={styles.bookingRateRow}>
+            <h2 className={styles.bookingRatePrice}>{priceInfo.display}</h2>
+            {priceInfo.period && (
+              <span className={styles.bookingRatePeriod}>{priceInfo.period}</span>
+            )}
+          </div>
+        )}
+
+        {statusBadge && (
+          <div>
+            <span className={styles.stockBadgeInStock}>{statusBadge}</span>
+          </div>
+        )}
+
+        {/* Selectable option groups (sizes / colors / tiers / …) */}
+        {optionGroups.map((g) => (
+          <div key={`opt-${g.key}`} className={styles.optionGroup}>
+            <label className={styles.fieldLabel}>{g.label}</label>
+            <div className={styles.optionChips}>
+              {g.values.map((val) => (
+                <button
+                  key={`${g.key}-${val}`}
+                  type="button"
+                  className={`${styles.optionChip} ${
+                    selectedOptions[g.key] === val ? styles.optionChipSelected : ""
+                  }`}
+                  onClick={() =>
+                    setSelectedOptions((prev) => ({ ...prev, [g.key]: val }))
+                  }
+                >
+                  {val}
                 </button>
               ))}
             </div>
-          )}
-
-          {/* Title & Metadata Header */}
-          <div className={styles.headerInfo}>
-            <div className={styles.titleRow}>
-              <h1 className={styles.carTitle}>{mainTitle}</h1>
-              {variantTitle && (
-                <span className={styles.carVariant}>{variantTitle}</span>
-              )}
-              {targetRecord.discountPercentage && (
-                <span className={styles.discountBadge}>
-                  {targetRecord.discountPercentage}% OFF
-                </span>
-              )}
-            </div>
-
-            {/* Sub-header: Location (for vehicle) or Category / Rating (for product) */}
-            {isVehicle && (locationStr || targetRecord.year) && (
-              <p className={styles.locationRow}>
-                <span>📍</span>
-                <span>
-                  {locationStr}
-                  {targetRecord.year ? ` • ${targetRecord.year}` : ""}
-                </span>
-              </p>
-            )}
-
-            {!isVehicle && targetRecord.rating && (
-              <div className={styles.ratingRow}>
-                <span className={styles.ratingStar}>★</span>
-                <span className={styles.ratingNumber}>
-                  {targetRecord.rating}
-                </span>
-                <span className={styles.reviewsCountText}>
-                  ({reviewsList.length || targetRecord.totalReviews || 0} reviews)
-                </span>
-                {targetRecord.category && (
-                  <span>• {targetRecord.category}</span>
-                )}
-              </div>
-            )}
           </div>
+        ))}
 
-          {/* Specifications Grid */}
-          {specsToRender.length > 0 && (
-            <div className={styles.section}>
-              <h3 className={styles.sectionTitle}>Specifications</h3>
-              <div className={styles.specsGrid}>
-                {specsToRender.map((s, idx) => (
-                  <div key={`spec-${idx}`} className={styles.specBox}>
-                    <span className={styles.specIcon}>{s.icon}</span>
-                    <div className={styles.specContent}>
-                      <span className={styles.specLabel}>{s.label}</span>
-                      <span className={styles.specValue}>{s.value}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* Quantity — only when there's a cart/order tool to receive it */}
+        {canAddToCart && (
+          <div className={styles.qtySection}>
+            <label className={styles.fieldLabel}>Quantity</label>
+            <div className={styles.qtyRow}>
+              <button
+                type="button"
+                className={styles.qtyBtn}
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                disabled={quantity <= 1}
+                aria-label="Decrease quantity"
+              >
+                −
+              </button>
+              <span className={styles.qtyDisplay}>{quantity}</span>
+              <button
+                type="button"
+                className={styles.qtyBtn}
+                onClick={() => setQuantity((q) => q + 1)}
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
             </div>
-          )}
-
-          {/* Features / Amenities / Tags Pills */}
-          {featuresList.length > 0 && (
-            <div className={styles.section}>
-              <h3 className={styles.sectionTitle}>
-                {isVehicle ? "Features" : "Tags & Highlights"}
-              </h3>
-              <div className={styles.featuresGrid}>
-                {featuresList.map((f, idx) => (
-                  <span key={`feat-${idx}`} className={styles.featurePill}>
-                    <span className={styles.checkIcon}>✓</span>
-                    <span>{f}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Description Section */}
-          {aboutText && (
-            <div className={styles.section}>
-              <h3 className={styles.sectionTitle}>
-                {isVehicle ? "About this vehicle" : "Product Description"}
-              </h3>
-              <p className={styles.aboutText}>{aboutText}</p>
-            </div>
-          )}
-
-          {/* Vehicle Rates Tier Section (Only for vehicles with dailyRate) */}
-          {isVehicle && dailyRate > 0 && (
-            <div className={styles.section}>
-              <h3 className={styles.sectionTitle}>Pricing Rates</h3>
-              <div className={styles.pricingGrid}>
-                <div className={styles.pricingCard}>
-                  <span className={styles.pricingLabel}>Daily rate</span>
-                  <span className={styles.pricingValue}>
-                    Rs. {dailyRate.toLocaleString()}
-                  </span>
-                </div>
-                <div className={styles.pricingCard}>
-                  <span className={styles.pricingLabel}>Weekly rate</span>
-                  <span className={styles.pricingValue}>
-                    Rs. {weeklyRate.toLocaleString()}
-                  </span>
-                </div>
-                <div className={styles.pricingCard}>
-                  <span className={styles.pricingLabel}>Monthly rate</span>
-                  <span className={styles.pricingValue}>
-                    Rs. {monthlyRate.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              {depositAmount > 0 && (
-                <p className={styles.depositNote}>
-                  Refundable security deposit: Rs. {depositAmount.toLocaleString()}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Customer Reviews Section */}
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>
-              Customer Reviews ({reviewsList.length})
-            </h3>
-            {reviewsList.length > 0 ? (
-              <div className={styles.reviewsList}>
-                {reviewsList.map((rev: any, idx: number) => (
-                  <div key={`rev-${idx}`} className={styles.reviewCard}>
-                    <div className={styles.reviewHeader}>
-                      <span className={styles.reviewerName}>
-                        {rev.reviewerName || rev.name || rev.author || "Verified Customer"}
-                      </span>
-                      {rev.rating && (
-                        <span className={styles.reviewStars}>
-                          {"★".repeat(Math.min(5, Math.max(1, Math.round(Number(rev.rating)))))}
-                        </span>
-                      )}
-                      {rev.date && (
-                        <span className={styles.reviewDate}>
-                          {new Date(rev.date).toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </span>
-                      )}
-                    </div>
-                    {rev.comment && (
-                      <p className={styles.reviewComment}>{rev.comment}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.reviewsBox}>
-                <p className={styles.emptyReviewText}>
-                  No reviews yet — be the first to share your experience.
-                </p>
-              </div>
-            )}
           </div>
+        )}
+
+        {toast && (
+          <div className={styles.toastNotice}>
+            <span>✓ Added to cart ({quantity}×)</span>
+            <button
+              type="button"
+              className={styles.toastViewCartBtn}
+              onClick={openCart}
+            >
+              View cart &rarr;
+            </button>
+          </div>
+        )}
+
+        {/* Gated CTAs — each only when the company registered it */}
+        <div className={styles.buttonGroup}>
+          {canAddToCart && (
+            <button
+              type="button"
+              className={styles.addToCartBtn}
+              onClick={handleAddToCart}
+            >
+              <span>🛒</span>
+              <span>Add to cart</span>
+            </button>
+          )}
+          {checkoutUrl && (
+            <button
+              type="button"
+              className={styles.buyNowBtn}
+              onClick={handleBuyNow}
+            >
+              <span>⚡</span>
+              <span>Buy now</span>
+            </button>
+          )}
+          {productItemUrl && (
+            <button
+              type="button"
+              className={styles.viewOnCompanyBtn}
+              onClick={handleViewOnCompany}
+            >
+              <span>↗</span>
+              <span>View on {companyName}</span>
+            </button>
+          )}
         </div>
 
-        {/* Right Column: Dynamic Action Sidebar */}
-        <div className={styles.sidebarCol}>
-          {isVehicle ? (
-            /* Vehicle Rental Booking Card */
-            <div className={styles.bookingBox}>
-              <div className={styles.bookingRateRow}>
-                <h2 className={styles.bookingRatePrice}>
-                  Rs. {dailyRate.toLocaleString()}
-                </h2>
-                <span className={styles.bookingRatePeriod}>per day</span>
-              </div>
-
-              {/* Interactive Calendar Date Picker */}
-              <div className={styles.calendarCard}>
-                <div className={styles.calendarMonthHeader}>
-                  <button type="button" className={styles.calNavBtn} aria-label="Previous month">
-                    &lt;
-                  </button>
-                  <span>September 2026</span>
-                  <button type="button" className={styles.calNavBtn} aria-label="Next month">
-                    &gt;
-                  </button>
-                </div>
-
-                <div className={styles.calDaysHeader}>
-                  <span>Su</span>
-                  <span>Mo</span>
-                  <span>Tu</span>
-                  <span>We</span>
-                  <span>Th</span>
-                  <span>Fr</span>
-                  <span>Sa</span>
-                </div>
-
-                <div className={styles.calDaysGrid}>
-                  {/* Previous month padding days */}
-                  <button type="button" className={`${styles.calDay} ${styles.calDayDimmed}`} disabled>
-                    30
-                  </button>
-                  <button type="button" className={`${styles.calDay} ${styles.calDayDimmed}`} disabled>
-                    31
-                  </button>
-
-                  {/* Interactive Month Days 1 to 28 */}
-                  {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => {
-                    const isSelected =
-                      day === selectedStartDay ||
-                      (selectedEndDay !== null && day === selectedEndDay);
-                    const isInRange =
-                      selectedEndDay !== null &&
-                      day > selectedStartDay &&
-                      day < selectedEndDay;
-
-                    return (
-                      <button
-                        key={`cal-${day}`}
-                        type="button"
-                        className={`${styles.calDay} ${isSelected ? styles.calDaySelected : ""} ${isInRange ? styles.calDayInRange : ""}`}
-                        onClick={() => handleDayClick(day)}
-                        aria-label={`Select September ${day}`}
-                      >
-                        {day}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <p className={styles.calStatusNote}>
-                  {rentalDays} {rentalDays === 1 ? "day" : "days"} selected (Sept{" "}
-                  {selectedStartDay}
-                  {selectedEndDay ? ` – ${selectedEndDay}` : ""})
-                </p>
-              </div>
-
-              {/* Pickup Location */}
-              <div className={styles.bookingField}>
-                <label className={styles.fieldLabel}>Pickup location</label>
-                <select
-                  className={styles.selectInput}
-                  value={pickupLocation}
-                  onChange={(e) => setPickupLocation(e.target.value)}
-                >
-                  <option value="Karachi Airport Branch — Karachi">
-                    Karachi Airport Branch — Karachi
-                  </option>
-                  <option value="Islamabad Blue Area Branch — Islamabad">
-                    Islamabad Blue Area Branch — Islamabad
-                  </option>
-                  <option value="Lahore Gulberg Branch — Lahore">
-                    Lahore Gulberg Branch — Lahore
-                  </option>
-                </select>
-              </div>
-
-              {/* Drop-off Location */}
-              <div className={styles.bookingField}>
-                <label className={styles.fieldLabel}>Drop-off location</label>
-                <select
-                  className={styles.selectInput}
-                  value={dropoffLocation}
-                  onChange={(e) => setDropoffLocation(e.target.value)}
-                >
-                  <option value="same">Same as pickup</option>
-                  <option value="Karachi Airport Branch — Karachi">
-                    Karachi Airport Branch — Karachi
-                  </option>
-                  <option value="Islamabad Blue Area Branch — Islamabad">
-                    Islamabad Blue Area Branch — Islamabad
-                  </option>
-                  <option value="Lahore Gulberg Branch — Lahore">
-                    Lahore Gulberg Branch — Lahore
-                  </option>
-                </select>
-              </div>
-
-              {/* Insurance Options */}
-              <div className={styles.insuranceSection}>
-                <label className={styles.fieldLabel}>🛡️ Insurance</label>
-
-                {/* Basic */}
-                <label
-                  className={`${styles.insuranceOption} ${
-                    selectedInsurance === "basic"
-                      ? styles.insuranceOptionSelected
-                      : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="insurance"
-                    checked={selectedInsurance === "basic"}
-                    onChange={() => setSelectedInsurance("basic")}
-                    className={styles.insuranceRadio}
-                  />
-                  <div className={styles.insuranceContent}>
-                    <div className={styles.insuranceTitleRow}>
-                      <span className={styles.insuranceName}>Basic</span>
-                      <span className={styles.insurancePrice}>Rs. 500/day</span>
-                    </div>
-                    <p className={styles.insuranceDesc}>
-                      Third-party liability only
-                    </p>
-                  </div>
-                </label>
-
-                {/* Standard */}
-                <label
-                  className={`${styles.insuranceOption} ${
-                    selectedInsurance === "standard"
-                      ? styles.insuranceOptionSelected
-                      : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="insurance"
-                    checked={selectedInsurance === "standard"}
-                    onChange={() => setSelectedInsurance("standard")}
-                    className={styles.insuranceRadio}
-                  />
-                  <div className={styles.insuranceContent}>
-                    <div className={styles.insuranceTitleRow}>
-                      <span className={styles.insuranceName}>Standard</span>
-                      <span className={styles.insurancePrice}>
-                        Rs. 1,200/day
-                      </span>
-                    </div>
-                    <p className={styles.insuranceDesc}>
-                      Collision damage waiver + theft protection
-                    </p>
-                  </div>
-                </label>
-
-                {/* Premium */}
-                <label
-                  className={`${styles.insuranceOption} ${
-                    selectedInsurance === "premium"
-                      ? styles.insuranceOptionSelected
-                      : ""
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="insurance"
-                    checked={selectedInsurance === "premium"}
-                    onChange={() => setSelectedInsurance("premium")}
-                    className={styles.insuranceRadio}
-                  />
-                  <div className={styles.insuranceContent}>
-                    <div className={styles.insuranceTitleRow}>
-                      <span className={styles.insuranceName}>Premium</span>
-                      <span className={styles.insurancePrice}>
-                        Rs. 2,500/day
-                      </span>
-                    </div>
-                    <p className={styles.insuranceDesc}>
-                      Full coverage with zero deductible
-                    </p>
-                  </div>
-                </label>
-              </div>
-
-              {/* Price Calculation Breakdown */}
-              <div className={styles.costBreakdown}>
-                <div className={styles.costRow}>
-                  <span>
-                    Rs. {dailyRate.toLocaleString()} × {rentalDays}{" "}
-                    {rentalDays === 1 ? "day" : "days"}
-                  </span>
-                  <span>Rs. {rentalTotal.toLocaleString()}</span>
-                </div>
-                <div className={styles.costRow}>
-                  <span>
-                    Insurance (
-                    {selectedInsurance.charAt(0).toUpperCase() +
-                      selectedInsurance.slice(1)}
-                    )
-                  </span>
-                  <span>Rs. {insuranceTotal.toLocaleString()}</span>
-                </div>
-                {depositAmount > 0 && (
-                  <div className={styles.costRow}>
-                    <span>Security deposit</span>
-                    <span>Rs. {depositAmount.toLocaleString()}</span>
-                  </div>
-                )}
-                <div className={styles.costTotalRow}>
-                  <span>Total</span>
-                  <span>Rs. {grandTotal.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Primary Action Button */}
-              <div className={styles.buttonGroup}>
-                <button
-                  type="button"
-                  className={styles.continueBookingBtn}
-                  onClick={handleContinueBooking}
-                >
-                  Continue to booking
-                </button>
-
-                {/* Secondary Action Button: View on {companyName} */}
-                <button
-                  type="button"
-                  className={styles.viewOnCompanyBtn}
-                  onClick={handleViewOnCompany}
-                >
-                  <span>↗</span>
-                  <span>View on {companyName}</span>
-                </button>
-              </div>
-
-              <p className={styles.bookingNote}>
-                You won't be charged yet — review and pay on the next step.
-              </p>
-            </div>
-          ) : (
-            /* E-Commerce Product Purchase Card */
-            <div className={styles.bookingBox}>
-              <div className={styles.bookingRateRow}>
-                <h2 className={styles.bookingRatePrice}>
-                  ${Number(rawPrice).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </h2>
-              </div>
-
-              {/* Availability Status */}
-              <div>
-                {targetRecord.stock !== undefined && targetRecord.stock > 0 ? (
-                  <span className={styles.stockBadgeInStock}>
-                    In Stock ({targetRecord.stock} available)
-                  </span>
-                ) : targetRecord.stock === 0 ? (
-                  <span className={styles.stockBadgeOutOfStock}>
-                    Out of Stock
-                  </span>
-                ) : (
-                  <span className={styles.stockBadgeInStock}>
-                    {targetRecord.availabilityStatus || "Available"}
-                  </span>
-                )}
-              </div>
-
-              {/* Quantity Stepper */}
-              <div className={styles.qtySection}>
-                <label className={styles.fieldLabel}>Quantity</label>
-                <div className={styles.qtyRow}>
-                  <button
-                    type="button"
-                    className={styles.qtyBtn}
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1}
-                    aria-label="Decrease quantity"
-                  >
-                    −
-                  </button>
-                  <span className={styles.qtyDisplay}>{quantity}</span>
-                  <button
-                    type="button"
-                    className={styles.qtyBtn}
-                    onClick={() => setQuantity((q) => Math.min(maxStock, q + 1))}
-                    disabled={quantity >= maxStock}
-                    aria-label="Increase quantity"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-
-              {/* Added to Cart Feedback Toast */}
-              {addedToCartToast && (
-                <div className={styles.toastNotice}>
-                  <span>✓ Added to cart ({quantity}x)</span>
-                  <button
-                    type="button"
-                    className={styles.toastViewCartBtn}
-                    onClick={openCart}
-                  >
-                    View Cart &rarr;
-                  </button>
-                </div>
-              )}
-
-              {/* Buttons Group */}
-              <div className={styles.buttonGroup}>
-                <button
-                  type="button"
-                  className={styles.addToCartBtn}
-                  onClick={handleAddToCart}
-                >
-                  <span>🛒</span>
-                  <span>Add to Cart</span>
-                </button>
-
-                <button
-                  type="button"
-                  className={styles.buyNowBtn}
-                  onClick={handleBuyNow}
-                >
-                  <span>⚡</span>
-                  <span>Buy Now</span>
-                </button>
-
-                {/* View on {companyName} button */}
-                <button
-                  type="button"
-                  className={styles.viewOnCompanyBtn}
-                  onClick={handleViewOnCompany}
-                >
-                  <span>↗</span>
-                  <span>View on {companyName}</span>
-                </button>
-              </div>
-
-              {/* Trust Badges */}
-              <div className={styles.trustBadgesRow}>
-                {targetRecord.shippingInformation && (
-                  <div className={styles.trustBadge}>
-                    <span className={styles.trustIcon}>🚚</span>
-                    <span>{targetRecord.shippingInformation}</span>
-                  </div>
-                )}
-                {targetRecord.returnPolicy && (
-                  <div className={styles.trustBadge}>
-                    <span className={styles.trustIcon}>🔄</span>
-                    <span>{targetRecord.returnPolicy}</span>
-                  </div>
-                )}
-                {targetRecord.warrantyInformation && (
-                  <div className={styles.trustBadge}>
-                    <span className={styles.trustIcon}>🛡️</span>
-                    <span>{targetRecord.warrantyInformation}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        {(checkoutUrl || canAddToCart) && (
+          <p className={styles.bookingNote}>
+            You won't be charged yet — review and confirm on the next step.
+          </p>
+        )}
       </div>
+    </div>
+  ) : null;
+
+  return (
+    <div className={styles.container}>
+      <button
+        type="button"
+        className={styles.backBtn}
+        onClick={handleBack}
+        aria-label={backText}
+      >
+        &larr; {backText}
+      </button>
+
+      {showSidebar ? (
+        <div className={styles.layoutTwoCol}>
+          {mainColumn}
+          {sidebarColumn}
+        </div>
+      ) : (
+        mainColumn
+      )}
     </div>
   );
 };

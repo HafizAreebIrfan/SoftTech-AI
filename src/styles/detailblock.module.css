@@ -33,7 +33,7 @@
 
 .layoutTwoCol {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 3fr 2fr; /* 60 / 40 */
   gap: 24px;
   width: 100%;
   box-sizing: border-box;
@@ -55,7 +55,8 @@
 
 .heroBanner {
   position: relative;
-  height: 320px;
+  height: 480px;
+  max-height: 60vh;
   width: 100%;
   border-radius: 16px;
   overflow: hidden;
@@ -64,6 +65,12 @@
   justify-content: center;
   background: linear-gradient(180deg, #18191e 0%, #101114 100%);
   border: 1px solid var(--widget-card-border, #22242a);
+}
+
+@media (max-width: 640px) {
+  .heroBanner {
+    height: 300px;
+  }
 }
 
 .heroImage {
@@ -864,6 +871,16 @@
   gap: 8px;
 }
 
+/* Groups the reviewer name + star rating on the left so the date sits alone
+   on the right — replaces the old 3-child space-between that spread awkwardly. */
+.reviewHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
 .reviewerName {
   font-size: 13px;
   font-weight: 700;
@@ -887,5 +904,107 @@
   line-height: 1.5;
   color: #cbd5e1;
   margin: 0;
+}
+
+/* Selectable option groups (sizes / colors / tiers / …) in the action box */
+.optionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.optionChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.optionChip {
+  background: #09090b;
+  border: 1px solid #22242a;
+  border-radius: 8px;
+  color: #cbd5e1;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.optionChip:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.optionChipSelected {
+  border-color: var(--widget-accent, #3b82f6);
+  background: rgba(59, 130, 246, 0.12);
+  color: #ffffff;
+}
+
+/* Add-a-review form (only rendered when a review-write tool is registered) */
+.addReviewBox {
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.starPicker {
+  display: flex;
+  gap: 4px;
+}
+
+.starPickBtn {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.reviewTextarea {
+  background: #09090b;
+  border: 1px solid #22242a;
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.reviewTextarea:focus {
+  border-color: var(--widget-accent, #3b82f6);
+}
+
+.submitReviewBtn {
+  background: var(--widget-accent, #6366f1);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  width: fit-content;
+  transition: opacity 0.15s ease;
+}
+
+.submitReviewBtn:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.submitReviewBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 

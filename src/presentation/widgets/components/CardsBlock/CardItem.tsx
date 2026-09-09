@@ -1,17 +1,27 @@
-import React, { useState } from "react";
+import React from "react";
 import styles from "../../../../styles/cardsblock.module.css";
 import type { CardItemProps } from "../../../../interfaces/mcp/cardsblock.interface";
 import { extractFirstImageUrl } from "../../helper/RenderImage/getproxiedimageurl";
+import { renderImage } from "../../helper/RenderImage";
+import { parseNumericPrice } from "../../../../infrastructure/store/cartStore";
 
-// Silhouette SVG for vehicle placeholder
-const CarSilhouetteIcon: React.FC = () => (
+/** Neutral, industry-agnostic placeholder shown when an item has no image. */
+const GenericItemIcon: React.FC = () => (
   <svg
-    viewBox="0 0 100 50"
-    fill="currentColor"
+    viewBox="0 0 24 24"
+    fill="none"
     className={styles.bannerSilhouette}
     aria-hidden="true"
   >
-    <path d="M15 32c-3.3 0-6-2.7-6-6 0-3.3 2.7-6 6-6s6 2.7 6 6c0 3.3-2.7 6-6 6zm70 0c-3.3 0-6-2.7-6-6 0-3.3 2.7-6 6-6s6 2.7 6 6c0 3.3-2.7 6-6 6zm10-12l-7-8c-2-2.3-5-3.6-8-3.6H42c-2.4 0-4.7.9-6.4 2.5L25 18H10c-3.3 0-6 2.7-6 6v8c0 1.1.9 2 2 2h3.5c1.2-4.6 5.4-8 10.5-8s9.3 3.4 10.5 8h39c1.2-4.6 5.4-8 10.5-8s9.3 3.4 10.5 8H96c1.1 0 2-.9 2-2v-9c0-1.7-.7-3.3-2-4.5zM38 18l7.5-6h23.5l5 6H38z" />
+    <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.4" />
+    <circle cx="8.5" cy="9" r="1.6" stroke="currentColor" strokeWidth="1.4" />
+    <path
+      d="M4 17l5-5 4 4 3-3 4 4"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 
@@ -25,106 +35,84 @@ const BANNER_CLASSES = [
   styles.bannerNavy,
 ];
 
-export const CardItem: React.FC<CardItemProps> = ({
-  record,
-  onSelect,
-  actions,
-  audience,
-}) => {
+const PRICE_KEY_RE = /(price|rate|cost|amount|fee|fare|premium|charge)/i;
+const OUT_OF_STOCK_RE =
+  /(out.?of.?stock|unavailable|sold.?out|booked|maintenance|inactive|discontinued|reserved)/i;
+
+/** Compact, currency-aware price using the record's OWN currency — no hardcoded symbol. */
+const formatCardPrice = (value: unknown, rec: Record<string, any>): string => {
+  if (value === null || value === undefined || value === "") return "";
+  if (typeof value === "string" && /[^\d.,\s-]/.test(value)) return value.trim();
+  const num = parseNumericPrice(value);
+  const code = rec.currency || rec.currencyCode || rec.priceCurrency;
+  if (typeof code === "string" && /^[A-Za-z]{3}$/.test(code)) {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: code.toUpperCase(),
+      }).format(num);
+    } catch {
+      /* unknown code — fall through */
+    }
+  }
+  const symbol = rec.currencySymbol || rec.symbol;
+  const formatted = num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return typeof symbol === "string" && symbol.trim()
+    ? `${symbol.trim()}${formatted}`
+    : formatted;
+};
+
+export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
   if (!record || typeof record !== "object") return null;
 
   const rec = record as Record<string, any>;
 
-  // Detect whether this item is a vehicle / rental car or an e-commerce / general product
-  const isVehicle =
-    Boolean(
-      rec.make &&
-      (rec.fuelType ||
-        rec.transmission ||
-        rec.licensePlate ||
-        rec.dailyRate ||
-        rec.pricePerDay),
-    ) ||
-    /car|vehicle|rental|fleet|auto/i.test(
-      String(rec.category || "").toLowerCase(),
-    );
-
-  // Extract Titles
+  // Title / subtitle — generic field names only (no entity/industry keys).
   const mainTitle =
-    (isVehicle ? rec.make : null) ||
-    rec.$title ||
-    rec.title ||
-    rec.name ||
-    rec.make ||
-    "Product";
-
+    rec.$title || rec.title || rec.name || rec.label || rec.heading || "Item";
   const variantTitle =
-    (isVehicle ? rec.model : null) ||
-    rec.model ||
-    rec.brand ||
-    rec.variant ||
-    rec.subtitle ||
-    (isVehicle && rec.year ? String(rec.year) : "");
+    rec.$subtitle || rec.subtitle || rec.variant || rec.tagline || "";
 
-  // Location or Category breadcrumb
-  const locationStr = isVehicle
-    ? rec.location?.name ||
-      rec.location?.city ||
-      rec.locationName ||
-      rec.city ||
-      (rec.branch ? `${rec.branch}, ${rec.city || ""}` : "")
-    : rec.category
-      ? String(rec.category)
-      : "";
+  // Category / type breadcrumb (generic).
+  const categoryStr = (() => {
+    const c = rec.category || rec.type || rec.group || rec.collection;
+    return c && (typeof c === "string" || typeof c === "number") ? String(c) : "";
+  })();
 
-  // Specs
+  // Minimal generic spec pills: a rating, if the record carries one.
   const specs: Array<{ icon: string; text: string }> = [];
-  if (isVehicle) {
-    if (rec.fuel || rec.fuelType) {
-      specs.push({
-        icon: "⛽",
-        text: String(rec.fuel || rec.fuelType).toLowerCase(),
-      });
-    }
-    if (rec.transmission) {
-      specs.push({ icon: "⚙️", text: String(rec.transmission).toLowerCase() });
-    }
-    if (rec.seats) {
-      specs.push({ icon: "👥", text: `${rec.seats} seats` });
-    }
-  } else {
-    // General / e-commerce specs
-    if (rec.rating) {
-      specs.push({ icon: "★", text: `${rec.rating}` });
-    }
-    if (rec.stock !== undefined && rec.stock !== null) {
-      specs.push({ icon: "📦", text: `${rec.stock} in stock` });
-    }
-    if (rec.brand && rec.brand !== variantTitle) {
-      specs.push({ icon: "🏷️", text: String(rec.brand) });
-    }
+  const ratingNum =
+    typeof rec.rating === "number"
+      ? rec.rating
+      : rec.rating != null && /^\d/.test(String(rec.rating))
+        ? Number(rec.rating)
+        : NaN;
+  if (isFinite(ratingNum) && ratingNum > 0) {
+    specs.push({ icon: "★", text: ratingNum.toFixed(1) });
+  }
+  if (typeof rec.stock === "number" && rec.stock >= 0) {
+    specs.push({ icon: "📦", text: `${rec.stock} in stock` });
   }
 
-  // Price & Period
-  const rawPrice =
-    rec.dailyRate ??
-    rec.pricePerDay ??
-    rec.price_per_day ??
-    rec.$price ??
-    rec.price;
-
-  let formattedPrice = "Price on request";
-  if (rawPrice !== undefined && rawPrice !== null) {
-    if (typeof rawPrice === "number") {
-      formattedPrice = isVehicle
-        ? `Rs. ${rawPrice.toLocaleString()}`
-        : `$${rawPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    } else {
-      formattedPrice = String(rawPrice);
+  // Price — prefer $price/price, else the first price-ish scalar (skip
+  // discount/qty/stock keys). Formatted with the record's own currency.
+  let rawPrice: unknown = rec.$price ?? rec.price;
+  if (rawPrice === undefined || rawPrice === null) {
+    for (const [k, v] of Object.entries(rec)) {
+      if (/(percent|discount|qty|quantity|count|stock)/i.test(k)) continue;
+      if (
+        PRICE_KEY_RE.test(k) &&
+        (typeof v === "number" || (typeof v === "string" && /\d/.test(v)))
+      ) {
+        rawPrice = v;
+        break;
+      }
     }
   }
+  const formattedPrice = formatCardPrice(rawPrice, rec);
 
-  // Robust Image candidate resolution (handling comma-separated lists, arrays, objects)
+  // Image candidate (handles comma-lists, arrays, objects). renderImage then
+  // does raw → proxied → neutral-fallback internally (no sticky dataset flag).
   const imageUrl =
     extractFirstImageUrl(rec.thumbnail) ||
     extractFirstImageUrl(rec.$image) ||
@@ -134,29 +122,29 @@ export const CardItem: React.FC<CardItemProps> = ({
 
   const hasValidImage = Boolean(
     imageUrl &&
-    (imageUrl.startsWith("data:") ||
-      imageUrl.startsWith("blob:") ||
-      imageUrl.startsWith("/") ||
-      /^https?:\/\//i.test(imageUrl)),
+      (imageUrl.startsWith("data:") ||
+        imageUrl.startsWith("blob:") ||
+        imageUrl.startsWith("/") ||
+        /^https?:\/\//i.test(imageUrl)),
   );
 
-  // Determine deterministic banner color based on name/id
+  // Deterministic gradient — used ONLY behind the no-image fallback icon.
   const bannerHash = (rec.id || rec._id || mainTitle)
     .toString()
     .split("")
     .reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
   const bannerClass = BANNER_CLASSES[bannerHash % BANNER_CLASSES.length];
 
-  // Availability status
-  const statusStr = String(
-    rec.status || rec.availabilityStatus || "",
-  ).toUpperCase();
-  const isAvailable =
-    rec.isAvailable !== false &&
-    statusStr !== "MAINTENANCE" &&
-    statusStr !== "BOOKED" &&
-    statusStr !== "OUT OF STOCK" &&
-    rec.availability !== "Unavailable";
+  // Availability badge — only when the record actually declares a status
+  // (never fabricate "Available").
+  const statusRaw = rec.availabilityStatus ?? rec.status ?? rec.availability;
+  const statusStr =
+    statusRaw != null && (typeof statusRaw === "string" || typeof statusRaw === "number")
+      ? String(statusRaw)
+      : "";
+  const explicitlyUnavailable = rec.isAvailable === false;
+  const isOut = statusStr ? OUT_OF_STOCK_RE.test(statusStr) : explicitlyUnavailable;
+  const showBadge = Boolean(statusStr) || explicitlyUnavailable;
 
   const actionUrlStr = rec.url || rec.link;
   const CardContainer = actionUrlStr ? "a" : "div";
@@ -172,46 +160,29 @@ export const CardItem: React.FC<CardItemProps> = ({
         onClick: () => onSelect?.(rec),
       };
 
-  const [imgError, setImgError] = useState(false);
-  const actionLabel = isVehicle ? "Book now" : "View details";
-
   return (
     <CardContainer {...containerProps}>
-      {/* Top Banner with Image or Colored Theme + Silhouette */}
-      <div className={`${styles.bannerWrapper} ${bannerClass}`}>
-        {hasValidImage && !imgError ? (
-          <img
-            src={imageUrl!}
-            alt={`${mainTitle} ${variantTitle}`}
-            className={styles.bannerImage}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              const target = e.currentTarget;
-              if (!target.dataset.triedProxy) {
-                target.dataset.triedProxy = "true";
-                target.src = `https://softtech-ai.onrender.com/api/images/image-proxy?url=${encodeURIComponent(imageUrl!)}`;
-              } else {
-                setImgError(true);
-              }
-            }}
-          />
-        ) : isVehicle ? (
-          <CarSilhouetteIcon />
-        ) : (
-          <div className={styles.productPlaceholderIcon}>🛍️</div>
-        )}
-
-        {isAvailable ? (
-          <span className={styles.availableBadge}>
-            {rec.availabilityStatus || "Available"}
-          </span>
-        ) : (
-          <span className={styles.outOfStockBadge}>
-            {rec.availabilityStatus || (isVehicle ? "Booked" : "Out of Stock")}
-          </span>
-        )}
-      </div>
+      {/* Real image → plain (bg-less) wrapper, contained so nothing is cropped.
+          No image → gradient banner behind a neutral placeholder icon. */}
+      {hasValidImage ? (
+        <div className={styles.bannerWrapperPlain}>
+          {renderImage(imageUrl, `${mainTitle} ${variantTitle}`.trim(), "contain")}
+          {showBadge && (
+            <span className={isOut ? styles.outOfStockBadge : styles.availableBadge}>
+              {statusStr || "Unavailable"}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className={`${styles.bannerWrapper} ${bannerClass}`}>
+          <GenericItemIcon />
+          {showBadge && (
+            <span className={isOut ? styles.outOfStockBadge : styles.availableBadge}>
+              {statusStr || "Unavailable"}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Card Content Body */}
       <div className={styles.contentBody}>
@@ -222,10 +193,10 @@ export const CardItem: React.FC<CardItemProps> = ({
           )}
         </div>
 
-        {locationStr && (
+        {categoryStr && (
           <p className={styles.locationRow}>
-            <span>{isVehicle ? "📍" : "🏷️"}</span>
-            <span>{locationStr}</span>
+            <span>🏷️</span>
+            <span>{categoryStr}</span>
           </p>
         )}
 
@@ -243,8 +214,9 @@ export const CardItem: React.FC<CardItemProps> = ({
         {/* Footer with Price and CTA */}
         <div className={styles.cardFooterRow}>
           <div className={styles.priceGroup}>
-            <span className={styles.priceValue}>{formattedPrice}</span>
-            {isVehicle && <span className={styles.pricePeriod}>per day</span>}
+            {formattedPrice && (
+              <span className={styles.priceValue}>{formattedPrice}</span>
+            )}
           </div>
 
           <button
@@ -255,7 +227,7 @@ export const CardItem: React.FC<CardItemProps> = ({
               onSelect?.(rec);
             }}
           >
-            <span>{actionLabel}</span>
+            <span>View details</span>
             <span>&rarr;</span>
           </button>
         </div>

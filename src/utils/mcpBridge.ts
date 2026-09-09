@@ -171,3 +171,81 @@ export function applyReQueryResult(result: unknown): boolean {
   return false;
 }
 
+/**
+ * Open a URL outside the widget sandbox. Prefers the Apps SDK `openExternal`
+ * (which respects the host's redirect_domains allow-list); falls back to
+ * `window.open` on hosts that don't expose it. Generic — the href is supplied
+ * by the caller (an interpolated, company-registered URL), never hardcoded.
+ */
+export function openExternalUrl(href: string): void {
+  if (!href) return;
+  const openai =
+    typeof window !== "undefined" ? (window as any).openai : undefined;
+  try {
+    if (openai?.openExternal) {
+      openai.openExternal({ href });
+      return;
+    }
+  } catch (err) {
+    console.warn("[MCP Bridge] openExternal failed, falling back:", err);
+  }
+  if (typeof window !== "undefined") {
+    window.open(href, "_blank", "noopener,noreferrer");
+  }
+}
+
+/**
+ * Override the target of the ChatGPT fullscreen header "Open in {app}" button
+ * (Apps SDK `setOpenInAppUrl`). Feature-detected no-op on hosts that lack it.
+ * The href is a company-registered catalog URL passed by the caller.
+ */
+export function setOpenInApp(href: string): void {
+  if (!href) return;
+  const openai =
+    typeof window !== "undefined" ? (window as any).openai : undefined;
+  try {
+    if (openai?.setOpenInAppUrl) {
+      openai.setOpenInAppUrl({ href });
+    }
+  } catch (err) {
+    console.warn("[MCP Bridge] setOpenInAppUrl failed:", err);
+  }
+}
+
+/**
+ * Pure string templating for registered redirect URLs. Replaces every `{key}`
+ * token with `extra[key]` (e.g. a user-selected option) or, failing that,
+ * `record[key]` — matched case-insensitively so `{insurancetier}` resolves an
+ * `insuranceTier` field. Unknown tokens collapse to empty (the company's
+ * destination page prompts for whatever it still needs). Values are
+ * URL-encoded. Never keys off entity/company names.
+ */
+export function interpolateTemplate(
+  template: string,
+  record: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {},
+): string {
+  if (!template) return "";
+
+  const lookup = (rawKey: string): unknown => {
+    const key = rawKey.trim();
+    if (key in extra) return (extra as Record<string, unknown>)[key];
+    if (key in record) return (record as Record<string, unknown>)[key];
+    const lower = key.toLowerCase();
+    for (const src of [extra, record]) {
+      for (const k of Object.keys(src)) {
+        if (k.toLowerCase() === lower) return (src as Record<string, unknown>)[k];
+      }
+    }
+    return undefined;
+  };
+
+  return template.replace(/\{([^}]+)\}/g, (_match, rawKey) => {
+    const value = lookup(String(rawKey));
+    if (value === undefined || value === null || typeof value === "object") {
+      return "";
+    }
+    return encodeURIComponent(String(value));
+  });
+}
+
