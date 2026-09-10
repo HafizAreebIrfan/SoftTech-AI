@@ -174,6 +174,27 @@ export const registerGenericWidgetResources = (
         ),
       );
 
+      const resourceDomains = Array.from(
+        new Set([
+          WIDGET_BASE_URL,
+          WIDGET_SERVER_URL,
+          "https://fonts.googleapis.com",
+          "https://fonts.gstatic.com",
+          "https://*.basemaps.cartocdn.com",
+          "https://basemaps.cartocdn.com",
+          "https://*.tile.openstreetmap.org",
+          "https://tile.openstreetmap.org",
+          "https://images.unsplash.com",
+          "https://cdn.dummyjson.com",
+          "https://i.ibb.co",
+          "https://cf.bstatic.com",
+          "https://*.bstatic.com",
+          "https://*.booking.com",
+          ...customConnectDomains,
+          ...redirectDomains,
+        ]),
+      );
+
       return {
         contents: [
           {
@@ -191,7 +212,7 @@ export const registerGenericWidgetResources = (
                 domain: WIDGET_SERVER_URL,
                 csp: {
                   connectDomains,
-                  resourceDomains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
+                  resourceDomains,
                 },
               },
               // Legacy ChatGPT CSP key: the only place redirect_domains is
@@ -202,7 +223,7 @@ export const registerGenericWidgetResources = (
                 ? {
                     "openai/widgetCSP": {
                       connect_domains: connectDomains,
-                      resource_domains: [WIDGET_BASE_URL, WIDGET_SERVER_URL],
+                      resource_domains: resourceDomains,
                       redirect_domains: redirectDomains,
                     },
                   }
