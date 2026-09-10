@@ -8,10 +8,13 @@ import { extractToolResult } from "../../../infrastructure/store/mcpWidgetStore"
 import styles from "../../../styles/cataloglayout.module.css";
 import { useRealtimeStream } from "../hooks/useRealtimeStream";
 import { capOn } from "../helper/AudienceHelper";
+import { extractCoordinates } from "../helper/geoHelper";
+import { MapCatalogLayout } from "./MapCatalogLayout";
 
 export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   title,
   subtitle,
+  data,
   records = [],
   fields = [],
   collection,
@@ -25,6 +28,12 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
   const cardsBlock = blocks.find((b) => b.type === "cards");
 
   const [localRecords, setLocalRecords] = useState<any[]>(records);
+
+  const hasGeoSupport = useMemo(() => {
+    return localRecords.some((rec, idx) => Boolean(extractCoordinates(rec, idx)));
+  }, [localRecords]);
+
+  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
 
   useEffect(() => {
     setLocalRecords(records);
@@ -680,6 +689,91 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
     actions?.some((a: any) => /cart|order/i.test(a?.id || a?.label || a?.tool || ""))
   );
 
+  if (viewMode === "map" && hasGeoSupport) {
+    return (
+      <section className={styles.container}>
+        {showToolbar && (
+          <div className={styles.toolbar}>
+            {canSearch && (
+              <div className={styles.searchContainer}>
+                <span className={styles.searchIcon}>🔍</span>
+                <input
+                  type="text"
+                  className={styles.searchInput}
+                  placeholder={searchPlaceholder}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className={styles.searchClearBtn}
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className={styles.toolbarActions}>
+              <div className={styles.viewModeToggle}>
+                <button
+                  type="button"
+                  className={styles.viewToggleBtn}
+                  onClick={() => setViewMode("grid")}
+                  title="Grid View"
+                >
+                  <span>⊞</span>
+                  <span>Grid</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.viewToggleBtn} ${styles.viewToggleBtnActive}`}
+                  onClick={() => setViewMode("map")}
+                  title="Map View"
+                >
+                  <span>🗺️</span>
+                  <span>Map</span>
+                </button>
+              </div>
+
+              {isEcomCart && (
+                <button
+                  type="button"
+                  className={styles.cartHeaderBtn}
+                  onClick={openCart}
+                  aria-label={`View Shopping Cart (${totalCartCount} items)`}
+                >
+                  <span>🛒</span>
+                  <span>Cart</span>
+                  {totalCartCount > 0 && (
+                    <span className={styles.cartCountBadge}>{totalCartCount}</span>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <MapCatalogLayout
+          title={title}
+          subtitle={subtitle}
+          data={data ?? filteredRecords}
+          records={filteredRecords}
+          fields={fields}
+          collection={collection}
+          capabilities={capabilities}
+          pagination={pagination}
+          actions={actions}
+          audience={audience}
+          presentationPlan={presentationPlan}
+        />
+      </section>
+    );
+  }
+
   return (
     <section className={styles.container}>
       {/* Dynamic Catalog Toolbar (Search, Filter Sidebar Trigger & Cart Button) */}
@@ -709,6 +803,29 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
           )}
 
           <div className={styles.toolbarActions}>
+            {hasGeoSupport && (
+              <div className={styles.viewModeToggle}>
+                <button
+                  type="button"
+                  className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
+                  onClick={() => setViewMode("grid")}
+                  title="Grid View"
+                >
+                  <span>⊞</span>
+                  <span>Grid</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.viewToggleBtn} ${viewMode === "map" ? styles.viewToggleBtnActive : ""}`}
+                  onClick={() => setViewMode("map")}
+                  title="Map View"
+                >
+                  <span>🗺️</span>
+                  <span>Map</span>
+                </button>
+              </div>
+            )}
+
             <button
               type="button"
               className={styles.filterDrawerTrigger}

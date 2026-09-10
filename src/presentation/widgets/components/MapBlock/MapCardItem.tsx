@@ -23,17 +23,20 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
   if (!record || typeof record !== "object") return null;
 
   const title =
-    record.$title ||
-    record.title ||
-    record.name ||
-    record.hotelName ||
-    record.propertyName ||
-    "Stay";
+    record.make
+      ? `${record.make} ${record.model || ""}`.trim()
+      : (record.$title ||
+         record.title ||
+         record.name ||
+         record.hotelName ||
+         record.propertyName ||
+         "Item");
 
   const rating = extractRatingInfo(record);
 
   // Pricing & Discounts
-  let basePrice: unknown = record.$price ?? record.price;
+  let basePrice: unknown =
+    record.pricePerDay ?? record.price_per_day ?? record.$price ?? record.price;
   if (basePrice === undefined || basePrice === null) {
     for (const [k, v] of Object.entries(record)) {
       if (/(percent|discount|qty|quantity|count|stock)/i.test(k)) continue;
@@ -113,7 +116,11 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
   const period =
     record.period ||
     record.duration ||
-    (record.nights ? `/ ${record.nights} nights` : "/ 2 nights");
+    (record.pricePerDay || record.price_per_day
+      ? "/ day"
+      : record.nights
+        ? `/ ${record.nights} nights`
+        : "");
 
   // Image
   const imageUrl =

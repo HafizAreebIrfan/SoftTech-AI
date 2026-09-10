@@ -694,3 +694,39 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+.viewModeToggle {
+  display: inline-flex;
+  align-items: center;
+  background: var(--widget-card-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--widget-card-border, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.viewToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewToggleBtn:hover {
+  color: var(--app-text-primary, #ffffff);
+}
+
+.viewToggleBtnActive {
+  background: var(--widget-accent, #6366f1);
+  color: #ffffff;
+  font-weight: 700;
+}
+

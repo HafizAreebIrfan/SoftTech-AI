@@ -165,7 +165,8 @@ export const formatMarkerPrice = (rec: Record<string, any>): string => {
   if (!rec || typeof rec !== "object") return "";
 
   // 1. Calculate price considering discounts or explicit sale price
-  let rawPrice: unknown = rec.$price ?? rec.price;
+  let rawPrice: unknown =
+    rec.pricePerDay ?? rec.price_per_day ?? rec.$price ?? rec.price;
   if (rawPrice === undefined || rawPrice === null || rawPrice === "") {
     for (const [k, v] of Object.entries(rec)) {
       if (/(percent|discount|qty|quantity|count|stock)/i.test(k)) continue;

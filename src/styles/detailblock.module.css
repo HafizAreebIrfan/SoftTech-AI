@@ -433,6 +433,22 @@
   cursor: default;
 }
 
+.calDayDisabled {
+  opacity: 0.22;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+  pointer-events: none;
+  text-decoration: line-through;
+}
+
+.calDayBooked {
+  opacity: 0.35;
+  color: #f87171 !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  cursor: not-allowed !important;
+  text-decoration: line-through;
+}
+
 .calStatusNote {
   font-size: 11px;
   color: var(--app-text-secondary, #94a3b8);

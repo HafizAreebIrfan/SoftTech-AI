@@ -791,20 +791,100 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   }, [targetRecord]);
 
   /* ----------------------- Rental Calendar & Booking ------------------- */
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+
+  const [dynamicConflictingBookings, setDynamicConflictingBookings] = useState<any[]>([]);
+
+  useEffect(() => {
+    const carId = targetRecord?.id || targetRecord?._id || targetRecord?.carId;
+    if (!carId || !isRental) return;
+
+    if (
+      targetRecord.conflictingBookings ||
+      targetRecord.data?.conflictingBookings
+    ) {
+      return;
+    }
+
+    const availAction = actions.find(
+      (a: any) =>
+        /availability/i.test(a?.name || a?.toolName || "") ||
+        /check_car_availability/i.test(a?.mcpToolName || a?.name || ""),
+    );
+
+    const toolName =
+      availAction?.mcpToolName ||
+      availAction?.name ||
+      "call_check_car_availability";
+
+    const endObj = new Date();
+    endObj.setDate(endObj.getDate() + 90);
+    const end = endObj.toISOString().split("T")[0];
+
+    callMcpTool(toolName, { id: carId, carId, startDate: todayStr, endDate: end })
+      .then((res: any) => {
+        const data = res?.data?.data || res?.data || res;
+        const bookings =
+          data?.conflictingBookings ||
+          data?.bookings ||
+          (Array.isArray(data) ? data : []);
+        if (Array.isArray(bookings) && bookings.length > 0) {
+          setDynamicConflictingBookings(bookings);
+        }
+      })
+      .catch(() => {});
+  }, [targetRecord?.id, isRental, actions, todayStr]);
+
+  const bookedDatesSet = useMemo(() => {
+    const set = new Set<string>();
+    const allBookings = [
+      ...(Array.isArray(targetRecord?.conflictingBookings)
+        ? targetRecord.conflictingBookings
+        : []),
+      ...(Array.isArray(targetRecord?.data?.conflictingBookings)
+        ? targetRecord.data.conflictingBookings
+        : []),
+      ...(Array.isArray(targetRecord?.bookings) ? targetRecord.bookings : []),
+      ...dynamicConflictingBookings,
+    ];
+
+    for (const b of allBookings) {
+      if (!b || typeof b !== "object") continue;
+      const st = String(b.status || "").toUpperCase();
+      if (st === "CANCELLED" || st === "REJECTED" || st === "REFUNDED") continue;
+
+      const sStr = String(b.pickupDate || b.startDate || b.actualPickupDate || "");
+      const eStr = String(b.dropoffDate || b.endDate || b.actualDropoffDate || "");
+      if (!sStr || !eStr) continue;
+
+      const s = new Date(sStr.split("T")[0]);
+      const e = new Date(eStr.split("T")[0]);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) continue;
+
+      const cur = new Date(s);
+      while (cur <= e) {
+        set.add(cur.toISOString().split("T")[0]);
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    return set;
+  }, [targetRecord, dynamicConflictingBookings]);
+
   const initialDateStr = useMemo(() => {
-    if (!targetRecord) return new Date().toISOString().split("T")[0];
+    if (!targetRecord) return todayStr;
     const raw =
       collection?.appliedQuery?.datefrom ||
       collection?.appliedQuery?.date ||
       targetRecord.pickupDate ||
       targetRecord.date ||
       metadata.generatedAt ||
-      new Date().toISOString().split("T")[0];
+      todayStr;
     const d = new Date(raw);
-    return isNaN(d.getTime())
-      ? new Date().toISOString().split("T")[0]
-      : d.toISOString().split("T")[0];
-  }, [targetRecord, collection, metadata]);
+    let candidate = isNaN(d.getTime()) ? todayStr : d.toISOString().split("T")[0];
+    // Never allow past dates
+    if (candidate < todayStr) candidate = todayStr;
+    return candidate;
+  }, [targetRecord, collection, metadata, todayStr]);
 
   const initialEndDateStr = useMemo(() => {
     if (!targetRecord) return "";
@@ -815,9 +895,12 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       "";
     if (raw) {
       const d = new Date(raw);
-      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+      if (!isNaN(d.getTime())) {
+        const candidate = d.toISOString().split("T")[0];
+        if (candidate > initialDateStr) return candidate;
+      }
     }
-    // Default 3 days rental (today + 2 days)
+    // Default 3 days rental (initialDate + 2 days)
     const d = new Date(initialDateStr);
     d.setDate(d.getDate() + 2);
     return d.toISOString().split("T")[0];
@@ -862,12 +945,32 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   };
 
   const handleDateClick = (dateStr: string) => {
+    // Cannot select past dates or booked dates
+    if (dateStr < todayStr || bookedDatesSet.has(dateStr)) return;
+
     if (!pickupDate || (pickupDate && dropoffDate)) {
       setPickupDate(dateStr);
       setDropoffDate("");
     } else if (pickupDate && !dropoffDate) {
       if (dateStr >= pickupDate) {
-        setDropoffDate(dateStr);
+        // Verify that no booked date is contained inside the selected range
+        let hasOverlap = false;
+        const cur = new Date(pickupDate);
+        const target = new Date(dateStr);
+        while (cur <= target) {
+          if (bookedDatesSet.has(cur.toISOString().split("T")[0])) {
+            hasOverlap = true;
+            break;
+          }
+          cur.setDate(cur.getDate() + 1);
+        }
+        if (hasOverlap) {
+          // Range contains booked dates, reset to clicked date
+          setPickupDate(dateStr);
+          setDropoffDate("");
+        } else {
+          setDropoffDate(dateStr);
+        }
       } else {
         setPickupDate(dateStr);
         setDropoffDate("");
@@ -1541,16 +1644,32 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     item.dateStr > pickupDate &&
                     item.dateStr < dropoffDate;
 
+                  const isPast = item.dateStr ? item.dateStr < todayStr : false;
+                  const isBooked = item.dateStr ? bookedDatesSet.has(item.dateStr) : false;
+                  const isDisabled = isPast || isBooked;
+
                   return (
                     <button
                       key={`day-${item.dateStr}`}
                       type="button"
+                      disabled={isDisabled}
+                      title={
+                        isBooked
+                          ? "Booked / Unavailable"
+                          : isPast
+                            ? "Past date"
+                            : undefined
+                      }
                       className={`${styles.calDay} ${
                         isStart || isEnd
                           ? styles.calDaySelected
                           : inRange
                             ? styles.calDayInRange
-                            : ""
+                            : isBooked
+                              ? styles.calDayBooked
+                              : isPast
+                                ? styles.calDayDisabled
+                                : ""
                       }`}
                       onClick={() => handleDateClick(item.dateStr!)}
                     >

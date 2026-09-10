@@ -43,6 +43,8 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     const parts: string[] = [];
     if (q?.datefrom && q?.dateto) {
       parts.push(`${q.datefrom} – ${q.dateto}`);
+    } else if (q?.startDate && q?.endDate) {
+      parts.push(`${q.startDate} – ${q.endDate}`);
     } else if (q?.checkin && q?.checkout) {
       parts.push(`${q.checkin} – ${q.checkout}`);
     } else if (selectedRecord?.dates) {
@@ -50,11 +52,13 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     }
     if (q?.adults || q?.guests) {
       parts.push(`${q.adults || q.guests} guests`);
-    } else if (selectedRecord?.guests) {
-      parts.push(`${selectedRecord.guests} guests`);
+    } else if (q?.city || selectedRecord?.location?.city) {
+      parts.push(String(q?.city || selectedRecord?.location?.city));
+    } else if (selectedRecord?.location?.name) {
+      parts.push(String(selectedRecord.location.name));
     }
     if (parts.length > 0) return parts.join(" · ");
-    return `${typedRecords.length} places available`;
+    return `${typedRecords.length} available`;
   }, [subtitle, collection, selectedRecord, typedRecords.length]);
 
   const handleSelectRecord = (rec: Record<string, any>, idx: number) => {
@@ -80,14 +84,20 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     : "";
 
   const flyoutTitle =
-    selectedRecord?.$title ||
-    selectedRecord?.title ||
-    selectedRecord?.name ||
-    selectedRecord?.hotelName ||
-    "Stay Details";
+    selectedRecord?.make
+      ? `${selectedRecord.make} ${selectedRecord.model || ""}`.trim()
+      : (selectedRecord?.$title ||
+         selectedRecord?.title ||
+         selectedRecord?.name ||
+         selectedRecord?.hotelName ||
+         "Details");
 
   // Price
-  let basePrice = selectedRecord?.$price ?? selectedRecord?.price;
+  let basePrice =
+    selectedRecord?.pricePerDay ??
+    selectedRecord?.price_per_day ??
+    selectedRecord?.$price ??
+    selectedRecord?.price;
   const baseNum = parseNumericPrice(basePrice);
   let salePrice = baseNum;
   let originalPrice: number | null = null;
@@ -137,7 +147,11 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
   const period =
     selectedRecord?.period ||
     selectedRecord?.duration ||
-    (selectedRecord?.nights ? `/ ${selectedRecord.nights} nights` : "/ 2 nights");
+    (selectedRecord?.pricePerDay || selectedRecord?.price_per_day
+      ? "/ day"
+      : selectedRecord?.nights
+        ? `/ ${selectedRecord.nights} nights`
+        : "");
 
   const actionUrl =
     selectedRecord?.url ||
@@ -150,7 +164,9 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     selectedRecord?.$description ||
     selectedRecord?.about ||
     selectedRecord?.summary ||
-    "Experience comfort and prime city access with high-speed Wi-Fi, air conditioning, and premium guest amenities.";
+    (selectedRecord?.make
+      ? `${selectedRecord.make} ${selectedRecord.model || ""} · ${selectedRecord.transmission || ""} · ${selectedRecord.fuelType || ""} · ${selectedRecord.seats ? selectedRecord.seats + " seats" : ""}`
+      : "Premium amenities and comfortable booking experience.");
 
   return (
     <div className={styles.layoutContainer}>

@@ -411,10 +411,24 @@ const GenericWidgetInner: React.FC = () => {
           ),
       );
 
+    const userPrompt = String(
+      (window as any).__WIDGET_METADATA__?.user_raw_prompt ||
+      (window as any).__WIDGET_DATA__?.user_raw_prompt ||
+      collection?.appliedQuery?.user_raw_prompt ||
+      ""
+    ).toLowerCase();
+
+    const isBranchOrLocationQuery =
+      hasCoordinates &&
+      /branch|near|location|closest|mapview|map view|cheap.*branch|cheapest.*branch/i.test(
+        userPrompt,
+      );
+
     const isMapLayout =
       (normalizedLayout as string) === "map" ||
       (presentationPlan?.layout as string) === "map" ||
-      (hasCoordinates && isGeospatialEntity);
+      (hasCoordinates && isGeospatialEntity) ||
+      isBranchOrLocationQuery;
 
     if (isMapLayout) {
       return (
