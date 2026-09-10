@@ -39,12 +39,19 @@ const PRICE_KEY_RE = /(price|rate|cost|amount|fee|fare|premium|charge)/i;
 const OUT_OF_STOCK_RE =
   /(out.?of.?stock|unavailable|sold.?out|booked|maintenance|inactive|discontinued|reserved)/i;
 
-/** Compact, currency-aware price using the record's OWN currency — no hardcoded symbol. */
+/** Compact, currency-aware price using the record's OWN currency — fallback default to '$'. */
 const formatCardPrice = (value: unknown, rec: Record<string, any>): string => {
   if (value === null || value === undefined || value === "") return "";
   if (typeof value === "string" && /[^\d.,\s-]/.test(value)) return value.trim();
   const num = parseNumericPrice(value);
-  const code = rec.currency || rec.currencyCode || rec.priceCurrency;
+  if (isNaN(num)) return "";
+
+  const code =
+    rec.currency ||
+    rec.currencyCode ||
+    rec.currency_code ||
+    rec.priceCurrency;
+
   if (typeof code === "string" && /^[A-Za-z]{3}$/.test(code)) {
     try {
       return new Intl.NumberFormat(undefined, {
@@ -55,11 +62,136 @@ const formatCardPrice = (value: unknown, rec: Record<string, any>): string => {
       /* unknown code — fall through */
     }
   }
-  const symbol = rec.currencySymbol || rec.symbol;
-  const formatted = num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+  const symbol =
+    rec.currencySymbol ||
+    rec.currency_symbol ||
+    rec.symbol ||
+    "$";
+
+  const formatted = num.toLocaleString(undefined, {
+    minimumFractionDigits: num % 1 !== 0 ? 2 : 0,
+    maximumFractionDigits: 2,
+  });
+
   return typeof symbol === "string" && symbol.trim()
     ? `${symbol.trim()}${formatted}`
-    : formatted;
+    : `$${formatted}`;
+};
+
+interface CardPriceDisplay {
+  mainPrice: string;
+  originalPrice?: string;
+}
+
+/**
+ * Computes main price and optional strikethrough original price.
+ * Supports explicit sale price, compare-at price, percentage discount,
+ * or flat discount from any tool response, with fallback default to '$'.
+ */
+const computeCardPrices = (rec: Record<string, any>): CardPriceDisplay => {
+  // 1. Identify base / normal price
+  let baseRaw: unknown = rec.$price ?? rec.price;
+  if (baseRaw === undefined || baseRaw === null || baseRaw === "") {
+    for (const [k, v] of Object.entries(rec)) {
+      if (/(percent|discount|qty|quantity|count|stock)/i.test(k)) continue;
+      if (
+        PRICE_KEY_RE.test(k) &&
+        (typeof v === "number" || (typeof v === "string" && /\d/.test(v)))
+      ) {
+        baseRaw = v;
+        break;
+      }
+    }
+  }
+
+  const baseNum = parseNumericPrice(baseRaw);
+  if (isNaN(baseNum) || baseNum <= 0) {
+    return { mainPrice: formatCardPrice(baseRaw, rec) };
+  }
+
+  // 2. Explicit compare-at / original / list price higher than base price
+  const compareAtRaw =
+    rec.originalPrice ??
+    rec.original_price ??
+    rec.regularPrice ??
+    rec.regular_price ??
+    rec.listPrice ??
+    rec.list_price ??
+    rec.compareAtPrice ??
+    rec.compare_at_price ??
+    rec.msrp ??
+    rec.oldPrice ??
+    rec.old_price;
+
+  const compareAtNum = compareAtRaw != null ? parseNumericPrice(compareAtRaw) : NaN;
+  if (isFinite(compareAtNum) && compareAtNum > baseNum) {
+    return {
+      mainPrice: formatCardPrice(baseNum, rec),
+      originalPrice: formatCardPrice(compareAtNum, rec),
+    };
+  }
+
+  // 3. Explicit sale price lower than base price
+  const saleRaw =
+    rec.salePrice ??
+    rec.sale_price ??
+    rec.discountedPrice ??
+    rec.discount_price ??
+    rec.specialPrice ??
+    rec.special_price ??
+    rec.offerPrice ??
+    rec.offer_price ??
+    rec.promoPrice;
+
+  const saleNum = saleRaw != null ? parseNumericPrice(saleRaw) : NaN;
+  if (isFinite(saleNum) && saleNum > 0 && saleNum < baseNum) {
+    return {
+      mainPrice: formatCardPrice(saleNum, rec),
+      originalPrice: formatCardPrice(baseNum, rec),
+    };
+  }
+
+  // 4. Percentage discount (e.g. discountPercentage: 6.55 from DummyJSON or e-com APIs)
+  const pctRaw =
+    rec.discountPercentage ??
+    rec.discount_percentage ??
+    rec.discountPercent ??
+    rec.discount_percent ??
+    rec.discountRate ??
+    rec.discount_rate;
+
+  const pctNum = pctRaw != null ? Number(pctRaw) : NaN;
+  if (isFinite(pctNum) && pctNum > 0 && pctNum < 100) {
+    const calculatedSale = Math.round(baseNum * (1 - pctNum / 100) * 100) / 100;
+    if (calculatedSale > 0 && calculatedSale < baseNum) {
+      return {
+        mainPrice: formatCardPrice(calculatedSale, rec),
+        originalPrice: formatCardPrice(baseNum, rec),
+      };
+    }
+  }
+
+  // 5. Flat discount amount (e.g. discountAmount: 10 or discount: 10)
+  const flatRaw =
+    rec.discountAmount ??
+    rec.discount_amount ??
+    (typeof rec.discount === "number" ||
+    (typeof rec.discount === "string" && !rec.discount.includes("%"))
+      ? rec.discount
+      : undefined);
+
+  const flatNum = flatRaw != null ? parseNumericPrice(flatRaw) : NaN;
+  if (isFinite(flatNum) && flatNum > 0 && flatNum < baseNum) {
+    const calculatedSale = Math.round((baseNum - flatNum) * 100) / 100;
+    return {
+      mainPrice: formatCardPrice(calculatedSale, rec),
+      originalPrice: formatCardPrice(baseNum, rec),
+    };
+  }
+
+  // Fallback: only normal price clearly
+  return { mainPrice: formatCardPrice(baseRaw, rec) };
 };
 
 export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
@@ -122,22 +254,8 @@ export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
     specs.push({ icon: "📍", text: String(locStr) });
   }
 
-  // Price — prefer $price/price, else the first price-ish scalar (skip
-  // discount/qty/stock keys). Formatted with the record's own currency.
-  let rawPrice: unknown = rec.$price ?? rec.price;
-  if (rawPrice === undefined || rawPrice === null) {
-    for (const [k, v] of Object.entries(rec)) {
-      if (/(percent|discount|qty|quantity|count|stock)/i.test(k)) continue;
-      if (
-        PRICE_KEY_RE.test(k) &&
-        (typeof v === "number" || (typeof v === "string" && /\d/.test(v)))
-      ) {
-        rawPrice = v;
-        break;
-      }
-    }
-  }
-  const formattedPrice = formatCardPrice(rawPrice, rec);
+  // Price — supports sale price & discounts with fallback default to '$'
+  const priceDisplay = computeCardPrices(rec);
 
   // Image candidate (handles comma-lists, arrays, objects). renderImage then
   // does raw → proxied → neutral-fallback internally (no sticky dataset flag).
@@ -242,8 +360,15 @@ export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
         {/* Footer with Price and CTA */}
         <div className={styles.cardFooterRow}>
           <div className={styles.priceGroup}>
-            {formattedPrice && (
-              <span className={styles.priceValue}>{formattedPrice}</span>
+            {priceDisplay.mainPrice && (
+              <div className={styles.priceRow}>
+                <span className={styles.priceValue}>{priceDisplay.mainPrice}</span>
+                {priceDisplay.originalPrice && (
+                  <span className={styles.originalPrice}>
+                    {priceDisplay.originalPrice}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 

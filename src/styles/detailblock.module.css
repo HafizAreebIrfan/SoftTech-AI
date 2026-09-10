@@ -127,11 +127,19 @@
 }
 
 .carVariant {
-  font-family: "Jost", sans-serif;
+  font-family: "Jost", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 22px;
   color: var(--app-text-secondary, #94a3b8);
   font-weight: 600;
   line-height: 1.2;
+}
+
+.categorySubtitle {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12.5px;
+  color: var(--app-text-secondary, #94a3b8);
+  font-weight: 500;
+  line-height: 1.3;
 }
 
 .locationRow {
@@ -324,16 +332,26 @@
 .bookingRateRow {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .bookingRatePrice {
-  font-family: "Jost", sans-serif;
+  font-family: "Jost", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 32px;
   font-weight: 800;
   color: #ffffff;
   margin: 0;
   line-height: 1.1;
+}
+
+.bookingOriginalPrice {
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-decoration: line-through;
+  opacity: 0.85;
 }
 
 .bookingRatePeriod {

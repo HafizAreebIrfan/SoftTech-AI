@@ -114,12 +114,8 @@ const formatPrice = (value: unknown, record: Record<string, any>): string => {
     return `Rs. ${num.toLocaleString()}`;
   }
 
-  // Generic ecommerce price: if has decimals or < 500
-  if (num < 500 || num !== Math.floor(num)) {
-    return `$${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  }
-
-  return num.toLocaleString();
+  // Generic fallback default to '$'
+  return `$${num.toLocaleString(undefined, { minimumFractionDigits: num % 1 !== 0 ? 2 : 0, maximumFractionDigits: 2 })}`;
 };
 
 const MONTH_NAMES = [
@@ -441,6 +437,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       value: undefined as unknown,
       key: "",
       display: "",
+      originalDisplay: undefined as string | undefined,
       period: "",
       numeric: 0,
     };
@@ -518,11 +515,73 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     const num = parseNumericPrice(displayVal);
     const period = derivePricePeriod(key) || (isRental ? "per day" : "");
 
+    let mainDisplay = formatPrice(displayVal, targetRecord);
+    let originalDisplay: string | undefined = undefined;
+
+    if (isFinite(num) && num > 0) {
+      const compareAtRaw =
+        targetRecord.originalPrice ??
+        targetRecord.original_price ??
+        targetRecord.regularPrice ??
+        targetRecord.regular_price ??
+        targetRecord.listPrice ??
+        targetRecord.list_price ??
+        targetRecord.compareAtPrice ??
+        targetRecord.compare_at_price ??
+        targetRecord.msrp ??
+        targetRecord.oldPrice ??
+        targetRecord.old_price;
+      const compareAtNum = compareAtRaw != null ? parseNumericPrice(compareAtRaw) : NaN;
+
+      const saleRaw =
+        targetRecord.salePrice ??
+        targetRecord.sale_price ??
+        targetRecord.discountedPrice ??
+        targetRecord.discount_price ??
+        targetRecord.specialPrice ??
+        targetRecord.offerPrice;
+      const saleNum = saleRaw != null ? parseNumericPrice(saleRaw) : NaN;
+
+      const pctRaw =
+        targetRecord.discountPercentage ??
+        targetRecord.discount_percentage ??
+        targetRecord.discountPercent ??
+        targetRecord.discountRate;
+      const pctNum = pctRaw != null ? Number(pctRaw) : NaN;
+
+      const flatRaw =
+        targetRecord.discountAmount ??
+        targetRecord.discount_amount ??
+        (typeof targetRecord.discount === "number" ||
+        (typeof targetRecord.discount === "string" && !targetRecord.discount.includes("%"))
+          ? targetRecord.discount
+          : undefined);
+      const flatNum = flatRaw != null ? parseNumericPrice(flatRaw) : NaN;
+
+      if (isFinite(compareAtNum) && compareAtNum > num) {
+        originalDisplay = formatPrice(compareAtNum, targetRecord);
+      } else if (isFinite(saleNum) && saleNum > 0 && saleNum < num) {
+        originalDisplay = formatPrice(num, targetRecord);
+        mainDisplay = formatPrice(saleNum, targetRecord);
+      } else if (isFinite(pctNum) && pctNum > 0 && pctNum < 100) {
+        const calculatedSale = Math.round(num * (1 - pctNum / 100) * 100) / 100;
+        if (calculatedSale > 0 && calculatedSale < num) {
+          originalDisplay = formatPrice(num, targetRecord);
+          mainDisplay = formatPrice(calculatedSale, targetRecord);
+        }
+      } else if (isFinite(flatNum) && flatNum > 0 && flatNum < num) {
+        const calculatedSale = Math.round((num - flatNum) * 100) / 100;
+        originalDisplay = formatPrice(num, targetRecord);
+        mainDisplay = formatPrice(calculatedSale, targetRecord);
+      }
+    }
+
     return {
       value: displayVal,
       key,
       numeric: num,
-      display: formatPrice(displayVal, targetRecord),
+      display: mainDisplay,
+      originalDisplay,
       period,
     };
   }, [targetRecord, fields, isRental, optionGroups, selectedOptions]);
@@ -1229,7 +1288,17 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       <div className={styles.headerInfo}>
         <div className={styles.titleRow}>
           <h1 className={styles.carTitle}>{title}</h1>
-          {subtitle && <span className={styles.carVariant}>{subtitle}</span>}
+          {subtitle && (
+            <span
+              className={
+                isRental && targetRecord?.make && targetRecord?.model
+                  ? styles.carVariant
+                  : styles.categorySubtitle
+              }
+            >
+              {subtitle}
+            </span>
+          )}
         </div>
         {ratingValue !== null && (
           <div className={styles.ratingRow}>
@@ -1405,7 +1474,14 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         {/* Price Row */}
         {priceInfo.display && (
           <div className={styles.bookingRateRow}>
-            <h2 className={styles.bookingRatePrice}>{priceInfo.display}</h2>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+              <h2 className={styles.bookingRatePrice}>{priceInfo.display}</h2>
+              {priceInfo.originalDisplay && (
+                <span className={styles.bookingOriginalPrice}>
+                  {priceInfo.originalDisplay}
+                </span>
+              )}
+            </div>
             {priceInfo.period && (
               <span className={styles.bookingRatePeriod}>{priceInfo.period}</span>
             )}

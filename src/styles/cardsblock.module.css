@@ -213,10 +213,27 @@
   gap: 1px;
 }
 
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .priceValue {
   font-size: 16px;
   font-weight: 800;
   color: #ffffff;
+  line-height: 1.2;
+}
+
+.originalPrice {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-decoration: line-through;
+  opacity: 0.85;
   line-height: 1.2;
 }
 

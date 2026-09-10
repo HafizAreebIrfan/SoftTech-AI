@@ -1,0 +1,349 @@
+/* Master-Detail Map Catalog Layout Styles */
+
+.layoutContainer {
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--app-text-primary, #ffffff);
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header Bar with Title, Subtitle, and View Switcher */
+.headerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+
+.headerTitleCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mainTitle {
+  font-family: 'Jost', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.subTitle {
+  font-size: 13px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.headerActionsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.viewToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 8px;
+  color: var(--app-text-secondary, #94a3b8);
+  padding: 6px 12px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewToggleBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.viewToggleBtnActive {
+  background: rgba(0, 108, 228, 0.15);
+  border-color: var(--widget-accent, #006ce4);
+  color: #ffffff;
+}
+
+.filterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 8px;
+  color: var(--app-text-secondary, #94a3b8);
+  padding: 6px 12px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+/* Split-Screen Layout (Desktop >= 960px) */
+.splitLayout {
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  gap: 20px;
+  width: 100%;
+  height: calc(100vh - 170px);
+  min-height: 560px;
+  max-height: 860px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1200px) {
+  .splitLayout {
+    grid-template-columns: 340px 1fr;
+  }
+}
+
+/* Left Panel: Scrollable Vertical List */
+.listPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 6px;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #2a2d35 transparent;
+}
+
+.listPanel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.listPanel::-webkit-scrollbar-thumb {
+  background: #2a2d35;
+  border-radius: 3px;
+}
+
+/* Right Panel: Interactive Map & Detail Flyout */
+.mapPanel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+/* Detail Flyout Sheet (Overlays or docks on top of map) */
+.detailFlyout {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  bottom: 14px;
+  width: 420px;
+  max-width: calc(100% - 28px);
+  background: rgba(18, 19, 22, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
+  overflow-y: auto;
+  animation: flyoutSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes flyoutSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.flyoutHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 12px 14px 4px 14px;
+}
+
+.flyoutCloseBtn {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: #ffffff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: background 0.15s ease;
+}
+
+.flyoutCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.flyoutBody {
+  padding: 0 16px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.flyoutHeroImage {
+  width: 100%;
+  height: 220px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #09090b;
+}
+
+.flyoutTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.flyoutTitle {
+  font-family: 'Jost', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.flyoutScoreBadge {
+  background: var(--widget-accent, #006ce4);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.flyoutMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.flyoutPriceSection {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.flyoutPriceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.flyoutCtaBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  background: var(--widget-accent, #006ce4);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.flyoutCtaBtn:hover {
+  background: #005bb5;
+  transform: translateY(-1px);
+}
+
+.flyoutAboutTitle {
+  font-family: 'Jost', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.flyoutAboutText {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+}
+
+.aiSummaryBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border-left: 3px solid #10b981;
+}
+
+.aiSummaryTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Mobile & Compact Screen Adaptations (< 960px) */
+@media (max-width: 960px) {
+  .splitLayout {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    max-height: none;
+  }
+
+  .listPanel {
+    display: none; /* In map mode on mobile, cards are shown in the bottom carousel */
+  }
+
+  .mapPanel {
+    height: 520px;
+  }
+}

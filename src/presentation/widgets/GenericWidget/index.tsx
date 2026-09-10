@@ -11,6 +11,8 @@ import { WeatherBlock } from "../components/WeatherBlock/WeatherBlock";
 import { AQIBlock } from "../components/AQIBlock";
 import { OptionPickerBlock } from "../components/OptionPickerBlock/OptionPickerBlock";
 import { DetailBlock } from "../components/DetailBlock";
+import { MapCatalogLayout } from "../layouts/MapCatalogLayout";
+import { extractCoordinates } from "../helper/geoHelper";
 import { useMcpWidgetStore } from "../../../infrastructure/store/mcpWidgetStore";
 import { getValue } from "../../../utils";
 import type { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
@@ -379,6 +381,44 @@ const GenericWidgetInner: React.FC = () => {
     if (isProfile || isBookings || normalizedLayout === "dashboard") {
       return (
         <DashboardLayout
+          title={content.title}
+          subtitle={content.subtitle}
+          data={rawData}
+          records={records}
+          fields={fields}
+          collection={collection}
+          capabilities={content.capabilities}
+          pagination={content.pagination}
+          actions={content.actions}
+          audience={content.audience}
+          presentationPlan={presentationPlan}
+        />
+      );
+    }
+
+    const hasCoordinates =
+      records.length > 0 &&
+      records.some((r, idx) => extractCoordinates(r as Record<string, any>, idx) !== null);
+
+    const isGeospatialEntity =
+      /hotel|stay|accommodation|property|real_estate|listing|room|resort|branch|depot|clinic/i.test(
+        entityName,
+      ) ||
+      Boolean(
+        collection?.itemLabel &&
+          /hotel|stay|accommodation|property|real_estate|listing|room|branch/i.test(
+            collection.itemLabel,
+          ),
+      );
+
+    const isMapLayout =
+      (normalizedLayout as string) === "map" ||
+      (presentationPlan?.layout as string) === "map" ||
+      (hasCoordinates && isGeospatialEntity);
+
+    if (isMapLayout) {
+      return (
+        <MapCatalogLayout
           title={content.title}
           subtitle={content.subtitle}
           data={rawData}

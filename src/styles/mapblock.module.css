@@ -1,0 +1,330 @@
+/* Pitch-black / Slate Map & Price Pin Styles */
+
+.mapWrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 460px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #09090b;
+  border: 1px solid var(--widget-card-border, #22242a);
+  box-sizing: border-box;
+}
+
+.leafletContainer {
+  width: 100%;
+  height: 100%;
+  min-height: 460px;
+  background: #09090b !important;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* Custom HTML Leaflet Price Pin */
+:global(.map-price-pin-wrapper) {
+  background: transparent !important;
+  border: none !important;
+}
+
+:global(.price-pin) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  position: relative;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+:global(.price-pin:hover) {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  z-index: 9999;
+}
+
+/* Selected Active Pin (Bright Accent Blue with white text) */
+:global(.price-pin.active) {
+  background: var(--widget-accent, #006ce4);
+  color: #ffffff;
+  transform: scale(1.12) translateY(-3px);
+  box-shadow: 0 6px 22px rgba(0, 108, 228, 0.7);
+  z-index: 10000 !important;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+:global(.price-pin .pin-icon) {
+  font-size: 11px;
+  opacity: 0.9;
+}
+
+:global(.price-pin .pin-price) {
+  letter-spacing: -0.01em;
+}
+
+:global(.price-pin .pin-arrow) {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #ffffff;
+}
+
+:global(.price-pin.active .pin-arrow) {
+  border-top-color: var(--widget-accent, #006ce4);
+}
+
+/* Card Item Styles for Left Sidebar / List */
+.listItemCard {
+  display: flex;
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.listItemCard:hover {
+  background: #18191e;
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.listItemCardActive {
+  border-color: var(--widget-accent, #006ce4) !important;
+  background: rgba(0, 108, 228, 0.08) !important;
+  box-shadow: 0 0 0 1px var(--widget-accent, #006ce4), 0 8px 24px rgba(0, 108, 228, 0.25) !important;
+}
+
+.cardThumbWrapper {
+  position: relative;
+  width: 130px;
+  min-width: 130px;
+  height: 110px;
+  background: #09090b;
+  overflow: hidden;
+}
+
+.cardThumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scoreBadge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--widget-accent, #006ce4);
+  color: #ffffff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.cardContent {
+  flex: 1;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.starsReviewsRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #f59e0b;
+}
+
+.reviewsCountText {
+  color: var(--app-text-secondary, #94a3b8);
+  font-weight: 500;
+}
+
+.wishlistBtn {
+  background: transparent;
+  border: none;
+  color: var(--app-text-secondary, #94a3b8);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.wishlistBtn:hover {
+  color: #ef4444;
+  transform: scale(1.15);
+}
+
+.wishlistBtnActive {
+  color: #ef4444 !important;
+}
+
+.cardTitle {
+  font-family: 'Jost', sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 3px 0 4px 0;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardPriceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.originalPrice {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #ef4444;
+  text-decoration: line-through;
+  opacity: 0.9;
+}
+
+.salePrice {
+  font-family: 'Poppins', sans-serif;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.periodSuffix {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.taxesSubtext {
+  font-size: 10px;
+  color: var(--app-text-secondary, #64748b);
+  margin: 1px 0 0 0;
+}
+
+/* Floating Card Carousel for Mobile / Compact View */
+.carouselOverlay {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.carouselTrack {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding: 4px;
+  pointer-events: auto;
+  scrollbar-width: none; /* Hide scrollbar Firefox */
+  -ms-overflow-style: none;
+}
+
+.carouselTrack::-webkit-scrollbar {
+  display: none;
+}
+
+.carouselCardItem {
+  scroll-snap-align: center;
+  flex: 0 0 290px;
+  max-width: 85vw;
+}
+
+.carouselNavBtn {
+  pointer-events: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(18, 19, 22, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.carouselNavBtn:hover {
+  background: #006ce4;
+  border-color: #006ce4;
+}
+
+/* Leaflet Attribution & Controls Dark Theme */
+:global(.leaflet-control-zoom) {
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
+}
+
+:global(.leaflet-control-zoom a) {
+  background: #121316 !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+:global(.leaflet-control-zoom a:hover) {
+  background: #1f2127 !important;
+  color: var(--widget-accent, #3b82f6) !important;
+}
+
+:global(.leaflet-control-attribution) {
+  background: rgba(9, 9, 11, 0.75) !important;
+  color: #64748b !important;
+  font-size: 10px !important;
+  border-top-left-radius: 6px;
+  backdrop-filter: blur(4px);
+}
+
+:global(.leaflet-control-attribution a) {
+  color: #94a3b8 !important;
+}
