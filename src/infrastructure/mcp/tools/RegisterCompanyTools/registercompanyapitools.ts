@@ -20,6 +20,30 @@ import {
 } from "./apihandler";
 import { SearchRecoveryInfo } from "./searchrecovery";
 
+/**
+ * Extracts pure business data records from normalized widgetContent,
+ * unwrapping common API response wrappers like { success: true, data: [...] }.
+ */
+const extractCleanData = (widgetContent: any): any => {
+  let cleanData = widgetContent?.data;
+  if (cleanData && typeof cleanData === "object") {
+    if (Array.isArray(cleanData.data)) {
+      cleanData = cleanData.data;
+    } else if (Array.isArray(cleanData.records)) {
+      cleanData = cleanData.records;
+    } else if (Array.isArray(cleanData.items)) {
+      cleanData = cleanData.items;
+    } else if (Array.isArray(cleanData.results)) {
+      cleanData = cleanData.results;
+    } else if (Array.isArray(cleanData.cars)) {
+      cleanData = cleanData.cars;
+    } else if (Array.isArray(cleanData.products)) {
+      cleanData = cleanData.products;
+    }
+  }
+  return cleanData;
+};
+
 export const registerCompanyApiTools = (
   server: McpServer,
   company: ICompany,
@@ -242,6 +266,11 @@ export const registerCompanyApiTools = (
                     `No ${entityLabel} found matching the search criteria from ${company.companyName}.`,
                 },
               ],
+              structuredContent: {
+                title: String(widgetContent.title || api.name || "Results"),
+                data: [],
+                total: 0,
+              },
             };
           }
 
@@ -253,6 +282,7 @@ export const registerCompanyApiTools = (
             console.log(
               `[MCP Tool Response] Suppressed duplicate widget for "${toolName}" — already displayed in session ${sessionKey}.`
             );
+            const cleanData = extractCleanData(widgetContent);
             return {
               content: [
                 {
@@ -260,6 +290,16 @@ export const registerCompanyApiTools = (
                   text: `The matching ${entityLabel} from ${company.companyName} are already displayed in the widget above.`,
                 },
               ],
+              structuredContent: {
+                title: String(widgetContent.title || api.name || "Results"),
+                data: cleanData,
+                total:
+                  typeof widgetContent.collection?.total === "number"
+                    ? widgetContent.collection.total
+                    : Array.isArray(cleanData)
+                      ? cleanData.length
+                      : 1,
+              },
             };
           }
 
@@ -326,6 +366,10 @@ export const registerCompanyApiTools = (
                   "The service is temporarily unavailable. Please try again shortly.",
               },
             ],
+            structuredContent: {
+              title: String(api.name || "Error"),
+              data: { error: sanitizedErrorMessage },
+            },
             isError: true,
           };
         }
@@ -413,26 +457,12 @@ const buildMcpSuccessResult = (
   }
 
   // Extract pure, clean data records for structuredContent:
-  // Unwrap nested wrappers like { success: true, data: [...] } to a direct clean array
-  let cleanData = widgetContent.data;
-  if (cleanData && typeof cleanData === "object") {
-    if (Array.isArray(cleanData.data)) {
-      cleanData = cleanData.data;
-    } else if (Array.isArray(cleanData.records)) {
-      cleanData = cleanData.records;
-    } else if (Array.isArray(cleanData.items)) {
-      cleanData = cleanData.items;
-    } else if (Array.isArray(cleanData.results)) {
-      cleanData = cleanData.results;
-    } else if (Array.isArray(cleanData.cars)) {
-      cleanData = cleanData.cars;
-    } else if (Array.isArray(cleanData.products)) {
-      cleanData = cleanData.products;
-    }
-  }
+  const cleanData = extractCleanData(widgetContent);
 
   // Clean structuredContent: only clean business data is exposed to ChatGPT & user
   const cleanStructuredContent: Record<string, any> = {
+    title: String(widgetContent.title || apiName || "Results"),
+    ...(widgetContent.subtitle ? { subtitle: widgetContent.subtitle } : {}),
     data: cleanData,
     ...(typeof widgetContent.collection?.total === "number"
       ? { total: widgetContent.collection.total }
