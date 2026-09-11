@@ -52,7 +52,11 @@ const GenericWidgetInner: React.FC = () => {
     (structuredContent as any)?.data?.authStrategy ||
     (toolResult as any)?.authStrategy;
 
-  const rawMetadata = (structuredContent as any)?.metadata || {};
+  const rawMetadata =
+    (structuredContent as any)?.metadata ||
+    (toolResult as any)?._meta?.widget?.metadata ||
+    (toolResult as any)?._meta?.metadata ||
+    {};
 
   const currentGlobalCheckoutUrl =
     rawAuthStrategy?.hasGlobalCheckout !== false && rawAuthStrategy?.globalCheckoutUrl

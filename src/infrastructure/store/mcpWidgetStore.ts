@@ -24,11 +24,13 @@ const isMcpToolResultPayload = (
   }
 
   const sc = payload.structuredContent as Record<string, unknown> | undefined;
+  const meta = payload._meta as Record<string, unknown> | undefined;
   if (sc && typeof sc === "object") {
     return Boolean(
       sc.data !== undefined ||
         sc.collection !== undefined ||
         sc.blocks !== undefined ||
+        (meta && typeof meta === "object" && meta.widget) ||
         (Array.isArray(payload.content) &&
           payload.content.some(
             (c: any) => c.text && typeof c.text === "string" && c.text.length > 50,
@@ -51,6 +53,8 @@ export const extractToolResult = (
     string,
     unknown
   >;
+  const meta = (rawObj._meta || {}) as Record<string, unknown>;
+  const widgetMeta = (meta.widget || {}) as Record<string, unknown>;
 
   let summaryText = "";
   if (Array.isArray(rawObj.content) && rawObj.content.length > 0) {
@@ -67,8 +71,25 @@ export const extractToolResult = (
   }
 
   const mergedStructuredContent = {
-    title: (structuredContent.title as string) || "Widget",
-    data: structuredContent.data || {},
+    title:
+      (widgetMeta.title as string) ||
+      (structuredContent.title as string) ||
+      "Widget",
+    subtitle:
+      (widgetMeta.subtitle as string) ||
+      (structuredContent.subtitle as string),
+    data:
+      structuredContent.data !== undefined
+        ? structuredContent.data
+        : widgetMeta.data || {},
+    collection: widgetMeta.collection || structuredContent.collection,
+    capabilities: widgetMeta.capabilities || structuredContent.capabilities,
+    pagination: widgetMeta.pagination || structuredContent.pagination,
+    actions: widgetMeta.actions || structuredContent.actions,
+    audience: widgetMeta.audience || structuredContent.audience,
+    platformtype: widgetMeta.platformtype || structuredContent.platformtype,
+    metadata: widgetMeta.metadata || structuredContent.metadata,
+    ...widgetMeta,
     ...structuredContent,
     ...(summaryText ? { summary: summaryText } : {}),
   };
