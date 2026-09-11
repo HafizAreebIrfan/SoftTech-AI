@@ -22,8 +22,6 @@ export const isStaleOrInvalidDescription = (desc?: string): boolean => {
   if (d.includes("generic widget response")) return true;
   if (d.startsWith("calls ")) return true;
   if (d.includes("do not call repeatedly")) return true;
-  if (d.includes("each result includes its branch location")) return true;
-  if (d.includes("car rental pro")) return true;
   return false;
 };
 

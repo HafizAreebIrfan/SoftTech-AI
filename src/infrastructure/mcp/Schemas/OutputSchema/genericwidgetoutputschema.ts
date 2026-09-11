@@ -135,64 +135,61 @@ const paginationSchema = z.object({
 /**
  * Final generic MCP output.
  */
-export const genericWidgetOutputSchema = z
-  .object({
-    /**
-     * Human-readable name of the result.
-     */
-    title: z.string().optional(),
+export const genericWidgetOutputSchema = z.object({
+  /**
+   * Human-readable name of the result.
+   */
+  title: z.string().optional(),
 
-    /**
-     * Optional description/context.
-     */
-    subtitle: z.string().optional(),
+  /**
+   * Optional description/context.
+   */
+  subtitle: z.string().optional(),
 
-    /**
-     * Original/normalized API result.
-     *
-     * This is the important part.
-     */
-    data: z.any().optional(),
+  /**
+   * Original/normalized API result.
+   *
+   * This is the important part.
+   */
+  data: z.any().optional(),
 
-    /**
-     * Information about what the data represents.
-     */
-    collection: collectionSchema.optional(),
+  /**
+   * Information about what the data represents.
+   */
+  collection: collectionSchema.optional(),
 
-    /**
-     * Capabilities supported by the API/tool.
-     */
-    capabilities: capabilitiesSchema.optional(),
+  /**
+   * Capabilities supported by the API/tool.
+   */
+  capabilities: capabilitiesSchema.optional(),
 
-    /**
-     * Pagination information when available.
-     */
-    pagination: paginationSchema.optional(),
+  /**
+   * Pagination information when available.
+   */
+  pagination: paginationSchema.optional(),
 
-    /**
-     * Actions supported by the widget.
-     */
-    actions: z.array(z.any()).optional(),
+  /**
+   * Actions supported by the widget.
+   */
+  actions: z.array(z.any()).optional(),
 
-    /**
-     * Additional non-UI metadata.
-     */
-    metadata: z.record(z.string(), z.any()).optional(),
+  /**
+   * Additional non-UI metadata.
+   */
+  metadata: z.record(z.string(), z.any()).optional(),
 
-    /**
-     * Target audience for the widget.
-     */
-    audience: z.enum(["admin", "customer"]).optional(),
+  /**
+   * Target audience for the widget.
+   */
+  audience: z.enum(["admin", "customer"]).optional(),
 
-    /**
-     * Target platform for the widget.
-     */
-    platformtype: z.enum(["web", "mobile", "both"]).optional(),
+  /**
+   * Target platform for the widget.
+   */
+  platformtype: z.enum(["web", "mobile", "both"]).optional(),
 
-    /**
-     * Optional count or total records.
-     */
-    total: z.number().optional(),
-  })
-  .passthrough()
-  .optional();
+  /**
+   * Optional count or total records.
+   */
+  total: z.number().optional(),
+});
