@@ -34,6 +34,7 @@ export interface ApiSchema {
   fields: FieldMetadata[];
   analyzedAt: string;
   defaultLayout?: string;
+  toolDescription?: string;
 }
 
 export interface AnalyzerOptions {

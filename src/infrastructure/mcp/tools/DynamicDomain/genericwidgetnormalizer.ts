@@ -67,7 +67,12 @@ export const normalizeApiResponseToWidget = (
   );
 
   // 1. Sanitize the payload: strip internal fields, apply schema, and flatten arrays
-  let data = sanitizeDataPayload(rawData, collection?.fields || [], apiSchema);
+  let data = sanitizeDataPayload(
+    rawData,
+    collection?.fields || [],
+    apiSchema,
+    audience,
+  );
   if (data === undefined) {
     data = rawData ?? null;
   }
@@ -248,6 +253,7 @@ const sanitizeDataPayload = (
   data: JsonValue,
   fields: FieldSchema[],
   apiSchema?: ApiSchema,
+  audience?: WidgetAudience,
 ): JsonValue => {
   const located = locateEntityRecords(data, apiSchema);
   const recordsToProcess = located
@@ -273,7 +279,7 @@ const sanitizeDataPayload = (
     }
 
     for (const [key, value] of Object.entries(record)) {
-      if (isInternalField(key)) continue;
+      if (isInternalField(key, audience)) continue;
 
       // Drop fields not in the Gemini schema — but never strip reserved widget
       // keys (checkout CTA `url`/`link` and pre-computed $-markers injected
@@ -289,8 +295,9 @@ const sanitizeDataPayload = (
       }
 
       let finalValue = value;
-      // Flatten arrays of strings/numbers
-      if (
+      if (isObject(value)) {
+        finalValue = sanitizeObject(value as Record<string, JsonValue>, audience);
+      } else if (
         Array.isArray(value) &&
         value.every((v) => typeof v === "string" || typeof v === "number")
       ) {
@@ -340,13 +347,40 @@ const sanitizeDataPayload = (
       }
     }
 
+    // Combine make + model into title if both are present and title is just make
+    if (
+      cleanRecord.make &&
+      cleanRecord.model &&
+      (!cleanRecord.$title || cleanRecord.$title === cleanRecord.make)
+    ) {
+      cleanRecord.$title = `${cleanRecord.make} ${cleanRecord.model}`;
+    }
+
     // Surface schema fields declared via nested dot-paths (e.g.
-    // "dimensions.width", "meta.qrCode") as flat keys so nested business data
-    // is not silently dropped. Sub-objects and arrays-of-objects are skipped;
-    // arrays of primitives are joined like the top-level pass above.
+    // "dimensions.width", "meta.qrCode") as flat keys ONLY if the parent object
+    // is not already preserved on the record, to avoid duplicating sub-fields.
     for (const field of fields) {
       const rawPath = String(field.path || "");
-      if (!rawPath.includes(".")) continue; // top-level keys handled above
+      if (!rawPath.includes(".")) continue;
+
+      const parentKey = rawPath.split(".")[0];
+      // If the parent object is already present on cleanRecord (e.g. record.location),
+      // do NOT duplicate all its sub-fields into the root object!
+      if (cleanRecord[parentKey] && isObject(cleanRecord[parentKey])) {
+        if (field.uiRole) {
+          const nestedValue = resolveDotPath(record, rawPath);
+          if (
+            nestedValue !== undefined &&
+            nestedValue !== null &&
+            !isObject(nestedValue)
+          ) {
+            applySchemaUiRole(cleanRecord, field.uiRole, nestedValue);
+          }
+        }
+        continue;
+      }
+
+      if (isInternalField(field.key, audience)) continue;
 
       const nestedValue = resolveDotPath(record, rawPath);
       if (nestedValue === undefined || nestedValue === null) continue;
@@ -462,17 +496,17 @@ const buildCollectionMetadata = (
     result.entity = apiSchema?.entity || key || entity;
     result.itemLabel = inferItemLabel(result.entity);
 
-    const schemaFields = buildFieldsFromApiSchema(apiSchema);
+    const schemaFields = buildFieldsFromApiSchema(apiSchema, audience);
     result.fields =
-      schemaFields.length > 0 ? schemaFields : buildFieldsFromRecords(records);
+      schemaFields.length > 0 ? schemaFields : buildFieldsFromRecords(records, audience);
     result.total = records.length;
   } else if (Array.isArray(data)) {
     result.itemLabel = inferItemLabel(result.entity);
-    const schemaFields = buildFieldsFromApiSchema(apiSchema);
+    const schemaFields = buildFieldsFromApiSchema(apiSchema, audience);
     result.fields =
       schemaFields.length > 0
         ? schemaFields
-        : buildFieldsFromRecords(data.filter(isObject));
+        : buildFieldsFromRecords(data.filter(isObject), audience);
     result.total = data.length;
   }
 
@@ -785,15 +819,18 @@ const locateEntityRecords = (
   return undefined;
 };
 
-const buildFieldsFromApiSchema = (apiSchema?: ApiSchema): FieldSchema[] => {
+const buildFieldsFromApiSchema = (
+  apiSchema?: ApiSchema,
+  audience?: WidgetAudience,
+): FieldSchema[] => {
   if (!apiSchema?.fields || apiSchema.fields.length === 0) return [];
   const seenKeys = new Set<string>();
   return apiSchema.fields
     .filter((field) => !field.hidden)
+    .filter((field) => !isInternalField(field.key, audience))
     .filter((field) => {
-      // Guard against the analyzer emitting two fields with the same key (e.g.
-      // a top-level and a nested path both keyed "price"), which renders
-      // duplicate columns and collides on React keys. First occurrence wins.
+      const pathTail = String(field.path || field.key || "").split(".").pop() || "";
+      if (isInternalField(pathTail, audience)) return false;
       if (!field.key || seenKeys.has(field.key)) return false;
       seenKeys.add(field.key);
       return true;
@@ -814,11 +851,12 @@ const buildFieldsFromApiSchema = (apiSchema?: ApiSchema): FieldSchema[] => {
 
 const buildFieldsFromRecords = (
   records: Record<string, JsonValue>[],
+  audience?: WidgetAudience,
 ): FieldSchema[] => {
   if (records.length === 0) return [];
   const firstRecord = records[0];
   return Object.entries(firstRecord)
-    .filter(([key]) => !isInternalField(key))
+    .filter(([key]) => !isInternalField(key, audience))
     .map(([key, value]) => ({
       key,
       label: toLabel(key),
@@ -956,15 +994,71 @@ const toLabel = (value: string): string => {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
-const isInternalField = (key: string): boolean => {
-  const normalized = key.toLowerCase();
-  return (
+const isInternalField = (key: string, audience?: string): boolean => {
+  const normalized = key.toLowerCase().replace(/[-_\s]/g, "");
+
+  // Framework & Security internals
+  if (
     normalized === "__v" ||
     normalized === "_v" ||
     normalized === "__typename" ||
+    normalized === "password" ||
+    normalized === "hash" ||
+    normalized === "salt" ||
+    normalized === "secret" ||
+    normalized === "token" ||
+    normalized === "refreshtoken" ||
+    normalized === "apikey"
+  ) {
+    return true;
+  }
+
+  // Database audit / internal operational keys
+  if (
     normalized === "createdat" ||
-    normalized === "updatedat"
-  );
+    normalized === "updatedat" ||
+    normalized === "deletedat" ||
+    normalized === "branchmanagerid" ||
+    normalized === "managerid" ||
+    normalized === "customid" ||
+    normalized === "isrestricted" ||
+    normalized === "restrictexpiresat"
+  ) {
+    return true;
+  }
+
+  // Customer audience: hide internal database foreign keys if redundant
+  if (audience === "customer") {
+    if (
+      normalized === "locationid" ||
+      normalized === "branchid" ||
+      normalized === "storeid" ||
+      normalized === "tenantid" ||
+      normalized === "companyid"
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const sanitizeObject = (
+  obj: Record<string, JsonValue>,
+  audience?: string,
+): Record<string, JsonValue> => {
+  const result: Record<string, JsonValue> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (isInternalField(k, audience)) continue;
+    if (v === null || v === undefined) continue;
+    if (isObject(v)) {
+      const nested = sanitizeObject(v as Record<string, JsonValue>, audience);
+      if (Object.keys(nested).length > 0) result[k] = nested;
+    } else {
+      result[k] = v;
+    }
+  }
+  return result;
 };
 
 /**

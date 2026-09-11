@@ -1,5 +1,6 @@
 import { ICompanyRepository } from "../../../ports/companies/register/companyregisterrepository";
 import { analyzeApiResponse } from "../../../../infrastructure/mcp/schema_analyzer/analyzer";
+import { isStaleOrInvalidDescription } from "../../../../infrastructure/mcp/tools/RegisterCompanyTools/mcpDescriptionGenerator";
 
 export async function analyzeSingleApi(
   companyRepository: ICompanyRepository,
@@ -27,6 +28,12 @@ export async function analyzeSingleApi(
   });
 
   company.apis[apiIndex].apiSchema = generatedSchema as any;
+  if (
+    (generatedSchema as any)?.toolDescription &&
+    !isStaleOrInvalidDescription((generatedSchema as any).toolDescription)
+  ) {
+    company.apis[apiIndex].mcpDescription = (generatedSchema as any).toolDescription;
+  }
   (company.apis[apiIndex] as any).isAnalyzed = true;
   (company.apis[apiIndex] as any).isTested = true;
 

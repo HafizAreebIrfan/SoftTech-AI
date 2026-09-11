@@ -10,10 +10,11 @@ export const AIPrompt = ({
   return `You are an API response schema analyzer.
 Analyze the following raw API response sample from an API named "${options?.apiName}" (Endpoint: "${options?.endpoint}", Industry: "${options?.industry}").
 
-Your job is to identify the business entity and every meaningful field returned by the API.
+Your job is to identify the business entity, a clear MCP tool description for LLMs, and every meaningful field returned by the API.
 Return a JSON object matching this EXACT schema structure:
 {
-  "entity": "entity_name (e.g. orders, products, weather, customers, bookings, packages)",
+  "entity": "entity_name (e.g. orders, products, weather, customers, bookings, packages, locations)",
+  "toolDescription": "A clear, actionable description for LLMs (like ChatGPT) explaining what this API tool does, what parameters/filters it supports, when to invoke it, and what entities it returns.",
   "dataPath": "dot.notation.path.to.records",
   "fields": [
     {
@@ -27,6 +28,12 @@ Return a JSON object matching this EXACT schema structure:
     }
   ]
 }
+
+TOOL DESCRIPTION RULES:
+1. Provide a concise, objective, and professional tool description in "toolDescription" for LLMs (like ChatGPT).
+2. Clearly and directly state what this specific tool does based on its HTTP method, endpoint path, and business entity (e.g., searches or lists records, retrieves details by ID, checks availability, creates a record).
+3. Mention key filter parameters or parameters supported by this endpoint (e.g., query keywords, filters, IDs).
+4. Keep the description domain-agnostic, factual, and strictly relevant to what the API performs. Do not include hardcoded company advice, assumptions, or unnecessary commentary.
 
 DATA PATH RULES:
 

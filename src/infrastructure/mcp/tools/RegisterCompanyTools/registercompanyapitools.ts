@@ -10,6 +10,7 @@ import { translateApiError } from "../../errors/errorTranslator";
 import { buildCustomMcpInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
 import { formatCheckoutToolResult } from "../CheckoutHandle/index";
 import { mcpRequestContext } from "../../../../adapters/http/controllers/mcp/mcptransportlayer";
+import { generateMcpDescription } from "./mcpDescriptionGenerator";
 
 // We will extract the HTTP and execution logic into this new file in the next step
 import {
@@ -49,24 +50,7 @@ export const registerCompanyApiTools = (
 
     const customInputSchema = buildCustomMcpInputSchema(configuredInputFields);
 
-    const rawDesc = api.mcpDescription || "";
-    let toolDescription = rawDesc;
-    if (
-      !toolDescription ||
-      toolDescription.includes("generic widget response") ||
-      toolDescription.includes("Calls ")
-    ) {
-      const endpoint = String(api.endpoint || "");
-      if (endpoint.includes("/categories") || endpoint.includes("/category-list")) {
-        toolDescription = `Retrieves the list of all product categories for ${company.companyName}. Use ONLY when the user explicitly asks to see or list available categories.`;
-      } else if (endpoint.includes("/category/")) {
-        toolDescription = `Retrieves products in a specific category (e.g. categoryname='vehicle', categoryname='womens-bags') from ${company.companyName}. Use when user asks to see or search products by category.`;
-      } else if (isDetailEndpoint(api)) {
-        toolDescription = `Retrieves the full details for a single item by ID from ${company.companyName}. Use when the user requests details for a specific item.`;
-      } else {
-        toolDescription = `Fetches ${api.name || "records"} from ${company.companyName}.`;
-      }
-    }
+    const toolDescription = generateMcpDescription(api, company);
     const resourceUri = api.mcpResourceUri;
 
     const method = (api.method || "GET").toUpperCase();
@@ -235,10 +219,49 @@ export const registerCompanyApiTools = (
             checkoutLinks,
           );
 
-          // If the search was empty and we relaxed the query (or still found
-          // nothing), tell the model exactly what happened so it narrates the
-          // result honestly instead of reporting a plain success.
           const summaryText = applyRecoveryMessaging(widgetContent, recovery);
+
+          const hasRecords = checkHasValidRecords(widgetContent);
+          const entityLabel =
+            widgetContent.collection?.entity ||
+            api.apiSchema?.entity ||
+            api.name ||
+            "items";
+
+          // If no valid records found (e.g. empty search / 0 items), return text-only so ChatGPT answers in chat without empty widgets
+          if (!hasRecords) {
+            console.log(
+              `[MCP Tool Response] No valid records for "${toolName}" — suppressing widget UI to prevent empty widgets. Returning text-only.`
+            );
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text:
+                    summaryText ||
+                    `No ${entityLabel} found matching the search criteria from ${company.companyName}.`,
+                },
+              ],
+            };
+          }
+
+          // Suppress duplicate widgets in the same session
+          const sessionKey = store?.sessionId || extra?.sessionId || companyId;
+          const signature = getWidgetDataSignature(widgetContent);
+
+          if (signature && isDuplicateWidget(sessionKey, `${toolName}:${signature}`)) {
+            console.log(
+              `[MCP Tool Response] Suppressed duplicate widget for "${toolName}" — already displayed in session ${sessionKey}.`
+            );
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `The matching ${entityLabel} from ${company.companyName} are already displayed in the widget above.`,
+                },
+              ],
+            };
+          }
 
           return buildMcpSuccessResult(
             widgetContent,
@@ -368,6 +391,18 @@ const buildMcpSuccessResult = (
     "softtech/action": method !== "GET",
     "softtech/httpMethod": method,
     "softtech/apiName": apiName,
+    // Background UI engine configuration for widget iframe:
+    widget: {
+      title: widgetContent.title,
+      subtitle: widgetContent.subtitle,
+      collection: widgetContent.collection,
+      capabilities: widgetContent.capabilities,
+      pagination: widgetContent.pagination,
+      actions: widgetContent.actions,
+      audience: widgetContent.audience,
+      platformtype: widgetContent.platformtype,
+      metadata: widgetContent.metadata,
+    },
   };
 
   if (isAuthChallenge) {
@@ -377,8 +412,37 @@ const buildMcpSuccessResult = (
     ];
   }
 
+  // Extract pure, clean data records for structuredContent:
+  // Unwrap nested wrappers like { success: true, data: [...] } to a direct clean array
+  let cleanData = widgetContent.data;
+  if (cleanData && typeof cleanData === "object") {
+    if (Array.isArray(cleanData.data)) {
+      cleanData = cleanData.data;
+    } else if (Array.isArray(cleanData.records)) {
+      cleanData = cleanData.records;
+    } else if (Array.isArray(cleanData.items)) {
+      cleanData = cleanData.items;
+    } else if (Array.isArray(cleanData.results)) {
+      cleanData = cleanData.results;
+    } else if (Array.isArray(cleanData.cars)) {
+      cleanData = cleanData.cars;
+    } else if (Array.isArray(cleanData.products)) {
+      cleanData = cleanData.products;
+    }
+  }
+
+  // Clean structuredContent: only clean business data is exposed to ChatGPT & user
+  const cleanStructuredContent: Record<string, any> = {
+    data: cleanData,
+    ...(typeof widgetContent.collection?.total === "number"
+      ? { total: widgetContent.collection.total }
+      : Array.isArray(cleanData)
+        ? { total: cleanData.length }
+        : {}),
+  };
+
   return {
-    structuredContent: widgetContent,
+    structuredContent: cleanStructuredContent,
     content: [
       {
         type: "text" as const,
@@ -419,6 +483,135 @@ const applyRecoveryMessaging = (
   }
 
   return undefined;
+};
+
+/**
+ * Inspects normalized widgetContent to determine if it actually contains
+ * meaningful business records.
+ * Returns false when 0 records are found (e.g. empty search array, collection.total === 0),
+ * suppressing empty widgets so ChatGPT narrates the answer in chat instead.
+ */
+const checkHasValidRecords = (widgetContent: any): boolean => {
+  if (!widgetContent) return false;
+  const d = widgetContent.data;
+  if (d === null || d === undefined) return false;
+
+  // 1. Explicit collection total
+  if (
+    widgetContent.collection &&
+    typeof widgetContent.collection.total === "number"
+  ) {
+    if (widgetContent.collection.total <= 0) return false;
+  }
+
+  // 2. Direct array data
+  if (Array.isArray(d)) {
+    return d.length > 0;
+  }
+
+  // 3. Object data
+  if (typeof d === "object") {
+    // Check known collection wrapper keys
+    for (const key of [
+      "data",
+      "records",
+      "items",
+      "results",
+      "cars",
+      "products",
+      "vehicles",
+      "rooms",
+      "hotels",
+    ]) {
+      if (Array.isArray(d[key])) {
+        return d[key].length > 0;
+      }
+    }
+
+    // Check if any property is an array of records
+    for (const [, val] of Object.entries(d)) {
+      if (Array.isArray(val)) {
+        if (val.length === 0) return false;
+        return true;
+      }
+    }
+
+    // Check if it's an error or empty response message
+    if (
+      typeof d.message === "string" &&
+      /no\s+(records|items|results|data|cars|vehicles|found)/i.test(d.message)
+    ) {
+      return false;
+    }
+    if (d.error || d.notFound) {
+      return false;
+    }
+
+    // Single item record: check if it has meaningful non-metadata keys
+    const meaningfulKeys = Object.keys(d).filter(
+      (k) => !k.startsWith("$") && !["__v", "_id", "status", "success"].includes(k)
+    );
+    if (meaningfulKeys.length === 0) return false;
+
+    return true;
+  }
+
+  return true;
+};
+
+/**
+ * Generates a lightweight signature for widget content data to detect and prevent
+ * duplicate widgets within the same conversation session.
+ */
+const getWidgetDataSignature = (widgetContent: any): string | null => {
+  if (!widgetContent || !widgetContent.data) return null;
+  const d = widgetContent.data;
+
+  if (Array.isArray(d)) {
+    if (d.length === 0) return null;
+    return d
+      .map((item: any) => item?.id || item?._id || item?.$title || JSON.stringify(item))
+      .sort()
+      .join("|");
+  }
+
+  if (typeof d === "object") {
+    for (const key of ["data", "records", "items", "results", "cars", "products", "vehicles"]) {
+      if (Array.isArray(d[key]) && d[key].length > 0) {
+        return d[key]
+          .map((item: any) => item?.id || item?._id || item?.$title || JSON.stringify(item))
+          .sort()
+          .join("|");
+      }
+    }
+
+    const id = d.id || d._id || d.$title;
+    if (id) return `item:${id}`;
+  }
+
+  return null;
+};
+
+interface SessionWidgetEntry {
+  signature: string;
+  timestamp: number;
+}
+const recentSessionWidgets = new Map<string, SessionWidgetEntry[]>();
+
+const isDuplicateWidget = (sessionKey: string, signature: string): boolean => {
+  const now = Date.now();
+  const TTL = 3 * 60 * 1000; // 3 minutes cache
+
+  const entries = (recentSessionWidgets.get(sessionKey) || []).filter(
+    (e) => now - e.timestamp < TTL
+  );
+
+  const found = entries.some((e) => e.signature === signature);
+  if (!found) {
+    entries.push({ signature, timestamp: now });
+    recentSessionWidgets.set(sessionKey, entries);
+  }
+  return found;
 };
 
 const toToolName = (name: string, index: number) => {

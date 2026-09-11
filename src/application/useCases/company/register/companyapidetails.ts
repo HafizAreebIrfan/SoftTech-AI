@@ -1,5 +1,9 @@
 import { ICompanyRepository } from "../../../ports/companies/register/companyregisterrepository";
 import { ICompany } from "../../../../domain/types/company.types";
+import {
+  generateMcpDescription,
+  isStaleOrInvalidDescription,
+} from "../../../../infrastructure/mcp/tools/RegisterCompanyTools/mcpDescriptionGenerator";
 
 const toToolName = (name: string, index: number): string => {
   const normalized = (name || "")
@@ -49,7 +53,7 @@ const parseHeaders = (api: any): any[] => {
   return [];
 };
 
-const transformApiEntry = (api: any, index: number): any => {
+const transformApiEntry = (api: any, index: number, companyName?: string): any => {
   const params = parseParams(api);
   const headers = parseHeaders(api);
   const body = Array.isArray(api.body) ? api.body : [];
@@ -89,8 +93,11 @@ const transformApiEntry = (api: any, index: number): any => {
     mcpToolName:
       api.mcpToolName || toToolName(api.name || api.apiName || "", index),
     mcpDescription:
-      api.mcpDescription ||
-      `Calls ${api.name || api.apiName || "a registered company API"} and returns a generic widget response.`,
+      api.mcpDescription && !isStaleOrInvalidDescription(api.mcpDescription)
+        ? api.mcpDescription
+        : (api.apiSchema?.toolDescription && !isStaleOrInvalidDescription(api.apiSchema.toolDescription))
+          ? api.apiSchema.toolDescription
+          : generateMcpDescription(api, { companyName: companyName || api.companyName }),
     mcpResourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
     requiresAuth: Boolean(api.requiresAuth),
     inputFieldMap: Array.isArray(api.inputFieldMap) ? api.inputFieldMap : [],
@@ -134,8 +141,11 @@ export async function saveCompanyApiDetails(
 
   const apisToProcess = businessApis.length > 0 ? businessApis : payload.apis;
 
+  const company = await companyRepository.findById(companyId);
+  const companyName = company?.companyName;
+
   const apis = apisToProcess.map((api: any, index: number) =>
-    transformApiEntry(api, index),
+    transformApiEntry(api, index, companyName),
   );
 
   const updateData: any = {
