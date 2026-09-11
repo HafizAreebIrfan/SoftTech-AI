@@ -5,6 +5,7 @@ import {
   BuildPresentationPlanOptions,
 } from "../../../../interfaces/mcp/widgetdecider.interface";
 import { capOn } from "../AudienceHelper";
+import { extractCoordinates } from "../geoHelper";
 
 export const buildPresentationPlan = ({
   fields,
@@ -14,32 +15,30 @@ export const buildPresentationPlan = ({
   records = [],
   audience,
 }: BuildPresentationPlanOptions): PresentationPlan => {
-  // 1. Resolve explicit layout or infer based on entity, collection size & audience
+  // 1. Resolve the layout: trust the backend's data-driven decision
+  //    (collection.layout), and only infer when it is genuinely undeclared
+  //    ("auto"/missing) — then strictly from generic, company/industry-agnostic
+  //    signals (record geometry, audience, record count), never entity/industry
+  //    name lists.
   let explicitLayout = (collection?.layout || "auto").toLowerCase();
-  const entityStr = String(
-    collection?.entity || collection?.dataPath || collection?.itemLabel || "",
-  ).toLowerCase();
-  const isProfileOrUser = /user|profile|account|member|customer|\bme\b/.test(entityStr);
-  const isBookings = /booking|reservation|rental|\border\b/.test(entityStr);
 
-  if (explicitLayout === "auto" || explicitLayout === "general") {
-    if (isProfileOrUser || isBookings) {
-      explicitLayout = "dashboard";
-    } else if (records.length > 1) {
-      if (audience === "admin") {
-        explicitLayout = "table";
-      } else {
-        explicitLayout = "catalog";
-      }
-    } else if (records.length === 0) {
-      // Empty results: preserve catalog for e-commerce/rental items so filters & empty states show
-      if (audience === "admin") {
-        explicitLayout = "table";
-      } else {
-        explicitLayout = "catalog";
-      }
-    } else {
+  if (explicitLayout === "auto") {
+    const hasCoordinates =
+      records.length > 0 &&
+      records.some(
+        (r, idx) => extractCoordinates(r as Record<string, any>, idx) !== null,
+      );
+
+    if (hasCoordinates) {
+      explicitLayout = "mapcatalog";
+    } else if (records.length === 1) {
       explicitLayout = "general";
+    } else if (audience === "admin") {
+      explicitLayout = "table";
+    } else {
+      // 0 or many plain records for a non-admin audience: catalog so filters
+      // and empty states still render.
+      explicitLayout = "catalog";
     }
   }
 
@@ -54,7 +53,7 @@ export const buildPresentationPlan = ({
     Boolean(pagination?.totalPages) || Boolean(collection?.totalPages);
 
   // 2. Map blocks directly based on the confirmed layout
-  if (explicitLayout === "catalog") {
+  if (explicitLayout === "catalog" || explicitLayout === "mapcatalog") {
     // Only surface a filter UI when the company's API actually supports
     // filtering — never merely because a price/status column is present.
     if (hasFiltering) {
@@ -73,7 +72,11 @@ export const buildPresentationPlan = ({
 
   // Ensure the layout matches a known type
   let finalLayout: PresentationLayout = "general";
-  if (["catalog", "table", "dashboard", "general"].includes(explicitLayout)) {
+  if (
+    ["catalog", "mapcatalog", "table", "dashboard", "general"].includes(
+      explicitLayout,
+    )
+  ) {
     finalLayout = explicitLayout as PresentationLayout;
   }
 

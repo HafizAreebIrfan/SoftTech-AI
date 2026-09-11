@@ -1,4 +1,9 @@
-export type PresentationLayout = "dashboard" | "catalog" | "table" | "general";
+export type PresentationLayout =
+  | "dashboard"
+  | "catalog"
+  | "table"
+  | "mapcatalog"
+  | "general";
 
 export type PresentationBlockType =
   | "summary"

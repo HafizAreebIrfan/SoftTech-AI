@@ -12,7 +12,6 @@ import { AQIBlock } from "../components/AQIBlock";
 import { OptionPickerBlock } from "../components/OptionPickerBlock/OptionPickerBlock";
 import { DetailBlock } from "../components/DetailBlock";
 import { MapCatalogLayout } from "../layouts/MapCatalogLayout";
-import { extractCoordinates } from "../helper/geoHelper";
 import { useMcpWidgetStore } from "../../../infrastructure/store/mcpWidgetStore";
 import { getValue } from "../../../utils";
 import type { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
@@ -263,20 +262,6 @@ const GenericWidgetInner: React.FC = () => {
 
   const normalizedLayout = presentationPlan.layout;
 
-  const isCart =
-    (normalizedLayout as string) === "cart" ||
-    collection?.dataPath === "carts" ||
-    (Boolean(collection?.entity && /^carts?$/i.test(collection.entity)) &&
-      collection?.entity !== "products") ||
-    collection?.itemLabel === "cart" ||
-    Boolean(
-      rawData &&
-        typeof rawData === "object" &&
-        ("carts" in (rawData as object) ||
-          ("userId" in (rawData as object) &&
-            "totalProducts" in (rawData as object))),
-    );
-
   const renderLayout = () => {
     const activeSubView = subViewHistory[subViewHistory.length - 1];
     if (activeSubView) {
@@ -346,139 +331,9 @@ const GenericWidgetInner: React.FC = () => {
       );
     }
 
-    if (isCart) {
-      return (
-        <CartLayout
-          title={content.title}
-          subtitle={content.subtitle}
-          data={rawData}
-          records={records}
-          fields={fields}
-          collection={collection}
-          actions={content.actions}
-          audience={content.audience}
-          presentationPlan={presentationPlan}
-        />
-      );
-    }
-
-    const hasUserFields = Boolean(
-      rawData &&
-        typeof rawData === "object" &&
-        ("email" in (rawData as object) ||
-          "mfaEnabled" in (rawData as object) ||
-          "fullName" in (rawData as object) ||
-          "role" in (rawData as object) ||
-          (records.length > 0 &&
-            records[0] &&
-            typeof records[0] === "object" &&
-            ("email" in records[0] || "fullName" in records[0]))),
-    );
-
-    const isProfile =
-      /user|profile|account|member|\bme\b|customer/.test(entityName) ||
-      hasUserFields;
-
-    const isBookings =
-      /booking|reservation|rental|\border\b/.test(entityName);
-
-    if (isProfile || isBookings || normalizedLayout === "dashboard") {
+    if (normalizedLayout === "dashboard") {
       return (
         <DashboardLayout
-          title={content.title}
-          subtitle={content.subtitle}
-          data={rawData}
-          records={records}
-          fields={fields}
-          collection={collection}
-          capabilities={content.capabilities}
-          pagination={content.pagination}
-          actions={content.actions}
-          audience={content.audience}
-          presentationPlan={presentationPlan}
-        />
-      );
-    }
-
-    const hasCoordinates =
-      records.length > 0 &&
-      records.some((r, idx) => extractCoordinates(r as Record<string, any>, idx) !== null);
-
-    const isGeospatialEntity =
-      /hotel|stay|accommodation|property|real_estate|listing|room|resort|branch|branches|location|locations|depot|clinic|office|store|venue|dealer/i.test(
-        entityName,
-      ) ||
-      Boolean(
-        collection?.itemLabel &&
-          /hotel|stay|accommodation|property|real_estate|listing|room|branch|location|store/i.test(
-            collection.itemLabel,
-          ),
-      );
-
-    const userPrompt = String(
-      (window as any).__WIDGET_METADATA__?.user_raw_prompt ||
-      (window as any).__WIDGET_DATA__?.user_raw_prompt ||
-      collection?.appliedQuery?.user_raw_prompt ||
-      ""
-    ).toLowerCase();
-
-    const isBranchOrLocationQuery =
-      hasCoordinates &&
-      /branch|branches|near|location|locations|closest|mapview|map view|cheap.*branch|cheapest.*branch/i.test(
-        userPrompt,
-      );
-
-    const isMapLayout =
-      (normalizedLayout as string) === "map" ||
-      (presentationPlan?.layout as string) === "map" ||
-      (hasCoordinates && isGeospatialEntity) ||
-      isBranchOrLocationQuery;
-
-    if (isMapLayout) {
-      return (
-        <MapCatalogLayout
-          title={content.title}
-          subtitle={content.subtitle}
-          data={rawData}
-          records={records}
-          fields={fields}
-          collection={collection}
-          capabilities={content.capabilities}
-          pagination={content.pagination}
-          actions={content.actions}
-          audience={content.audience}
-          presentationPlan={presentationPlan}
-        />
-      );
-    }
-
-    // Customer-facing protection: customers should never see raw internal database tables
-    // for products, branches, locations, or catalog items.
-    if (
-      content.audience === "customer" &&
-      normalizedLayout === "table" &&
-      !isBookings &&
-      !isProfile
-    ) {
-      if (hasCoordinates) {
-        return (
-          <MapCatalogLayout
-            title={content.title}
-            subtitle={content.subtitle}
-            data={rawData}
-            records={records}
-            fields={fields}
-            collection={collection}
-            capabilities={content.capabilities}
-            pagination={content.pagination}
-            actions={content.actions}
-            audience={content.audience}
-            presentationPlan={presentationPlan}
-          />
-        );
-      }
-      return (
-        <CatalogLayout
           title={content.title}
           subtitle={content.subtitle}
           data={rawData}
@@ -498,6 +353,23 @@ const GenericWidgetInner: React.FC = () => {
       case "catalog":
         return (
           <CatalogLayout
+            title={content.title}
+            subtitle={content.subtitle}
+            data={rawData}
+            records={records}
+            fields={fields}
+            collection={collection}
+            capabilities={content.capabilities}
+            pagination={content.pagination}
+            actions={content.actions}
+            audience={content.audience}
+            presentationPlan={presentationPlan}
+          />
+        );
+
+      case "mapcatalog":
+        return (
+          <MapCatalogLayout
             title={content.title}
             subtitle={content.subtitle}
             data={rawData}
