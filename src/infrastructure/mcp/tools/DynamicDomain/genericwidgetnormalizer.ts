@@ -64,6 +64,7 @@ export const normalizeApiResponseToWidget = (
     audience,
     userRawPrompt,
     inferredIntent,
+    Boolean(streamUrl),
   );
 
   // 1. Sanitize the payload: strip internal fields, apply schema, and flatten arrays
@@ -81,10 +82,12 @@ export const normalizeApiResponseToWidget = (
   const pagination = extractPagination(data);
 
   const entityName = apiSchema?.entity || collection?.entity || "";
-  const entityLower = String(entityName).toLowerCase();
 
-  const isCommercialEntity =
-    /package|product|service|hotel|car|item|accommodation/.test(entityLower);
+  // Commercial/pickable is decided by data shape (a record carrying both media
+  // and a price), never by the entity/company name. Same signal the collection
+  // layout inference uses, so the "Select" affordance and the catalog layout
+  // stay consistent for any industry — see hasCommercialShape.
+  const isCommercialEntity = hasCommercialShape(collection?.fields);
 
   // 2. Fix interactivity: Treat catalog GET requests as interactive so buttons render
   const isInteractiveAction =
@@ -178,6 +181,97 @@ export const normalizeApiResponseToWidget = (
       generatedAt: new Date().toISOString(),
     },
   };
+};
+
+/**
+ * Detects a "browsable catalog item" from the data SHAPE alone: a record that
+ * carries both a visual field (image/media) and a price/currency field. This
+ * replaces the former hardcoded entity-name regex
+ * (/package|product|service|hotel|car|item|accommodation/) so the platform
+ * stays company/industry-agnostic — a product, hotel, car, property, flight,
+ * menu item, or any future entity qualifies by shape, with no name list to
+ * maintain. Used for both the "Select" affordance and the catalog layout so
+ * they always agree.
+ */
+const hasMediaField = (fields: FieldSchema[]): boolean =>
+  fields.some(
+    (f) =>
+      f.type === "image" ||
+      f.uiRole === "image" ||
+      f.uiRole === "thumbnail" ||
+      /image|photo|thumbnail|avatar|cover|picture|img|logo|banner|gallery/i.test(
+        f.key,
+      ),
+  );
+
+const hasPriceField = (fields: FieldSchema[]): boolean =>
+  fields.some(
+    (f) =>
+      f.type === "currency" ||
+      f.uiRole === "price" ||
+      /price|amount|cost|fee|rate|fare|salary|total/i.test(f.key),
+  );
+
+const hasCommercialShape = (fields: FieldSchema[] = []): boolean =>
+  hasMediaField(fields) && hasPriceField(fields);
+
+/**
+ * True when records carry BOTH a latitude and a longitude field — the signal
+ * for a map view. Works for weather, store branches, hotels, restaurants, real
+ * estate, bookings, or any future geo entity, keyed off field type/name only.
+ */
+const hasGeoField = (fields: FieldSchema[]): boolean => {
+  const hasLat = fields.some(
+    (f) => f.type === "latitude" || /(^|[_-])(lat|latitude)([_-]|$)/i.test(f.key),
+  );
+  const hasLng = fields.some(
+    (f) =>
+      f.type === "longitude" ||
+      /(^|[_-])(lng|lon|long|longitude)([_-]|$)/i.test(f.key),
+  );
+  return hasLat && hasLng;
+};
+
+/**
+ * Data-driven layout fallback, used ONLY when neither the endpoint's
+ * apiSchema.defaultLayout nor the company's uiPreference.layout declared one
+ * (Tier 2). Chooses from the layouts the widget renderer ships
+ * (dashboard | mapcatalog | catalog | table | general) based on observable
+ * signals — never the entity/company name. `cart` is intentionally NOT emitted:
+ * it is a widget-internal state layered on `catalog` (add-to-cart -> checkout
+ * link), so emitting it as a layout would make the host render a separate cart
+ * UI. Cascade:
+ *   - analytics intent in the prompt + multiple metrics -> dashboard
+ *   - admin audience (scan / compare / manage rows)      -> table
+ *   - geo fields (lat + lng)                             -> mapcatalog
+ *   - catalog shape (media + price)                      -> catalog
+ *   - dense columns or real-time stream (finance/trade)  -> table
+ *   - otherwise (short plain record set)                 -> general
+ */
+const inferLayout = (
+  fields: FieldSchema[],
+  audience: WidgetAudience | undefined,
+  metricCount: number,
+  prompt: string,
+  realtime: boolean,
+): string => {
+  const wantsAnalytics =
+    /\b(chart|graph|trend|breakdown|report|analytics|stats?|distribution|over time)\b/i.test(
+      prompt,
+    );
+  if (wantsAnalytics && metricCount > 1) return "dashboard";
+  if (audience === "admin") return "table";
+  if (hasGeoField(fields)) return "mapcatalog";
+  if (hasCommercialShape(fields)) return "catalog";
+
+  // Plain records (no map / catalog / dashboard signal). Dense or live-updating
+  // data reads best as rows/columns (finance, stock, gold, trades, real-time
+  // feeds); a short, simple record set uses the general renderer.
+  const displayColumns = fields.filter(
+    (f) => f.type !== "object" && f.type !== "array",
+  ).length;
+  if (realtime || displayColumns >= 5) return "table";
+  return "general";
 };
 
 /**
@@ -467,6 +561,7 @@ const buildCollectionMetadata = (
   audience?: WidgetAudience,
   userRawPrompt?: string,
   inferredIntent?: string,
+  realtime = false,
 ): CollectionResult | undefined => {
   const entity = apiSchema?.entity || inferEntityName(apiName, data);
   if (!entity) return undefined;
@@ -476,14 +571,17 @@ const buildCollectionMetadata = (
     ...(apiSchema?.dataPath ? { dataPath: apiSchema.dataPath } : {}),
   };
 
-  let selectedLayout = apiSchema?.defaultLayout || layout;
-  const entityLower = String(entity || "").toLowerCase();
-  const isCommercial =
-    /package|product|service|hotel|car|item|accommodation/.test(entityLower);
-
-  if (!selectedLayout || (isCommercial && audience === "customer")) {
-    selectedLayout = audience === "admin" ? "table" : "catalog";
-  }
+  // Tier 1 — honor a declared layout: the per-endpoint schema default first,
+  // else the company's UI preference. "auto" counts as "not declared" so the
+  // data-driven fallback (inferLayout, below — once fields and metrics are
+  // known) can choose. The old entity-name regex that forced "catalog" for a
+  // hardcoded list of entities is gone; layout now follows the data shape.
+  const selectedLayout =
+    apiSchema?.defaultLayout && apiSchema.defaultLayout !== "auto"
+      ? apiSchema.defaultLayout
+      : layout && layout !== "auto"
+        ? layout
+        : undefined;
 
   if (selectedLayout) {
     result.layout = selectedLayout;
@@ -675,9 +773,14 @@ const buildCollectionMetadata = (
       }
     }
 
-    if (!selectedLayout || selectedLayout === "auto") {
-      result.layout =
-        result.metrics && result.metrics.length > 1 ? "dashboard" : "table";
+    if (!selectedLayout) {
+      result.layout = inferLayout(
+        fields,
+        audience,
+        result.metrics?.length || 0,
+        `${userRawPrompt || ""} ${inferredIntent || ""}`,
+        realtime,
+      );
     }
   }
 

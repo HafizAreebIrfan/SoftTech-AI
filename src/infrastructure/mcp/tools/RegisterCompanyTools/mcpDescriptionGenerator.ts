@@ -66,6 +66,21 @@ export const generateMcpDescription = (
 
   const paramText = filterKeys.length > 0 ? filterKeys.join(", ") : "";
 
+  // 2b. Categories / options discovery tool (the list of valid filter values).
+  // Described as a helper so the model uses its result to pick a value for a
+  // follow-up call rather than presenting it as the answer. Mirrors the
+  // optionsTool role detection in buildEntityToolDirectory (path/name shape).
+  const epLower = endpoint.toLowerCase();
+  const isOptionsList =
+    method === "GET" &&
+    (epLower.includes("/categories") ||
+      epLower.includes("/category-list") ||
+      epLower.includes("/category_list") ||
+      /categories|category list/i.test(apiName));
+  if (isOptionsList) {
+    return `Lists the available categories/options from ${companyName}. Use it to discover valid filter values, then call the matching list or category tool with the chosen value. Its result is for selecting a value, not for display.`;
+  }
+
   // 3. Availability Check
   if (endpoint.includes("/availability") || /availab/i.test(apiName)) {
     return `Checks availability for ${entity} from ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}`;

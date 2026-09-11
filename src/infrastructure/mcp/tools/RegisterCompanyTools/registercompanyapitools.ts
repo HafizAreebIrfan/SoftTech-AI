@@ -340,6 +340,39 @@ export const registerCompanyApiTools = (
             };
           }
 
+          // A discovery/options tool (e.g. a categories/options list) exists so
+          // the model can pick a valid value for a follow-up call — its output is
+          // selection metadata, not a user-facing result. Return it text-only so
+          // no widget renders; only actual-result tools (search/list/category/
+          // detail) show UI. Generic: keyed off the optionsTool role, not names.
+          if (actionTools.optionsTool && toolName === actionTools.optionsTool) {
+            const options = extractCleanData(widgetContent);
+            const names = Array.isArray(options)
+              ? Array.from(
+                  new Set(options.map(optionLabel).filter(Boolean)),
+                ).join(", ")
+              : "";
+            console.log(
+              `[MCP Tool Response] "${toolName}" is a discovery/options tool — returning options as text-only (no widget).`
+            );
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: names
+                    ? `Available ${entityLabel} options: ${names}. Choose the one closest to the user's request and call the matching list or category tool with it — do not present this list to the user as the final answer.`
+                    : finalSummary ||
+                      `No ${entityLabel} options are available from ${company.companyName}.`,
+                },
+              ],
+              structuredContent: {
+                title: String(widgetContent.title || api.name || "Options"),
+                data: options,
+                total: Array.isArray(options) ? options.length : options ? 1 : 0,
+              },
+            };
+          }
+
           // Suppress duplicate widgets in the same session
           const sessionKey = store?.sessionId || extra?.sessionId || companyId;
           const signature = getWidgetDataSignature(widgetContent);
@@ -641,6 +674,34 @@ const buildSearchPivot = (
     `Instead, ${steps.join(", and ")}. ` +
     `Do not tell the user these are matches for "${term}"; use the follow-up tool result to answer.`
   );
+};
+
+/**
+ * Best-effort human-readable label for one option/category item, used to render
+ * a discovery/options tool's result as text. Handles a plain string/number or an
+ * object (prefers common display keys, else the first non-id/non-media string).
+ * Generic: keys off value shape + common label field names, never entity names.
+ */
+const optionLabel = (item: any): string => {
+  if (item === null || item === undefined) return "";
+  if (typeof item === "string" || typeof item === "number") {
+    return String(item).trim();
+  }
+  if (typeof item === "object") {
+    for (const key of ["name", "label", "title", "slug", "value", "category"]) {
+      const v = (item as any)[key];
+      if (typeof v === "string" && v.trim()) return v.trim();
+      if (typeof v === "number") return String(v);
+    }
+    // Fallback: first non-id, non-media string value.
+    for (const [key, v] of Object.entries(item as Record<string, any>)) {
+      const k = key.toLowerCase();
+      if (/id$/.test(k)) continue;
+      if (/image|thumbnail|photo|url|link|icon/.test(k)) continue;
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+  }
+  return "";
 };
 
 /**
