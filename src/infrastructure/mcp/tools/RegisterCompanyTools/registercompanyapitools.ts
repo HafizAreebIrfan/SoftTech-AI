@@ -292,6 +292,25 @@ export const registerCompanyApiTools = (
               : undefined;
           const finalSummary = summaryText || relevanceNote;
 
+          // Search matched nothing and recovery could only fall back to the
+          // full, unfiltered catalog. Don't render an irrelevant list — point
+          // the model at the sibling category/options tool so it can pivot
+          // using the user's own term instead of presenting the whole catalog.
+          const pivotNote = buildSearchPivot(recovery, actionTools, toolName);
+          if (pivotNote) {
+            console.log(
+              `[MCP Tool Response] "${toolName}" search for "${recovery.originalQuery}" matched nothing; pivoting model to sibling tool(s) instead of the full catalog.`
+            );
+            return {
+              content: [{ type: "text" as const, text: pivotNote }],
+              structuredContent: {
+                title: String(widgetContent.title || api.name || "Results"),
+                data: [],
+                total: 0,
+              },
+            };
+          }
+
           const hasRecords = checkHasValidRecords(widgetContent);
           const entityLabel =
             widgetContent.collection?.entity ||
@@ -560,6 +579,68 @@ const applyRecoveryMessaging = (
   }
 
   return undefined;
+};
+
+/**
+ * When deterministic search recovery could only return results by dropping the
+ * query entirely (the user's term matched nothing, so the API returned its full,
+ * unfiltered catalog), rendering that catalog would show data unrelated to the
+ * request. If a sibling category/options tool exists for this entity, this
+ * returns a model-facing instruction to pivot to it using the user's ORIGINAL
+ * term — so ChatGPT makes the correct follow-up call instead of presenting the
+ * whole list. Returns undefined when no pivot applies (normal results, a real
+ * relaxed term, or no sibling tool to pivot to).
+ *
+ * Generic across every company/industry: the term is whatever the user typed
+ * (recovery.originalQuery, sourced from this tool's own search input), and the
+ * targets are real registered sibling tool names resolved from HTTP method +
+ * path shape — never a hardcoded category/entity/company vocabulary.
+ */
+const buildSearchPivot = (
+  recovery: SearchRecoveryInfo,
+  actionTools: ActionToolLinks,
+  currentTool: string,
+): string | undefined => {
+  // Only the collapse-to-full-catalog outcome has a blank effectiveQuery; every
+  // other recovered outcome carries a real/parenthetical query and is relevant.
+  if (!recovery.recovered || recovery.effectiveQuery?.trim()) return undefined;
+
+  const term = String(recovery.originalQuery || "").trim();
+  if (!term) return undefined;
+
+  // Never pivot back to the tool we're already in (avoids a self-loop).
+  const categoryTool =
+    actionTools.categoryTool && actionTools.categoryTool !== currentTool
+      ? actionTools.categoryTool
+      : undefined;
+  const optionsTool =
+    actionTools.optionsTool && actionTools.optionsTool !== currentTool
+      ? actionTools.optionsTool
+      : undefined;
+
+  if (!categoryTool && !optionsTool) return undefined;
+
+  const categoryParam = actionTools.categoryParam || "category";
+
+  const steps: string[] = [];
+  if (categoryTool) {
+    steps.push(
+      `call the \`${categoryTool}\` tool with ${categoryParam}="${term}" (the term may be a category rather than free text)`,
+    );
+  }
+  if (optionsTool) {
+    steps.push(
+      categoryTool
+        ? `if that returns nothing, call the \`${optionsTool}\` tool to list the available options and retry with the closest one to "${term}"`
+        : `call the \`${optionsTool}\` tool to list the available options, then retry with the closest one to "${term}"`,
+    );
+  }
+
+  return (
+    `A text search for "${term}" found no direct matches, so only the full unfiltered list is available — do not present it as the answer. ` +
+    `Instead, ${steps.join(", and ")}. ` +
+    `Do not tell the user these are matches for "${term}"; use the follow-up tool result to answer.`
+  );
 };
 
 /**
