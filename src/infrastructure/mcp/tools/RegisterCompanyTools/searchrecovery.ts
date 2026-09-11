@@ -59,8 +59,10 @@ const FILTER_PARAM_KEYS = new Set([
   "grouping",
 ]);
 
-// Filler words that carry no search signal on their own.
-const STOPWORDS = new Set([
+// Filler words that carry no search signal on their own. Exported so the
+// relevance filter (tool handler) shares one source of truth with search
+// recovery. Generic across companies/industries — never entity words.
+export const STOPWORDS = new Set([
   "for",
   "the",
   "a",
@@ -83,6 +85,17 @@ const STOPWORDS = new Set([
   "any",
   "some",
   "please",
+  "available",
+  "near",
+  "around",
+  "looking",
+  "want",
+  "need",
+  "this",
+  "that",
+  "from",
+  "view",
+  "see",
 ]);
 
 /**

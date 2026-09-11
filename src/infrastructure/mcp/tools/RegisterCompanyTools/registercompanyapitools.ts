@@ -18,30 +18,60 @@ import {
   isUserAuthRequiredNotice,
   sanitizeResponseBody,
 } from "./apihandler";
-import { SearchRecoveryInfo } from "./searchrecovery";
+import { SearchRecoveryInfo, STOPWORDS, toggleNumber } from "./searchrecovery";
 
 /**
- * Extracts pure business data records from normalized widgetContent,
- * unwrapping common API response wrappers like { success: true, data: [...] }.
+ * Entity-agnostic extraction of the primary record array from normalized
+ * widgetContent. Never keys off entity/industry/company names: it honors the
+ * analyzer's collection.dataPath (single-segment leaf only — a nested dataPath's
+ * cleaned array is collapsed to a top-level leaf key by the normalizer while the
+ * original nested copy is left uncleaned, so we must not dot-walk it), then
+ * falls back to the first array-of-objects property, then any array. Returns
+ * null for a single record or scalar payload (nothing to iterate over).
  */
-const extractCleanData = (widgetContent: any): any => {
-  let cleanData = widgetContent?.data;
-  if (cleanData && typeof cleanData === "object") {
-    if (Array.isArray(cleanData.data)) {
-      cleanData = cleanData.data;
-    } else if (Array.isArray(cleanData.records)) {
-      cleanData = cleanData.records;
-    } else if (Array.isArray(cleanData.items)) {
-      cleanData = cleanData.items;
-    } else if (Array.isArray(cleanData.results)) {
-      cleanData = cleanData.results;
-    } else if (Array.isArray(cleanData.cars)) {
-      cleanData = cleanData.cars;
-    } else if (Array.isArray(cleanData.products)) {
-      cleanData = cleanData.products;
+const getRecordsArray = (
+  widgetContent: any,
+): { array: any[]; ownerKey?: string } | null => {
+  const data = widgetContent?.data;
+  if (data === null || data === undefined) return null;
+  if (Array.isArray(data)) return { array: data };
+  if (typeof data !== "object") return null;
+
+  // (a) analyzer-declared data path — leaf segment as a top-level array key
+  const dataPath = String(widgetContent?.collection?.dataPath || "").trim();
+  const leaf = dataPath.includes(".")
+    ? dataPath.split(".").pop() || ""
+    : dataPath;
+  if (leaf && Array.isArray(data[leaf])) {
+    return { array: data[leaf], ownerKey: leaf };
+  }
+
+  // (b) first property whose value is an array of objects
+  for (const [key, val] of Object.entries(data as Record<string, any>)) {
+    if (
+      Array.isArray(val) &&
+      val.some((v) => v && typeof v === "object" && !Array.isArray(v))
+    ) {
+      return { array: val, ownerKey: key };
     }
   }
-  return cleanData;
+
+  // (c) first array property of any kind
+  for (const [key, val] of Object.entries(data as Record<string, any>)) {
+    if (Array.isArray(val)) return { array: val, ownerKey: key };
+  }
+
+  return null;
+};
+
+/**
+ * Extracts pure business data records from normalized widgetContent for
+ * structuredContent. Unwraps common collection wrappers via getRecordsArray;
+ * a single-record or scalar payload is returned as-is.
+ */
+const extractCleanData = (widgetContent: any): any => {
+  const found = getRecordsArray(widgetContent);
+  return found ? found.array : widgetContent?.data;
 };
 
 export const registerCompanyApiTools = (
@@ -245,6 +275,23 @@ export const registerCompanyApiTools = (
 
           const summaryText = applyRecoveryMessaging(widgetContent, recovery);
 
+          // Narrow a padded result set down to what the user actually asked for
+          // (e.g. an API that returned every city because it couldn't map the
+          // requested city to its opaque id). Skipped when search recovery has
+          // already made a deliberate breadth decision, to avoid double-filtering.
+          const relevanceNote =
+            !recovery.recovered && !recovery.empty
+              ? applyRelevanceFilter(widgetContent, {
+                  userRawPrompt,
+                  inferredIntent,
+                  entity:
+                    widgetContent.collection?.entity ||
+                    api.apiSchema?.entity ||
+                    api.name,
+                })
+              : undefined;
+          const finalSummary = summaryText || relevanceNote;
+
           const hasRecords = checkHasValidRecords(widgetContent);
           const entityLabel =
             widgetContent.collection?.entity ||
@@ -262,7 +309,7 @@ export const registerCompanyApiTools = (
                 {
                   type: "text" as const,
                   text:
-                    summaryText ||
+                    finalSummary ||
                     `No ${entityLabel} found matching the search criteria from ${company.companyName}.`,
                 },
               ],
@@ -309,7 +356,7 @@ export const registerCompanyApiTools = (
             company,
             resourceUri,
             method,
-            summaryText,
+            finalSummary,
           );
         } catch (error: any) {
           // 3. Handle Error Widget
@@ -516,6 +563,168 @@ const applyRecoveryMessaging = (
 };
 
 /**
+ * True when `re` (a word-boundary token regex) matches some scalar VALUE in the
+ * record. Scans string/number fields and descends one level into nested objects
+ * and arrays. Skips identifier keys (id / _id / *id) and media/link keys so
+ * opaque foreign keys and URLs never produce a spurious match. Generic across
+ * every company/entity — it looks at field shape, never field names.
+ */
+const recordMatchesToken = (value: any, re: RegExp, depth = 0): boolean => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string" || typeof value === "number") {
+    return re.test(String(value));
+  }
+  if (depth > 1) return false;
+  if (Array.isArray(value)) {
+    return value.some((item) => recordMatchesToken(item, re, depth + 1));
+  }
+  if (typeof value === "object") {
+    for (const [key, val] of Object.entries(value as Record<string, any>)) {
+      const k = key.toLowerCase();
+      if (k === "id" || k === "_id" || k.endsWith("id")) continue;
+      if (/image|thumbnail|photo|url|link|icon/.test(k)) continue;
+      if (recordMatchesToken(val, re, depth + 1)) return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Writes a trimmed record array back into widgetContent in its original shape
+ * and reconciles the precomputed aggregates so header counts stay honest.
+ * Returns false (leaving widgetContent untouched) for shapes it can't safely
+ * rewrite. Only ever called with a positive, non-empty subset.
+ */
+const writeBackRecords = (
+  widgetContent: any,
+  ownerKey: string | undefined,
+  filtered: any[],
+): boolean => {
+  if (Array.isArray(widgetContent.data)) {
+    widgetContent.data = filtered;
+  } else if (
+    ownerKey &&
+    !ownerKey.includes(".") &&
+    widgetContent.data &&
+    typeof widgetContent.data === "object"
+  ) {
+    widgetContent.data = { ...widgetContent.data, [ownerKey]: filtered };
+  } else {
+    return false;
+  }
+
+  // metrics/charts/pagination were derived from the FULL set by the normalizer
+  // and ride into _meta.widget; drop them so a trimmed list never shows a stale
+  // "Total: 24" header or a 24-row chart. total is corrected to the subset.
+  if (widgetContent.collection && typeof widgetContent.collection === "object") {
+    widgetContent.collection.total = filtered.length;
+    delete widgetContent.collection.metrics;
+    delete widgetContent.collection.charts;
+  }
+  delete widgetContent.pagination;
+
+  return true;
+};
+
+/**
+ * Conservative, entity-agnostic relevance narrowing.
+ *
+ * Many upstream APIs filter on opaque ids the model can't supply (e.g. a
+ * `locationId` cuid the user named only as "karachi"), so the call comes back
+ * padded with irrelevant rows. This trims the set to rows matching the
+ * DISCRIMINATING tokens in the user's phrasing — a token counts only when it
+ * matches at least one row but NOT all of them, so it genuinely partitions the
+ * set. Tokens that match every row (entity/category words) or no row
+ * (filler/typos) are ignored; if nothing discriminates, the data is left
+ * unchanged. The result is therefore always a non-empty proper subset of the
+ * API's own rows, or the original set — it never empties or fabricates.
+ *
+ * Only runs when the widget holds the complete result set (not a page window)
+ * and never touches single-record detail views. Returns a short model-facing
+ * note when it trimmed, else undefined.
+ */
+const applyRelevanceFilter = (
+  widgetContent: any,
+  ctx: { userRawPrompt?: string; inferredIntent?: string; entity?: unknown },
+): string | undefined => {
+  const found = getRecordsArray(widgetContent);
+  if (!found || found.array.length < 2) return undefined;
+  const records = found.array;
+
+  // Hold-complete-set gate: never trim a window of a larger, paged result —
+  // reporting a low count over a partial set would mislead.
+  const collTotal = widgetContent.collection?.total;
+  if (typeof collTotal === "number" && collTotal > records.length) {
+    return undefined;
+  }
+  const totalPages = widgetContent.pagination?.totalPages;
+  if (typeof totalPages === "number" && totalPages > 1) return undefined;
+
+  const promptText = `${ctx.userRawPrompt || ""} ${ctx.inferredIntent || ""}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ");
+  if (!promptText.trim()) return undefined;
+
+  // The entity noun describes the whole set (e.g. "cars"), so it must never act
+  // as a filter token — drop it and its singular/plural variant.
+  const entityWords = new Set<string>();
+  for (const w of String(ctx.entity || "")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)) {
+    entityWords.add(w);
+    const toggled = toggleNumber(w);
+    if (toggled) entityWords.add(toggled.toLowerCase());
+  }
+
+  const tokens = Array.from(
+    new Set(
+      promptText
+        .split(/\s+/)
+        .map((t) => t.trim())
+        .filter((t) => t.length >= 3)
+        .filter((t) => !STOPWORDS.has(t))
+        .filter((t) => !entityWords.has(t)),
+    ),
+  );
+  if (tokens.length === 0) return undefined;
+
+  // Keep only tokens that PARTITION the set (match some rows, not all). Each
+  // token also matches via its singular/plural variant to kill number mismatch.
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const discriminators: RegExp[] = [];
+
+  for (const token of tokens) {
+    const variants = [token];
+    const toggled = toggleNumber(token);
+    if (toggled && toggled.toLowerCase() !== token) {
+      variants.push(toggled.toLowerCase());
+    }
+    const re = new RegExp(`\\b(?:${variants.map(escape).join("|")})\\b`, "i");
+
+    let count = 0;
+    for (const r of records) if (recordMatchesToken(r, re)) count++;
+    if (count >= 1 && count < records.length) discriminators.push(re);
+  }
+
+  if (discriminators.length === 0) return undefined;
+
+  const filtered = records.filter((r) =>
+    discriminators.every((re) => recordMatchesToken(r, re)),
+  );
+  if (filtered.length === 0 || filtered.length === records.length) {
+    return undefined;
+  }
+
+  if (!writeBackRecords(widgetContent, found.ownerKey, filtered)) {
+    return undefined;
+  }
+
+  widgetContent.subtitle = `Showing ${filtered.length} of ${records.length} matching your request`;
+  return `Filtered the ${records.length} returned result(s) down to the ${filtered.length} relevant to the user's request. Present only these as the matches and do not mention the ones that were filtered out.`;
+};
+
+/**
  * Inspects normalized widgetContent to determine if it actually contains
  * meaningful business records.
  * Returns false when 0 records are found (e.g. empty search array, collection.total === 0),
@@ -534,42 +743,15 @@ const checkHasValidRecords = (widgetContent: any): boolean => {
     if (widgetContent.collection.total <= 0) return false;
   }
 
-  // 2. Direct array data
-  if (Array.isArray(d)) {
-    return d.length > 0;
-  }
+  // 2. Collection array (generic, entity-agnostic — no hardcoded key names)
+  const found = getRecordsArray(widgetContent);
+  if (found) return found.array.length > 0;
 
-  // 3. Object data
+  // 3. Single object: reject empty/error messages, else require meaningful keys
   if (typeof d === "object") {
-    // Check known collection wrapper keys
-    for (const key of [
-      "data",
-      "records",
-      "items",
-      "results",
-      "cars",
-      "products",
-      "vehicles",
-      "rooms",
-      "hotels",
-    ]) {
-      if (Array.isArray(d[key])) {
-        return d[key].length > 0;
-      }
-    }
-
-    // Check if any property is an array of records
-    for (const [, val] of Object.entries(d)) {
-      if (Array.isArray(val)) {
-        if (val.length === 0) return false;
-        return true;
-      }
-    }
-
-    // Check if it's an error or empty response message
     if (
       typeof d.message === "string" &&
-      /no\s+(records|items|results|data|cars|vehicles|found)/i.test(d.message)
+      /no\s+(records|items|results|data|found)/i.test(d.message)
     ) {
       return false;
     }
@@ -577,9 +759,10 @@ const checkHasValidRecords = (widgetContent: any): boolean => {
       return false;
     }
 
-    // Single item record: check if it has meaningful non-metadata keys
     const meaningfulKeys = Object.keys(d).filter(
-      (k) => !k.startsWith("$") && !["__v", "_id", "status", "success"].includes(k)
+      (k) =>
+        !k.startsWith("$") &&
+        !["__v", "_id", "status", "success"].includes(k),
     );
     if (meaningfulKeys.length === 0) return false;
 
@@ -594,27 +777,17 @@ const checkHasValidRecords = (widgetContent: any): boolean => {
  * duplicate widgets within the same conversation session.
  */
 const getWidgetDataSignature = (widgetContent: any): string | null => {
-  if (!widgetContent || !widgetContent.data) return null;
-  const d = widgetContent.data;
-
-  if (Array.isArray(d)) {
-    if (d.length === 0) return null;
-    return d
+  const found = getRecordsArray(widgetContent);
+  if (found) {
+    if (found.array.length === 0) return null;
+    return found.array
       .map((item: any) => item?.id || item?._id || item?.$title || JSON.stringify(item))
       .sort()
       .join("|");
   }
 
-  if (typeof d === "object") {
-    for (const key of ["data", "records", "items", "results", "cars", "products", "vehicles"]) {
-      if (Array.isArray(d[key]) && d[key].length > 0) {
-        return d[key]
-          .map((item: any) => item?.id || item?._id || item?.$title || JSON.stringify(item))
-          .sort()
-          .join("|");
-      }
-    }
-
+  const d = widgetContent?.data;
+  if (d && typeof d === "object") {
     const id = d.id || d._id || d.$title;
     if (id) return `item:${id}`;
   }
