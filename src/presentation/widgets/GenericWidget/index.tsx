@@ -401,12 +401,12 @@ const GenericWidgetInner: React.FC = () => {
       records.some((r, idx) => extractCoordinates(r as Record<string, any>, idx) !== null);
 
     const isGeospatialEntity =
-      /hotel|stay|accommodation|property|real_estate|listing|room|resort|branch|depot|clinic/i.test(
+      /hotel|stay|accommodation|property|real_estate|listing|room|resort|branch|branches|location|locations|depot|clinic|office|store|venue|dealer/i.test(
         entityName,
       ) ||
       Boolean(
         collection?.itemLabel &&
-          /hotel|stay|accommodation|property|real_estate|listing|room|branch/i.test(
+          /hotel|stay|accommodation|property|real_estate|listing|room|branch|location|store/i.test(
             collection.itemLabel,
           ),
       );
@@ -420,7 +420,7 @@ const GenericWidgetInner: React.FC = () => {
 
     const isBranchOrLocationQuery =
       hasCoordinates &&
-      /branch|near|location|closest|mapview|map view|cheap.*branch|cheapest.*branch/i.test(
+      /branch|branches|near|location|locations|closest|mapview|map view|cheap.*branch|cheapest.*branch/i.test(
         userPrompt,
       );
 
@@ -433,6 +433,48 @@ const GenericWidgetInner: React.FC = () => {
     if (isMapLayout) {
       return (
         <MapCatalogLayout
+          title={content.title}
+          subtitle={content.subtitle}
+          data={rawData}
+          records={records}
+          fields={fields}
+          collection={collection}
+          capabilities={content.capabilities}
+          pagination={content.pagination}
+          actions={content.actions}
+          audience={content.audience}
+          presentationPlan={presentationPlan}
+        />
+      );
+    }
+
+    // Customer-facing protection: customers should never see raw internal database tables
+    // for products, branches, locations, or catalog items.
+    if (
+      content.audience === "customer" &&
+      normalizedLayout === "table" &&
+      !isBookings &&
+      !isProfile
+    ) {
+      if (hasCoordinates) {
+        return (
+          <MapCatalogLayout
+            title={content.title}
+            subtitle={content.subtitle}
+            data={rawData}
+            records={records}
+            fields={fields}
+            collection={collection}
+            capabilities={content.capabilities}
+            pagination={content.pagination}
+            actions={content.actions}
+            audience={content.audience}
+            presentationPlan={presentationPlan}
+          />
+        );
+      }
+      return (
+        <CatalogLayout
           title={content.title}
           subtitle={content.subtitle}
           data={rawData}
