@@ -123,3 +123,23 @@
 .cartBrowseBtn:hover {
   opacity: 0.92;
 }
+
+/* Responsive: keep the horizontal gutter at 1.25rem on every breakpoint so the
+   map layout's full-bleed breakout (margin-inline: -1.25rem) stays exact and
+   never overshoots into horizontal scroll; only trim the oversized bottom
+   padding and the inner shell padding on small screens. */
+@media (max-width: 640px) {
+  .container {
+    padding-bottom: 84px;
+    border-radius: 12px;
+  }
+
+  .widgetShell {
+    padding: 1.25rem;
+  }
+
+  .emptyDesc,
+  .cartEmptyDesc {
+    font-size: 14px;
+  }
+}

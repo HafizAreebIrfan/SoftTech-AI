@@ -1,12 +1,23 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import styles from "../../../../styles/mapblock.module.css";
 import { extractFirstImageUrl } from "../../helper/RenderImage/getproxiedimageurl";
 import { renderImage } from "../../helper/RenderImage";
 import { extractRatingInfo } from "../../helper/geoHelper";
 import { parseNumericPrice } from "../../../../infrastructure/store/cartStore";
+import {
+  deriveSpecChips,
+  deriveLocationText,
+  deriveStatusBadge,
+  deriveCtaLabel,
+  findFavouriteAction,
+  findFavouriteField,
+} from "../../helper/cardMeta";
+import { callMcpTool } from "../../../../utils/mcpBridge";
 
 interface MapCardItemProps {
   record: Record<string, any>;
+  fields?: Array<Record<string, any>>;
+  actions?: any[];
   isActive?: boolean;
   onSelect?: (record: Record<string, any>) => void;
   onHover?: (record: Record<string, any> | null) => void;
@@ -14,11 +25,20 @@ interface MapCardItemProps {
 
 export const MapCardItem: React.FC<MapCardItemProps> = ({
   record,
+  fields = [],
+  actions = [],
   isActive = false,
   onSelect,
   onHover,
 }) => {
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  // Favourite is gated: only shown when the company exposes a favourite tool
+  // or the record itself carries a favourite/wishlist flag.
+  const favTool = useMemo(() => findFavouriteAction(actions), [actions]);
+  const favField = useMemo(() => findFavouriteField(record), [record]);
+  const showHeart = Boolean(favTool || favField);
+  const [isWishlisted, setIsWishlisted] = useState(
+    Boolean(favField && record?.[favField]),
+  );
 
   if (!record || typeof record !== "object") return null;
 
@@ -33,6 +53,10 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
          "Item");
 
   const rating = extractRatingInfo(record);
+  const statusBadge = deriveStatusBadge(record, fields);
+  const locationText = deriveLocationText(record);
+  const specChips = deriveSpecChips(record, fields);
+  const ctaLabel = deriveCtaLabel(actions);
 
   // Pricing & Discounts
   let basePrice: unknown =
@@ -54,7 +78,6 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
   let finalPrice = baseNum;
   let originalPrice: number | null = null;
 
-  // Compare-at / list price
   const compareAtRaw =
     record.originalPrice ??
     record.regularPrice ??
@@ -62,14 +85,12 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
     record.compareAtPrice;
   const compareAtNum = compareAtRaw != null ? parseNumericPrice(compareAtRaw) : NaN;
 
-  // Sale price
   const saleRaw =
     record.salePrice ??
     record.discountedPrice ??
     record.specialPrice;
   const saleNum = saleRaw != null ? parseNumericPrice(saleRaw) : NaN;
 
-  // Percentage discount
   const pctRaw =
     record.discountPercentage ??
     record.discountPercent ??
@@ -87,14 +108,18 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
     originalPrice = baseNum;
   }
 
-  // Currency symbol
+  // Currency symbol — from record currency fields only (no country/city guess).
   const currencySymbol =
     record.currencySymbol ||
     record.currency_symbol ||
     record.symbol ||
-    (record.location?.country === "Pakistan" || record.city === "Karachi"
-      ? "PKR "
-      : "$");
+    (typeof record.currency === "string" && record.currency
+      ? `${record.currency} `
+      : "") ||
+    (typeof record.currencyCode === "string" && record.currencyCode
+      ? `${record.currencyCode} `
+      : "") ||
+    "$";
 
   const formattedSale =
     isFinite(finalPrice) && finalPrice > 0
@@ -112,7 +137,6 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
         })}`
       : null;
 
-  // Period / duration
   const period =
     record.period ||
     record.duration ||
@@ -122,7 +146,6 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
         ? `/ ${record.nights} nights`
         : "");
 
-  // Image
   const imageUrl =
     extractFirstImageUrl(record.thumbnail) ||
     extractFirstImageUrl(record.image) ||
@@ -130,9 +153,28 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
     extractFirstImageUrl(record.photo) ||
     extractFirstImageUrl(record);
 
+  const handleFavourite = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = !isWishlisted;
+    setIsWishlisted(next); // optimistic
+    if (favTool?.tool) {
+      callMcpTool(favTool.tool, {
+        id: record.id ?? record._id,
+        favourite: next,
+      }).catch(() => setIsWishlisted(!next));
+    }
+  };
+
+  const toneClass =
+    statusBadge?.tone === "positive"
+      ? styles.statusBadgePositive
+      : statusBadge?.tone === "negative"
+        ? styles.statusBadgeNegative
+        : styles.statusBadgeNeutral;
+
   return (
     <div
-      className={`${styles.listItemCard} ${isActive ? styles.listItemCardActive : ""}`}
+      className={`${styles.carCard} ${isActive ? styles.carCardActive : ""}`}
       onClick={() => onSelect?.(record)}
       onMouseEnter={() => onHover?.(record)}
       onMouseLeave={() => onHover?.(null)}
@@ -145,48 +187,65 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
         }
       }}
     >
-      {/* Thumbnail with score badge */}
-      <div className={styles.cardThumbWrapper}>
+      {/* Hero image with badges */}
+      <div className={styles.carCardImageWrap}>
         {renderImage(imageUrl, title, "cover")}
+        {statusBadge && (
+          <span className={`${styles.statusBadge} ${toneClass}`}>
+            {statusBadge.text}
+          </span>
+        )}
         {rating.scoreFormatted && (
           <span className={styles.scoreBadge}>{rating.scoreFormatted}</span>
         )}
+        {showHeart && (
+          <button
+            type="button"
+            className={`${styles.favBtn} ${isWishlisted ? styles.favBtnActive : ""}`}
+            onClick={handleFavourite}
+            title={isWishlisted ? "Remove from favourites" : "Add to favourites"}
+            aria-label="Favourite"
+          >
+            {isWishlisted ? "♥" : "♡"}
+          </button>
+        )}
       </div>
 
-      {/* Content */}
-      <div className={styles.cardContent}>
-        <div>
-          <div className={styles.cardHeaderRow}>
-            {rating.stars > 0 && (
-              <div className={styles.starsReviewsRow}>
-                <span>{"★".repeat(rating.stars)}</span>
-                {rating.reviewsCount !== null && (
-                  <span className={styles.reviewsCountText}>
-                    {rating.reviewsCount.toLocaleString()} reviews
-                  </span>
-                )}
-              </div>
-            )}
-            <button
-              type="button"
-              className={`${styles.wishlistBtn} ${isWishlisted ? styles.wishlistBtnActive : ""}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsWishlisted(!isWishlisted);
-              }}
-              title={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-              aria-label="Wishlist"
-            >
-              {isWishlisted ? "♥" : "♡"}
-            </button>
+      {/* Body */}
+      <div className={styles.carCardBody}>
+        <h4 className={styles.carCardTitle} title={title}>
+          {title}
+        </h4>
+
+        {locationText && (
+          <div className={styles.carCardLocation}>
+            <span>📍</span>
+            <span>{locationText}</span>
           </div>
+        )}
 
-          <h4 className={styles.cardTitle} title={title}>
-            {title}
-          </h4>
-        </div>
+        {rating.stars > 0 && (
+          <div className={styles.starsReviewsRow}>
+            <span>{"★".repeat(rating.stars)}</span>
+            {rating.reviewsCount !== null && (
+              <span className={styles.reviewsCountText}>
+                {rating.reviewsCount.toLocaleString()} reviews
+              </span>
+            )}
+          </div>
+        )}
 
-        <div>
+        {specChips.length > 0 && (
+          <div className={styles.carCardSpecs}>
+            {specChips.map((chip) => (
+              <span className={styles.specChip} key={chip.key}>
+                {chip.value}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className={styles.carCardFooter}>
           <div className={styles.cardPriceRow}>
             {formattedOriginal && (
               <span className={styles.originalPrice}>{formattedOriginal}</span>
@@ -196,7 +255,7 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
             )}
             {period && <span className={styles.periodSuffix}>{period}</span>}
           </div>
-          <p className={styles.taxesSubtext}>Taxes and fees: included</p>
+          <span className={styles.carCardCta}>{ctaLabel}</span>
         </div>
       </div>
     </div>

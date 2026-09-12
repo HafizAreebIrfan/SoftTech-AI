@@ -88,6 +88,13 @@ const GenericWidgetInner: React.FC = () => {
     }
   }, [companyName]);
 
+  // A fresh tool result must never inherit the cart overlay from a prior
+  // widget/result. Add-to-cart opens the overlay without changing toolResult,
+  // so this won't fight it. (subViewHistory already resets in setToolResult.) (#7)
+  useEffect(() => {
+    setViewFullCart(false);
+  }, [toolResult, setViewFullCart]);
+
   // Clean, fresh metadata per tool call (prevents previous company's URLs leaking)
   const currentMetadata = useMemo(
     () => ({

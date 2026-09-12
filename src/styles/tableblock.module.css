@@ -244,6 +244,19 @@
   font-size: 0.85rem;
 }
 
+/* Responsive: denser cells on phones (the wrapper already scrolls the table
+   horizontally, so columns are never crushed). */
+@media (max-width: 640px) {
+  .table {
+    font-size: 0.8rem;
+  }
+
+  .th,
+  .td {
+    padding: 9px 11px;
+  }
+}
+
 .th {
   background-color: var(
     --app-bg-secondary,

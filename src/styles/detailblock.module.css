@@ -75,6 +75,10 @@
   .heroBanner {
     height: 260px;
   }
+
+  .carTitle {
+    font-size: 24px;
+  }
 }
 
 .heroImage {

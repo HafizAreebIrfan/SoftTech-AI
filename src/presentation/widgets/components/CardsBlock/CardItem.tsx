@@ -4,6 +4,7 @@ import type { CardItemProps } from "../../../../interfaces/mcp/cardsblock.interf
 import { extractFirstImageUrl } from "../../helper/RenderImage/getproxiedimageurl";
 import { renderImage } from "../../helper/RenderImage";
 import { parseNumericPrice } from "../../../../infrastructure/store/cartStore";
+import { deriveCtaLabel } from "../../helper/cardMeta";
 
 /** Neutral, industry-agnostic placeholder shown when an item has no image. */
 const GenericItemIcon: React.FC = () => (
@@ -194,7 +195,11 @@ const computeCardPrices = (rec: Record<string, any>): CardPriceDisplay => {
   return { mainPrice: formatCardPrice(baseRaw, rec) };
 };
 
-export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
+export const CardItem: React.FC<CardItemProps> = ({
+  record,
+  actions = [],
+  onSelect,
+}) => {
   if (!record || typeof record !== "object") return null;
 
   const rec = record as Record<string, any>;
@@ -257,6 +262,26 @@ export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
   // Price — supports sale price & discounts with fallback default to '$'
   const priceDisplay = computeCardPrices(rec);
 
+  // Generic rental / subscription period suffix (e.g. "/ day", "/ 3 nights").
+  // Keyed off structural price-cadence fields only — never entity names.
+  const pricePeriod =
+    (typeof rec.period === "string" && rec.period) ||
+    (typeof rec.duration === "string" && rec.duration) ||
+    (rec.pricePerDay || rec.price_per_day
+      ? "/ day"
+      : rec.pricePerHour || rec.price_per_hour
+        ? "/ hour"
+        : rec.pricePerMonth || rec.price_per_month
+          ? "/ month"
+          : rec.nights
+            ? `/ ${rec.nights} night${Number(rec.nights) === 1 ? "" : "s"}`
+            : "");
+
+  // CTA label from the company's registered action verbs (Book / Order / Add
+  // to cart / …), falling back to "View details". Arrow rendered separately so
+  // the existing hover-gap animation is preserved.
+  const ctaLabel = deriveCtaLabel(actions).replace(/\s*→\s*$/, "");
+
   // Image candidate (handles comma-lists, arrays, objects). renderImage then
   // does raw → proxied → neutral-fallback internally (no sticky dataset flag).
   const imageUrl =
@@ -308,11 +333,12 @@ export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
 
   return (
     <CardContainer {...containerProps}>
-      {/* Real image → plain (bg-less) wrapper, contained so nothing is cropped.
+      {/* Real image → fills the card edge-to-edge (`cover`), matching the map
+          card so the grid reads consistently.
           No image → gradient banner behind a neutral placeholder icon. */}
       {hasValidImage ? (
         <div className={styles.bannerWrapperPlain}>
-          {renderImage(imageUrl, `${mainTitle} ${variantTitle}`.trim(), "contain")}
+          {renderImage(imageUrl, `${mainTitle} ${variantTitle}`.trim(), "cover")}
           {showBadge && (
             <span className={isOut ? styles.outOfStockBadge : styles.availableBadge}>
               {statusStr || "Unavailable"}
@@ -368,6 +394,9 @@ export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
                     {priceDisplay.originalPrice}
                   </span>
                 )}
+                {pricePeriod && (
+                  <span className={styles.pricePeriod}>{pricePeriod}</span>
+                )}
               </div>
             )}
           </div>
@@ -380,7 +409,7 @@ export const CardItem: React.FC<CardItemProps> = ({ record, onSelect }) => {
               onSelect?.(rec);
             }}
           >
-            <span>View details</span>
+            <span>{ctaLabel}</span>
             <span>&rarr;</span>
           </button>
         </div>

@@ -4,18 +4,18 @@
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 460px;
-  border-radius: 14px;
+  min-height: 440px;
+  border-radius: 0;
   overflow: hidden;
   background: #09090b;
-  border: 1px solid var(--widget-card-border, #22242a);
+  border: 0;
   box-sizing: border-box;
 }
 
 .leafletContainer {
   width: 100%;
   height: 100%;
-  min-height: 460px;
+  min-height: 440px;
   background: #09090b !important;
   font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
@@ -87,77 +87,149 @@
   border-top-color: var(--widget-accent, #006ce4);
 }
 
-/* Card Item Styles for Left Sidebar / List */
-.listItemCard {
+/* Vertical Card (map peek carousel + shared inspiration) */
+.carCard {
   display: flex;
+  flex-direction: column;
   background: var(--widget-card-bg, #121316);
   border: 1px solid var(--widget-card-border, #22242a);
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  text-decoration: none;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.2s ease;
   color: inherit;
   box-sizing: border-box;
+  height: 100%;
 }
 
-.listItemCard:hover {
-  background: #18191e;
+.carCard:hover {
   border-color: rgba(255, 255, 255, 0.18);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
 }
 
-.listItemCardActive {
+.carCardActive {
   border-color: var(--widget-accent, #006ce4) !important;
-  background: rgba(0, 108, 228, 0.08) !important;
-  box-shadow: 0 0 0 1px var(--widget-accent, #006ce4), 0 8px 24px rgba(0, 108, 228, 0.25) !important;
+  box-shadow: 0 0 0 1px var(--widget-accent, #006ce4), 0 10px 28px rgba(0, 108, 228, 0.28) !important;
 }
 
-.cardThumbWrapper {
+.carCardImageWrap {
   position: relative;
-  width: 130px;
-  min-width: 130px;
-  height: 110px;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  min-height: 140px;
   background: #09090b;
   overflow: hidden;
 }
 
-.cardThumbImage {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.statusBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.statusBadgePositive {
+  background: rgba(16, 185, 129, 0.9);
+  color: #ffffff;
+}
+
+.statusBadgeNegative {
+  background: rgba(239, 68, 68, 0.9);
+  color: #ffffff;
+}
+
+.statusBadgeNeutral {
+  background: rgba(15, 23, 42, 0.82);
+  color: #e2e8f0;
 }
 
 .scoreBadge {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  bottom: 10px;
+  left: 10px;
   background: var(--widget-accent, #006ce4);
   color: #ffffff;
   font-family: 'Poppins', sans-serif;
   font-size: 11px;
   font-weight: 800;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 5px;
   letter-spacing: 0.02em;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
-.cardContent {
+.favBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(9, 9, 11, 0.6);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+}
+
+.favBtn:hover {
+  color: #ef4444;
+  transform: scale(1.1);
+}
+
+.favBtnActive {
+  color: #ef4444;
+}
+
+.carCardBody {
   flex: 1;
-  padding: 10px 12px;
+  padding: 12px 14px 14px 14px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 6px;
   min-width: 0;
 }
 
-.cardHeaderRow {
+.carCardTitle {
+  font-family: 'Jost', sans-serif;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carCardLocation {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--app-text-secondary, #94a3b8);
+  min-width: 0;
+}
+
+.carCardLocation > span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .starsReviewsRow {
@@ -173,36 +245,33 @@
   font-weight: 500;
 }
 
-.wishlistBtn {
-  background: transparent;
-  border: none;
-  color: var(--app-text-secondary, #94a3b8);
-  font-size: 16px;
-  cursor: pointer;
-  padding: 0;
-  line-height: 1;
-  transition: color 0.15s ease, transform 0.15s ease;
+.carCardSpecs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
 }
 
-.wishlistBtn:hover {
-  color: #ef4444;
-  transform: scale(1.15);
-}
-
-.wishlistBtnActive {
-  color: #ef4444 !important;
-}
-
-.cardTitle {
-  font-family: 'Jost', sans-serif;
-  font-size: 14.5px;
-  font-weight: 700;
-  color: #ffffff;
-  margin: 3px 0 4px 0;
-  line-height: 1.25;
+.specChip {
+  font-family: 'Poppins', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 2px 8px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-transform: capitalize;
+}
+
+.carCardFooter {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
 }
 
 .cardPriceRow {
@@ -210,7 +279,6 @@
   align-items: baseline;
   gap: 6px;
   flex-wrap: wrap;
-  margin-top: 4px;
 }
 
 .originalPrice {
@@ -224,34 +292,38 @@
 
 .salePrice {
   font-family: 'Poppins', sans-serif;
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   color: #ffffff;
 }
 
 .periodSuffix {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--app-text-secondary, #94a3b8);
 }
 
-.taxesSubtext {
-  font-size: 10px;
-  color: var(--app-text-secondary, #64748b);
-  margin: 1px 0 0 0;
+.carCardCta {
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--widget-accent, #3b82f6);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-/* Floating Card Carousel for Mobile / Compact View */
+/* Floating peek carousel over the full-bleed map.
+   Desktop: 1.5–1.7 cards visible (1 full + half + faint peek) with a right-edge
+   fade mask; arrows float ON the cards. Mobile: ~1 card, arrows hidden (swipe). */
 .carouselOverlay {
   position: absolute;
-  bottom: 16px;
-  left: 16px;
-  right: 16px;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  padding: 0 14px;
   z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 8px;
   pointer-events: none;
+  box-sizing: border-box;
 }
 
 .carouselTrack {
@@ -260,10 +332,24 @@
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
-  padding: 4px;
+  padding: 4px 2px;
   pointer-events: auto;
   scrollbar-width: none; /* Hide scrollbar Firefox */
   -ms-overflow-style: none;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 0%,
+    #000 82%,
+    rgba(0, 0, 0, 0.35) 96%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    #000 0%,
+    #000 82%,
+    rgba(0, 0, 0, 0.35) 96%,
+    rgba(0, 0, 0, 0) 100%
+  );
 }
 
 .carouselTrack::-webkit-scrollbar {
@@ -272,30 +358,65 @@
 
 .carouselCardItem {
   scroll-snap-align: center;
-  flex: 0 0 290px;
-  max-width: 85vw;
+  flex: 0 0 340px;
+  max-width: 78%;
 }
 
 .carouselNavBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   pointer-events: auto;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: rgba(18, 19, 22, 0.9);
+  background: rgba(18, 19, 22, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #ffffff;
+  font-size: 18px;
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  transition: all 0.15s ease;
-  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  z-index: 20;
 }
 
 .carouselNavBtn:hover {
-  background: #006ce4;
-  border-color: #006ce4;
+  background: var(--widget-accent, #006ce4);
+  border-color: var(--widget-accent, #006ce4);
+}
+
+.carouselNavBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.carouselNavPrev {
+  left: 6px;
+}
+
+.carouselNavNext {
+  right: 6px;
+}
+
+@media (max-width: 768px) {
+  .carouselNavPrev,
+  .carouselNavNext {
+    display: none;
+  }
+
+  .carouselCardItem {
+    flex: 0 0 85vw;
+    max-width: 85vw;
+  }
+
+  .carouselOverlay {
+    padding: 0 10px;
+    bottom: 12px;
+  }
 }
 
 /* Leaflet Attribution & Controls Dark Theme */

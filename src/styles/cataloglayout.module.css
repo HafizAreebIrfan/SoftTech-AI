@@ -28,10 +28,12 @@
   height: fit-content;
 }
 
-@media (max-width: 820px) {
-  .sidebar {
-    width: 100%;
-    padding: 14px;
+/* The inline .sidebar was superseded by the slide-over .drawerSidebar (the only
+   filter surface CatalogLayout renders). Make that drawer full-width on phones
+   so filters are comfortable to use. */
+@media (max-width: 480px) {
+  .drawerSidebar {
+    max-width: 100%;
   }
 }
 
@@ -728,5 +730,25 @@
   background: var(--widget-accent, #6366f1);
   color: #ffffff;
   font-weight: 700;
+}
+
+/* Responsive: phone/tablet — let the search fill the row, tighten the header. */
+@media (max-width: 640px) {
+  .title {
+    font-size: 18px;
+  }
+
+  .searchContainer {
+    max-width: none;
+  }
+
+  .toolbar,
+  .paginationBar {
+    gap: 8px;
+  }
+
+  .categorySelect {
+    max-width: none;
+  }
 }
 

@@ -78,6 +78,18 @@ const Navbar: React.FC = () => {
               Preview
             </Link>
 
+            {/* Dev-only: standalone widget preview harness (never ships). */}
+            {import.meta.env.DEV && (
+              <a
+                href="/preview.html"
+                target="_blank"
+                rel="noreferrer"
+                className={styles.primaryBtn}
+              >
+                Widget Preview
+              </a>
+            )}
+
             <button
               id="menu-toggle"
               className={styles.menuBtn}
@@ -164,6 +176,18 @@ const Navbar: React.FC = () => {
           >
             Preview
           </Link>
+          {/* Dev-only: standalone widget preview harness (never ships). */}
+          {import.meta.env.DEV && (
+            <a
+              href="/preview.html"
+              target="_blank"
+              rel="noreferrer"
+              className={styles.mobilePrimaryBtn}
+              onClick={closeMobileMenu}
+            >
+              Widget Preview
+            </a>
+          )}
         </div>
       </div>
     </>

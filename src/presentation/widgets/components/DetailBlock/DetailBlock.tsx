@@ -135,6 +135,83 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
+/* ------------------------------------------------------------------ *
+ * Generic availability-date parsing. APIs express availability many
+ * ways: arrays of date strings, arrays of {from,to} / {start,end}
+ * ranges, or objects carrying a single date. These helpers expand any
+ * such shape into a Set of "YYYY-MM-DD" days, keying only off value
+ * shape + key-name patterns (never company/entity names).
+ * ------------------------------------------------------------------ */
+const UNAVAILABLE_KEY_RE =
+  /(unavailable|blocked|disabled|reserved|soldout|sold_out|booked|conflict)/i;
+const AVAILABLE_KEY_RE =
+  /(available|opendate|open_date|openday|open_day|slots?|freedates?|free_date)/i;
+const RANGE_START_RE =
+  /^(from|start|startdate|start_date|pickup|pickupdate|pickup_date|checkin|check_in|begin|datefrom|date_from)$/i;
+const RANGE_END_RE =
+  /^(to|end|enddate|end_date|dropoff|dropoffdate|dropoff_date|checkout|check_out|finish|dateto|date_to)$/i;
+const SINGLE_DATE_KEY_RE = /^(date|day)$/i;
+
+/** Normalize any date-ish value to a "YYYY-MM-DD" string, or null. */
+const toDayStr = (v: unknown): string | null => {
+  if (v === null || v === undefined) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const d = new Date(s.length > 10 ? s.split("T")[0] : s);
+  return isNaN(d.getTime()) ? null : d.toISOString().split("T")[0];
+};
+
+/** Add every day in [startStr, endStr] (inclusive) to the set. */
+const expandDateRange = (
+  startStr: string,
+  endStr: string,
+  out: Set<string>,
+): void => {
+  const s = new Date(startStr);
+  const e = new Date(endStr);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return;
+  const cur = new Date(s);
+  let guard = 0;
+  while (cur <= e && guard < 3660) {
+    out.add(cur.toISOString().split("T")[0]);
+    cur.setDate(cur.getDate() + 1);
+    guard++;
+  }
+};
+
+/** Expand a date signal (string | range object | array of either) into days. */
+const collectDates = (value: unknown, out: Set<string>): void => {
+  if (value === null || value === undefined) return;
+  if (typeof value === "string") {
+    const d = toDayStr(value);
+    if (d) out.add(d);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) collectDates(item, out);
+    return;
+  }
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    let startVal: unknown;
+    let endVal: unknown;
+    let singleVal: unknown;
+    for (const [k, v] of Object.entries(obj)) {
+      if (startVal === undefined && RANGE_START_RE.test(k)) startVal = v;
+      else if (endVal === undefined && RANGE_END_RE.test(k)) endVal = v;
+      else if (singleVal === undefined && SINGLE_DATE_KEY_RE.test(k)) singleVal = v;
+    }
+    const sStr = toDayStr(startVal);
+    const eStr = toDayStr(endVal);
+    if (sStr && eStr) expandDateRange(sStr, eStr, out);
+    else if (sStr) out.add(sStr);
+    else {
+      const single = toDayStr(singleVal);
+      if (single) out.add(single);
+    }
+  }
+};
+
 export const DetailBlock: React.FC<DetailBlockProps> = ({
   records = [],
   fields = [],
@@ -144,6 +221,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   metadata: propMetadata,
 }) => {
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
+  const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
   const openCart = useCartStore((state) => state.openCart);
 
   const targetRecord = useMemo<Record<string, any> | null>(() => {
@@ -194,70 +272,48 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   }, [fields]);
 
   /* ------------------------------------------------------------------ *
-   * Adaptive Mode Detection: Vehicle/Rental vs E-Commerce/Product
-   * Completely shape-driven: detects pricePerDay/dailyRate/fuelType/
-   * licensePlate/cars entity vs standard product schema.
+   * Time-based booking ("rental") mode — fully data-driven.
+   * A rental/booking prices by DURATION (rate × days/nights) and needs a
+   * date-range picker; a product prices per unit and needs a quantity
+   * stepper. Detected purely from field SHAPE / value patterns / template
+   * placeholders — never from entity, company or industry name lists.
    * ------------------------------------------------------------------ */
   const isRental = useMemo(() => {
     if (!targetRecord) return false;
-    const entity = (collection?.entity || metadata.entity || "").toLowerCase();
+    const keys = Object.keys(targetRecord);
 
-    // Packages, services, products, items are NEVER car rentals
-    if (
-      entity === "packages" ||
-      entity === "package" ||
-      entity === "services" ||
-      entity === "service" ||
-      entity === "products" ||
-      entity === "product" ||
-      entity === "items" ||
-      entity === "catalog"
-    ) {
-      return false;
-    }
-
-    // Explicit vehicle/car rental entities
-    if (
-      entity === "cars" ||
-      entity === "car" ||
-      entity === "vehicles" ||
-      entity === "vehicle" ||
-      entity === "rentals" ||
-      entity === "rental" ||
-      entity === "car_rental"
-    ) {
+    // (1) Priced per unit of TIME (pricePerDay, dailyRate, pricePerNight,
+    //     nightlyRate, pricePerHour, weeklyRate, monthlyRate …) → the quantity
+    //     is a duration, so this is a time-based booking.
+    const PRICE_KEY_RE = /(price|rate|cost|fee|charge|fare|amount)/i;
+    const TIME_UNIT_RE =
+      /(per[_-]?)?(day|night|hour|week|month)s?\b|daily|nightly|hourly|weekly|monthly/i;
+    if (keys.some((k) => PRICE_KEY_RE.test(k) && TIME_UNIT_RE.test(k))) {
       return true;
     }
 
-    // Check for vehicle-specific hardware/rental attributes (and not a service package)
-    if (
-      (targetRecord.licensePlate != null ||
-        (targetRecord.fuelType != null && targetRecord.transmission != null) ||
-        targetRecord.carId != null) &&
-      !targetRecord.packagename &&
-      !targetRecord.packageprice
-    ) {
-      return true;
-    }
+    // (2) An explicit rental-duration quantity field on the record.
+    const DURATION_QTY_RE =
+      /^(nights?|numberofnights|rentaldays|numberofdays|durationdays)$/i;
+    if (keys.some((k) => DURATION_QTY_RE.test(k))) return true;
 
-    // Daily rate strictly for vehicles
-    if (
-      (targetRecord.pricePerDay != null || targetRecord.dailyRate != null) &&
-      !targetRecord.packagename &&
-      !targetRecord.packageprice
-    ) {
-      return true;
-    }
+    // (3) The record carries date-RANGE availability data (conflicting or
+    //     blocked ranges), which only exists for time-range bookings.
+    const RANGE_AVAIL_RE =
+      /(conflictingbookings|bookeddates|blockeddates|unavailabledates|availabledates|reserveddates)/i;
+    if (keys.some((k) => RANGE_AVAIL_RE.test(k))) return true;
 
-    // Explicit booking checkout template containing carId AND rental dates
-    const checkoutUrlTpl =
-      metadata.globalCheckoutUrl || metadata.webCheckoutUrl || "";
-    if (/{carId}/i.test(checkoutUrlTpl) && /{pickupDate}/i.test(checkoutUrlTpl)) {
-      return true;
-    }
+    // (4) A checkout/booking URL template that consumes a DATE RANGE (two
+    //     strong date-range placeholders: pickup/dropoff, check-in/out …).
+    const tpl = String(
+      metadata.globalCheckoutUrl || metadata.webCheckoutUrl || "",
+    );
+    const RANGE_PLACEHOLDER_RE =
+      /{[^}]*(pickup|drop[_-]?off|check[_-]?in|check[_-]?out|arrival|departure|start[_-]?date|end[_-]?date|from[_-]?date|to[_-]?date)[^}]*}/gi;
+    if ((tpl.match(RANGE_PLACEHOLDER_RE) || []).length >= 2) return true;
 
     return false;
-  }, [targetRecord, collection, metadata]);
+  }, [targetRecord, metadata]);
 
   /* -------------------------- Title / subtitle -------------------------- */
   const { title, subtitle } = useMemo(() => {
@@ -794,6 +850,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   const [dynamicConflictingBookings, setDynamicConflictingBookings] = useState<any[]>([]);
+  const [dynamicAvailableDates, setDynamicAvailableDates] = useState<any[]>([]);
 
   useEffect(() => {
     const carId = targetRecord?.id || targetRecord?._id || targetRecord?.carId;
@@ -831,6 +888,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         if (Array.isArray(bookings) && bookings.length > 0) {
           setDynamicConflictingBookings(bookings);
         }
+        const avail =
+          data?.availableDates || data?.available || data?.openDates;
+        if (Array.isArray(avail) && avail.length > 0) {
+          setDynamicAvailableDates(avail);
+        }
       })
       .catch(() => {});
   }, [targetRecord?.id, isRental, actions, todayStr]);
@@ -867,8 +929,61 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         cur.setDate(cur.getDate() + 1);
       }
     }
+
+    // Generic unavailable-date fields (deny-list): arrays of date strings or
+    // {from,to}/{start,end} ranges under keys like unavailableDates /
+    // blockedDates. Booking arrays above are already handled (status-aware).
+    for (const [k, v] of Object.entries(targetRecord || {})) {
+      if (k.startsWith("$")) continue;
+      if (/^(conflictingBookings|bookings)$/i.test(k)) continue;
+      if (!UNAVAILABLE_KEY_RE.test(k)) continue;
+      collectDates(v, set);
+    }
     return set;
   }, [targetRecord, dynamicConflictingBookings]);
+
+  // Allow-list: dates the record explicitly marks available (arrays of date
+  // strings/ranges under keys like availableDates / openSlots), plus any the
+  // availability tool returned. Deny-named keys (unavailable…) never count.
+  const availableDatesSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const [k, v] of Object.entries(targetRecord || {})) {
+      if (k.startsWith("$")) continue;
+      if (UNAVAILABLE_KEY_RE.test(k)) continue; // deny wins over allow
+      if (!AVAILABLE_KEY_RE.test(k)) continue;
+      collectDates(v, set);
+    }
+    for (const d of dynamicAvailableDates) collectDates(d, set);
+    return set;
+  }, [targetRecord, dynamicAvailableDates]);
+
+  // An availability mechanism exists when the tool response advertises an
+  // availability/slots/calendar action (verb/name shape, never entity name).
+  const hasAvailabilityAction = useMemo(
+    () =>
+      (actions || []).some((a: any) =>
+        /availab|calendar|slots?|schedule|vacan/i.test(
+          `${a?.name || ""} ${a?.tool || ""} ${a?.mcpToolName || ""} ${a?.toolName || ""}`,
+        ),
+      ),
+    [actions],
+  );
+
+  // Whether we have ANY availability signal. When false we must not imply the
+  // whole calendar is open — hide it and show plain date inputs instead. (#5)
+  const hasAvailabilityData =
+    bookedDatesSet.size > 0 ||
+    availableDatesSet.size > 0 ||
+    hasAvailabilityAction;
+
+  // A day is selectable when it is not past, not denied, and — if an explicit
+  // allow-list exists — is inside it.
+  const isSelectableDate = (dateStr: string): boolean => {
+    if (!dateStr || dateStr < todayStr) return false;
+    if (bookedDatesSet.has(dateStr)) return false;
+    if (availableDatesSet.size > 0 && !availableDatesSet.has(dateStr)) return false;
+    return true;
+  };
 
   const initialDateStr = useMemo(() => {
     if (!targetRecord) return todayStr;
@@ -945,8 +1060,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   };
 
   const handleDateClick = (dateStr: string) => {
-    // Cannot select past dates or booked dates
-    if (dateStr < todayStr || bookedDatesSet.has(dateStr)) return;
+    // Cannot select past, booked, or (when an allow-list exists) unavailable dates
+    if (!isSelectableDate(dateStr)) return;
 
     if (!pickupDate || (pickupDate && dropoffDate)) {
       setPickupDate(dateStr);
@@ -958,7 +1073,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         const cur = new Date(pickupDate);
         const target = new Date(dateStr);
         while (cur <= target) {
-          if (bookedDatesSet.has(cur.toISOString().split("T")[0])) {
+          if (!isSelectableDate(cur.toISOString().split("T")[0])) {
             hasOverlap = true;
             break;
           }
@@ -1311,13 +1426,21 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     else popSubView();
   }, [onBack, popSubView]);
 
+  // Only show "Back" when there is somewhere to return to: an explicit
+  // onBack handler, or a pushed sub-view (card → detail). A primary
+  // single-record render (e.g. GeneralLayout) has neither, so the button
+  // is hidden instead of dead. (#6)
+  const canGoBack = Boolean(onBack) || subViewHistory.length > 0;
+
   /* ------------------------------ Guards ------------------------------- */
   if (!targetRecord) {
     return (
       <div className={styles.container}>
-        <button type="button" className={styles.backBtn} onClick={handleBack}>
-          &larr; Back
-        </button>
+        {canGoBack && (
+          <button type="button" className={styles.backBtn} onClick={handleBack}>
+            &larr; Back
+          </button>
+        )}
         <div className={styles.emptyDetailState}>
           <h3>No details available</h3>
           <p>The requested record could not be loaded.</p>
@@ -1594,7 +1717,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         {/* ----------------- RENTAL / BOOKING CARD ------------------ */}
         {isRental ? (
           <>
-            {/* Interactive Calendar Date Picker */}
+            {/* Availability calendar shown only when we have a real
+                availability signal; otherwise plain date inputs. (#5) */}
+            {hasAvailabilityData ? (
             <div className={styles.calendarCard}>
               <div className={styles.calendarMonthHeader}>
                 <button
@@ -1646,7 +1771,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
                   const isPast = item.dateStr ? item.dateStr < todayStr : false;
                   const isBooked = item.dateStr ? bookedDatesSet.has(item.dateStr) : false;
-                  const isDisabled = isPast || isBooked;
+                  const isUnavailable = item.dateStr
+                    ? availableDatesSet.size > 0 && !availableDatesSet.has(item.dateStr)
+                    : false;
+                  const isDisabled = isPast || isBooked || isUnavailable;
 
                   return (
                     <button
@@ -1656,9 +1784,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                       title={
                         isBooked
                           ? "Booked / Unavailable"
-                          : isPast
-                            ? "Past date"
-                            : undefined
+                          : isUnavailable
+                            ? "Unavailable"
+                            : isPast
+                              ? "Past date"
+                              : undefined
                       }
                       className={`${styles.calDay} ${
                         isStart || isEnd
@@ -1667,7 +1797,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                             ? styles.calDayInRange
                             : isBooked
                               ? styles.calDayBooked
-                              : isPast
+                              : isPast || isUnavailable
                                 ? styles.calDayDisabled
                                 : ""
                       }`}
@@ -1687,6 +1817,34 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     : "Select pickup date"}
               </p>
             </div>
+            ) : (
+            <>
+              <div className={styles.bookingField}>
+                <label className={styles.fieldLabel}>Pickup date</label>
+                <input
+                  type="date"
+                  className={styles.selectInput}
+                  min={todayStr}
+                  value={pickupDate}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setPickupDate(v);
+                    if (dropoffDate && dropoffDate <= v) setDropoffDate("");
+                  }}
+                />
+              </div>
+              <div className={styles.bookingField}>
+                <label className={styles.fieldLabel}>Drop-off date</label>
+                <input
+                  type="date"
+                  className={styles.selectInput}
+                  min={pickupDate || todayStr}
+                  value={dropoffDate}
+                  onChange={(e) => setDropoffDate(e.target.value)}
+                />
+              </div>
+            </>
+            )}
 
             {/* Pickup Location Dropdown */}
             <div className={styles.bookingField}>
@@ -1969,14 +2127,16 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       className={styles.container}
       style={{ ["--widget-accent" as any]: themeColor }}
     >
-      <button
-        type="button"
-        className={styles.backBtn}
-        onClick={handleBack}
-        aria-label={backText}
-      >
-        &larr; {backText}
-      </button>
+      {canGoBack && (
+        <button
+          type="button"
+          className={styles.backBtn}
+          onClick={handleBack}
+          aria-label={backText}
+        >
+          &larr; {backText}
+        </button>
+      )}
 
       {showSidebar ? (
         <div className={styles.layoutTwoCol}>

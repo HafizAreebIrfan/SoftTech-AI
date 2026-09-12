@@ -51,8 +51,8 @@
 }
 
 /* Plain wrapper for real images: NO gradient/background behind the image,
-   fixed height so very tall images are capped, `contain` (via renderImage)
-   so nothing is cropped. */
+   fixed height; the image fills it edge-to-edge (`cover` via renderImage),
+   matching the map card so the grid looks consistent. */
 .bannerWrapperPlain {
   position: relative;
   height: 180px;
@@ -259,4 +259,52 @@
 .bookNowBtn:hover {
   opacity: 0.9;
   gap: 7px;
+}
+
+/* Responsive: tablet — tighten the grid + card chrome. */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .bannerWrapper,
+  .bannerWrapperPlain {
+    height: 150px;
+  }
+
+  .contentBody {
+    padding: 12px 13px;
+    gap: 7px;
+  }
+
+  .priceValue {
+    font-size: 15px;
+  }
+}
+
+/* Responsive: phone — single column, comfortable touch targets. */
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .bannerWrapper,
+  .bannerWrapperPlain {
+    height: 170px;
+  }
+
+  .carTitle {
+    font-size: 14px;
+  }
+
+  .cardFooterRow {
+    padding-top: 12px;
+  }
+
+  .bookNowBtn {
+    font-size: 12.5px;
+    padding: 4px 0;
+  }
 }

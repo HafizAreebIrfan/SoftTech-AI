@@ -8,12 +8,14 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+preview
+preview.html
 dist
 dist-ssr
 *.local
 .env
 graphify-out
-
+OPENAI_PLUGIN_SKILLS_ARCHITECTURE.md
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -24,3 +26,4 @@ graphify-out
 *.njsproj
 *.sln
 *.sw?
+.claude
