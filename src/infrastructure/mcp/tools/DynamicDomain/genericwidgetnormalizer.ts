@@ -377,13 +377,17 @@ const sanitizeDataPayload = (
 
       // Drop fields not in the Gemini schema — but never strip reserved widget
       // keys (checkout CTA `url`/`link` and pre-computed $-markers injected
-      // upstream), otherwise the checkout call-to-action vanishes here.
+      // upstream), otherwise the checkout call-to-action vanishes here. Also
+      // keep booking/availability-signal fields: the registration-time sample
+      // often has no active bookings, so these are absent from the schema yet
+      // appear at runtime and drive the widget's date-availability calendar.
       if (
         hasSchema &&
         !allowedKeys.has(key) &&
         key !== "_id" &&
         key !== "id" &&
-        !isReservedWidgetKey(key)
+        !isReservedWidgetKey(key) &&
+        !isAvailabilitySignalKey(key)
       ) {
         continue;
       }
@@ -782,6 +786,20 @@ const buildCollectionMetadata = (
         realtime,
       );
     }
+
+    // A response carrying MULTIPLE records must never render through the
+    // single-record "general" detail view — that view shows only the first
+    // record (the root cause of the "one pending package + dead Back button"
+    // bug: a priced list with no image field falls through inferLayout to
+    // "general"). Regardless of how the layout was chosen (company UI
+    // preference, endpoint default, or the data-driven fallback above), upgrade
+    // a multi-record "general" result to a browsable list: a card catalog when
+    // the records are priced (cards degrade to a placeholder banner when a
+    // record has no image), otherwise a table. Keyed purely off record count +
+    // price signal — never an entity/company/industry name.
+    if (result.layout === "general" && rawRecords.length > 1) {
+      result.layout = hasPriceField(fields) ? "catalog" : "table";
+    }
   }
 
   return result;
@@ -1171,6 +1189,21 @@ const sanitizeObject = (
  */
 const isReservedWidgetKey = (key: string): boolean =>
   key.startsWith("$") || key === "url" || key === "link";
+
+/**
+ * Booking / availability signal fields the widget's calendar reads to block or
+ * open dates — booked, blocked, unavailable, reserved, conflicting, or
+ * available date ranges / slots (e.g. `conflictingBookings`, `bookedDates`,
+ * `availableDates`). Preserved through schema filtering — like the reserved
+ * checkout keys above — because the registration-time sample frequently has no
+ * active bookings, so these fields are missing from the analyzer schema yet
+ * appear at runtime. Matched by NAME SHAPE only, using the same tokens the
+ * widget's calendar looks for; never an entity/company/industry name.
+ */
+const isAvailabilitySignalKey = (key: string): boolean =>
+  /(unavailable|available|booked|blocked|disabled|reserved|conflicting|occupied)/i.test(
+    key,
+  );
 
 const inferItemLabel = (entity: string): string => {
   const normalized = entity
