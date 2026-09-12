@@ -187,16 +187,13 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
         }
       }}
     >
-      {/* Hero image with badges */}
+      {/* Compact hero (left) with badges */}
       <div className={styles.carCardImageWrap}>
         {renderImage(imageUrl, title, "cover")}
         {statusBadge && (
           <span className={`${styles.statusBadge} ${toneClass}`}>
             {statusBadge.text}
           </span>
-        )}
-        {rating.scoreFormatted && (
-          <span className={styles.scoreBadge}>{rating.scoreFormatted}</span>
         )}
         {showHeart && (
           <button
@@ -211,11 +208,16 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
         )}
       </div>
 
-      {/* Body */}
+      {/* Body (right) */}
       <div className={styles.carCardBody}>
-        <h4 className={styles.carCardTitle} title={title}>
-          {title}
-        </h4>
+        <div className={styles.carCardTopRow}>
+          <h4 className={styles.carCardTitle} title={title}>
+            {title}
+          </h4>
+          {rating.scoreFormatted && (
+            <span className={styles.scorePill}>{rating.scoreFormatted}</span>
+          )}
+        </div>
 
         {locationText && (
           <div className={styles.carCardLocation}>
@@ -224,20 +226,9 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
           </div>
         )}
 
-        {rating.stars > 0 && (
-          <div className={styles.starsReviewsRow}>
-            <span>{"★".repeat(rating.stars)}</span>
-            {rating.reviewsCount !== null && (
-              <span className={styles.reviewsCountText}>
-                {rating.reviewsCount.toLocaleString()} reviews
-              </span>
-            )}
-          </div>
-        )}
-
         {specChips.length > 0 && (
           <div className={styles.carCardSpecs}>
-            {specChips.map((chip) => (
+            {specChips.slice(0, 2).map((chip) => (
               <span className={styles.specChip} key={chip.key}>
                 {chip.value}
               </span>

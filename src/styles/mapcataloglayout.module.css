@@ -95,6 +95,43 @@
   box-sizing: border-box;
 }
 
+/* Fullscreen map while a detail panel is docked: fill the granted fullscreen
+   height so the map stays the dominant surface behind the floating panel. */
+.mapStageDetailOpen {
+  height: calc(100vh - 96px);
+  max-height: none;
+}
+
+/* Floating detail panel docked over the fullscreen map — a left panel on
+   desktop, a bottom sheet on mobile. Size + scroll live here; the DetailBlock
+   inside renders in its compact single-column "mapDock" variant. */
+.mapDetailDock {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  bottom: 14px;
+  width: min(400px, calc(100% - 28px));
+  z-index: 1200;
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 16px;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.62);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mapDetailDock::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mapDetailDock::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+}
+
 @media (max-width: 768px) {
   .mainTitle {
     font-size: 20px;
@@ -103,5 +140,19 @@
   .mapStage {
     height: 70vh;
     min-height: 440px;
+  }
+
+  .mapStageDetailOpen {
+    height: calc(100vh - 80px);
+  }
+
+  .mapDetailDock {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 82%;
+    border-radius: 18px 18px 0 0;
   }
 }

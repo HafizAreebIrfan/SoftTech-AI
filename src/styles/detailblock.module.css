@@ -49,6 +49,25 @@
   }
 }
 
+/* Docked (map) variant — a compact single-column panel floating over a
+   parent-owned fullscreen map. Its size + scroll live on the map dock wrapper;
+   here we only force one narrow column and a smaller hero, because container
+   width (not viewport width) is what's constrained, so the media query above
+   would not otherwise fire inside the ~400px dock. */
+.containerDocked {
+  gap: 14px;
+}
+
+.containerDocked .layoutTwoCol {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.containerDocked .heroBanner {
+  height: 190px;
+  max-height: 32vh;
+}
+
 /* Left Column: Hero, Specs, Features, About, Pricing, Reviews */
 .mainCol {
   display: flex;

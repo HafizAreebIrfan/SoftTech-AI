@@ -1,64 +1,10 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { CardItem } from "./CardItem";
-import { callMcpTool } from "../../../../utils/mcpBridge";
 import styles from "../../../../styles/cardsblock.module.css";
 import type { CardsBlockProps } from "../../../../interfaces/mcp/cardsblock.interface";
-import {
-  useMcpWidgetStore,
-  extractToolResult,
-} from "../../../../infrastructure/store/mcpWidgetStore";
-import { findDetailTool } from "../../helper/AudienceHelper";
+import { useMcpWidgetStore } from "../../../../infrastructure/store/mcpWidgetStore";
+import { enrichRecordViaDetailTool } from "../../helper/detailEnrichment";
 import { useRealtimeStream } from "../../hooks/useRealtimeStream";
-
-/**
- * Reduce a get-by-id tool result to the single detail record, generically:
- *  • unwrap a nested { data: {…} } envelope,
- *  • if the payload is a list wrapper ({ products:[…] }) or array, take the
- *    first object,
- *  • otherwise use the object itself.
- * Returns null when nothing object-shaped is found. No entity/company names.
- */
-const recordFromToolResult = (result: unknown): Record<string, any> | null => {
-  const payload = extractToolResult(result);
-  let data: any =
-    payload?.structuredContent?.data ?? (payload as any)?.data ?? payload;
-
-  if (data && typeof data === "object" && !Array.isArray(data)) {
-    // Check known common wrapper keys or single-key envelopes generically
-    for (const key of ["product", "car", "package", "service", "item", "record", "result", "detail", "data"]) {
-      if (key in data && data[key] && typeof data[key] === "object" && !Array.isArray(data[key])) {
-        data = data[key];
-        break;
-      }
-    }
-    // If the object has only 1 property and that property is an object, unwrap it
-    const keys = Object.keys(data);
-    if (
-      keys.length === 1 &&
-      typeof data[keys[0]] === "object" &&
-      data[keys[0]] !== null &&
-      !Array.isArray(data[keys[0]])
-    ) {
-      data = data[keys[0]];
-    }
-  }
-
-  if (Array.isArray(data)) {
-    const first = data.find((d) => d && typeof d === "object");
-    return (first as Record<string, any>) || null;
-  }
-
-  if (data && typeof data === "object") {
-    const arr = Object.values(data).find((v) => Array.isArray(v)) as
-      | any[]
-      | undefined;
-    const firstInArr = arr?.find((d) => d && typeof d === "object");
-    if (firstInArr) return firstInArr as Record<string, any>;
-    return data as Record<string, any>;
-  }
-
-  return null;
-};
 
 export const CardsBlock: React.FC<CardsBlockProps> = ({
   block,
@@ -161,71 +107,16 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
     return null;
   }
 
-  const detailTool = findDetailTool(actions);
-
-  // Card tap → single-record detail (hybrid):
-  //  • if a get-by-id tool exists, fetch the full record from the backend
-  //    (the new tool result re-renders the widget as its detail layout);
-  //  • otherwise push an instant in-widget detail view built from this record.
+  // Card tap → single-record detail (hybrid, shared with the map view):
+  // enrich the summary record via the get-by-id detail tool when one exists
+  // (so the detail carries booking / availability / date data the list omits),
+  // then open the in-widget detail sub-view. enrichRecordViaDetailTool always
+  // resolves to a usable record — the original when there is no tool / it fails.
   const handleSelect = async (record: Record<string, any>) => {
-    const rawId = record.id ?? record._id;
-
-    if (detailTool?.tool && rawId !== undefined && rawId !== null) {
-      const idStr = String(rawId);
-      const numId = Number(rawId);
-      const isNumeric = !isNaN(numId) && typeof rawId !== "boolean";
-      const entitySingular = (collection?.entity || "").replace(/s$/, "").toLowerCase();
-      const entityIdKey = entitySingular ? `${entitySingular}Id` : "itemId";
-      console.log(`[CardsBlock] Card selected → calling detail tool "${detailTool.tool}" for id=${rawId}`);
-      try {
-        let result: unknown;
-        try {
-          // Attempt 1: clean single parameter with native type (standard: { id: ... })
-          result = await callMcpTool(detailTool.tool, { id: isNumeric ? numId : idStr });
-        } catch {
-          try {
-            // Attempt 2: entity-specific id key (e.g. { carId }, { packageId }, { productId })
-            result = await callMcpTool(detailTool.tool, { [entityIdKey]: isNumeric ? numId : idStr });
-          } catch {
-            // Attempt 3: combined multi-key payload for strict schemas
-            result = await callMcpTool(detailTool.tool, {
-              id: isNumeric ? numId : idStr,
-              [entityIdKey]: isNumeric ? numId : idStr,
-              productId: isNumeric ? numId : idStr,
-              carId: isNumeric ? numId : idStr,
-              packageId: isNumeric ? numId : idStr,
-              itemId: isNumeric ? numId : idStr,
-            });
-          }
-        }
-        console.log(`[CardsBlock] ✓ Detail tool "${detailTool.tool}" succeeded:`, result);
-        // A widget-initiated callTool returns the result to us; the host does
-        // NOT automatically re-render the widget with it. So apply it ourselves:
-        // open the detail sub-view with the freshest record (enriched values
-        // from the tool merged over the card record we already have). This is
-        // what makes the tap actually navigate to the detail. Generic.
-        const enriched = recordFromToolResult(result);
-        pushSubView({
-          title: String(record.$title || collection?.entity || "Details"),
-          data: enriched ? { ...record, ...enriched } : record,
-          blockType: "detail",
-        });
-      } catch (err) {
-        console.error(`[CardsBlock] ✗ Detail tool "${detailTool.tool}" failed:`, err);
-        console.log(`[CardsBlock] Falling back to in-widget detail view`);
-        pushSubView({
-          title: String(record.$title || collection?.entity || "Details"),
-          data: record,
-          blockType: "detail",
-        });
-      }
-      return;
-    }
-
-    console.log(`[CardsBlock] Card selected → no detail tool, using in-widget view for "${record.$title || record.id}"`);
+    const data = await enrichRecordViaDetailTool(record, actions, collection);
     pushSubView({
       title: String(record.$title || collection?.entity || "Details"),
-      data: record,
+      data,
       blockType: "detail",
     });
   };

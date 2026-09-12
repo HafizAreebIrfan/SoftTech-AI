@@ -219,10 +219,12 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   actions = [],
   onBack,
   metadata: propMetadata,
+  variant = "default",
 }) => {
   const popSubView = useMcpWidgetStore((state) => state.popSubView);
   const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
   const openCart = useCartStore((state) => state.openCart);
+  const isDocked = variant === "mapDock";
 
   const targetRecord = useMemo<Record<string, any> | null>(() => {
     if (records.length > 0 && records[0] && typeof records[0] === "object") {
@@ -232,12 +234,15 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   }, [records]);
 
   // Fullscreen while a detail is open; restore inline when it closes.
+  // The docked (map) variant is rendered INSIDE a parent-owned fullscreen map,
+  // so it must not fight the parent for the host display mode.
   useEffect(() => {
+    if (isDocked) return;
     requestDisplayMode("fullscreen");
     return () => {
       requestDisplayMode("inline");
     };
-  }, []);
+  }, [isDocked]);
 
   const metadata = useMemo<Record<string, any>>(() => {
     if (propMetadata && Object.keys(propMetadata).length > 0) {
@@ -853,8 +858,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const [dynamicAvailableDates, setDynamicAvailableDates] = useState<any[]>([]);
 
   useEffect(() => {
-    const carId = targetRecord?.id || targetRecord?._id || targetRecord?.carId;
-    if (!carId || !isRental) return;
+    const recId = targetRecord?.id ?? targetRecord?._id;
+    if (recId === undefined || recId === null || !isRental) return;
 
     if (
       targetRecord.conflictingBookings ||
@@ -863,22 +868,23 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       return;
     }
 
-    const availAction = actions.find(
-      (a: any) =>
-        /availability/i.test(a?.name || a?.toolName || "") ||
-        /check_car_availability/i.test(a?.mcpToolName || a?.name || ""),
+    // Find an availability tool generically (verb/name shape only — no entity
+    // names). Matches ids like "check_car_availability", "getAvailability",
+    // "room_calendar", "slots", "schedule", "vacancies", …
+    const availAction = actions.find((a: any) =>
+      /availab|calendar|slots?|schedule|vacan/i.test(
+        a?.tool || a?.mcpToolName || a?.name || a?.toolName || "",
+      ),
     );
-
     const toolName =
-      availAction?.mcpToolName ||
-      availAction?.name ||
-      "call_check_car_availability";
+      availAction?.tool || availAction?.mcpToolName || availAction?.name;
+    if (!toolName) return;
 
     const endObj = new Date();
     endObj.setDate(endObj.getDate() + 90);
     const end = endObj.toISOString().split("T")[0];
 
-    callMcpTool(toolName, { id: carId, carId, startDate: todayStr, endDate: end })
+    callMcpTool(toolName, { id: recId, startDate: todayStr, endDate: end })
       .then((res: any) => {
         const data = res?.data?.data || res?.data || res;
         const bookings =
@@ -2124,7 +2130,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
   return (
     <div
-      className={styles.container}
+      className={`${styles.container} ${isDocked ? styles.containerDocked : ""}`}
       style={{ ["--widget-accent" as any]: themeColor }}
     >
       {canGoBack && (

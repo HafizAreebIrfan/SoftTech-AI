@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import styles from "../../../styles/mapcataloglayout.module.css";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { MapBlock } from "../components/MapBlock/MapBlock";
 import { MapCardCarousel } from "../components/MapBlock/MapCardCarousel";
 import { CardsBlock } from "../components/CardsBlock";
-import { useMcpWidgetStore } from "../../../infrastructure/store/mcpWidgetStore";
+import { DetailBlock } from "../components/DetailBlock";
+import { enrichRecordViaDetailTool } from "../helper/detailEnrichment";
+import { requestDisplayMode } from "../../../utils/mcpBridge";
 
 export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
   title = "Results based on your search",
@@ -19,7 +21,13 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
 }) => {
   const [viewMode, setViewMode] = useState<"map" | "grid">("map");
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const pushSubView = useMcpWidgetStore((state) => state.pushSubView);
+  // Map "full map + floating detail": tapping a card opens the item detail as a
+  // panel docked over a fullscreen map — the map stays put and the bottom card
+  // strip switches cars. (Grid view keeps its own tap → sub-view flow.)
+  const [detailRecord, setDetailRecord] = useState<Record<string, any> | null>(
+    null,
+  );
+  const enrichSeqRef = useRef(0);
 
   const typedRecords = useMemo(
     () => (Array.isArray(records) ? (records as Array<Record<string, any>>) : []),
@@ -55,20 +63,49 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     return `${typedRecords.length} available`;
   }, [subtitle, collection, selectedRecord, typedRecords.length]);
 
-  // Map marker / carousel arrow → highlight + auto-center only (no flyout).
-  const handleSelectRecord = (_rec: Record<string, any>, idx: number) => {
+  // Open (or swap) the docked detail panel for a card. Opens instantly with the
+  // summary record + requests the fullscreen map, then enriches via the shared
+  // get-by-id helper (identical to the grid) so booking / date data shows here
+  // too. A sequence guard ignores stale enrichments when cars are switched fast.
+  const openDetailFor = (rec: Record<string, any>, idx: number) => {
     setSelectedIndex(idx);
+    setDetailRecord(rec);
+    requestDisplayMode("fullscreen");
+    const seq = ++enrichSeqRef.current;
+    enrichRecordViaDetailTool(rec, actions, collection)
+      .then((enriched) => {
+        if (enrichSeqRef.current === seq) {
+          setDetailRecord((cur) => (cur ? enriched : cur));
+        }
+      })
+      .catch(() => {});
   };
 
-  // Card tap → straight to the fullscreen DetailBlock (booking/date selection
-  // and the real CTA all live there). No intermediate flyout.
+  const closeDetail = () => {
+    enrichSeqRef.current++; // invalidate any in-flight enrichment
+    setDetailRecord(null);
+    requestDisplayMode("inline");
+  };
+
+  // Map marker / carousel arrow → highlight + auto-center. If the detail panel
+  // is already open, follow the selection (swap the panel to the new item).
+  const handleSelectRecord = (rec: Record<string, any>, idx: number) => {
+    if (detailRecord) {
+      openDetailFor(rec, idx);
+    } else {
+      setSelectedIndex(idx);
+    }
+  };
+
+  // Card tap → open / replace the docked detail panel over the map.
   const handleOpenFullDetail = (rec: Record<string, any>, idx: number) => {
-    setSelectedIndex(idx);
-    pushSubView({
-      title: rec.$title || rec.title || rec.name || "Details",
-      data: rec,
-      blockType: "detail",
-    });
+    openDetailFor(rec, idx);
+  };
+
+  // Leaving the map for the grid closes the docked detail + restores inline.
+  const showGrid = () => {
+    if (detailRecord) closeDetail();
+    setViewMode("grid");
   };
 
   return (
@@ -97,7 +134,7 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
           <button
             type="button"
             className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
-            onClick={() => setViewMode("grid")}
+            onClick={showGrid}
             title="Switch to Cards Grid View"
           >
             <span>⊞</span>
@@ -118,14 +155,32 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
           audience={audience}
         />
       ) : (
-        /* VIEW MODE 2: Full-bleed map with a floating peek carousel */
-        <div className={styles.mapStage}>
+        /* VIEW MODE 2: Full-bleed map with a floating peek carousel. Tapping a
+           card docks its detail panel over the map (fullscreen). */
+        <div
+          className={`${styles.mapStage} ${detailRecord ? styles.mapStageDetailOpen : ""}`}
+        >
           <MapBlock
             records={typedRecords}
             selectedRecord={selectedRecord}
             onSelectRecord={handleSelectRecord}
             height="100%"
           />
+
+          {detailRecord && (
+            <div className={styles.mapDetailDock}>
+              <DetailBlock
+                key={String(detailRecord.id ?? detailRecord._id ?? "dock")}
+                records={[detailRecord]}
+                fields={fields}
+                collection={collection}
+                actions={actions}
+                audience={audience}
+                onBack={closeDetail}
+                variant="mapDock"
+              />
+            </div>
+          )}
 
           <MapCardCarousel
             records={typedRecords}
