@@ -1497,6 +1497,14 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   // Detect when every selectable day in the visible month is blocked. In that
   // case fall back to plain date inputs so the user can still enter dates
   // manually (the calendar offers no clickable days and would be frustrating).
+  // Also applies when there is no availability data at all — the calendar
+  // would show every date as available, which is misleading; date inputs
+  // with a "check availability" prompt are clearer.
+  const noBookingData =
+    isRental &&
+    bookedDatesSet.size === 0 &&
+    availableDatesSet.size === 0 &&
+    dynamicConflictingBookings.length === 0;
   const allVisibleDatesBlocked = calendarDays.every((item) => {
     if (!item.isCurrent || !item.dateStr) return true; // non-current days don't count
     return !isSelectableDate(item.dateStr);
@@ -1739,10 +1747,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         {/* ----------------- RENTAL / BOOKING CARD ------------------ */}
         {isRental ? (
           <>
-            {/* Availability calendar shown when we have availability data
-                AND at least one day in the visible month is selectable.
-                Falls back to plain date inputs when all days are blocked. */}
-            {hasAvailabilityData && !allVisibleDatesBlocked ? (
+            {/* Calendar: always show for rental items. Shows booked dates as
+                disabled, available dates as selectable. When there is no
+                booking data at all, shows a note prompting the user to select
+                dates for an availability check. */}
+            {!allVisibleDatesBlocked ? (
             <div className={styles.calendarCard}>
               <div className={styles.calendarMonthHeader}>
                 <button
@@ -1833,11 +1842,13 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               </div>
 
               <p className={styles.calStatusNote}>
-                {pickupDate && dropoffDate
-                  ? `${rentalDays} day${rentalDays === 1 ? "" : "s"} selected (${pickupDate} to ${dropoffDate})`
-                  : pickupDate
-                    ? `Pickup: ${pickupDate} — Select drop-off date`
-                    : "Select pickup date"}
+                {noBookingData && !pickupDate
+                  ? "Select dates to check availability"
+                  : pickupDate && dropoffDate
+                    ? `${rentalDays} day${rentalDays === 1 ? "" : "s"} selected (${pickupDate} to ${dropoffDate})`
+                    : pickupDate
+                      ? `Pickup: ${pickupDate} — Select drop-off date`
+                      : "Select pickup date"}
               </p>
             </div>
             ) : (

@@ -6,11 +6,9 @@ import {
   useSignupStore,
   parseJsonToRows,
 } from "../../../../infrastructure/store/signupStore";
+import { stepTwoSchema } from "../../../../infrastructure/validation/signupSchemas";
 import {
-  stepTwoSchema,
-  authStrategySchema,
-} from "../../../../infrastructure/validation/signupSchemas";
-import {
+  DatabaseIcon,
   TrashIcon,
   SlidersIcon,
   ServerIcon,
@@ -21,8 +19,13 @@ import {
   SparklesIcon,
   BoltIcon,
   CheckIcon,
+  EyeIcon,
   ChevronDownIcon,
+  SpinnerIcon,
   ShieldLockIcon,
+  XMarkIcon,
+  RefreshIcon,
+  UploadIcon,
   HelpIcon,
 } from "../../../../assets/icons";
 import { showToast } from "../../../../utils/toasts";
@@ -83,25 +86,17 @@ const SignupStep2: FC = () => {
     updateApiField,
     handleAddApi,
     handleDeleteApi,
+    apiTestStates,
     isStepTwoPending,
+    handleTestApi,
+    handleSaveSampleResponse,
     handleStepTwoSubmit,
     handleEndpointUrlChange,
-    handleDeleteAllApis,
     importApisBatch,
     stepOneData,
-    authStrategy,
-    setAuthStrategy,
   } = useSignupStore();
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [hasChosenManual, setHasChosenManual] = useState(false);
-
-  const isInitialEmpty =
-    apisList.length === 1 &&
-    (!apisList[0].apiName || !apisList[0].apiName.trim()) &&
-    (!apisList[0].apiEndpoint ||
-      apisList[0].apiEndpoint === "https://" ||
-      apisList[0].apiEndpoint.trim() === "");
 
   React.useEffect(() => {
     if (!companyId) {
@@ -111,111 +106,65 @@ const SignupStep2: FC = () => {
   }, [companyId, navigate]);
 
   const [activeTabs, setActiveTabs] = useState<
-    Record<string, "params" | "headers" | "body">
+    Record<string, "params" | "auth" | "headers" | "body">
   >({});
+  const [showApiKeyMask, setShowApiKeyMask] = useState<Record<string, boolean>>(
+    {},
+  );
   const [showHelpGuide, setShowHelpGuide] = useState<Record<string, boolean>>(
     {},
   );
-  const [collapsedApiIds, setCollapsedApiIds] = useState<Set<string>>(new Set());
+  const [uploadingSampleApiId, setUploadingSampleApiId] = useState<
+    string | null
+  >(null);
+  const [sampleInputText, setSampleInputText] = useState("");
 
-  const toggleCollapseApi = (id: string) => {
-    setCollapsedApiIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const industryStr = (stepOneData?.primaryIndustry || "").toLowerCase();
-
-  const isBookingIndustry = Boolean(
-    [
-      "booking",
-      "rental",
-      "car rental",
-      "vehicle rental",
-      "hotel",
-      "hospitality",
-      "automotive",
-      "travel",
-      "reservation",
-      "appointments",
-      "events",
-      "flight",
-      "airline",
-      "tour",
-      "rideshare",
-    ].some((ind) => industryStr.includes(ind)),
-  );
-
-  const isShopOrProductIndustry = Boolean(
-    [
-      "ecommerce",
-      "e-commerce",
-      "retail",
-      "shopping",
-      "buying",
-      "shop",
-      "store",
-      "marketplace",
-      "fashion",
-      "clothing",
-      "apparel",
-      "courses",
-      "course",
-      "education",
-      "learning",
-      "booking",
-      "rental",
-      "car rental",
-      "automotive",
-      "restaurant",
-      "food",
-      "products",
-      "digital goods",
-      "electronics",
-    ].some((ind) => industryStr.includes(ind)),
-  );
-
-  const getActiveTab = (apiId: string): "params" | "headers" | "body" => {
+  const getActiveTab = (
+    apiId: string,
+  ): "params" | "auth" | "headers" | "body" => {
     return activeTabs[apiId] || "params";
   };
 
   const setActiveTabForApi = (
     apiId: string,
-    tab: "params" | "headers" | "body",
+    tab: "params" | "auth" | "headers" | "body",
   ) => {
     setActiveTabs((prev) => ({ ...prev, [apiId]: tab }));
   };
 
+  const allApisTestedSuccessfully = apisList.every(
+    (api) =>
+      api.isTested ||
+      api.isAnalyzed ||
+      apiTestStates[api.id]?.status === "success",
+  );
+
+  const anyApiHasError = apisList.some(
+    (api) => apiTestStates[api.id]?.status === "error",
+  );
+
   const getButtonText = () => {
     if (isStepTwoPending) return "Saving...";
-    return "Continue to UI Preferences";
+    if (anyApiHasError) return "Fix API Errors to Continue";
+    if (!allApisTestedSuccessfully)
+      return "Upload Samples for All APIs to Continue";
+    return "Continue";
   };
 
   const handleStepTwoSubmitWithValidation = () => {
-    // Validate Auth Strategy
-    const authResult = authStrategySchema.safeParse(
-      authStrategy || { strategyType: "none" },
-    );
-    if (!authResult.success) {
+    const result = stepTwoSchema.safeParse(apisList);
+    if (!result.success) {
       const errorMsg =
-        authResult.error.issues[0]?.message ||
-        "Please complete authentication strategy fields.";
+        result.error.issues[0]?.message || "Please fix validation errors.";
       showToast(errorMsg, "warning");
       return;
     }
 
-    // Validate APIs List
-    const result = stepTwoSchema.safeParse(apisList);
-    if (!result.success) {
-      const errorMsg =
-        result.error.issues[0]?.message || "Please fix API validation errors.";
-      showToast(errorMsg, "warning");
+    if (!allApisTestedSuccessfully) {
+      showToast(
+        "Please upload sample responses for all APIs before continuing.",
+        "warning",
+      );
       return;
     }
 
@@ -239,7 +188,7 @@ const SignupStep2: FC = () => {
           boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`,
         }}
       >
-        {/* Header Title & Actions */}
+        {/* Header Title & 1-Click Import Action */}
         <div className={styles.step2HeaderContainer}>
           <div className={styles.step2HeaderTextCol}>
             <h2
@@ -250,1116 +199,30 @@ const SignupStep2: FC = () => {
             </h2>
             <p className={styles.headerDesc} style={{ color: colors.TextBody }}>
               Define how your backend communicates with your services. Specify
-              endpoints, configure authentication, or import all routes in
-              1-click via OpenAPI / Postman.
+              endpoints without query parameters, configure authentication
+              protocols, or import all your routes instantly via OpenAPI / Postman.
             </p>
           </div>
 
-          <div className={styles.step2HeaderActions}>
-            <button
-              type="button"
-              onClick={() => setIsImportModalOpen(true)}
-              className={styles.step2HeaderImportBtn}
-              style={{
-                background: `linear-gradient(120deg, ${colors.ButtonGradientOne || "#6366f1"}, ${colors.ButtonGradientTwo || "#8b5cf6"})`,
-              }}
-            >
-              <SparklesIcon size={15} color="#ffffff" />
-              <span>1-Click Import (Swagger / Postman)</span>
-            </button>
-
-            {apisList.length > 0 && !isInitialEmpty && (
-              <button
-                type="button"
-                onClick={async () => {
-                  if (
-                    window.confirm(
-                      "Are you sure you want to delete all API connections? This will clear all endpoints from local storage and the database.",
-                    )
-                  ) {
-                    await handleDeleteAllApis();
-                    setHasChosenManual(false);
-                  }
-                }}
-                className={styles.step2HeaderDeleteAllBtn}
-                title="Delete all API connections"
-              >
-                <TrashIcon size={13} color="currentColor" />
-                <span>Delete All</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Global Authentication Strategy & Gateways */}
-        <div
-          className={styles.apiBlock}
-          style={{
-            background: colors.Background,
-            border: `1px solid ${colors.CardBorder}`,
-            marginBottom: "1.5rem",
-          }}
-        >
-          <div
-            className={styles.apiBlockHeader}
+          <button
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className={styles.step2HeaderImportBtn}
             style={{
-              borderBottom: `1px solid ${colors.CardBorder}`,
-              background: "rgba(99, 102, 241, 0.04)",
+              background: `linear-gradient(120deg, ${colors.ButtonGradientOne || "#6366f1"}, ${colors.ButtonGradientTwo || "#8b5cf6"})`,
             }}
           >
-            <div
-              style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}
-            >
-              <div
-                style={{
-                  width: "28px",
-                  height: "28px",
-                  borderRadius: "6px",
-                  background: "rgba(99, 102, 241, 0.15)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <ShieldLockIcon size={16} color={colors.BrandIndigo} />
-              </div>
-              <div>
-                <span
-                  className={styles.apiBlockTitle}
-                  style={{
-                    color: colors.TextHighlightedHeading,
-                    fontSize: "0.9375rem",
-                  }}
-                >
-                  Global Authentication Strategy
-                </span>
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    color: colors.TextBody,
-                    marginTop: "0.125rem",
-                  }}
-                >
-                  Configure how ChatGPT, AI agents, and SoftTech AI authenticate
-                  with your backend APIs.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={styles.apiBlockBody} style={{ gap: "1rem" }}>
-            {/* Strategy Type Selector */}
-            <div>
-              <label
-                className={styles.fieldLabel}
-                style={{ color: colors.TextBody, marginBottom: "0.5rem" }}
-              >
-                Authentication Strategy{" "}
-                <span style={{ color: colors.WarningText }}>*</span>
-              </label>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                  gap: "0.625rem",
-                }}
-              >
-                {[
-                  {
-                    type: "none" as const,
-                    title: "No Auth / Public",
-                    desc: "Open public endpoints",
-                    icon: SparklesIcon,
-                  },
-                  {
-                    type: "api_key" as const,
-                    title: "API Key",
-                    desc: "Header / Query Key",
-                    icon: KeyIcon,
-                  },
-                  {
-                    type: "custom_header" as const,
-                    title: "Custom Header",
-                    desc: "Static auth token",
-                    icon: LockIcon,
-                  },
-                  {
-                    type: "oauth2" as const,
-                    title: "User OAuth 2.0",
-                    desc: "OpenAI ChatGPT Standard",
-                    icon: ShieldLockIcon,
-                  },
-                ].map((strat) => {
-                  const isSelected =
-                    (authStrategy?.strategyType || "none") === strat.type;
-                  const IconComp = strat.icon;
-                  return (
-                    <button
-                      key={strat.type}
-                      type="button"
-                      onClick={() =>
-                        setAuthStrategy({ strategyType: strat.type })
-                      }
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "flex-start",
-                        padding: "0.75rem 0.875rem",
-                        borderRadius: "0.5rem",
-                        cursor: "pointer",
-                        textAlign: "left",
-                        background: isSelected
-                          ? "rgba(99, 102, 241, 0.12)"
-                          : colors.BackgroundSecondary,
-                        border: `1px solid ${isSelected ? colors.CardActiveBorder : colors.CardBorder}`,
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.5rem",
-                          width: "100%",
-                          marginBottom: "0.25rem",
-                        }}
-                      >
-                        <IconComp
-                          size={15}
-                          color={
-                            isSelected ? colors.BrandIndigo : colors.IconColor
-                          }
-                        />
-                        <span
-                          style={{
-                            fontSize: "0.8125rem",
-                            fontWeight: 700,
-                            color: isSelected
-                              ? colors.TextHeading
-                              : colors.TextBody,
-                          }}
-                        >
-                          {strat.title}
-                        </span>
-                        {isSelected && (
-                          <span style={{ marginLeft: "auto" }}>
-                            <CheckIcon size={14} color={colors.BrandIndigo} />
-                          </span>
-                        )}
-                      </div>
-                      <span
-                        style={{ fontSize: "0.7rem", color: colors.TextBody }}
-                      >
-                        {strat.desc}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Strategy Specific Configs */}
-            {(authStrategy?.strategyType || "none") === "api_key" && (
-              <div className={styles.authInputGrid}>
-                <div>
-                  <label
-                    className={styles.fieldLabel}
-                    style={{ color: colors.TextBody }}
-                  >
-                    Header / Parameter Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. X-API-Key or Authorization"
-                    value={authStrategy.authHeader || ""}
-                    onChange={(e) =>
-                      setAuthStrategy({ authHeader: e.target.value })
-                    }
-                    className={styles.urlInput}
-                    style={{
-                      background: colors.BackgroundSecondary,
-                      border: `1px solid ${colors.CardBorder}`,
-                      borderRadius: "0.5rem",
-                      color: colors.TextHeading,
-                      padding: "0.5rem 0.75rem",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label
-                    className={styles.fieldLabel}
-                    style={{ color: colors.TextBody }}
-                  >
-                    API Key Value
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Enter API Key secret"
-                    value={authStrategy.apiKey || ""}
-                    onChange={(e) =>
-                      setAuthStrategy({ apiKey: e.target.value })
-                    }
-                    className={styles.urlInput}
-                    style={{
-                      background: colors.BackgroundSecondary,
-                      border: `1px solid ${colors.CardBorder}`,
-                      borderRadius: "0.5rem",
-                      color: colors.TextHeading,
-                      padding: "0.5rem 0.75rem",
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {authStrategy?.strategyType === "custom_header" && (
-              <div className={styles.authInputGrid}>
-                <div>
-                  <label
-                    className={styles.fieldLabel}
-                    style={{ color: colors.TextBody }}
-                  >
-                    Custom Header Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. X-Organization-Id or X-Auth-Token"
-                    value={authStrategy.authHeader || ""}
-                    onChange={(e) =>
-                      setAuthStrategy({ authHeader: e.target.value })
-                    }
-                    className={styles.urlInput}
-                    style={{
-                      background: colors.BackgroundSecondary,
-                      border: `1px solid ${colors.CardBorder}`,
-                      borderRadius: "0.5rem",
-                      color: colors.TextHeading,
-                      padding: "0.5rem 0.75rem",
-                    }}
-                  />
-                </div>
-                <div>
-                  <label
-                    className={styles.fieldLabel}
-                    style={{ color: colors.TextBody }}
-                  >
-                    Header Value
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Enter custom header token"
-                    value={authStrategy.apiKey || ""}
-                    onChange={(e) =>
-                      setAuthStrategy({ apiKey: e.target.value })
-                    }
-                    className={styles.urlInput}
-                    style={{
-                      background: colors.BackgroundSecondary,
-                      border: `1px solid ${colors.CardBorder}`,
-                      borderRadius: "0.5rem",
-                      color: colors.TextHeading,
-                      padding: "0.5rem 0.75rem",
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {authStrategy?.strategyType === "oauth2" && (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.875rem",
-                }}
-              >
-                <div
-                  style={{
-                    padding: "0.75rem",
-                    borderRadius: "0.5rem",
-                    background: "rgba(99, 102, 241, 0.08)",
-                    border: `1px solid ${colors.CardActiveBorder}`,
-                    color: colors.TextHeading,
-                    fontSize: "0.8125rem",
-                    lineHeight: 1.4,
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <SparklesIcon size={16} color={colors.BrandIndigo} />
-                  <div>
-                    <strong>
-                      OpenAI ChatGPT OAuth Discovery Compliant (RFC 9728)
-                    </strong>
-                    <p
-                      style={{
-                        margin: "0.25rem 0 0 0",
-                        color: colors.TextBody,
-                        fontSize: "0.75rem",
-                      }}
-                    >
-                      SoftTech AI automatically hosts Protected Resource
-                      Metadata at{" "}
-                      <code>/.well-known/oauth-protected-resource</code>. When
-                      users interact with protected tools, ChatGPT prompts them
-                      to log in via your website and dynamically forwards their
-                      authenticated Bearer token.
-                    </p>
-                  </div>
-                </div>
-
-                <div className={styles.authInputGrid}>
-                  <div>
-                    <label
-                      className={styles.fieldLabel}
-                      style={{ color: colors.TextBody }}
-                    >
-                      Authorization Server URL{" "}
-                      <span style={{ color: colors.WarningText }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. https://carrentalprostudio.com"
-                      value={authStrategy.authorizationServer || ""}
-                      onChange={(e) =>
-                        setAuthStrategy({ authorizationServer: e.target.value })
-                      }
-                      className={styles.urlInput}
-                      style={{
-                        background: colors.BackgroundSecondary,
-                        border: `1px solid ${colors.CardBorder}`,
-                        borderRadius: "0.5rem",
-                        color: colors.TextHeading,
-                        padding: "0.5rem 0.75rem",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className={styles.fieldLabel}
-                      style={{ color: colors.TextBody }}
-                    >
-                      OAuth Client ID{" "}
-                      <span style={{ color: colors.WarningText }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. chatgpt-connector or carrental-app"
-                      value={authStrategy.clientId || ""}
-                      onChange={(e) =>
-                        setAuthStrategy({ clientId: e.target.value })
-                      }
-                      className={styles.urlInput}
-                      style={{
-                        background: colors.BackgroundSecondary,
-                        border: `1px solid ${colors.CardBorder}`,
-                        borderRadius: "0.5rem",
-                        color: colors.TextHeading,
-                        padding: "0.5rem 0.75rem",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className={styles.authInputGrid}>
-                  <div>
-                    <label
-                      className={styles.fieldLabel}
-                      style={{ color: colors.TextBody }}
-                    >
-                      Authorization / Login URL{" "}
-                      <span style={{ color: colors.WarningText }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. https://carrentalprostudio.com/oauth/authorize"
-                      value={authStrategy.authorizationEndpoint || ""}
-                      onChange={(e) =>
-                        setAuthStrategy({
-                          authorizationEndpoint: e.target.value,
-                        })
-                      }
-                      className={styles.urlInput}
-                      style={{
-                        background: colors.BackgroundSecondary,
-                        border: `1px solid ${colors.CardBorder}`,
-                        borderRadius: "0.5rem",
-                        color: colors.TextHeading,
-                        padding: "0.5rem 0.75rem",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className={styles.fieldLabel}
-                      style={{ color: colors.TextBody }}
-                    >
-                      Token Endpoint URL{" "}
-                      <span style={{ color: colors.WarningText }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. https://carrentalprostudio.com/api/oauth/token"
-                      value={authStrategy.tokenEndpoint || ""}
-                      onChange={(e) =>
-                        setAuthStrategy({ tokenEndpoint: e.target.value })
-                      }
-                      className={styles.urlInput}
-                      style={{
-                        background: colors.BackgroundSecondary,
-                        border: `1px solid ${colors.CardBorder}`,
-                        borderRadius: "0.5rem",
-                        color: colors.TextHeading,
-                        padding: "0.5rem 0.75rem",
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className={styles.authInputGrid}>
-                  <div>
-                    <label
-                      className={styles.fieldLabel}
-                      style={{ color: colors.TextBody }}
-                    >
-                      OAuth Client Secret (Optional / PKCE)
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Leave blank for public PKCE clients"
-                      value={authStrategy.clientSecret || ""}
-                      onChange={(e) =>
-                        setAuthStrategy({ clientSecret: e.target.value })
-                      }
-                      className={styles.urlInput}
-                      style={{
-                        background: colors.BackgroundSecondary,
-                        border: `1px solid ${colors.CardBorder}`,
-                        borderRadius: "0.5rem",
-                        color: colors.TextHeading,
-                        padding: "0.5rem 0.75rem",
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className={styles.fieldLabel}
-                      style={{ color: colors.TextBody }}
-                    >
-                      Supported Scopes (Comma or space separated)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. read, write, booking"
-                      value={
-                        Array.isArray(authStrategy.scopes)
-                          ? authStrategy.scopes.join(", ")
-                          : ""
-                      }
-                      onChange={(e) =>
-                        setAuthStrategy({
-                          scopes: e.target.value
-                            .split(/[\s,]+/)
-                            .map((s) => s.trim())
-                            .filter(Boolean),
-                        })
-                      }
-                      className={styles.urlInput}
-                      style={{
-                        background: colors.BackgroundSecondary,
-                        border: `1px solid ${colors.CardBorder}`,
-                        borderRadius: "0.5rem",
-                        color: colors.TextHeading,
-                        padding: "0.5rem 0.75rem",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Global Integration & Streaming Options */}
-            <div
-              style={{
-                marginTop: "0.875rem",
-                paddingTop: "0.875rem",
-                borderTop: `1px dashed ${colors.CardBorder}`,
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.875rem",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.375rem",
-                  }}
-                >
-                  <BoltIcon size={14} color={colors.BrandIndigo} />
-                  <span
-                    style={{
-                      fontSize: "0.8125rem",
-                      fontWeight: 600,
-                      color: colors.TextHeading,
-                    }}
-                  >
-                    Global Platform Gateways & Redirect URLs (Optional)
-                  </span>
-                </div>
-                <span style={{ fontSize: "0.75rem", color: colors.TextBody }}>
-                  Global settings for AI agents, ChatGPT, and widgets
-                </span>
-              </div>
-
-              {/* 1. Global WebSocket / Live Stream URL */}
-              <div>
-                <label
-                  className={styles.fieldLabel}
-                  style={{ color: colors.TextBody, marginBottom: "0.375rem" }}
-                >
-                  Global WebSocket / Live Stream URL
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. wss://api.company.com/stream or https://api.company.com/events"
-                  value={authStrategy?.globalStreamUrl || ""}
-                  onChange={(e) =>
-                    setAuthStrategy({ globalStreamUrl: e.target.value })
-                  }
-                  className={styles.urlInput}
-                  style={{
-                    background: colors.BackgroundSecondary,
-                    border: `1px solid ${colors.CardBorder}`,
-                    borderRadius: "0.5rem",
-                    color: colors.TextHeading,
-                    padding: "0.5rem 0.75rem",
-                  }}
-                />
-              </div>
-
-              {/* 2. Direct Checkout / Booking URL Redirect (for Booking / Rental / Hotel / Travel / Automotive industries) */}
-              {isBookingIndustry && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.5rem",
-                    padding: "0.75rem",
-                    borderRadius: "0.5rem",
-                    background: colors.BackgroundSecondary,
-                    border: `1px solid ${colors.CardBorder}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      id="global-checkout-checkbox"
-                      checked={Boolean(authStrategy?.hasGlobalCheckout)}
-                      onChange={(e) =>
-                        setAuthStrategy({
-                          hasGlobalCheckout: e.target.checked,
-                        })
-                      }
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        cursor: "pointer",
-                        accentColor: colors.BrandIndigo,
-                      }}
-                    />
-                    <label
-                      htmlFor="global-checkout-checkbox"
-                      style={{
-                        fontSize: "0.8125rem",
-                        fontWeight: 600,
-                        color: colors.TextHeading,
-                        cursor: "pointer",
-                        margin: 0,
-                      }}
-                    >
-                      Enable Checkout / Booking Redirect URL
-                    </label>
-                  </div>
-
-                  {authStrategy?.hasGlobalCheckout && (
-                    <div
-                      style={{
-                        marginTop: "0.25rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.375rem",
-                      }}
-                    >
-                      <label
-                        className={styles.fieldLabel}
-                        style={{ color: colors.TextBody, marginBottom: 0 }}
-                      >
-                        Checkout / Booking URL Template
-                      </label>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "0.5rem",
-                        }}
-                      >
-                        <input
-                          type="text"
-                          placeholder="e.g. https://carrental.pro/book?carId={carId}&pickupLocationId={pickupLocationId}&dropoffLocationId={dropoffLocationId}&pickupDate={pickupDate}&dropoffDate={dropoffDate}&insuranceTier={insuranceTier}"
-                          value={authStrategy?.globalCheckoutUrl || ""}
-                          onChange={(e) =>
-                            setAuthStrategy({
-                              globalCheckoutUrl: e.target.value,
-                            })
-                          }
-                          className={styles.urlInput}
-                          style={{
-                            background: colors.Background,
-                            border: `1px solid ${colors.CardBorder}`,
-                            borderRadius: "0.5rem",
-                            color: colors.TextHeading,
-                            padding: "0.5rem 0.75rem",
-                            fontFamily: "monospace",
-                            fontSize: "0.8125rem",
-                          }}
-                        />
-
-                        {/* Parameter helper badges */}
-                        <div
-                          style={{
-                            background: colors.Card,
-                            border: `1px solid ${colors.CardBorder}`,
-                            borderRadius: "0.5rem",
-                            padding: "0.625rem 0.75rem",
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: "0.5rem",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontSize: "0.75rem",
-                                fontWeight: 700,
-                                color: colors.TextHeading,
-                              }}
-                            >
-                              Supported Template Parameters (click to insert):
-                            </span>
-                          </div>
-
-                          <div
-                            style={{
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: "0.375rem",
-                            }}
-                          >
-                            {[
-                              { tag: "{id}", label: "Item / Car / Product ID" },
-                              { tag: "{carId}", label: "Car ID" },
-                              { tag: "{pickupLocationId}", label: "Pickup Location ID" },
-                              { tag: "{dropoffLocationId}", label: "Drop-off Location ID" },
-                              { tag: "{pickupDate}", label: "Pickup Date (YYYY-MM-DD)" },
-                              { tag: "{dropoffDate}", label: "Drop-off Date (YYYY-MM-DD)" },
-                              { tag: "{insuranceTier}", label: "Insurance (BASIC, STANDARD, PREMIUM)" },
-                              { tag: "{quantity}", label: "Quantity / Duration (days)" },
-                              { tag: "{price}", label: "Price / Daily Rate" },
-                              { tag: "{total}", label: "Total Amount" },
-                              { tag: "{slug}", label: "URL Slug" },
-                            ].map((p) => (
-                              <button
-                                key={p.tag}
-                                type="button"
-                                title={`Click to add ${p.tag} (${p.label})`}
-                                onClick={() => {
-                                  const cur = authStrategy?.globalCheckoutUrl || "";
-                                  const separator = cur.includes("?")
-                                    ? cur.endsWith("?") || cur.endsWith("&")
-                                      ? ""
-                                      : "&"
-                                    : "?";
-                                  const paramKey = p.tag.replace(/[{}]/g, "");
-                                  const toAdd = cur
-                                    ? cur.endsWith("=")
-                                      ? p.tag
-                                      : `${separator}${paramKey}=${p.tag}`
-                                    : `https://yourcompany.com/book?${paramKey}=${p.tag}`;
-                                  setAuthStrategy({
-                                    globalCheckoutUrl: cur ? `${cur}${toAdd}` : toAdd,
-                                  });
-                                }}
-                                style={{
-                                  background: colors.BackgroundSecondary,
-                                  border: `1px solid ${colors.CardBorder}`,
-                                  borderRadius: "0.375rem",
-                                  padding: "0.25rem 0.5rem",
-                                  fontSize: "0.7rem",
-                                  color: colors.BrandIndigo,
-                                  fontWeight: 600,
-                                  cursor: "pointer",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "0.25rem",
-                                }}
-                              >
-                                <code>{p.tag}</code>
-                                <span style={{ color: colors.TextBody, fontSize: "0.65rem" }}>
-                                  ({p.label})
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-
-                          {/* Quick Preset Templates */}
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "0.5rem",
-                              marginTop: "0.25rem",
-                              paddingTop: "0.375rem",
-                              borderTop: `1px solid ${colors.CardBorder}`,
-                            }}
-                          >
-                            <span style={{ fontSize: "0.7rem", color: colors.TextBody }}>
-                              Quick Presets:
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setAuthStrategy({
-                                  globalCheckoutUrl:
-                                    "https://yourcarrental.com/book?carId={carId}&pickupLocationId={pickupLocationId}&dropoffLocationId={dropoffLocationId}&pickupDate={pickupDate}&dropoffDate={dropoffDate}&insuranceTier={insuranceTier}",
-                                })
-                              }
-                              style={{
-                                background: "transparent",
-                                border: `1px solid ${colors.BrandIndigo}`,
-                                borderRadius: "0.25rem",
-                                padding: "0.2rem 0.4rem",
-                                fontSize: "0.68rem",
-                                color: colors.BrandIndigo,
-                                cursor: "pointer",
-                                fontWeight: 600,
-                              }}
-                            >
-                              Car Rental / Booking URL
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setAuthStrategy({
-                                  globalCheckoutUrl:
-                                    "https://yourstore.com/checkout?productId={id}&quantity={quantity}&price={price}",
-                                })
-                              }
-                              style={{
-                                background: "transparent",
-                                border: `1px solid ${colors.CardBorder}`,
-                                borderRadius: "0.25rem",
-                                padding: "0.2rem 0.4rem",
-                                fontSize: "0.68rem",
-                                color: colors.TextBody,
-                                cursor: "pointer",
-                                fontWeight: 600,
-                              }}
-                            >
-                              E-Commerce Checkout URL
-                            </button>
-                          </div>
-
-                          {/* Parameter Format & Validation Reference Table */}
-                          <div
-                            style={{
-                              marginTop: "0.5rem",
-                              background: colors.BackgroundSecondary,
-                              border: `1px solid ${colors.CardBorder}`,
-                              borderRadius: "0.375rem",
-                              padding: "0.5rem 0.75rem",
-                              fontSize: "0.68rem",
-                              color: colors.TextBody,
-                            }}
-                          >
-                            <div
-                              style={{
-                                fontWeight: 700,
-                                color: colors.TextHeading,
-                                marginBottom: "0.375rem",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "0.375rem",
-                              }}
-                            >
-                              <span>ℹ️ Parameter Data Types & Validation Guide:</span>
-                            </div>
-                            <div
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "1.2fr 1fr 2.5fr",
-                                gap: "0.375rem 0.5rem",
-                                lineHeight: "1.35",
-                              }}
-                            >
-                              <span style={{ fontWeight: 600, color: colors.TextHeading }}>Token</span>
-                              <span style={{ fontWeight: 600, color: colors.TextHeading }}>Type</span>
-                              <span style={{ fontWeight: 600, color: colors.TextHeading }}>Description & Validation</span>
-
-                              <code>{"{carId}"} / {"{id}"}</code>
-                              <span>String</span>
-                              <span>Unique item/vehicle ID (e.g. <code>cmtjtc945...</code>).</span>
-
-                              <code>{"{pickupLocationId}"}</code>
-                              <span>String</span>
-                              <span>Pickup branch ID (e.g. <code>cmtjtc4rg...</code>). Validated by booking APIs.</span>
-
-                              <code>{"{dropoffLocationId}"}</code>
-                              <span>String</span>
-                              <span>Drop-off branch ID. Will use selected branch or same as pickup.</span>
-
-                              <code>{"{pickupDate}"}</code>
-                              <span>ISO / Date</span>
-                              <span>Booking start date (e.g. <code>2026-09-09T00:00:00.000Z</code> or <code>YYYY-MM-DD</code>).</span>
-
-                              <code>{"{dropoffDate}"}</code>
-                              <span>ISO / Date</span>
-                              <span>Booking return date (e.g. <code>2026-09-11T00:00:00.000Z</code> or <code>YYYY-MM-DD</code>).</span>
-
-                              <code>{"{insuranceTier}"}</code>
-                              <span>String Enum</span>
-                              <span>Selected tier: <code>BASIC</code>, <code>STANDARD</code>, or <code>PREMIUM</code>.</span>
-
-                              <code>{"{quantity}"}</code>
-                              <span>Number</span>
-                              <span>Total days (for rentals) or item quantity.</span>
-
-                              <code>{"{total}"}</code>
-                              <span>Number</span>
-                              <span>Calculated total order/rental amount in company currency.</span>
-                            </div>
-                            <p style={{ margin: "0.5rem 0 0", fontStyle: "italic", fontSize: "0.65rem", color: (colors as any).TextMuted || colors.TextBody }}>
-                              * You can map these tokens to any query parameter required by your system, e.g. <code>pickup_loc={"{"}pickupLocationId{"}"}&vehicle_id={"{"}carId{"}"}</code>.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 3. Shop & Product Page URLs (for Shopping / Buying / Courses / Ecommerce / Retail / Marketplace industries) */}
-              {isShopOrProductIndustry && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.5rem",
-                    padding: "0.75rem",
-                    borderRadius: "0.5rem",
-                    background: colors.BackgroundSecondary,
-                    border: `1px solid ${colors.CardBorder}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      id="global-product-pages-checkbox"
-                      checked={Boolean(authStrategy?.hasProductPages)}
-                      onChange={(e) =>
-                        setAuthStrategy({
-                          hasProductPages: e.target.checked,
-                        })
-                      }
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        cursor: "pointer",
-                        accentColor: colors.BrandIndigo,
-                      }}
-                    />
-                    <label
-                      htmlFor="global-product-pages-checkbox"
-                      style={{
-                        fontSize: "0.8125rem",
-                        fontWeight: 600,
-                        color: colors.TextHeading,
-                        cursor: "pointer",
-                        margin: 0,
-                      }}
-                    >
-                      Enable Shop / Catalog & Single Product Page URLs
-                    </label>
-                  </div>
-
-                  {authStrategy?.hasProductPages && (
-                    <div
-                      className={styles.authInputGrid}
-                      style={{ marginTop: "0.25rem" }}
-                    >
-                      <div>
-                        <label
-                          className={styles.fieldLabel}
-                          style={{
-                            color: colors.TextBody,
-                            marginBottom: "0.25rem",
-                          }}
-                        >
-                          Shop / Catalog URL
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. https://yourstore.com/shop or https://courses.com/catalog"
-                          value={authStrategy?.shopCatalogUrl || ""}
-                          onChange={(e) =>
-                            setAuthStrategy({
-                              shopCatalogUrl: e.target.value,
-                            })
-                          }
-                          className={styles.urlInput}
-                          style={{
-                            background: colors.Background,
-                            border: `1px solid ${colors.CardBorder}`,
-                            borderRadius: "0.5rem",
-                            color: colors.TextHeading,
-                            padding: "0.5rem 0.75rem",
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label
-                          className={styles.fieldLabel}
-                          style={{
-                            color: colors.TextBody,
-                            marginBottom: "0.25rem",
-                          }}
-                        >
-                          Single Product / Item URL Template
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. https://yourstore.com/product/{id} or https://courses.com/course/{slug}"
-                          value={authStrategy?.productItemUrlTemplate || ""}
-                          onChange={(e) =>
-                            setAuthStrategy({
-                              productItemUrlTemplate: e.target.value,
-                            })
-                          }
-                          className={styles.urlInput}
-                          style={{
-                            background: colors.Background,
-                            border: `1px solid ${colors.CardBorder}`,
-                            borderRadius: "0.5rem",
-                            color: colors.TextHeading,
-                            padding: "0.5rem 0.75rem",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+            <SparklesIcon size={15} color="#ffffff" />
+            <span>1-Click Import (Swagger / Postman)</span>
+          </button>
         </div>
 
-        {/* Hero Card when initial/empty and manual not chosen yet */}
-        {isInitialEmpty && !hasChosenManual && (
-          <div
-            className={styles.step2HeroCard}
-            style={
-              {
-                "--hero-border": colors.CardBorder,
-                "--hero-bg": colors.BackgroundSecondary,
-              } as React.CSSProperties
-            }
-          >
-            <div className={styles.heroIconBg}>
-              <SparklesIcon size={28} color={colors.BrandIndigo} />
-            </div>
-            <h3
-              className={styles.heroTitle}
-              style={{ color: colors.TextHeading }}
-            >
-              Fast-Track: 1-Click API Import
-            </h3>
-            <p className={styles.heroDesc} style={{ color: colors.TextBody }}>
-              Have an OpenAPI 3.0 / Swagger specification or a Postman
-              collection? Import all your routes, headers, parameters, and
-              sample payloads in seconds.
-            </p>
-
-            <div className={styles.heroActionGroup}>
-              <button
-                type="button"
-                onClick={() => setIsImportModalOpen(true)}
-                className={styles.heroPrimaryBtn}
-                style={{
-                  background: `linear-gradient(120deg, ${colors.ButtonGradientOne || "#6366f1"}, ${colors.ButtonGradientTwo || "#8b5cf6"})`,
-                }}
-              >
-                <SparklesIcon size={18} color="#ffffff" />
-                <span>1-Click Import (Swagger / Postman)</span>
-              </button>
-
-              <div
-                className={styles.heroOrDivider}
-                style={{ color: colors.TextBody }}
-              >
-                <span>OR</span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setHasChosenManual(true)}
-                className={styles.heroSecondaryBtn}
-                style={{
-                  color: colors.TextHeading,
-                  borderColor: colors.CardBorder,
-                }}
-              >
-                <SlidersIcon size={16} color={colors.BrandIndigo} />
-                <span>Configure Endpoints Manually</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Connected APIs List */}
         {apisList.map((api, index) => {
           const methodColors = getMethodBadgeStyle(
             api.apiMethod || "GET",
             colors,
           );
           const activeTab = getActiveTab(api.id);
-          const isCollapsed = collapsedApiIds.has(api.id);
 
           return (
             <div
@@ -1368,544 +231,1450 @@ const SignupStep2: FC = () => {
               style={{
                 background: colors.Background,
                 border: `1px solid ${colors.CardBorder}`,
-                borderRadius: "0.75rem",
-                overflow: "hidden",
-                marginBottom: "1rem",
               }}
             >
-              {/* Top Block Header (Clickable Collapsible Bar) */}
+              {/* Top Block Header */}
               <div
                 className={styles.apiBlockHeader}
-                onClick={() => toggleCollapseApi(api.id)}
                 style={{
-                  borderBottom: isCollapsed
-                    ? "none"
-                    : `1px solid ${colors.CardBorder}`,
-                  cursor: "pointer",
-                  userSelect: "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "0.75rem 1rem",
-                  background: isCollapsed
-                    ? colors.BackgroundSecondary
-                    : colors.Background,
-                  transition: "background 0.15s ease",
+                  borderBottom: `1px solid ${colors.CardBorder}`,
                 }}
               >
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "0.625rem",
-                    flex: 1,
-                    overflow: "hidden",
+                    gap: "0.5rem",
                   }}
                 >
-                  <div
-                    style={{
-                      transform: isCollapsed
-                        ? "rotate(-90deg)"
-                        : "rotate(0deg)",
-                      transition: "transform 0.2s ease",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    <ChevronDownIcon size={15} color={colors.IconColor} />
-                  </div>
-                  <span
-                    style={{
-                      fontSize: "0.6875rem",
-                      fontWeight: 700,
-                      padding: "0.15rem 0.5rem",
-                      borderRadius: "0.25rem",
-                      background: methodColors.bg,
-                      color: methodColors.text,
-                      border: `1px solid ${methodColors.border}`,
-                      letterSpacing: "0.03em",
-                    }}
-                  >
-                    {api.apiMethod || "GET"}
-                  </span>
+                  <DatabaseIcon size={16} color={colors.IconColor} />
                   <span
                     className={styles.apiBlockTitle}
-                    style={{
-                      color: colors.TextHighlightedHeading,
-                      fontWeight: 600,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      maxWidth: "280px",
-                    }}
+                    style={{ color: colors.TextHighlightedHeading }}
                   >
-                    {api.apiName?.trim()
-                      ? api.apiName
-                      : `API #${index + 1} (Untitled)`}
+                    API Connection #{index + 1} {index === 0}
                   </span>
-                  {api.apiEndpoint && api.apiEndpoint !== "https://" && (
-                    <span
-                      style={{
-                        color: colors.TextBody,
-                        opacity: 0.65,
-                        fontSize: "0.75rem",
-                        fontFamily: "monospace",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        maxWidth: "320px",
-                      }}
-                    >
-                      {api.apiEndpoint.replace(/^https?:\/\/[^\/]+/, "") ||
-                        api.apiEndpoint}
-                    </span>
-                  )}
                 </div>
+                {apisList.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteApi(api.id)}
+                    className={styles.deleteBtn}
+                  >
+                    <TrashIcon size={13} color="currentColor" />
+                    <span>Delete API</span>
+                  </button>
+                )}
+              </div>
+
+              <div className={styles.apiBlockBody}>
+                {/* Section 1: API Name */}
+                <div>
+                  <label
+                    className={styles.fieldLabel}
+                    style={{ color: colors.TextBody }}
+                  >
+                    API Name{" "}
+                    <span style={{ color: colors.WarningText }}>*</span>
+                  </label>
+                  <div className={styles.inputRelative}>
+                    <span className={styles.inputIconLeft}>
+                      <SlidersIcon size={14} color={colors.IconColor} />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="e.g. Order / Checkout API"
+                      value={api.apiName}
+                      onChange={(e) =>
+                        updateApiField(api.id, "apiName", e.target.value)
+                      }
+                      className={styles.inputWithIcon}
+                      style={{
+                        background: colors.BackgroundSecondary,
+                        border: `1px solid ${colors.CardBorder}`,
+                        color: colors.TextHeading,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Section 2: HTTP Method & Postman Endpoint URL Bar */}
                 <div
                   style={{
                     display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
+                    flexDirection: "column",
+                    gap: "0.25rem",
                   }}
-                  onClick={(e) => e.stopPropagation()}
                 >
-                  {apisList.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteApi(api.id)}
-                      className={styles.deleteBtn}
-                    >
-                      <TrashIcon size={13} color="currentColor" />
-                      <span>Delete</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {!isCollapsed && (
-                <div className={styles.apiBlockBody}>
-                  {/* Section 1: API Name */}
-                  <div>
+                  <div className={styles.endpointHeader}>
                     <label
                       className={styles.fieldLabel}
-                      style={{ color: colors.TextBody }}
+                      style={{ color: colors.TextBody, marginBottom: 0 }}
                     >
-                      API Name{" "}
+                      HTTP Method & Endpoint{" "}
                       <span style={{ color: colors.WarningText }}>*</span>
                     </label>
-                    <div className={styles.inputRelative}>
-                      <span className={styles.inputIconLeft}>
-                        <SlidersIcon size={14} color={colors.IconColor} />
-                      </span>
-                      <input
-                        type="text"
-                        placeholder="e.g. Order / Checkout API"
-                        value={api.apiName}
-                        onChange={(e) =>
-                          updateApiField(api.id, "apiName", e.target.value)
-                        }
-                        className={styles.inputWithIcon}
-                        style={{
-                          background: colors.BackgroundSecondary,
-                          border: `1px solid ${colors.CardBorder}`,
-                          color: colors.TextHeading,
-                        }}
-                      />
-                    </div>
                   </div>
 
-                  {/* Section 2: HTTP Method & Postman Endpoint URL Bar */}
+                  {/* Postman URL Request Bar */}
+                  <div
+                    className={styles.requestBar}
+                    style={{
+                      background: colors.BackgroundSecondary,
+                      borderColor: colors.CardBorder,
+                    }}
+                  >
+                    {/* Method Selector Badge */}
+                    <div
+                      className={styles.methodSelectWrapper}
+                      style={{ borderColor: colors.CardBorder }}
+                    >
+                      <select
+                        value={api.apiMethod}
+                        onChange={(e) => {
+                          const newMethod = e.target.value as any;
+                          updateApiField(api.id, "apiMethod", newMethod);
+                          if (
+                            (newMethod === "GET" || newMethod === "DELETE") &&
+                            getActiveTab(api.id) === "body"
+                          ) {
+                            setActiveTabForApi(api.id, "params");
+                          }
+                        }}
+                        className={styles.methodSelect}
+                        style={{
+                          color: colors.TextBody,
+                          backgroundColor: colors.Background,
+                        }}
+                      >
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="PATCH">PATCH</option>
+                        <option value="DELETE">DELETE</option>
+                      </select>
+                      <span className={styles.selectArrow}>
+                        <ChevronDownIcon size={12} color={colors.TextBody} />
+                      </span>
+                    </div>
+
+                    {/* Protocol Prefix */}
+                    <div
+                      className={styles.protocolPrefix}
+                      style={{
+                        background: colors.Background,
+                        color: colors.TextBody,
+                      }}
+                    >
+                      <ServerIcon size={13} color={colors.IconColor} />
+                      <span>https://</span>
+                    </div>
+
+                    {/* Endpoint URL Input */}
+                    <div className={styles.urlInputWrapper}>
+                      <input
+                        type="text"
+                        placeholder="api.domain.com/v1/forecast.json"
+                        value={(api.apiEndpoint || "").replace(
+                          /^https?:\/\//,
+                          "",
+                        )}
+                        onChange={(e) =>
+                          handleEndpointUrlChange(api.id, e.target.value)
+                        }
+                        className={styles.urlInput}
+                        style={{ color: colors.TextHeading }}
+                      />
+                    </div>
+
+                    {/* Upload Sample Response Button */}
+                    <div
+                      className={styles.testBtnWrapper}
+                      style={{
+                        borderColor: colors.CardBorder,
+                        alignItems: "center",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadingSampleApiId(api.id);
+                          setSampleInputText(api.sampleresponse || "");
+                        }}
+                        disabled={
+                          api.isTested ||
+                          api.isAnalyzed ||
+                          apiTestStates[api.id]?.status === "success"
+                        }
+                        className={styles.testBtn}
+                        style={{
+                          background:
+                            api.isTested ||
+                            api.isAnalyzed ||
+                            apiTestStates[api.id]?.status === "success"
+                              ? colors.SuccessBtnBg
+                              : colors.UploadSampleBtnBg,
+                          border: `1px solid ${colors.UploadSampleBtnBorder}`,
+                          color:
+                            api.isTested ||
+                            api.isAnalyzed ||
+                            apiTestStates[api.id]?.status === "success"
+                              ? colors.TestApiBtnText
+                              : colors.UploadSampleBtnText,
+                          opacity: api.isTested || api.isAnalyzed ? 0.85 : 1,
+                        }}
+                      >
+                        {api.isTested ||
+                        api.isAnalyzed ||
+                        apiTestStates[api.id]?.status === "success" ? (
+                          <>
+                            <CheckIcon
+                              size={13}
+                              color={colors.TestApiBtnText}
+                            />
+                            <span>Sample Analyzed ✓</span>
+                          </>
+                        ) : (
+                          <>
+                            <UploadIcon
+                              size={13}
+                              color={colors.UploadSampleBtnText}
+                            />
+                            <span>Upload Sample</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Target Audience Toggle */}
+                <div>
+                  <label
+                    className={styles.fieldLabel}
+                    style={{
+                      color: colors.TextBody,
+                      marginBottom: "0.375rem",
+                      display: "block",
+                    }}
+                  >
+                    Target Audience
+                  </label>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    {(["customer", "admin"] as const).map((aud) => (
+                      <button
+                        key={aud}
+                        type="button"
+                        onClick={() => updateApiField(api.id, "audience", aud)}
+                        style={{
+                          padding: "0.375rem 0.75rem",
+                          borderRadius: "0.375rem",
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          textTransform: "capitalize",
+                          background:
+                            (api.audience || "customer") === aud
+                              ? "rgba(59, 130, 246, 0.2)"
+                              : colors.BackgroundSecondary,
+                          border: `1px solid ${
+                            (api.audience || "customer") === aud
+                              ? colors.CardActiveBorder
+                              : colors.CardBorder
+                          }`,
+                          color:
+                            (api.audience || "customer") === aud
+                              ? colors.TextHeading
+                              : colors.TextBody,
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        {aud}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Section 2.5: Checkout API Toggle, Audience Selector & Redirect URLs (Only visible for POST method) */}
+                {api.apiMethod === "POST" && (
                   <div
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      gap: "0.25rem",
+                      gap: "0.75rem",
+                      marginTop: "0.5rem",
                     }}
                   >
-                    <div className={styles.endpointHeader}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        id={`checkout-toggle-${api.id}`}
+                        checked={Boolean(api.isCheckoutApi)}
+                        onChange={(e) =>
+                          updateApiField(
+                            api.id,
+                            "isCheckoutApi",
+                            e.target.checked,
+                          )
+                        }
+                        style={{
+                          width: "16px",
+                          height: "16px",
+                          cursor: "pointer",
+                          accentColor: colors.BrandIndigo,
+                        }}
+                      />
                       <label
+                        htmlFor={`checkout-toggle-${api.id}`}
                         className={styles.fieldLabel}
-                        style={{ color: colors.TextBody, marginBottom: 0 }}
+                        style={{
+                          color: colors.TextHeading,
+                          margin: 0,
+                          cursor: "pointer",
+                        }}
                       >
-                        HTTP Method & Endpoint{" "}
-                        <span style={{ color: colors.WarningText }}>*</span>
+                        Is this a Checkout / Order Creation API?
                       </label>
                     </div>
 
-                    {/* Postman URL Request Bar */}
-                    <div
-                      className={styles.requestBar}
-                      style={{
-                        background: colors.BackgroundSecondary,
-                        borderColor: colors.CardBorder,
-                      }}
-                    >
-                      {/* Method Selector Badge */}
+                    {api.isCheckoutApi && (
                       <div
-                        className={styles.methodSelectWrapper}
-                        style={{ borderColor: colors.CardBorder }}
-                      >
-                        <select
-                          value={api.apiMethod}
-                          onChange={(e) => {
-                            const newMethod = e.target.value as any;
-                            updateApiField(api.id, "apiMethod", newMethod);
-                            if (
-                              (newMethod === "GET" || newMethod === "DELETE") &&
-                              getActiveTab(api.id) === "body"
-                            ) {
-                              setActiveTabForApi(api.id, "params");
-                            }
-                          }}
-                          className={styles.methodSelect}
-                          style={{
-                            color: colors.TextBody,
-                            backgroundColor: colors.Background,
-                          }}
-                        >
-                          <option value="GET">GET</option>
-                          <option value="POST">POST</option>
-                          <option value="PUT">PUT</option>
-                          <option value="PATCH">PATCH</option>
-                          <option value="DELETE">DELETE</option>
-                        </select>
-                        <span className={styles.selectArrow}>
-                          <ChevronDownIcon size={12} color={colors.TextBody} />
-                        </span>
-                      </div>
-
-                      {/* Protocol Prefix */}
-                      <div
-                        className={styles.protocolPrefix}
                         style={{
-                          background: colors.Background,
-                          color: colors.TextBody,
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.75rem",
+                          paddingLeft: "1.5rem",
+                          borderLeft: `2px solid ${colors.CardActiveBorder}`,
                         }}
                       >
-                        <ServerIcon size={13} color={colors.IconColor} />
-                        <span>https://</span>
-                      </div>
-
-                      {/* Endpoint URL Input */}
-                      <div className={styles.urlInputWrapper}>
-                        <input
-                          type="text"
-                          placeholder="api.domain.com/v1/forecast.json"
-                          value={(api.apiEndpoint || "").replace(
-                            /^https?:\/\//,
-                            "",
-                          )}
-                          onChange={(e) =>
-                            handleEndpointUrlChange(api.id, e.target.value)
-                          }
-                          className={styles.urlInput}
-                          style={{ color: colors.TextHeading }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Target Audience Toggle */}
-                  <div>
-                    <label
-                      className={styles.fieldLabel}
-                      style={{
-                        color: colors.TextBody,
-                        marginBottom: "0.375rem",
-                        display: "block",
-                      }}
-                    >
-                      Target Audience
-                    </label>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      {(["customer", "admin"] as const).map((aud) => (
-                        <button
-                          key={aud}
-                          type="button"
-                          onClick={() =>
-                            updateApiField(api.id, "audience", aud)
-                          }
-                          style={{
-                            padding: "0.375rem 0.75rem",
-                            borderRadius: "0.375rem",
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            textTransform: "capitalize",
-                            background:
-                              (api.audience || "customer") === aud
-                                ? "rgba(59, 130, 246, 0.2)"
-                                : colors.BackgroundSecondary,
-                            border: `1px solid ${
-                              (api.audience || "customer") === aud
-                                ? colors.CardActiveBorder
-                                : colors.CardBorder
-                            }`,
-                            color:
-                              (api.audience || "customer") === aud
-                                ? colors.TextHeading
-                                : colors.TextBody,
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          {aud}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Section 3: Request Tabs (Params, Headers, Body) */}
-                  <div className={styles.configGrid}>
-                    <div className={styles.requestCol}>
-                      {/* Postman Tab Bar */}
-                      <div
-                        className={styles.tabBar}
-                        style={{ borderColor: colors.CardBorder }}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setActiveTabForApi(api.id, "params")}
-                          className={`${styles.tabBtn} ${
-                            activeTab === "params" ? styles.tabActive : ""
-                          }`}
-                          style={{
-                            color:
-                              activeTab === "params"
-                                ? colors.TextOverlay
-                                : colors.TextBody,
-                            borderColor:
-                              activeTab === "params"
-                                ? colors.CardActiveBorder
-                                : "transparent",
-                          }}
-                        >
-                          <span>Params</span>
-                          <span
-                            className={styles.tabBadge}
-                            style={{
-                              background: colors.BackgroundSecondary,
-                              color: colors.TextBody,
-                            }}
-                          >
-                            {
-                              parseJsonToRows(api.apiQueryParams).filter((r) =>
-                                r.key.trim(),
-                              ).length
-                            }
-                          </span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setActiveTabForApi(api.id, "headers")}
-                          className={`${styles.tabBtn} ${
-                            activeTab === "headers" ? styles.tabActive : ""
-                          }`}
-                          style={{
-                            color:
-                              activeTab === "headers"
-                                ? colors.TextHeading
-                                : colors.TextBody,
-                            borderColor:
-                              activeTab === "headers"
-                                ? colors.CardActiveBorder
-                                : "transparent",
-                          }}
-                        >
-                          <span>Headers</span>
-                          <span
-                            className={styles.tabBadge}
-                            style={{
-                              background: colors.BackgroundSecondary,
-                              color: colors.TextBody,
-                            }}
-                          >
-                            {
-                              parseJsonToRows(api.apiHeaders).filter((r) =>
-                                r.key.trim(),
-                              ).length
-                            }
-                          </span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setActiveTabForApi(api.id, "body")}
-                          disabled={
-                            api.apiMethod === "GET" || api.apiMethod === "DELETE"
-                          }
-                          className={`${styles.tabBtn} ${
-                            activeTab === "body" ? styles.tabActive : ""
-                          }`}
-                          style={{
-                            color:
-                              api.apiMethod === "GET" ||
-                              api.apiMethod === "DELETE"
-                                ? colors.TextBody
-                                : activeTab === "body"
-                                  ? colors.TextHeading
-                                  : colors.TextBody,
-                            borderColor:
-                              activeTab === "body"
-                                ? colors.CardActiveBorder
-                                : "transparent",
-                            opacity:
-                              api.apiMethod === "GET" ||
-                              api.apiMethod === "DELETE"
-                                ? 0.4
-                                : 1,
-                            cursor:
-                              api.apiMethod === "GET" ||
-                              api.apiMethod === "DELETE"
-                                ? "not-allowed"
-                                : "pointer",
-                          }}
-                        >
-                          <span>Body</span>
-                          <span className={styles.jsonBodyPill}>JSON</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setShowHelpGuide((prev) => ({
-                              ...prev,
-                              [api.id]: !prev[api.id],
-                            }))
-                          }
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "0.25rem",
-                            padding: "0.25rem 0.5rem",
-                            borderRadius: "0.375rem",
-                            background: showHelpGuide[api.id]
-                              ? "rgba(99, 102, 241, 0.2)"
-                              : "transparent",
-                            border: `1px solid ${
-                              showHelpGuide[api.id]
-                                ? colors.CardActiveBorder
-                                : colors.CardBorder
-                            }`,
-                            color: colors.TextHeading,
-                            fontSize: "0.75rem",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            marginLeft: "auto",
-                          }}
-                          title="Toggle tab guide"
-                        >
-                          <HelpIcon size={14} color={colors.BrandIndigo} />
-                          <span>Help</span>
-                        </button>
-                      </div>
-
-                      {showHelpGuide[api.id] && (
-                        <div
-                          style={{
-                            margin: "0.5rem 0",
-                            padding: "0.75rem",
-                            borderRadius: "0.5rem",
-                            background: colors.BackgroundSecondary,
-                            border: `1px solid ${colors.CardActiveBorder}`,
-                            color: colors.TextHeading,
-                            fontSize: "0.8125rem",
-                            lineHeight: 1.4,
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "0.5rem",
-                          }}
-                        >
-                          <span style={{ flexShrink: 0, marginTop: "2px" }}>
-                            <HelpIcon size={16} color={colors.BrandIndigo} />
-                          </span>
+                        {/* Official Web Checkout URL */}
+                        {((stepOneData.targetPlatform || "web") === "web" ||
+                          (stepOneData.targetPlatform || "web") === "both") && (
                           <div>
-                            <strong>
-                              {activeTab === "params" && "Params Tab Guide"}
-                              {activeTab === "headers" && "Headers Tab Guide"}
-                              {activeTab === "body" && "Body Tab Guide"}
-                            </strong>
-                            <p
+                            <label
+                              className={styles.fieldLabel}
+                              style={{ color: colors.TextBody }}
+                            >
+                              Official Web Checkout Redirect URL (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. https://cardetailerzzexpress.com/order/checkout"
+                              value={
+                                api.webCheckoutUrl ||
+                                api.apiCheckoutTemplate ||
+                                ""
+                              }
+                              onChange={(e) =>
+                                updateApiField(
+                                  api.id,
+                                  "webCheckoutUrl",
+                                  e.target.value,
+                                )
+                              }
+                              className={styles.urlInput}
                               style={{
-                                margin: "0.25rem 0 0 0",
+                                width: "100%",
+                                background: colors.BackgroundSecondary,
+                                border: `1px solid ${colors.CardBorder}`,
+                                borderRadius: "0.375rem",
+                                color: colors.TextHeading,
+                                padding: "0.5rem 0.75rem",
+                                fontSize: "0.8125rem",
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Mobile App Deep Link Scheme */}
+                        {((stepOneData.targetPlatform || "web") === "mobile" ||
+                          (stepOneData.targetPlatform || "web") === "both") && (
+                          <div>
+                            <label
+                              className={styles.fieldLabel}
+                              style={{ color: colors.TextBody }}
+                            >
+                              Mobile App Deep Link Scheme (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. cardetailerzz://checkout"
+                              value={api.mobileDeepLink || ""}
+                              onChange={(e) =>
+                                updateApiField(
+                                  api.id,
+                                  "mobileDeepLink",
+                                  e.target.value,
+                                )
+                              }
+                              className={styles.urlInput}
+                              style={{
+                                width: "100%",
+                                background: colors.BackgroundSecondary,
+                                border: `1px solid ${colors.CardBorder}`,
+                                borderRadius: "0.375rem",
+                                color: colors.TextHeading,
+                                padding: "0.5rem 0.75rem",
+                                fontSize: "0.8125rem",
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Real-time / Live Stream (WebSocket / SSE) Option */}
+                    <div className={styles.realtimeToggleRow}>
+                      <input
+                        type="checkbox"
+                        id={`realtime-toggle-${api.id}`}
+                        checked={Boolean(api.isRealtimeApi)}
+                        onChange={(e) =>
+                          updateApiField(
+                            api.id,
+                            "isRealtimeApi",
+                            e.target.checked,
+                          )
+                        }
+                        className={styles.realtimeCheckbox}
+                        style={{
+                          accentColor: colors.BrandIndigo || "#6366f1",
+                        }}
+                      />
+                      <label
+                        htmlFor={`realtime-toggle-${api.id}`}
+                        className={styles.realtimeLabel}
+                        style={{
+                          color: colors.TextHeading,
+                        }}
+                      >
+                        ⚡ Does this API provide Live / Real-Time updates (WebSocket or SSE)?
+                      </label>
+                    </div>
+
+                    {api.isRealtimeApi && (
+                      <div
+                        className={styles.realtimeInputContainer}
+                        style={{
+                          borderLeft: `2px solid ${colors.BrandIndigo || "rgba(99, 102, 241, 0.4)"}`,
+                        }}
+                      >
+                        <div>
+                          <label
+                            className={styles.fieldLabel}
+                            style={{ color: colors.TextBody }}
+                          >
+                            WebSocket / SSE Stream URL
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. wss://api.company.com/ws/feed or https://api.company.com/events"
+                            value={api.streamUrl || ""}
+                            onChange={(e) =>
+                              updateApiField(
+                                api.id,
+                                "streamUrl",
+                                e.target.value,
+                              )
+                            }
+                            className={styles.realtimeStreamInput}
+                            style={{
+                              background: colors.BackgroundSecondary,
+                              border: `1px solid ${colors.CardBorder}`,
+                              color: colors.TextHeading,
+                            }}
+                          />
+                          <span
+                            className={styles.realtimeHelpText}
+                            style={{
+                              color: colors.TextBody,
+                            }}
+                          >
+                            The widget will connect directly to this stream to receive live tickers, chart points, and real-time record updates.
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Section 3: Postman Request Config & AI Response Inspector */}
+                <div className={styles.configGrid}>
+                  {/* Left Column (7 Cols): Request Tabs (Params, Auth, Headers, Body) */}
+                  <div className={styles.requestCol}>
+                    {/* Postman Tab Bar */}
+                    <div
+                      className={styles.tabBar}
+                      style={{ borderColor: colors.CardBorder }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setActiveTabForApi(api.id, "params")}
+                        className={`${styles.tabBtn} ${
+                          activeTab === "params" ? styles.tabActive : ""
+                        }`}
+                        style={{
+                          color:
+                            activeTab === "params"
+                              ? colors.TextOverlay
+                              : colors.TextBody,
+                          borderColor:
+                            activeTab === "params"
+                              ? colors.CardActiveBorder
+                              : "transparent",
+                        }}
+                      >
+                        <span>Params</span>
+                        <span
+                          className={styles.tabBadge}
+                          style={{
+                            background: colors.BackgroundSecondary,
+                            color: colors.TextBody,
+                          }}
+                        >
+                          {
+                            parseJsonToRows(api.apiQueryParams).filter((r) =>
+                              r.key.trim(),
+                            ).length
+                          }
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTabForApi(api.id, "auth")}
+                        className={`${styles.tabBtn} ${
+                          activeTab === "auth" ? styles.tabActive : ""
+                        }`}
+                        style={{
+                          color:
+                            activeTab === "auth"
+                              ? colors.TextHeading
+                              : colors.TextBody,
+                          borderColor:
+                            activeTab === "auth"
+                              ? colors.CardActiveBorder
+                              : "transparent",
+                        }}
+                      >
+                        <span>Authorization</span>
+                        {api.apiAuthType !== "No Auth" && (
+                          <span
+                            className={styles.authEnabledDot}
+                            title="Auth Enabled"
+                          />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTabForApi(api.id, "headers")}
+                        className={`${styles.tabBtn} ${
+                          activeTab === "headers" ? styles.tabActive : ""
+                        }`}
+                        style={{
+                          color:
+                            activeTab === "headers"
+                              ? colors.TextHeading
+                              : colors.TextBody,
+                          borderColor:
+                            activeTab === "headers"
+                              ? colors.CardActiveBorder
+                              : "transparent",
+                        }}
+                      >
+                        <span>Headers</span>
+                        <span
+                          className={styles.tabBadge}
+                          style={{
+                            background: colors.BackgroundSecondary,
+                            color: colors.TextBody,
+                          }}
+                        >
+                          {
+                            parseJsonToRows(api.apiHeaders).filter((r) =>
+                              r.key.trim(),
+                            ).length
+                          }
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTabForApi(api.id, "body")}
+                        disabled={
+                          api.apiMethod === "GET" || api.apiMethod === "DELETE"
+                        }
+                        className={`${styles.tabBtn} ${
+                          activeTab === "body" ? styles.tabActive : ""
+                        }`}
+                        style={{
+                          color:
+                            api.apiMethod === "GET" ||
+                            api.apiMethod === "DELETE"
+                              ? colors.TextBody
+                              : activeTab === "body"
+                                ? colors.TextHeading
+                                : colors.TextBody,
+                          borderColor:
+                            activeTab === "body"
+                              ? colors.CardActiveBorder
+                              : "transparent",
+                          opacity:
+                            api.apiMethod === "GET" ||
+                            api.apiMethod === "DELETE"
+                              ? 0.4
+                              : 1,
+                          cursor:
+                            api.apiMethod === "GET" ||
+                            api.apiMethod === "DELETE"
+                              ? "not-allowed"
+                              : "pointer",
+                        }}
+                      >
+                        <span>Body</span>
+                        <span className={styles.jsonBodyPill}>JSON</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowHelpGuide((prev) => ({
+                            ...prev,
+                            [api.id]: !prev[api.id],
+                          }))
+                        }
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "0.25rem",
+                          padding: "0.25rem 0.5rem",
+                          borderRadius: "0.375rem",
+                          background: showHelpGuide[api.id]
+                            ? "rgba(99, 102, 241, 0.2)"
+                            : "transparent",
+                          border: `1px solid ${
+                            showHelpGuide[api.id]
+                              ? colors.CardActiveBorder
+                              : colors.CardBorder
+                          }`,
+                          color: colors.TextHeading,
+                          fontSize: "0.75rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          marginLeft: "auto",
+                        }}
+                        title="Toggle tab guide"
+                      >
+                        <HelpIcon size={14} color={colors.BrandIndigo} />
+                        <span>Help</span>
+                      </button>
+                    </div>
+
+                    {showHelpGuide[api.id] && (
+                      <div
+                        style={{
+                          margin: "0.5rem 0",
+                          padding: "0.75rem",
+                          borderRadius: "0.5rem",
+                          background: colors.BackgroundSecondary,
+                          border: `1px solid ${colors.CardActiveBorder}`,
+                          color: colors.TextHeading,
+                          fontSize: "0.8125rem",
+                          lineHeight: 1.4,
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <span style={{ flexShrink: 0, marginTop: "2px" }}>
+                          <HelpIcon size={16} color={colors.BrandIndigo} />
+                        </span>
+                        <div>
+                          <strong>
+                            {activeTab === "params" && "Params Tab Guide"}
+                            {activeTab === "auth" && "Authorization Tab Guide"}
+                            {activeTab === "headers" && "Headers Tab Guide"}
+                            {activeTab === "body" && "Body Tab Guide"}
+                          </strong>
+                          <p
+                            style={{
+                              margin: "0.25rem 0 0 0",
+                              color: colors.TextBody,
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            {activeTab === "params" &&
+                              "Query parameters are appended to your URL endpoint (e.g. ?q=search&limit=10). Toggle 'Dynamic (AI)' so ChatGPT can automatically supply values based on user chat queries."}
+                            {activeTab === "auth" &&
+                              "Select the authentication type required by your endpoint (No Auth, API Key, Bearer Token, or OAuth 2.0). Credentials are stored encrypted and injected by our server-side MCP bridge."}
+                            {activeTab === "headers" &&
+                              "Specify custom HTTP headers sent with every request (e.g. Accept-Language, X-Client-Version)."}
+                            {activeTab === "body" &&
+                              "Define the JSON request payload expected by your POST, PUT, or PATCH endpoints. GET and DELETE endpoints do not take request bodies."}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3-Fail Fallback Warning Banner */}
+                    {(apiTestStates[api.id]?.failCount || 0) >= 3 && (
+                      <div
+                        style={{
+                          margin: "0.5rem 0",
+                          padding: "0.75rem",
+                          borderRadius: "0.5rem",
+                          background: colors.ErrorBadgeBg,
+                          border: `1px solid ${colors.ErrorBadgeBorder}`,
+                          color: colors.ErrorBadgeText,
+                          fontSize: "0.8125rem",
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        ⚠️ <strong>3 Live Tests Failed</strong> (likely due to
+                        CORS or Network restrictions). Live testing is disabled.
+                        Please switch to the{" "}
+                        <strong>Body / Sample Response</strong> tab below, paste
+                        your expected JSON response, and click{" "}
+                        <strong>Analyze Sample JSON</strong>.
+                      </div>
+                    )}
+
+                    {/* Tab Content */}
+                    <div style={{ paddingTop: "0.25rem" }}>
+                      {activeTab === "params" && (
+                        <PostmanTableEditor
+                          api={api}
+                          field="apiQueryParams"
+                          title="Query & Path Parameters"
+                          description="Parameters added here are automatically appended to your endpoint. Toggle 'Dynamic (AI)' to let ChatGPT supply parameters at runtime based on user chat queries."
+                          showDynamicToggle={true}
+                          colors={colors}
+                          updateApiField={updateApiField}
+                          stepOneData={stepOneData}
+                        />
+                      )}
+
+                      {activeTab === "headers" && (
+                        <PostmanTableEditor
+                          api={api}
+                          field="apiHeaders"
+                          title="Custom HTTP Headers"
+                          description="Add custom headers sent with every request (e.g. Accept-Language, X-User-Id, custom metadata)."
+                          showDynamicToggle={false}
+                          colors={colors}
+                          updateApiField={updateApiField}
+                        />
+                      )}
+
+                      {activeTab === "auth" && (
+                        <div
+                          className={styles.authContainer}
+                          style={{
+                            background: colors.Background,
+                            borderColor: colors.CardBorder,
+                          }}
+                        >
+                          <div>
+                            <label
+                              className={styles.fieldLabel}
+                              style={{
                                 color: colors.TextBody,
-                                fontSize: "0.75rem",
+                                marginBottom: "0.375rem",
                               }}
                             >
-                              {activeTab === "params" &&
-                                "Query parameters are appended to your URL endpoint (e.g. ?q=search&limit=10). Toggle 'Dynamic (AI)' so ChatGPT can automatically supply values based on user chat queries."}
-                              {activeTab === "headers" &&
-                                "Specify custom HTTP headers sent with every request (e.g. Accept-Language, X-Client-Version)."}
-                              {activeTab === "body" &&
-                                "Define the JSON request payload expected by your POST, PUT, or PATCH endpoints. GET and DELETE endpoints do not take request bodies."}
-                            </p>
+                              Authentication Type{" "}
+                              <span style={{ color: colors.WarningText }}>
+                                *
+                              </span>
+                            </label>
+                            <div className={styles.authGrid}>
+                              {[
+                                "No Auth",
+                                "API Key",
+                                "Bearer Token",
+                                "OAuth 2.0",
+                              ].map((authOption) => (
+                                <button
+                                  key={authOption}
+                                  type="button"
+                                  onClick={() =>
+                                    updateApiField(
+                                      api.id,
+                                      "apiAuthType",
+                                      authOption,
+                                    )
+                                  }
+                                  className={styles.authTypeBtn}
+                                  style={{
+                                    color:
+                                      api.apiAuthType === authOption
+                                        ? colors.BrandIndigo
+                                        : colors.TextBody,
+                                    borderColor:
+                                      api.apiAuthType === authOption
+                                        ? colors.CardActiveBorder
+                                        : colors.CardBorder,
+                                    background:
+                                      api.apiAuthType === authOption
+                                        ? "rgba(99, 102, 241, 0.1)"
+                                        : "rgba(255, 255, 255, 0.03)",
+                                  }}
+                                >
+                                  <KeyIcon
+                                    size={13}
+                                    color={
+                                      api.apiAuthType === authOption
+                                        ? colors.BrandIndigo
+                                        : colors.IconColor
+                                    }
+                                  />
+                                  <span>{authOption}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {api.apiAuthType === "No Auth" && (
+                            <div
+                              className={styles.noAuthBanner}
+                              style={{
+                                backgroundColor: "rgba(255, 255, 255, 0.01)",
+                                borderColor: colors.CardBorder,
+                                color: colors.TextBody,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  fontWeight: 700,
+                                  fontSize: "0.75rem",
+                                  color: colors.TextHeading,
+                                }}
+                              >
+                                No Authentication Required
+                              </div>
+                              <p
+                                style={{ opacity: 0.75, fontSize: "0.6875rem" }}
+                              >
+                                This endpoint is public and does not require
+                                credentials, bearer tokens, or API keys.
+                              </p>
+                            </div>
+                          )}
+
+                          {api.apiAuthType === "Bearer Token" && (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "0.75rem",
+                              }}
+                            >
+                              <div>
+                                <label
+                                  className={styles.fieldLabel}
+                                  style={{ color: colors.TextBody }}
+                                >
+                                  Bearer Token{" "}
+                                  <span style={{ color: colors.WarningText }}>
+                                    *
+                                  </span>
+                                </label>
+                                <div className={styles.inputRelative}>
+                                  <span className={styles.inputIconLeft}>
+                                    <LockIcon
+                                      size={14}
+                                      color={colors.IconColor}
+                                    />
+                                  </span>
+                                  <input
+                                    type={
+                                      showApiKeyMask[api.id]
+                                        ? "text"
+                                        : "password"
+                                    }
+                                    placeholder="e.g. eyJhbGciOiJIUzI1NiIsIn..."
+                                    value={api.apiCredentials || ""}
+                                    onChange={(e) =>
+                                      updateApiField(
+                                        api.id,
+                                        "apiCredentials",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className={styles.inputWithIcon}
+                                    style={{
+                                      background: colors.BackgroundSecondary,
+                                      borderColor: colors.CardBorder,
+                                      color: colors.TextHeading,
+                                      fontFamily: "monospace",
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setShowApiKeyMask((prev) => ({
+                                        ...prev,
+                                        [api.id]: !prev[api.id],
+                                      }))
+                                    }
+                                    className={styles.passwordToggleBtn}
+                                  >
+                                    <EyeIcon
+                                      size={14}
+                                      color={colors.IconColor}
+                                    />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {api.apiAuthType === "API Key" && (
+                            <div className={styles.authInputGrid}>
+                              <div>
+                                <label
+                                  className={styles.fieldLabel}
+                                  style={{ color: colors.TextBody }}
+                                >
+                                  Header Name{" "}
+                                  <span style={{ color: colors.WarningText }}>
+                                    *
+                                  </span>
+                                </label>
+                                <div className={styles.inputRelative}>
+                                  <span className={styles.inputIconLeft}>
+                                    <SlidersIcon
+                                      size={14}
+                                      color={colors.IconColor}
+                                    />
+                                  </span>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. X-API-Key or Authorization"
+                                    value={api.apiAuthHeader || ""}
+                                    onChange={(e) =>
+                                      updateApiField(
+                                        api.id,
+                                        "apiAuthHeader",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className={styles.inputWithIcon}
+                                    style={{
+                                      background: colors.BackgroundSecondary,
+                                      borderColor: colors.CardBorder,
+                                      color: colors.TextHeading,
+                                      fontFamily: "monospace",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label
+                                  className={styles.fieldLabel}
+                                  style={{ color: colors.TextBody }}
+                                >
+                                  API Key Value{" "}
+                                  <span style={{ color: colors.WarningText }}>
+                                    *
+                                  </span>
+                                </label>
+                                <div className={styles.inputRelative}>
+                                  <span className={styles.inputIconLeft}>
+                                    <LockIcon
+                                      size={14}
+                                      color={colors.IconColor}
+                                    />
+                                  </span>
+                                  <input
+                                    type={
+                                      showApiKeyMask[api.id]
+                                        ? "text"
+                                        : "password"
+                                    }
+                                    placeholder="e.g. 39e38d5b03284e..."
+                                    value={api.apiCredentials || ""}
+                                    onChange={(e) =>
+                                      updateApiField(
+                                        api.id,
+                                        "apiCredentials",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className={styles.inputWithIcon}
+                                    style={{
+                                      background: colors.BackgroundSecondary,
+                                      borderColor: colors.CardBorder,
+                                      color: colors.TextHeading,
+                                      fontFamily: "monospace",
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setShowApiKeyMask((prev) => ({
+                                        ...prev,
+                                        [api.id]: !prev[api.id],
+                                      }))
+                                    }
+                                    className={styles.passwordToggleBtn}
+                                  >
+                                    <EyeIcon
+                                      size={14}
+                                      color={colors.IconColor}
+                                    />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {api.apiAuthType === "OAuth 2.0" && (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: "0.75rem",
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.5rem",
+                                  marginBottom: "0.25rem",
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  id={`user-oauth-toggle-${api.id}`}
+                                  checked={Boolean(api.isUserOAuth)}
+                                  onChange={(e) =>
+                                    updateApiField(
+                                      api.id,
+                                      "isUserOAuth",
+                                      e.target.checked,
+                                    )
+                                  }
+                                  style={{
+                                    width: "16px",
+                                    height: "16px",
+                                    cursor: "pointer",
+                                    accentColor: colors.BrandIndigo,
+                                  }}
+                                />
+                                <label
+                                  htmlFor={`user-oauth-toggle-${api.id}`}
+                                  className={styles.fieldLabel}
+                                  style={{
+                                    color: colors.TextHeading,
+                                    margin: 0,
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Requires End-User Authorization (User OAuth
+                                  2.0 PKCE)
+                                </label>
+                              </div>
+
+                              {Boolean(api.isUserOAuth) && (
+                                <div>
+                                  <label
+                                    className={styles.fieldLabel}
+                                    style={{ color: colors.TextBody }}
+                                  >
+                                    Authorization URL (User Login Page){" "}
+                                    <span style={{ color: colors.WarningText }}>
+                                      *
+                                    </span>
+                                  </label>
+                                  <div
+                                    style={{ display: "flex", width: "100%" }}
+                                  >
+                                    <div
+                                      className={styles.protocolPrefix}
+                                      style={{
+                                        display: "flex",
+                                        background: colors.BackgroundSecondary,
+                                        borderColor: colors.CardBorder,
+                                        color: colors.TextBody,
+                                        borderRadius: "0.5rem 0 0 0.5rem",
+                                      }}
+                                    >
+                                      <span>https://</span>
+                                    </div>
+                                    <input
+                                      type="text"
+                                      placeholder="auth.domain.com/oauth/authorize"
+                                      value={(
+                                        api.oauthAuthorizationUrl || ""
+                                      ).replace(/^https?:\/\//, "")}
+                                      onChange={(e) =>
+                                        updateApiField(
+                                          api.id,
+                                          "oauthAuthorizationUrl",
+                                          "https://" +
+                                            e.target.value.replace(
+                                              /^https?:\/\//,
+                                              "",
+                                            ),
+                                        )
+                                      }
+                                      className={styles.urlInput}
+                                      style={{
+                                        background: colors.BackgroundSecondary,
+                                        border: `1px solid ${colors.CardBorder}`,
+                                        borderRadius: "0 0.5rem 0.5rem 0",
+                                        color: colors.TextHeading,
+                                        padding: "0.375rem 0.75rem",
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              <div>
+                                <label
+                                  className={styles.fieldLabel}
+                                  style={{ color: colors.TextBody }}
+                                >
+                                  Token / Grant URL{" "}
+                                  <span style={{ color: colors.WarningText }}>
+                                    *
+                                  </span>
+                                </label>
+                                <div style={{ display: "flex", width: "100%" }}>
+                                  <div
+                                    className={styles.protocolPrefix}
+                                    style={{
+                                      display: "flex",
+                                      background: colors.BackgroundSecondary,
+                                      borderColor: colors.CardBorder,
+                                      color: colors.TextBody,
+                                      borderRadius: "0.5rem 0 0 0.5rem",
+                                    }}
+                                  >
+                                    <span>https://</span>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    placeholder="auth.domain.com/oauth/token"
+                                    value={(api.oauthTokenUrl || "").replace(
+                                      /^https?:\/\//,
+                                      "",
+                                    )}
+                                    onChange={(e) =>
+                                      updateApiField(
+                                        api.id,
+                                        "oauthTokenUrl",
+                                        "https://" +
+                                          e.target.value.replace(
+                                            /^https?:\/\//,
+                                            "",
+                                          ),
+                                      )
+                                    }
+                                    className={styles.urlInput}
+                                    style={{
+                                      background: colors.BackgroundSecondary,
+                                      border: `1px solid ${colors.CardBorder}`,
+                                      borderRadius: "0 0.5rem 0.5rem 0",
+                                      color: colors.TextHeading,
+                                      padding: "0.375rem 0.75rem",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className={styles.authInputGrid}>
+                                <div>
+                                  <label
+                                    className={styles.fieldLabel}
+                                    style={{ color: colors.TextBody }}
+                                  >
+                                    Client ID{" "}
+                                    <span style={{ color: colors.WarningText }}>
+                                      *
+                                    </span>
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="Enter Client ID"
+                                    value={api.oauthClientId || ""}
+                                    onChange={(e) =>
+                                      updateApiField(
+                                        api.id,
+                                        "oauthClientId",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className={styles.urlInput}
+                                    style={{
+                                      background: colors.BackgroundSecondary,
+                                      border: `1px solid ${colors.CardBorder}`,
+                                      borderRadius: "0.5rem",
+                                      color: colors.TextHeading,
+                                      padding: "0.375rem 0.75rem",
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label
+                                    className={styles.fieldLabel}
+                                    style={{ color: colors.TextBody }}
+                                  >
+                                    Client Secret{" "}
+                                    <span style={{ color: colors.WarningText }}>
+                                      *
+                                    </span>
+                                  </label>
+                                  <input
+                                    type="password"
+                                    placeholder="Enter Client Secret"
+                                    value={api.apiCredentials || ""}
+                                    onChange={(e) =>
+                                      updateApiField(
+                                        api.id,
+                                        "apiCredentials",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className={styles.urlInput}
+                                    style={{
+                                      background: colors.BackgroundSecondary,
+                                      border: `1px solid ${colors.CardBorder}`,
+                                      borderRadius: "0.5rem",
+                                      color: colors.TextHeading,
+                                      padding: "0.375rem 0.75rem",
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div
+                            className={styles.securityNotice}
+                            style={{
+                              background: colors.BackgroundSecondary,
+                              borderColor: colors.CardBorder,
+                              color: colors.TextBody,
+                            }}
+                          >
+                            <ShieldLockIcon
+                              size={14}
+                              color={colors.IconColor}
+                            />
+                            <span>
+                              Credentials are encrypted at rest and injected by
+                              our server-side MCP bridge. They are never exposed
+                              to client browsers or AI prompts.
+                            </span>
                           </div>
                         </div>
                       )}
 
-                      {/* Tab Content */}
-                      <div style={{ paddingTop: "0.25rem" }}>
-                        {activeTab === "params" && (
+                      {activeTab === "body" &&
+                        (api.apiMethod === "POST" ||
+                        api.apiMethod === "PUT" ||
+                        api.apiMethod === "PATCH" ? (
                           <PostmanTableEditor
                             api={api}
-                            field="apiQueryParams"
-                            title="Query & Path Parameters"
-                            description="Parameters added here are automatically appended to your endpoint. Toggle 'Dynamic (AI)' to let ChatGPT supply parameters at runtime based on user chat queries."
+                            field="apiRequestBody"
+                            title="Request Body Parameters (JSON)"
+                            description="Define the JSON payload or body fields expected by this POST/PUT/PATCH endpoint."
                             showDynamicToggle={true}
                             colors={colors}
                             updateApiField={updateApiField}
                             stepOneData={stepOneData}
                           />
-                        )}
+                        ) : (
+                          <div
+                            style={{
+                              padding: "1.5rem",
+                              textAlign: "center",
+                              color: colors.TextBody,
+                              fontSize: "0.8125rem",
+                            }}
+                          >
+                            GET and DELETE endpoints do not take request bodies.
+                            Use the <strong>Upload Sample</strong> button above
+                            to supply expected response JSON.
+                          </div>
+                        ))}
+                    </div>
+                  </div>
 
-                        {activeTab === "headers" && (
-                          <PostmanTableEditor
-                            api={api}
-                            field="apiHeaders"
-                            title="Custom HTTP Headers"
-                            description="Add custom headers sent with every request (e.g. Accept-Language, X-User-Id, custom metadata)."
-                            showDynamicToggle={false}
-                            colors={colors}
-                            updateApiField={updateApiField}
-                          />
-                        )}
-
-                        {activeTab === "body" &&
-                          (api.apiMethod === "POST" ||
-                          api.apiMethod === "PUT" ||
-                          api.apiMethod === "PATCH" ? (
-                            <PostmanTableEditor
-                              api={api}
-                              field="apiRequestBody"
-                              title="Request Body Parameters (JSON)"
-                              description="Define the JSON payload or body fields expected by this POST/PUT/PATCH endpoint."
-                              showDynamicToggle={true}
-                              colors={colors}
-                              updateApiField={updateApiField}
-                              stepOneData={stepOneData}
+                  {/* Right Column (5 Cols): Response Visualizer & AI Schema Analyzer */}
+                  <div className={styles.responseCol}>
+                    <div
+                      className={styles.responseHeader}
+                      style={{ borderColor: colors.CardBorder }}
+                    >
+                      <span
+                        className={styles.responseTitle}
+                        style={{ color: colors.TextHeading }}
+                      >
+                        Response & AI Schema
+                      </span>
+                      <div style={{ display: "flex", alignItems: "center" }}>
+                        {api.isTested ||
+                        api.isAnalyzed ||
+                        apiTestStates[api.id]?.status === "success" ? (
+                          <span
+                            className={styles.statusBadge}
+                            style={{
+                              background: colors.SuccessBadgeBg,
+                              color: colors.SuccessBadgeText,
+                              borderColor: colors.SuccessBadgeBorder,
+                            }}
+                          >
+                            <CheckIcon
+                              size={11}
+                              color={colors.SuccessBadgeText}
                             />
-                          ) : (
-                            <div
-                              style={{
-                                padding: "1.5rem",
-                                textAlign: "center",
-                                color: colors.TextBody,
-                                fontSize: "0.8125rem",
-                              }}
-                            >
-                              GET and DELETE endpoints do not take request bodies.
+                            <span>200 OK — AI Schema Ready</span>
+                          </span>
+                        ) : apiTestStates[api.id]?.status === "error" ? (
+                          <span
+                            className={styles.statusBadge}
+                            style={{
+                              background: colors.ErrorBadgeBg,
+                              color: colors.ErrorBadgeText,
+                              borderColor: colors.ErrorBadgeBorder,
+                            }}
+                          >
+                            <XMarkIcon
+                              size={11}
+                              color={colors.ErrorBadgeText}
+                            />
+                            <span>Connection Error</span>
+                          </span>
+                        ) : (
+                          <span
+                            className={styles.statusBadge}
+                            style={{
+                              background: colors.BackgroundSecondary,
+                              color: colors.TextBody,
+                              borderColor: colors.CardBorder,
+                            }}
+                          >
+                            Not Tested Yet
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div
+                      className={styles.terminalWindow}
+                      style={{
+                        background: colors.BackgroundSecondary,
+                        borderColor:
+                          api.isTested ||
+                          api.isAnalyzed ||
+                          apiTestStates[api.id]?.status === "success"
+                            ? colors.SuccessBadgeBorder
+                            : apiTestStates[api.id]?.status === "error"
+                              ? colors.ErrorBadgeBorder
+                              : colors.CardBorder,
+                      }}
+                    >
+                      {/* Terminal window header */}
+                      <div
+                        className={styles.terminalBar}
+                        style={{
+                          background: colors.Background,
+                          borderColor: colors.CardBorder,
+                          color: colors.TextBody,
+                        }}
+                      >
+                        <div className={styles.terminalDots}>
+                          <span className={styles.dotRed} />
+                          <span className={styles.dotYellow} />
+                          <span className={styles.dotGreen} />
+                          <span className={styles.terminalTitleText}>
+                            {apiTestStates[api.id] ||
+                            api.isTested ||
+                            api.isAnalyzed
+                              ? "test-output.json"
+                              : "sample-response.json"}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                          }}
+                        />
+                      </div>
+
+                      {/* Terminal body */}
+                      <div className={styles.terminalBody}>
+                        {apiTestStates[api.id]?.logs ? (
+                          <pre
+                            className={styles.logPre}
+                            style={{
+                              color:
+                                apiTestStates[api.id]?.status === "error" &&
+                                !api.isTested &&
+                                !api.isAnalyzed
+                                  ? colors.ErrorBadgeText
+                                  : colors.SuccessBadgeText,
+                            }}
+                          >
+                            {apiTestStates[api.id].logs}
+                          </pre>
+                        ) : api.isTested ||
+                          api.isAnalyzed ||
+                          api.sampleresponse ? (
+                          <pre
+                            className={styles.logPre}
+                            style={{ color: colors.SuccessBadgeText }}
+                          >
+                            {`[${new Date().toLocaleTimeString()}] Schema Verified & Analyzed ✓\nSample Response Body:\n${api.sampleresponse || "{}"}`}
+                          </pre>
+                        ) : (
+                          <div className={styles.emptyTerminal}>
+                            <div className={styles.emptyIconBg}>
+                              <ServerIcon
+                                size={20}
+                                color={colors.BrandIndigo}
+                              />
                             </div>
-                          ))}
+                            <div
+                              className={styles.emptyTitle}
+                              style={{ color: colors.TextHeading }}
+                            >
+                              Hit 'Upload Sample' to inspect response
+                            </div>
+                            <p
+                              className={styles.emptyDesc}
+                              style={{ color: colors.TextBody }}
+                            >
+                              When you upload a sample response, our AI
+                              automatically analyzes the response schema to
+                              configure dynamic widgets and filters.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
 
-        {/* Add Another API Endpoint Button */}
+        {/* Add Another API & Secondary Import Buttons */}
         <div className={styles.addApiBtnGroup}>
           <button
             type="button"
@@ -1916,6 +1685,26 @@ const SignupStep2: FC = () => {
               <Plus size={14} color={colors.BrandIndigo} />
             </div>
             <span className={styles.addApiText}>Add Another API Endpoint</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className={styles.btnSecondaryImport}
+            style={{
+              background: colors.BackgroundSecondary,
+              border: `1px dashed ${colors.BrandIndigo || "#6366f1"}`,
+            }}
+          >
+            <div className={styles.secondaryImportIconBg}>
+              <UploadIcon size={14} color={colors.BrandIndigo || "#6366f1"} />
+            </div>
+            <span
+              className={styles.addApiText}
+              style={{ color: colors.TextHeading }}
+            >
+              Import OpenAPI / Postman
+            </span>
           </button>
         </div>
 
@@ -1939,17 +1728,35 @@ const SignupStep2: FC = () => {
               onClick={handleStepTwoSubmitWithValidation}
               className={styles.btn}
               style={{
-                background: isStepTwoPending
-                  ? colors.Background
-                  : `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
-                color: isStepTwoPending ? colors.TextBody : "#ffffff",
-                border: isStepTwoPending
-                  ? `1px solid ${colors.CardBorder}`
-                  : "none",
-                cursor: isStepTwoPending ? "not-allowed" : "pointer",
+                background:
+                  isStepTwoPending ||
+                  !allApisTestedSuccessfully ||
+                  anyApiHasError
+                    ? colors.Background
+                    : `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
+                color:
+                  isStepTwoPending ||
+                  !allApisTestedSuccessfully ||
+                  anyApiHasError
+                    ? colors.TextBody
+                    : "#ffffff",
+                border:
+                  isStepTwoPending ||
+                  !allApisTestedSuccessfully ||
+                  anyApiHasError
+                    ? `1px solid ${colors.CardBorder}`
+                    : "none",
+                cursor:
+                  isStepTwoPending ||
+                  !allApisTestedSuccessfully ||
+                  anyApiHasError
+                    ? "not-allowed"
+                    : "pointer",
                 opacity: 1,
               }}
-              disabled={isStepTwoPending}
+              disabled={
+                isStepTwoPending || !allApisTestedSuccessfully || anyApiHasError
+              }
             >
               {getButtonText()}
             </button>
@@ -1957,21 +1764,228 @@ const SignupStep2: FC = () => {
         </div>
       </div>
 
+      {/* Upload Sample Response Modal Dialog */}
+      {uploadingSampleApiId && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.ModalBackdrop,
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div
+            style={{
+              width: "90%",
+              maxWidth: "560px",
+              background: colors.BackgroundSecondary,
+              border: `1px solid ${colors.CardBorder}`,
+              borderRadius: "1rem",
+              padding: "1.5rem",
+              color: colors.TextHeading,
+              boxShadow: colors.OverlayShadow,
+              position: "relative",
+            }}
+          >
+            <button
+              onClick={() => setUploadingSampleApiId(null)}
+              style={{
+                position: "absolute",
+                top: "1rem",
+                right: "1rem",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: colors.TextBody,
+              }}
+            >
+              <XMarkIcon size={18} color={colors.TextBody} />
+            </button>
+
+            <h3
+              style={{
+                fontSize: "1.125rem",
+                fontWeight: 700,
+                marginBottom: "0.5rem",
+              }}
+            >
+              Upload / Paste Sample Response
+            </h3>
+            <p
+              style={{
+                fontSize: "0.8125rem",
+                color: colors.TextBody,
+                marginBottom: "1rem",
+                lineHeight: 1.4,
+              }}
+            >
+              Upload a <code>.json</code> file from your device or paste an
+              expected sample JSON response. AI Schema Engine will analyze its
+              schema risk-free without triggering live requests.
+            </p>
+
+            {/* File Upload / Drag & Drop Dropzone */}
+            <div
+              style={{
+                marginBottom: "1rem",
+                padding: "1rem",
+                border: `2px dashed ${colors.CardBorder}`,
+                borderRadius: "0.5rem",
+                background: colors.Background,
+                textAlign: "center",
+                cursor: "pointer",
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const content = event.target?.result as string;
+                    if (content) {
+                      setSampleInputText(content);
+                      showToast(`Loaded ${file.name} successfully!`, "success");
+                    }
+                  };
+                  reader.readAsText(file);
+                }
+              }}
+            >
+              <input
+                type="file"
+                id="json-file-input"
+                accept=".json,text/plain"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const content = event.target?.result as string;
+                      if (content) {
+                        setSampleInputText(content);
+                        showToast(
+                          `Loaded ${file.name} successfully!`,
+                          "success",
+                        );
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+              />
+              <label
+                htmlFor="json-file-input"
+                style={{
+                  cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "0.375rem",
+                }}
+              >
+                <UploadIcon size={22} color={colors.BrandIndigo} />
+                <span
+                  style={{
+                    fontSize: "0.8125rem",
+                    fontWeight: 600,
+                    color: colors.TextHeading,
+                  }}
+                >
+                  Upload .json File from Device or Drag & Drop Here
+                </span>
+                <span style={{ fontSize: "0.75rem", color: colors.TextBody }}>
+                  Supports JSON files up to 5MB
+                </span>
+              </label>
+            </div>
+
+            <textarea
+              rows={8}
+              placeholder='{\n  "success": true,\n  "data": {\n    "id": "123",\n    "name": "Sample Output"\n  }\n}'
+              value={sampleInputText}
+              onChange={(e) => setSampleInputText(e.target.value)}
+              style={{
+                width: "100%",
+                background: colors.Background,
+                border: `1px solid ${colors.CardBorder}`,
+                borderRadius: "0.5rem",
+                color: colors.SuccessBadgeText,
+                padding: "0.75rem",
+                fontFamily: "monospace",
+                fontSize: "0.8125rem",
+                outline: "none",
+                resize: "vertical",
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "0.75rem",
+                marginTop: "1rem",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setUploadingSampleApiId(null)}
+                style={{
+                  padding: "0.5rem 1rem",
+                  borderRadius: "0.375rem",
+                  background: colors.Background,
+                  color: colors.TextBody,
+                  border: `1px solid ${colors.CardBorder}`,
+                  cursor: "pointer",
+                  fontSize: "0.8125rem",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!sampleInputText.trim()) {
+                    showToast(
+                      "Please paste or enter a sample JSON response.",
+                      "warning",
+                    );
+                    return;
+                  }
+                  handleSaveSampleResponse(
+                    uploadingSampleApiId,
+                    sampleInputText,
+                  );
+                  setUploadingSampleApiId(null);
+                }}
+                style={{
+                  padding: "0.5rem 1.25rem",
+                  borderRadius: "0.375rem",
+                  background: `linear-gradient(90deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
+                  color: colors.TextOverlay,
+                  fontWeight: 600,
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "0.8125rem",
+                }}
+              >
+                Save & Analyze Sample
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* OpenAPI / Postman Importer Modal */}
       <ApiImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        hasExistingManualApis={apisList.some(
-          (a) =>
-            (a.apiName && a.apiName.trim().length > 0) ||
-            (a.apiEndpoint &&
-              a.apiEndpoint !== "https://" &&
-              a.apiEndpoint.trim().length > 8),
-        )}
-        onImport={(apis, mode) => {
-          importApisBatch(apis, mode);
-          setHasChosenManual(true);
-        }}
+        onImport={(apis, mode) => importApisBatch(apis, mode)}
       />
     </motion.div>
   );

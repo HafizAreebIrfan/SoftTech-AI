@@ -128,6 +128,10 @@ export interface SignupStore {
     navigate: (opts: { to: string }) => void,
   ) => Promise<void>;
   handleEndpointUrlChange: (apiId: string, inputUrl: string) => void;
+  importApisBatch: (
+    apis: ApiConnection[],
+    mode: "append" | "replace",
+  ) => void;
   applyTemplateSuggestions: (
     apiId: string,
     field: "apiQueryParams" | "apiHeaders" | "apiRequestBody",
