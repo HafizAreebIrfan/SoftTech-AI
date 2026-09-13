@@ -279,6 +279,27 @@ export const registerCompanyApiTools = (
             }
           }
 
+          // Helper tools (availability, stock-check, coupon validation, etc.)
+          // support main tools (listing, detail, search) but should never
+          // render their own widget. When the current tool is registered as a
+          // helper, return text-only so the model narrates the answer without
+          // a generic single-record card. Data-driven: flagged during tool
+          // registration by buildEntityToolDirectory, not by entity/industry
+          // name.
+          if (actionTools.helperTools?.has(toolName)) {
+            console.log(
+              `[MCP Tool Response] "${toolName}" is a helper tool — returning text-only (no widget).`,
+            );
+            return {
+              content: [{ type: "text" as const, text: `${api.name || toolName} result received.` }],
+              structuredContent: {
+                title: String(api.name || toolName),
+                data: (processedResponse as any)?.data ?? processedResponse ?? null,
+                total: 0,
+              },
+            };
+          }
+
           const widgetContent = normalizeApiResponseToWidget(
             company.companyName,
             api.name || `API ${index + 1}`,
@@ -300,6 +321,13 @@ export const registerCompanyApiTools = (
             (api as any).streamUrl,
             checkoutLinks,
           );
+
+          // Classify tool purpose from HTTP method + endpoint shape + response
+          // data. This drives the frontend's layout routing and commerce guard.
+          const toolPurpose = classifyToolPurpose(api, processedResponse);
+          if (widgetContent.collection) {
+            widgetContent.collection.purpose = toolPurpose;
+          }
 
           const summaryText = applyRecoveryMessaging(widgetContent, recovery);
 
@@ -453,6 +481,8 @@ export const registerCompanyApiTools = (
             resourceUri,
             method,
             finalSummary,
+            false,
+            (api as any).uiConfig?.uiEnabled,
           );
         } catch (error: any) {
           // 3. Handle Error Widget
@@ -564,6 +594,7 @@ const buildMcpSuccessResult = (
   method = "GET",
   summaryText?: string,
   isAuthChallenge = false,
+  uiEnabled?: boolean,
 ) => {
   const metaObject: Record<string, any> = {
     ui: { resourceUri },
@@ -588,7 +619,12 @@ const buildMcpSuccessResult = (
       actions: widgetContent.actions,
       audience: widgetContent.audience,
       platformtype: widgetContent.platformtype,
-      metadata: widgetContent.metadata,
+      metadata: {
+        ...widgetContent.metadata,
+        // Company toggle: when uiEnabled is explicitly false, the frontend
+        // skips widget rendering for this tool. Defaults to true (show widget).
+        uiEnabled: uiEnabled !== false,
+      },
     },
   };
 
@@ -1136,6 +1172,84 @@ const isDetailEndpoint = (api: any): boolean => {
   return false;
 };
 
+/**
+ * Classifies the data purpose for a tool response. Data-driven: uses HTTP
+ * method + endpoint path shape + response shape to determine whether the
+ * result is browsable product data, user profile data, utility metadata,
+ * a mutation action, or analytics. Never keys off entity/industry/company
+ * names — only generic signals like path segments, field shapes, and
+ * HTTP verbs.
+ */
+const classifyToolPurpose = (
+  api: any,
+  response: any,
+): "product" | "profile" | "utility" | "action" | "analytics" => {
+  const method = String(api?.method || "GET").toUpperCase();
+  const endpoint = String(api?.endpoint || "").toLowerCase();
+  const name = String(api?.name || "").toLowerCase();
+
+  // 1. Mutations are always "action"
+  if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
+    return "action";
+  }
+
+  // 2. Profile / user / account endpoints → "profile"
+  if (
+    /\/user\b|\/profile|\/account|\/me\b|\/my\b|\/customer\b/i.test(endpoint) ||
+    /profile|account|my\s|user\s|customer/i.test(name)
+  ) {
+    // Sub-check: if the response has booking/order-like arrays, it's a user's
+    // booking list — still "profile" (user-specific data, not browsable products).
+    return "profile";
+  }
+
+  // 3. Analytics / spending / reports → "analytics"
+  if (
+    /\/analytics|\/spending|\/reports?|\/stats|\/insights|\/summary|\/dashboard/i.test(endpoint) ||
+    /analytics|spending|report|stat|insight|summary/i.test(name)
+  ) {
+    return "analytics";
+  }
+
+  // 4. Utility / metadata / options / filters → "utility"
+  if (
+    /\/categories|\/category-list|\/options|\/filters?|\/tags?|\/types?|\/genres?|\/brands?|\/departments?/i.test(endpoint) ||
+    /categor|option|filter|tag|type|genre|brand|department|list\s/i.test(name)
+  ) {
+    return "utility";
+  }
+
+  // 5. Review / rating endpoints → "utility" (not browsable products)
+  if (
+    /\/reviews?|\/ratings?|\/feedback|\/testimonials?/i.test(endpoint) ||
+    /review|rating|feedback|testimonial/i.test(name)
+  ) {
+    return "utility";
+  }
+
+  // 6. Fallback: if response has commercial shape (price + image) → "product"
+  const data = response && typeof response === "object" && "data" in response
+    ? response.data
+    : response;
+  const records = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+  if (records.length > 0) {
+    const sample = records[0];
+    if (sample && typeof sample === "object") {
+      const hasPrice = Object.keys(sample).some(
+        (k) => /price|amount|cost|fee|rate|fare|total/i.test(k),
+      );
+      const hasImage = Object.keys(sample).some(
+        (k) => /image|photo|thumbnail|avatar|cover|picture|img|logo|banner|gallery/i.test(k),
+      );
+      if (hasPrice && hasImage) return "product";
+      if (hasPrice) return "product";
+    }
+  }
+
+  // 7. Default: "product" for GET list endpoints (browsable data)
+  return "product";
+};
+
 const firstPathSegment = (endpoint?: string): string => {
   const clean = String(endpoint || "").split("?")[0];
   for (const segment of clean.split("/")) {
@@ -1220,6 +1334,10 @@ const buildEntityToolDirectory = (
         // Per-item date availability / booking calendar — its own role so the
         // widget's booking calendar and the model both get a dedicated tool.
         if (!roles.availability) roles.availability = toolId;
+        // Mark as helper: availability checks support detail views but should
+        // never render their own widget (text verdict only).
+        if (!roles.helperTools) roles.helperTools = new Set();
+        roles.helperTools.add(toolId);
       } else if (isDetailEndpoint(api)) {
         roles.detail = toolId;
       } else if (

@@ -27,6 +27,13 @@ export interface ActionToolLinks {
   optionsTool?: string;
   /** Tool that checks an item's date availability / booked calendar. */
   availability?: string;
+  /**
+   * Set of tool IDs that are "helper" tools — they support main tools
+   * (listing, detail, search) but should never render their own widget.
+   * When a tool's ID is in this set, the handler returns text-only.
+   * Examples: availability check, stock check, coupon validation.
+   */
+  helperTools?: Set<string>;
 }
 
 export const normalizeApiResponseToWidget = (

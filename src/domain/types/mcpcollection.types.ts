@@ -53,10 +53,13 @@ export type CollectionFacet = {
   options?: Array<{ label: string; value: string | number }>;
 };
 
+export type CollectionPurpose = "product" | "profile" | "utility" | "action" | "analytics";
+
 export type CollectionResult = {
   entity?: string;
   dataPath?: string;
   layout?: string;
+  purpose?: CollectionPurpose;
   itemLabel?: string;
   total?: number;
   page?: number;
