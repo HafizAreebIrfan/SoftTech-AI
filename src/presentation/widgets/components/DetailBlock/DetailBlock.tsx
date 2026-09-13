@@ -856,10 +856,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
   const [dynamicConflictingBookings, setDynamicConflictingBookings] = useState<any[]>([]);
   const [dynamicAvailableDates, setDynamicAvailableDates] = useState<any[]>([]);
-  // Ranges the availability tool reported as NOT bookable when its response
-  // carried no per-date data (flat boolean/count shapes like
-  // {available:false, remainingQuantity:0}).
-  const [dynamicBlockedRanges, setDynamicBlockedRanges] = useState<any[]>([]);
 
   useEffect(() => {
     const recId = targetRecord?.id ?? targetRecord?._id;
@@ -904,18 +900,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           setDynamicAvailableDates(avail);
         }
         // Flat boolean/count responses (e.g. {available:false,
-        // remainingQuantity:0} with no date arrays) carry no per-date data —
-        // conservatively block the checked range when it came back
-        // unavailable, so the calendar never shows open dates the API says
-        // are taken. Data-driven: keyed off the boolean + requested range.
-        const boolAvail = Object.entries(data || {})
-          .filter(
-            ([k, v]) => typeof v === "boolean" && /availab/i.test(k),
-          )
-          .map(([, v]) => v)[0];
-        if (boolAvail === false && !Array.isArray(avail)) {
-          setDynamicBlockedRanges([{ from: todayStr, to: end }]);
-        }
+        // remainingQuantity:0} with no date arrays) carry no per-date data.
+        // Do NOT block the entire range — let the calendar show all dates as
+        // available so the user can still see and select open dates. The
+        // record's own bookings array (if any) marks specific blocked dates.
       })
       .catch(() => {});
   }, [targetRecord?.id, isRental, actions, todayStr]);
@@ -962,11 +950,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       if (!UNAVAILABLE_KEY_RE.test(k)) continue;
       collectDates(v, set);
     }
-    // Ranges the availability tool reported unavailable with no per-date
-    // detail (flat boolean/count response) — block the checked window.
-    for (const r of dynamicBlockedRanges) collectDates(r, set);
     return set;
-  }, [targetRecord, dynamicConflictingBookings, dynamicBlockedRanges]);
+  }, [targetRecord, dynamicConflictingBookings]);
 
   // Allow-list: dates the record explicitly marks available (arrays of date
   // strings/ranges under keys like availableDates / openSlots), plus any the
@@ -995,9 +980,12 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     [actions],
   );
 
-  // Whether we have ANY availability signal. When false we must not imply the
-  // whole calendar is open — hide it and show plain date inputs instead. (#5)
+  // Whether we have ANY availability signal. For rental items, always show
+  // the calendar — the record's own bookings data marks blocked dates, and
+  // the calendar shows which dates ARE available. Only hide the calendar
+  // entirely when there is truly no availability mechanism (non-rental items).
   const hasAvailabilityData =
+    isRental ||
     bookedDatesSet.size > 0 ||
     availableDatesSet.size > 0 ||
     hasAvailabilityAction;
@@ -1506,6 +1494,14 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     calendarDays.push({ day: d, isCurrent: true, dateStr });
   }
 
+  // Detect when every selectable day in the visible month is blocked. In that
+  // case fall back to plain date inputs so the user can still enter dates
+  // manually (the calendar offers no clickable days and would be frustrating).
+  const allVisibleDatesBlocked = calendarDays.every((item) => {
+    if (!item.isCurrent || !item.dateStr) return true; // non-current days don't count
+    return !isSelectableDate(item.dateStr);
+  });
+
   /* ------------------------------- Left Column ------------------------- */
   const mainColumn = (
     <div className={styles.mainCol}>
@@ -1743,9 +1739,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         {/* ----------------- RENTAL / BOOKING CARD ------------------ */}
         {isRental ? (
           <>
-            {/* Availability calendar shown only when we have a real
-                availability signal; otherwise plain date inputs. (#5) */}
-            {hasAvailabilityData ? (
+            {/* Availability calendar shown when we have availability data
+                AND at least one day in the visible month is selectable.
+                Falls back to plain date inputs when all days are blocked. */}
+            {hasAvailabilityData && !allVisibleDatesBlocked ? (
             <div className={styles.calendarCard}>
               <div className={styles.calendarMonthHeader}>
                 <button
@@ -1845,6 +1842,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             </div>
             ) : (
             <>
+              {allVisibleDatesBlocked && (
+                <p className={styles.calStatusNote} style={{ marginBottom: 8 }}>
+                  All dates in this period are booked. Select dates manually below — we'll check for the next available slot.
+                </p>
+              )}
               <div className={styles.bookingField}>
                 <label className={styles.fieldLabel}>Pickup date</label>
                 <input

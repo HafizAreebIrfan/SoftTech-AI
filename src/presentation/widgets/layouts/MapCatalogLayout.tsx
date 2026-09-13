@@ -46,8 +46,69 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     [records],
   );
 
+  // Client-side filter: when the backend returns records that don't match the
+  // declared appliedQuery (e.g. all cars instead of only Karachi Toyotas),
+  // prune markers that clearly violate the query. Keys off field shape only —
+  // no entity/company/industry names. Date-range keys (datefrom, dateto,
+  // startDate, endDate, checkin, checkout) are excluded from filtering since
+  // they describe the booking window, not the record set.
+  const filteredRecords = useMemo(() => {
+    const q = collection?.appliedQuery as Record<string, any> | undefined;
+    if (!q || typeof q !== "object") return typedRecords;
+
+    const DATE_KEYS =
+      /^(datefrom|dateto|startdate|enddate|checkin|checkout|from|to)$/i;
+
+    const queryFilters = Object.entries(q).filter(
+      ([k, v]) =>
+        !DATE_KEYS.test(k) &&
+        v !== undefined &&
+        v !== null &&
+        v !== "" &&
+        typeof v !== "object",
+    );
+    if (queryFilters.length === 0) return typedRecords;
+
+    return typedRecords.filter((rec) =>
+      queryFilters.every(([key, queryVal]) => {
+        const qStr = String(queryVal).toLowerCase();
+        // Direct field match
+        const direct = rec[key];
+        if (
+          direct !== undefined &&
+          String(direct).toLowerCase().includes(qStr)
+        )
+          return true;
+        // Nested location.city / location.name / location.country match
+        if (rec.location && typeof rec.location === "object") {
+          const loc = rec.location as Record<string, any>;
+          for (const locKey of Object.keys(loc)) {
+            if (
+              loc[locKey] !== undefined &&
+              String(loc[locKey]).toLowerCase().includes(qStr)
+            )
+              return true;
+          }
+        }
+        // Generic nested objects (1 level)
+        for (const v of Object.values(rec)) {
+          if (v && typeof v === "object" && !Array.isArray(v)) {
+            for (const inner of Object.values(v as Record<string, any>)) {
+              if (
+                inner !== undefined &&
+                String(inner).toLowerCase().includes(qStr)
+              )
+                return true;
+            }
+          }
+        }
+        return false;
+      }),
+    );
+  }, [typedRecords, collection?.appliedQuery]);
+
   const selectedRecord: Record<string, any> | null =
-    typedRecords[selectedIndex] || typedRecords[0] || null;
+    filteredRecords[selectedIndex] || filteredRecords[0] || null;
 
   // Derive a human-friendly search context (dates / guests / location) without
   // any entity- or industry-specific assumptions.
@@ -72,8 +133,8 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
       parts.push(String(selectedRecord.location.name));
     }
     if (parts.length > 0) return parts.join(" · ");
-    return `${typedRecords.length} available`;
-  }, [subtitle, collection, selectedRecord, typedRecords.length]);
+    return `${filteredRecords.length} available`;
+  }, [subtitle, collection, selectedRecord, filteredRecords.length]);
 
   // Open (or swap) the docked detail panel for a card. Opens instantly with the
   // summary record + requests the fullscreen map, then enriches via the shared
@@ -206,7 +267,7 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
           }
         >
           <MapBlock
-            records={typedRecords}
+            records={filteredRecords}
             selectedRecord={selectedRecord}
             onSelectRecord={handleSelectRecord}
             height="100%"
@@ -228,7 +289,7 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
           )}
 
           <MapCardCarousel
-            records={typedRecords}
+            records={filteredRecords}
             fields={fields}
             actions={actions}
             selectedIndex={selectedIndex}
