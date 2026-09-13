@@ -1,5 +1,13 @@
 import { User } from "../../domain/entities/CompanyLogin";
 
+export type ToolUiType = "auto" | "catalog" | "mapcatalog" | "table" | "dashboard" | "profile" | "hidden";
+
+export interface ToolUiConfig {
+  uiEnabled: boolean;
+  uiType: ToolUiType;
+  mapEnabled: boolean;
+}
+
 export interface ApiConnection {
   id: string;
   apiName: string;
@@ -13,7 +21,15 @@ export interface ApiConnection {
   oauthTokenUrl?: string;
   oauthClientId?: string;
   apiHeaders?: string;
+  uiConfig?: ToolUiConfig;
+  mcpDescription?: string;
 }
+
+export const DEFAULT_TOOL_UI_CONFIG: ToolUiConfig = {
+  uiEnabled: false,
+  uiType: "auto",
+  mapEnabled: false,
+};
 
 export interface AuthStore {
   user: User | null;
@@ -43,5 +59,7 @@ export interface AuthStore {
       | "list"
       | "cards",
   ) => void;
+  updateApiUiConfig: (apiId: string, config: Partial<ToolUiConfig>) => void;
+  updateApiDescription: (apiId: string, description: string) => void;
   clearAuth: () => void;
 }

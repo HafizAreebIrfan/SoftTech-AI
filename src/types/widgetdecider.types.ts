@@ -3,7 +3,8 @@ export type PresentationLayout =
   | "catalog"
   | "table"
   | "mapcatalog"
-  | "general";
+  | "general"
+  | "profile";
 
 export type PresentationBlockType =
   | "summary"

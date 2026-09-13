@@ -244,6 +244,20 @@ const GenericWidgetInner: React.FC = () => {
     return null;
   }
 
+  // Purpose-based widget gating: utility/action tools return text-only, no widget.
+  const toolPurpose =
+    (collection as any)?.purpose ||
+    currentMetadata?.purpose;
+
+  if (toolPurpose === "utility" || toolPurpose === "action") {
+    return null;
+  }
+
+  // Company toggle: when uiEnabled is explicitly false, skip widget rendering.
+  if (currentMetadata?.uiEnabled === false) {
+    return null;
+  }
+
   const entityName = String(
     collection?.entity || content.metadata?.apiName || content.title || "",
   ).toLowerCase();
@@ -394,6 +408,23 @@ const GenericWidgetInner: React.FC = () => {
       case "table":
         return (
           <TableLayout
+            title={content.title}
+            subtitle={content.subtitle}
+            data={rawData}
+            records={records}
+            fields={fields}
+            collection={collection}
+            capabilities={content.capabilities}
+            pagination={content.pagination}
+            actions={content.actions}
+            audience={content.audience}
+            presentationPlan={presentationPlan}
+          />
+        );
+
+      case "profile":
+        return (
+          <GeneralLayout
             title={content.title}
             subtitle={content.subtitle}
             data={rawData}

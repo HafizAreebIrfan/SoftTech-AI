@@ -2120,7 +2120,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               </div>
             )}
 
-            {/* Action Buttons: Add to Cart and Buy Now are always visible */}
+            {/* Action Buttons: Add to Cart and Buy Now — only for product purpose */}
+            {collection?.purpose !== "profile" && collection?.purpose !== "utility" && collection?.purpose !== "analytics" && (
             <div className={styles.buttonGroup}>
               <button
                 type="button"
@@ -2151,6 +2152,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 </button>
               )}
             </div>
+            )}
 
             <p className={styles.bookingNote}>
               You won't be charged yet — review and confirm on the next step.

@@ -41,6 +41,7 @@ export interface ApisInformation {
     clientId?: string;
     clientSecret?: string;
   };
+  mcpDescription?: string;
 }
 
 export interface CompanyUIInformation {

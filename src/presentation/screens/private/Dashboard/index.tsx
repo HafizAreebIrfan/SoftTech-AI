@@ -15,15 +15,35 @@ import {
 } from "../../../../assets/icons";
 import styles from "../../../../styles/dashboard.module.css";
 import { logout } from "../../../../adapters/api/authApi";
+import type { ToolUiType } from "../../../../interfaces/auth/auth.interface";
+
+const UI_TYPE_LABELS: Record<ToolUiType, string> = {
+  auto: "Auto (data-driven)",
+  catalog: "Catalog Grid",
+  mapcatalog: "Map View",
+  table: "Table",
+  dashboard: "Dashboard",
+  profile: "Profile",
+  hidden: "Hidden (text-only)",
+};
+
+const METHOD_COLORS: Record<string, { bg: string; text: string }> = {
+  GET: { bg: "#10b98115", text: "#10b981" },
+  POST: { bg: "#6366f115", text: "#6366f1" },
+  PUT: { bg: "#f59e0b15", text: "#f59e0b" },
+  PATCH: { bg: "#f59e0b15", text: "#f59e0b" },
+  DELETE: { bg: "#ef444415", text: "#ef4444" },
+};
 
 const Dashboard: FC = () => {
   const navigate = useNavigate();
   const { colors, isDark, toggleTheme } = useThemeStore();
-  const { user, apisList, selectedLayout, setSelectedLayout, clearAuth } =
+  const { user, apisList, selectedLayout, setSelectedLayout, clearAuth, updateApiUiConfig, updateApiDescription } =
     useAuthStore();
   const [activeTab, setActiveTab] = useState<"dashboard" | "apis" | "settings">(
     "dashboard",
   );
+  const [expandedApi, setExpandedApi] = useState<string | null>(null);
 
   const handleLogout = () => {
     logout()
@@ -39,6 +59,10 @@ const Dashboard: FC = () => {
         );
       });
   };
+
+  const enabledCount = apisList.filter(
+    (a) => a.uiConfig?.uiEnabled !== false,
+  ).length;
 
   return (
     <div
@@ -109,7 +133,7 @@ const Dashboard: FC = () => {
                     : colors.IconColor
                 }
               />
-              UI Curator Settings
+              UI Settings
             </button>
           </nav>
         </div>
@@ -147,11 +171,11 @@ const Dashboard: FC = () => {
               className={styles.welcomeTitle}
               style={{ color: colors.TextHeading }}
             >
-              Welcome {user?.name} Console
+              {user?.name || "Company"} Console
             </h1>
             <p className={styles.subtitle}>
-              Monitor, refine, and orchestrate company interface streams in
-              real-time.
+              Manage API connections and configure how each tool renders in the
+              widget.
             </p>
           </div>
           <button
@@ -195,80 +219,354 @@ const Dashboard: FC = () => {
         )}
 
         {activeTab === "apis" && (
-          <div
-            className={styles.workspaceCard}
-            style={{
-              background: colors.BackgroundSecondary,
-              borderColor: colors.Border,
-            }}
-          >
-            <h3
-              className={styles.workspaceTitle}
-              style={{ color: colors.TextHeading }}
+          <div className="space-y-4">
+            {/* Summary bar */}
+            <div
+              className="p-4 rounded-2xl border flex items-center justify-between"
+              style={{
+                background: colors.BackgroundSecondary,
+                borderColor: colors.Border,
+              }}
             >
-              Connected API Connections
-            </h3>
-            <p className="text-xs text-slate-500">
-              Your registered integration streams syncing data feeds to SoftTech
-              AI.
-            </p>
-            <div className="mt-4 space-y-4">
-              {apisList.map((api) => (
-                <div
-                  key={api.id}
-                  className="p-5 rounded-2xl border flex flex-col md:flex-row justify-between gap-4"
+              <div>
+                <h3
+                  className="text-sm font-semibold"
+                  style={{ color: colors.TextHeading }}
+                >
+                  {apisList.length} API{apisList.length !== 1 ? "s" : ""}{" "}
+                  Connected
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {enabledCount} with widget UI enabled
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    apisList.forEach((api) =>
+                      updateApiUiConfig(api.id, { uiEnabled: true }),
+                    );
+                    showToast("All APIs enabled", "success");
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
                   style={{
-                    background: colors.Background,
                     borderColor: colors.Border,
+                    color: colors.TextBody,
+                    background: colors.Background,
                   }}
                 >
-                  <div className="space-y-2 text-left">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`${styles.methodBadge} ${api.apiMethod === "GET" ? styles.methodGet : styles.methodPost}`}
-                      >
-                        {api.apiMethod}
-                      </span>
-                      <h4 className="font-bold text-base text-slate-200">
-                        {api.apiName}
-                      </h4>
-                    </div>
-                    <p className="font-mono text-xs text-slate-400 truncate max-w-lg">
-                      {api.apiEndpoint}
-                    </p>
-                    <div className="flex gap-4 text-xs text-slate-500 mt-2">
-                      <span>
-                        Auth Type:{" "}
-                        <strong className="text-indigo-400">
-                          {api.apiAuthType}
-                        </strong>
-                      </span>
-                      {api.apiAuthHeader && (
-                        <span>
-                          Header:{" "}
-                          <strong className="text-slate-400">
-                            {api.apiAuthHeader}
-                          </strong>
-                        </span>
-                      )}
-                      {api.oauthTokenUrl && (
-                        <span>
-                          OAuth Token:{" "}
-                          <strong className="text-slate-400">
-                            {api.oauthTokenUrl}
-                          </strong>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-1 rounded bg-indigo-500/10 text-indigo-400">
-                      Sync Online
-                    </span>
-                  </div>
-                </div>
-              ))}
+                  Enable All
+                </button>
+                <button
+                  onClick={() => {
+                    apisList.forEach((api) =>
+                      updateApiUiConfig(api.id, { uiEnabled: false }),
+                    );
+                    showToast("All APIs disabled", "success");
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+                  style={{
+                    borderColor: colors.Border,
+                    color: colors.TextBody,
+                    background: colors.Background,
+                  }}
+                >
+                  Disable All
+                </button>
+              </div>
             </div>
+
+            {/* API cards */}
+            {apisList.map((api) => {
+              const uiCfg = api.uiConfig || {
+                uiEnabled: false,
+                uiType: "auto" as ToolUiType,
+                mapEnabled: false,
+              };
+              const isExpanded = expandedApi === api.id;
+              const methodStyle = METHOD_COLORS[api.apiMethod] || METHOD_COLORS.GET;
+
+              return (
+                <div
+                  key={api.id}
+                  className="rounded-2xl border overflow-hidden transition-all"
+                  style={{
+                    background: colors.BackgroundSecondary,
+                    borderColor:
+                      uiCfg.uiEnabled && isExpanded
+                        ? "#6366f140"
+                        : colors.Border,
+                  }}
+                >
+                  {/* Card header — always visible */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExpandedApi(isExpanded ? null : api.id)
+                    }
+                    className="w-full p-4 flex items-center gap-4 text-left transition-colors"
+                    style={{ background: "transparent" }}
+                  >
+                    {/* Method badge */}
+                    <span
+                      className="inline-flex items-center justify-center w-12 h-8 rounded-lg text-[11px] font-bold tracking-wider shrink-0"
+                      style={{
+                        background: methodStyle.bg,
+                        color: methodStyle.text,
+                      }}
+                    >
+                      {api.apiMethod}
+                    </span>
+
+                    {/* Name + endpoint */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4
+                          className="font-semibold text-sm truncate"
+                          style={{ color: colors.TextHeading }}
+                        >
+                          {api.apiName || "Unnamed API"}
+                        </h4>
+                        {/* Widget status pill */}
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0"
+                          style={{
+                            background: uiCfg.uiEnabled
+                              ? "#10b98118"
+                              : "#6b728018",
+                            color: uiCfg.uiEnabled ? "#10b981" : "#6b7280",
+                          }}
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full"
+                            style={{
+                              background: uiCfg.uiEnabled ? "#10b981" : "#6b7280",
+                            }}
+                          />
+                          {uiCfg.uiEnabled ? "Widget ON" : "Widget OFF"}
+                        </span>
+                      </div>
+                      <p
+                        className="font-mono text-[11px] mt-0.5 truncate"
+                        style={{ color: "#6b7280" }}
+                      >
+                        {api.apiEndpoint || "No endpoint"}
+                      </p>
+                    </div>
+
+                    {/* Chevron */}
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      className="shrink-0 transition-transform"
+                      style={{
+                        transform: isExpanded ? "rotate(180deg)" : "rotate(0)",
+                        color: "#6b7280",
+                      }}
+                    >
+                      <path
+                        d="M4 6L8 10L12 6"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Expanded controls */}
+                  {isExpanded && (
+                    <div
+                      className="px-4 pb-4 pt-2 border-t"
+                      style={{ borderColor: colors.Border }}
+                    >
+                      {/* API details row */}
+                      <div
+                        className="flex flex-wrap gap-x-6 gap-y-1 text-[11px] mb-4"
+                        style={{ color: "#9ca3af" }}
+                      >
+                        <span>
+                          Auth:{" "}
+                          <span style={{ color: colors.TextBody }}>
+                            {api.apiAuthType}
+                          </span>
+                        </span>
+                        {api.apiAuthHeader && (
+                          <span>
+                            Header:{" "}
+                            <span style={{ color: colors.TextBody }}>
+                              {api.apiAuthHeader}
+                            </span>
+                          </span>
+                        )}
+                        {api.oauthTokenUrl && (
+                          <span>
+                            OAuth:{" "}
+                            <span style={{ color: colors.TextBody }}>
+                              Connected
+                            </span>
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Widget UI Controls */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                        {/* Enable/Disable */}
+                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={uiCfg.uiEnabled}
+                            onClick={() =>
+                              updateApiUiConfig(api.id, {
+                                uiEnabled: !uiCfg.uiEnabled,
+                              })
+                            }
+                            className="relative inline-flex h-[22px] w-[40px] items-center rounded-full transition-colors"
+                            style={{
+                              background: uiCfg.uiEnabled ? "#6366f1" : "#374151",
+                            }}
+                          >
+                            <span
+                              className="inline-block h-[16px] w-[16px] rounded-full bg-white transition-transform"
+                              style={{
+                                transform: uiCfg.uiEnabled
+                                  ? "translateX(20px)"
+                                  : "translateX(3px)",
+                              }}
+                            />
+                          </button>
+                          <span
+                            className="text-xs font-medium"
+                            style={{ color: colors.TextBody }}
+                          >
+                            Show widget UI
+                          </span>
+                        </label>
+
+                        {/* Layout selector */}
+                        {uiCfg.uiEnabled && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs" style={{ color: "#9ca3af" }}>
+                              Layout
+                            </span>
+                            <select
+                              value={uiCfg.uiType}
+                              onChange={(e) =>
+                                updateApiUiConfig(api.id, {
+                                  uiType: e.target.value as ToolUiType,
+                                })
+                              }
+                              className="text-xs rounded-lg px-2.5 py-1.5 border outline-none"
+                              style={{
+                                background: colors.Background,
+                                borderColor: colors.Border,
+                                color: colors.TextBody,
+                              }}
+                            >
+                              {Object.entries(UI_TYPE_LABELS).map(
+                                ([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Map toggle — only when auto */}
+                        {uiCfg.uiEnabled && uiCfg.uiType === "auto" && (
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={uiCfg.mapEnabled}
+                              onClick={() =>
+                                updateApiUiConfig(api.id, {
+                                  mapEnabled: !uiCfg.mapEnabled,
+                                })
+                              }
+                              className="relative inline-flex h-[18px] w-[32px] items-center rounded-full transition-colors"
+                              style={{
+                                background: uiCfg.mapEnabled ? "#6366f1" : "#374151",
+                              }}
+                            >
+                              <span
+                                className="inline-block h-[12px] w-[12px] rounded-full bg-white transition-transform"
+                                style={{
+                                  transform: uiCfg.mapEnabled
+                                    ? "translateX(16px)"
+                                    : "translateX(3px)",
+                                }}
+                              />
+                            </button>
+                            <span
+                              className="text-xs"
+                              style={{ color: "#9ca3af" }}
+                            >
+                              Map view
+                            </span>
+                          </label>
+                        )}
+                      </div>
+
+                      {/* MCP Tool Description */}
+                      <div className="mt-4">
+                        <label
+                          className="block text-[11px] font-medium mb-1.5"
+                          style={{ color: "#9ca3af" }}
+                        >
+                          MCP Tool Description{" "}
+                          <span style={{ color: "#6b7280" }}>
+                            (shown to ChatGPT)
+                          </span>
+                        </label>
+                        <textarea
+                          value={api.mcpDescription || ""}
+                          onChange={(e) =>
+                            updateApiDescription(api.id, e.target.value)
+                          }
+                          placeholder="Auto-generated from API schema if left empty..."
+                          rows={3}
+                          className="w-full text-xs rounded-lg px-3 py-2 border outline-none resize-none"
+                          style={{
+                            background: colors.Background,
+                            borderColor: colors.Border,
+                            color: colors.TextBody,
+                          }}
+                        />
+                        <p className="text-[10px] mt-1" style={{ color: "#6b7280" }}>
+                          {api.mcpDescription
+                            ? `${api.mcpDescription.length} characters — custom description active`
+                            : "Using auto-generated description from API schema"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {apisList.length === 0 && (
+              <div
+                className="p-8 rounded-2xl border text-center"
+                style={{
+                  background: colors.BackgroundSecondary,
+                  borderColor: colors.Border,
+                }}
+              >
+                <div className="mx-auto mb-3">
+                  <DatabaseIcon size={32} color="#4b5563" />
+                </div>
+                <p className="text-sm" style={{ color: "#9ca3af" }}>
+                  No API connections yet. Register your first API during
+                  onboarding.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

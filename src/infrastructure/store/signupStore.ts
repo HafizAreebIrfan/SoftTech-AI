@@ -1006,6 +1006,7 @@ export const useSignupStore = create<SignupStore>()(
                 ...isapikey,
                 ...isoauth,
                 ...isuseroauth,
+                mcpDescription: api.mcpDescription || undefined,
               };
             });
 
@@ -1183,6 +1184,7 @@ export const useSignupStore = create<SignupStore>()(
               ...isapikey,
               ...isoauth,
               ...isuseroauth,
+              mcpDescription: api.mcpDescription || undefined,
             };
           });
 

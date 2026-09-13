@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { AuthStore, ApiConnection } from "../../interfaces/auth/auth.interface";
+import {
+  AuthStore,
+  ApiConnection,
+  ToolUiConfig,
+  DEFAULT_TOOL_UI_CONFIG,
+} from "../../interfaces/auth/auth.interface";
 
 const normalizeLayout = (layout: string): any => {
   if (layout === "grid") return "dashboard";
@@ -34,6 +39,8 @@ export const useAuthStore = create<AuthStore>()(
             api.headers && api.headers.length > 0 ? api.headers[0] : "",
           apiQueryParams:
             api.params && api.params.length > 0 ? api.params[0] : "",
+          uiConfig: api.uiConfig || { ...DEFAULT_TOOL_UI_CONFIG },
+          mcpDescription: api.mcpDescription || "",
         }));
 
         set((state) => ({
@@ -54,6 +61,26 @@ export const useAuthStore = create<AuthStore>()(
         })),
       setSelectedLayout: (layout) =>
         set({ selectedLayout: normalizeLayout(layout) }),
+      updateApiUiConfig: (apiId, config) =>
+        set((state) => ({
+          apisList: state.apisList.map((api) =>
+            api.id === apiId
+              ? {
+                  ...api,
+                  uiConfig: {
+                    ...(api.uiConfig || { ...DEFAULT_TOOL_UI_CONFIG }),
+                    ...config,
+                  },
+                }
+              : api,
+          ),
+        })),
+      updateApiDescription: (apiId, description) =>
+        set((state) => ({
+          apisList: state.apisList.map((api) =>
+            api.id === apiId ? { ...api, mcpDescription: description } : api,
+          ),
+        })),
       clearAuth: () =>
         set({
           user: null,

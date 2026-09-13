@@ -64,10 +64,13 @@ export interface CollectionFacet {
   options?: Array<{ label: string; value: string | number }>;
 }
 
+export type CollectionPurpose = "product" | "profile" | "utility" | "action" | "analytics";
+
 export interface CollectionResult {
   entity?: string;
   dataPath?: string;
   layout?: string;
+  purpose?: CollectionPurpose;
   itemLabel?: string;
   total?: number;
   page?: number;
@@ -115,6 +118,10 @@ export interface WidgetMetadata {
   companyName?: string;
   themeColor?: string;
   streamUrl?: string;
+  /** Backend-injected: false when company disabled UI for this tool. */
+  uiEnabled?: boolean;
+  /** Backend-injected: data purpose signal from tool classification. */
+  purpose?: CollectionPurpose;
   /** Fullscreen "Open in {company}" → catalog page. */
   hasProductPages?: boolean;
   shopCatalogUrl?: string;
