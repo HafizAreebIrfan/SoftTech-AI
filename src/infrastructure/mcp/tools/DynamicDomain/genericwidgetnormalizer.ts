@@ -25,6 +25,8 @@ export interface ActionToolLinks {
   categoryTool?: string;
   categoryParam?: string;
   optionsTool?: string;
+  /** Tool that checks an item's date availability / booked calendar. */
+  availability?: string;
 }
 
 export const normalizeApiResponseToWidget = (
@@ -301,6 +303,21 @@ const buildWidgetActions = (
       id: isSelect ? "select_item" : "view_details",
       label: isSelect ? "Select Option" : "View Details",
       tool: actionTools.detail,
+      requiresItem: true,
+      enabled: true,
+    });
+  }
+
+  // Date-availability check for time-based bookings (rentals, appointments,
+  // reservations). Emitted whenever the company registered a tool for it so
+  // both the model and the widget's booking calendar can invoke it with the
+  // item id + a date range. Detected from the endpoint/tool shape — never an
+  // entity or industry name.
+  if (actionTools.availability) {
+    actions.push({
+      id: "check_availability",
+      label: "Check Availability",
+      tool: actionTools.availability,
       requiresItem: true,
       enabled: true,
     });

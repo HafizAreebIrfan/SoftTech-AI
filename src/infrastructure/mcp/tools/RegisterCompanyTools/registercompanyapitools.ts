@@ -251,6 +251,34 @@ export const registerCompanyApiTools = (
           const userRawPrompt = input?.user_raw_prompt;
           const inferredIntent = input?.inferred_intent;
 
+          // Per-item date-availability verdicts (e.g. "is car X free next
+          // week?") are ANSWERS, not browsable collections — rendering them
+          // as a generic widget would replace the rich catalog/grid the user
+          // is looking at with a near-empty single-record card. Return the
+          // verdict as text (no _meta → no widget) so the model narrates it.
+          // Fully generic: detected from the registered endpoint's shape
+          // (GET + item path param + availability path/name), never an
+          // entity/industry name.
+          if (isAvailabilityEndpoint(api)) {
+            const verdict = describeAvailabilityVerdict(
+              processedResponse,
+              input,
+            );
+            if (verdict) {
+              console.log(
+                `[MCP Tool Response] "${toolName}" is a per-item availability check — returning a text verdict instead of a widget.`,
+              );
+              return {
+                content: [{ type: "text" as const, text: verdict }],
+                structuredContent: {
+                  title: String(api.name || "Availability"),
+                  data: (processedResponse as any)?.data ?? processedResponse ?? null,
+                  total: 0,
+                },
+              };
+            }
+          }
+
           const widgetContent = normalizeApiResponseToWidget(
             company.companyName,
             api.name || `API ${index + 1}`,
@@ -277,10 +305,17 @@ export const registerCompanyApiTools = (
 
           // Narrow a padded result set down to what the user actually asked for
           // (e.g. an API that returned every city because it couldn't map the
-          // requested city to its opaque id). Skipped when search recovery has
-          // already made a deliberate breadth decision, to avoid double-filtering.
+          // requested city to its opaque id). Runs on normal results AND on the
+          // recovery outcome where the query was dropped entirely and the API
+          // returned its full catalog — that fallback is exactly the padded set
+          // this filter exists to trim (a user term like a city still names a
+          // subset, so the discriminating-token partition applies). Still
+          // skipped for the other recovery outcomes, which already carry a real
+          // relaxed query, and for empty results.
+          const isFullCatalogFallback =
+            Boolean(recovery.recovered) && !recovery.effectiveQuery?.trim();
           const relevanceNote =
-            !recovery.recovered && !recovery.empty
+            (!recovery.recovered && !recovery.empty) || isFullCatalogFallback
               ? applyRelevanceFilter(widgetContent, {
                   userRawPrompt,
                   inferredIntent,
@@ -290,13 +325,22 @@ export const registerCompanyApiTools = (
                     api.name,
                 })
               : undefined;
-          const finalSummary = summaryText || relevanceNote;
+          // A successful trim already produced the relevant subset — it IS the
+          // answer to what the user asked — so it wins over the generic
+          // "nearest matches, invite to refine" recovery messaging.
+          const finalSummary = relevanceNote || summaryText;
 
           // Search matched nothing and recovery could only fall back to the
-          // full, unfiltered catalog. Don't render an irrelevant list — point
-          // the model at the sibling category/options tool so it can pivot
-          // using the user's own term instead of presenting the whole catalog.
-          const pivotNote = buildSearchPivot(recovery, actionTools, toolName);
+          // full, unfiltered catalog. If the relevance filter could NOT trim
+          // that catalog to the user's term (no sibling tool either), don't
+          // render the irrelevant list — point the model at the sibling
+          // category/options tool so it can pivot using the user's own term.
+          // When the trim DID succeed, the trimmed subset is the answer and
+          // the pivot is skipped (the follow-up tool would only re-ask the
+          // same thing).
+          const pivotNote = relevanceNote
+            ? undefined
+            : buildSearchPivot(recovery, actionTools, toolName);
           if (pivotNote) {
             console.log(
               `[MCP Tool Response] "${toolName}" search for "${recovery.originalQuery}" matched nothing; pivoting model to sibling tool(s) instead of the full catalog.`
@@ -677,6 +721,69 @@ const buildSearchPivot = (
 };
 
 /**
+ * Renders a per-item date-availability tool's response as a short text verdict
+ * the model can narrate. Reads generic availability signals from the response
+ * shape (a boolean under an availability-ish key, remaining-quantity counters,
+ * conflict counters, date/range arrays) — never entity/industry names. Returns
+ * undefined when the response carries no recognizable signal (the caller then
+ * falls through to the normal widget path).
+ */
+const describeAvailabilityVerdict = (
+  response: any,
+  input?: Record<string, any>,
+): string | undefined => {
+  const data =
+    response && typeof response === "object" && "data" in response
+      ? (response.data ?? response)
+      : response;
+  const obj =
+    data && typeof data === "object" && !Array.isArray(data) ? data : null;
+  if (!obj) return undefined;
+
+  // A boolean availability signal (available / isAvailable / free / open).
+  const boolKey = Object.keys(obj).find(
+    (k) =>
+      typeof obj[k] === "boolean" &&
+      /availab|free|open|bookab/i.test(k),
+  );
+  // Numeric counters (remainingQuantity / availableCount / slotsLeft / conflicts).
+  const numEntries = Object.entries(obj).filter(
+    ([k, v]) =>
+      typeof v === "number" &&
+      /remaining|availab|left|count|total|conflict|booked|slot/i.test(k),
+  );
+
+  if (boolKey === undefined && numEntries.length === 0) return undefined;
+
+  const range: string[] = [];
+  const start = String(input?.startDate || input?.start || input?.from || "");
+  const end = String(input?.endDate || input?.to || "");
+  if (/^\d{4}-\d{2}-\d{2}/.test(start)) range.push(start.slice(0, 10));
+  if (/^\d{4}-\d{2}-\d{2}/.test(end)) range.push(end.slice(0, 10));
+
+  const isAvailable = boolKey !== undefined ? Boolean(obj[boolKey]) : undefined;
+  const conflictCount = numEntries.find(([k]) =>
+    /conflict|booked/i.test(k),
+  )?.[1] as number | undefined;
+  const remaining = numEntries.find(([k]) =>
+    /remaining|left/i.test(k),
+  )?.[1] as number | undefined;
+
+  const parts: string[] = [];
+  if (isAvailable === true) parts.push("the item IS available");
+  else if (isAvailable === false) parts.push("the item is NOT available for the requested dates");
+  if (conflictCount !== undefined && conflictCount > 0)
+    parts.push(`${conflictCount} conflicting booking(s) in that period`);
+  if (remaining !== undefined)
+    parts.push(`${remaining} unit(s) remaining`);
+
+  const when = range.length === 2 ? ` for ${range[0]} to ${range[1]}` : "";
+  return parts.length > 0
+    ? `Availability check${when}: ${parts.join("; ")}. State this clearly to the user and suggest nearby free dates if it is not available.`
+    : undefined;
+};
+
+/**
  * Best-effort human-readable label for one option/category item, used to render
  * a discovery/options tool's result as text. Handles a plain string/number or an
  * object (prefers common display keys, else the first non-id/non-media string).
@@ -972,6 +1079,27 @@ const PATH_PARAM_RE = /\{[^}]+\}|:[a-zA-Z0-9_-]+/;
 const hasPathParam = (endpoint?: string): boolean =>
   PATH_PARAM_RE.test(String(endpoint || ""));
 
+/**
+ * True for a per-item date-availability / booking-calendar endpoint (e.g.
+ * /cars/{id}/availability?startDate&endDate, /rooms/{id}/calendar,
+ * /items/{id}/slots). Detected from endpoint path + name shape — never an
+ * entity or industry name — and required to carry a path item param so plain
+ * list endpoints that merely mention "availability" (e.g. /available-cars)
+ * are not captured.
+ */
+const isAvailabilityEndpoint = (api: any): boolean => {
+  const endpoint = String(api?.endpoint || "");
+  const method = String(api?.method || "GET").toUpperCase();
+  if (method !== "GET") return false;
+  if (!hasPathParam(endpoint)) return false;
+  const name = String(api?.name || "").toLowerCase();
+  return (
+    /\/availability\b|\/availability[/?]|\/calendar|\/slots?\b|\/vacanc|\/bookings?\//i.test(
+      endpoint,
+    ) || /availability|calendar|vacanc|slots?\b/.test(name)
+  );
+};
+
 const isDetailEndpoint = (api: any): boolean => {
   const endpoint = String(api?.endpoint || "");
   const method = String(api?.method || "GET").toUpperCase();
@@ -981,6 +1109,11 @@ const isDetailEndpoint = (api: any): boolean => {
   if (/\/category\/|\/categories\/|\/type\/|\/tag\/|\/department\/|\/filter\//i.test(endpoint)) {
     return false;
   }
+
+  // Availability / calendar endpoints are per-item SUB-resources, not the
+  // record itself — they must never occupy the detail role (that would make
+  // the widget's "View Details" call them instead of the real get-by-id).
+  if (isAvailabilityEndpoint(api)) return false;
 
   // Endpoints with ID parameters (e.g. /{id}, /:id, /{productId}, /{packageId}, /{itemId})
   const pathIdParamRegex =
@@ -1083,7 +1216,11 @@ const buildEntityToolDirectory = (
     }
 
     if (method === "GET") {
-      if (isDetailEndpoint(api)) {
+      if (isAvailabilityEndpoint(api)) {
+        // Per-item date availability / booking calendar — its own role so the
+        // widget's booking calendar and the model both get a dedicated tool.
+        if (!roles.availability) roles.availability = toolId;
+      } else if (isDetailEndpoint(api)) {
         roles.detail = toolId;
       } else if (
         endpoint.includes("/category/") ||

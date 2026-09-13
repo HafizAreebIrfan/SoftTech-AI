@@ -25,7 +25,6 @@
     "http": "^0.0.1-security",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",
-    "ngrok": "^5.0.0-beta.2",
     "nodemailer": "^6.9.4",
     "nodemon": "^3.1.14",
     "socket.io": "^4.8.3",
@@ -42,7 +41,6 @@
     "typescript": "^6.0.3"
   },
   "allowScripts": {
-    "bcrypt@6.0.0": true,
-    "ngrok@5.0.0-beta.2": true
+    "bcrypt@6.0.0": true
   }
 }
