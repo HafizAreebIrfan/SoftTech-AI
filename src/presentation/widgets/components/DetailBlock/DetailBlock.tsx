@@ -856,6 +856,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
   const [dynamicConflictingBookings, setDynamicConflictingBookings] = useState<any[]>([]);
   const [dynamicAvailableDates, setDynamicAvailableDates] = useState<any[]>([]);
+  // Ranges the availability tool reported as NOT bookable when its response
+  // carried no per-date data (flat boolean/count shapes like
+  // {available:false, remainingQuantity:0}).
+  const [dynamicBlockedRanges, setDynamicBlockedRanges] = useState<any[]>([]);
 
   useEffect(() => {
     const recId = targetRecord?.id ?? targetRecord?._id;
@@ -898,6 +902,19 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           data?.availableDates || data?.available || data?.openDates;
         if (Array.isArray(avail) && avail.length > 0) {
           setDynamicAvailableDates(avail);
+        }
+        // Flat boolean/count responses (e.g. {available:false,
+        // remainingQuantity:0} with no date arrays) carry no per-date data —
+        // conservatively block the checked range when it came back
+        // unavailable, so the calendar never shows open dates the API says
+        // are taken. Data-driven: keyed off the boolean + requested range.
+        const boolAvail = Object.entries(data || {})
+          .filter(
+            ([k, v]) => typeof v === "boolean" && /availab/i.test(k),
+          )
+          .map(([, v]) => v)[0];
+        if (boolAvail === false && !Array.isArray(avail)) {
+          setDynamicBlockedRanges([{ from: todayStr, to: end }]);
         }
       })
       .catch(() => {});
@@ -945,8 +962,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       if (!UNAVAILABLE_KEY_RE.test(k)) continue;
       collectDates(v, set);
     }
+    // Ranges the availability tool reported unavailable with no per-date
+    // detail (flat boolean/count response) — block the checked window.
+    for (const r of dynamicBlockedRanges) collectDates(r, set);
     return set;
-  }, [targetRecord, dynamicConflictingBookings]);
+  }, [targetRecord, dynamicConflictingBookings, dynamicBlockedRanges]);
 
   // Allow-list: dates the record explicitly marks available (arrays of date
   // strings/ranges under keys like availableDates / openSlots), plus any the

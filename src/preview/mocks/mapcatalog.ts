@@ -5,6 +5,8 @@ import type { McpToolResultPayload } from "../../domain/entities/GenericWidget";
  * `mapcatalog` and plots markers. Cards read make/model/image/pricePerDay/
  * currency/fuelType/transmission/seats/rating/reviewsCount/location/status.
  * A favourite tool is present so the heart shows and is tappable (verb-based).
+ * Each car carries embedded `bookings` so the detail panel's calendar renders.
+ * The `check_availability` action is registered so the detail fetcher finds it.
  */
 const cars = [
   {
@@ -25,6 +27,10 @@ const cars = [
     latitude: 40.7128,
     longitude: -74.006,
     location: { city: "New York", name: "Downtown Hub" },
+    bookings: [
+      { status: "CONFIRMED", pickupDate: "2026-09-20", dropoffDate: "2026-09-24" },
+      { status: "CONFIRMED", pickupDate: "2026-10-01", dropoffDate: "2026-10-03" },
+    ],
   },
   {
     id: "car-2",
@@ -44,6 +50,7 @@ const cars = [
     latitude: 40.7306,
     longitude: -73.9866,
     location: { city: "New York", name: "East Village" },
+    bookings: [],
   },
   {
     id: "car-3",
@@ -63,6 +70,9 @@ const cars = [
     latitude: 40.7061,
     longitude: -74.0087,
     location: { city: "New York", name: "Financial District" },
+    bookings: [
+      { status: "CONFIRMED", pickupDate: "2026-09-15", dropoffDate: "2026-09-18" },
+    ],
   },
   {
     id: "car-4",
@@ -82,6 +92,9 @@ const cars = [
     latitude: 40.7484,
     longitude: -73.9857,
     location: { city: "New York", name: "Midtown" },
+    bookings: [
+      { status: "CONFIRMED", pickupDate: "2026-09-13", dropoffDate: "2026-09-19" },
+    ],
   },
   {
     id: "car-5",
@@ -101,6 +114,7 @@ const cars = [
     latitude: 40.7195,
     longitude: -74.0021,
     location: { city: "New York", name: "SoHo" },
+    bookings: [],
   },
 ];
 
@@ -123,6 +137,8 @@ export const mapCatalogPayload: McpToolResultPayload = {
         { key: "fuelType", label: "Fuel", type: "text", filterable: true },
         { key: "transmission", label: "Transmission", type: "text", filterable: true },
         { key: "seats", label: "Seats", type: "number" },
+        { key: "rating", label: "Rating", type: "number", sortable: true },
+        { key: "reviewsCount", label: "Reviews", type: "number", sortable: true },
         { key: "latitude", label: "Latitude", type: "latitude", hidden: true },
         { key: "longitude", label: "Longitude", type: "longitude", hidden: true },
       ],
@@ -137,6 +153,7 @@ export const mapCatalogPayload: McpToolResultPayload = {
         requiresItem: true,
       },
       { id: "get_car", label: "View details", tool: "get_car", requiresItem: true },
+      { id: "check_availability", label: "Check availability", tool: "check_availability", requiresItem: true },
     ],
     audience: "customer",
   },

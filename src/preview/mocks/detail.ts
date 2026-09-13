@@ -76,6 +76,10 @@ export const detailBookingPayload: McpToolResultPayload = {
           { status: "CONFIRMED", pickupDate: "2026-09-20", dropoffDate: "2026-09-24" },
           { status: "CONFIRMED", pickupDate: "2026-10-01", dropoffDate: "2026-10-03" },
         ],
+        bookings: [
+          { status: "CONFIRMED", pickupDate: "2026-09-20", dropoffDate: "2026-09-24", customerName: "Alice" },
+          { status: "CONFIRMED", pickupDate: "2026-10-01", dropoffDate: "2026-10-03", customerName: "Bob" },
+        ],
       },
     ],
     collection: {
@@ -93,6 +97,7 @@ export const detailBookingPayload: McpToolResultPayload = {
         tool: "toggle_favourite_car",
         requiresItem: true,
       },
+      { id: "check_availability", label: "Check availability", tool: "check_availability", requiresItem: true },
     ],
     audience: "customer",
   },
@@ -141,6 +146,7 @@ export const detailNoAvailabilityPayload: McpToolResultPayload = {
     actions: [
       { id: "create_booking", label: "Book now", tool: "create_booking", requiresItem: true },
       { id: "get_car", label: "Refresh", tool: "get_car", requiresItem: true },
+      { id: "check_availability", label: "Check availability", tool: "check_availability", requiresItem: true },
     ],
     audience: "customer",
   },

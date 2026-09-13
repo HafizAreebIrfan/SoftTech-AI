@@ -90,16 +90,21 @@
   margin-right: -1.25rem;
   height: calc(100vh - 190px);
   min-height: 520px;
-  max-height: 820px;
+  /* Hard clamp: in the auto-resized widget iframe, 100vh tracks the iframe
+     itself — without a cap the stage can chase the growing iframe. */
+  max-height: 720px;
   overflow: hidden;
   box-sizing: border-box;
 }
 
-/* Fullscreen map while a detail panel is docked: fill the granted fullscreen
-   height so the map stays the dominant surface behind the floating panel. */
+/* Fullscreen map while a detail panel is docked. The inline `height` set in
+   px by the layout (frozen at dock time from the iframe's viewport) is the
+   primary sizing; this class only clamps. vh units are deliberately avoided
+   here: the host resizes the widget iframe to fit content, so a 100vh stage
+   grows with the iframe that is growing to fit it → infinite height. */
 .mapStageDetailOpen {
-  height: calc(100vh - 96px);
-  max-height: none;
+  height: 82vh; /* fallback only (no inline px set) */
+  max-height: 900px;
 }
 
 /* Floating detail panel docked over the fullscreen map — a left panel on
@@ -143,7 +148,8 @@
   }
 
   .mapStageDetailOpen {
-    height: calc(100vh - 80px);
+    height: 78vh; /* fallback only (no inline px set) */
+    max-height: 900px;
   }
 
   .mapDetailDock {

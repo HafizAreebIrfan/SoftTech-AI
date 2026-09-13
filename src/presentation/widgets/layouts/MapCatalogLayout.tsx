@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import styles from "../../../styles/mapcataloglayout.module.css";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { MapBlock } from "../components/MapBlock/MapBlock";
@@ -25,6 +25,18 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
   // panel docked over a fullscreen map — the map stays put and the bottom card
   // strip switches cars. (Grid view keeps its own tap → sub-view flow.)
   const [detailRecord, setDetailRecord] = useState<Record<string, any> | null>(
+    null,
+  );
+  // Frozen px height for the docked (fullscreen) map stage. The host can
+  // resize the widget iframe at ANY time (fullscreen grant, collapse back to
+  // inline, chat reflow) and the Apps SDK gives the app NO notification when
+  // the HOST changes the display mode — only the app can request it. A CSS
+  // `100vh` stage chases that moving iframe (`vh` re-evaluates as the host
+  // grows the sandbox to fit content → content grows again → infinite chat
+  // height). Freezing the stage height in px at dock time, measured from the
+  // iframe's own viewport, breaks the feedback loop: the stage stays exactly
+  // as tall as the granted fullscreen while docked, whatever the host does.
+  const [dockedStageHeight, setDockedStageHeight] = useState<number | null>(
     null,
   );
   const enrichSeqRef = useRef(0);
@@ -70,6 +82,10 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
   const openDetailFor = (rec: Record<string, any>, idx: number) => {
     setSelectedIndex(idx);
     setDetailRecord(rec);
+    // Freeze the stage height NOW — before requesting fullscreen — so it is
+    // the height the host actually granted. Re-opens while already docked keep
+    // the existing freeze (no reflow churn when swapping cars).
+    setDockedStageHeight((cur) => cur ?? Math.max(window.innerHeight, 520));
     requestDisplayMode("fullscreen");
     const seq = ++enrichSeqRef.current;
     enrichRecordViaDetailTool(rec, actions, collection)
@@ -81,11 +97,35 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
       .catch(() => {});
   };
 
-  const closeDetail = () => {
+  const closeDetail = useCallback(() => {
     enrichSeqRef.current++; // invalidate any in-flight enrichment
     setDetailRecord(null);
+    setDockedStageHeight(null);
     requestDisplayMode("inline");
-  };
+  }, []);
+
+  // The host (ChatGPT) can collapse the fullscreen widget at any time without
+  // notifying the app. Detect it heuristically: while docked, watch the
+  // iframe's own viewport height. The host grants fullscreen by making the
+  // iframe tall; collapsing restores a small inline iframe. A large DROP from
+  // the frozen dock height means the host exited fullscreen — restore the
+  // pre-fullscreen map position (close the dock, back to inline) exactly like
+  // the Back button does. The 0.6 threshold makes normal host-side resizes
+  // (scrollbar, minor reflow) harmless.
+  useEffect(() => {
+    if (!detailRecord) return;
+    const frozen = dockedStageHeight ?? 0;
+    if (!frozen) return;
+
+    const onResize = () => {
+      const vh = window.innerHeight;
+      if (vh < frozen * 0.6 && vh < frozen - 160) {
+        closeDetail();
+      }
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [detailRecord, dockedStageHeight, closeDetail]);
 
   // Map marker / carousel arrow → highlight + auto-center. If the detail panel
   // is already open, follow the selection (swap the panel to the new item).
@@ -159,6 +199,11 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
            card docks its detail panel over the map (fullscreen). */
         <div
           className={`${styles.mapStage} ${detailRecord ? styles.mapStageDetailOpen : ""}`}
+          style={
+            detailRecord && dockedStageHeight
+              ? { height: `${dockedStageHeight}px` }
+              : undefined
+          }
         >
           <MapBlock
             records={typedRecords}

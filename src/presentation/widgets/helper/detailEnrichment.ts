@@ -58,6 +58,21 @@ export const recordFromToolResult = (
   }
 
   if (data && typeof data === "object") {
+    // A single-object payload is the detail record itself — even when it also
+    // carries child arrays (images, bookings, reviews…). Those nested arrays
+    // are attributes of the record, not the record: picking "the first
+    // object in any array" would return a booking/photo instead of the item.
+    // Only fall back to array-unwrap when the payload is a pure list wrapper
+    // (no id-ish key of its own and nothing but array(s) inside).
+    const hasOwnId = Object.keys(data).some(
+      (k) => k === "id" || k === "_id" || /id$/i.test(k),
+    );
+    const scalarOrNestedObjectKeys = Object.keys(data).filter(
+      (k) => !Array.isArray(data[k]),
+    );
+    if (hasOwnId || scalarOrNestedObjectKeys.length > 0) {
+      return data as Record<string, any>;
+    }
     const arr = Object.values(data).find((v) => Array.isArray(v)) as
       | any[]
       | undefined;
