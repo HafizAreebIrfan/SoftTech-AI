@@ -862,8 +862,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     if (recId === undefined || recId === null || !isRental) return;
 
     if (
-      targetRecord.conflictingBookings ||
-      targetRecord.data?.conflictingBookings
+      targetRecord?.conflictingBookings ||
+      targetRecord?.data?.conflictingBookings
     ) {
       return;
     }

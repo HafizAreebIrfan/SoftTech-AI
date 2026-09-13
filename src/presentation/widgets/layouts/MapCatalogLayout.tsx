@@ -46,66 +46,103 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     [records],
   );
 
-  // Client-side filter: when the backend returns records that don't match the
-  // declared appliedQuery (e.g. all cars instead of only Karachi Toyotas),
-  // prune markers that clearly violate the query. Keys off field shape only —
-  // no entity/company/industry names. Date-range keys (datefrom, dateto,
-  // startDate, endDate, checkin, checkout) are excluded from filtering since
-  // they describe the booking window, not the record set.
+  // Client-side relevance trim: when the backend hands the widget a padded set
+  // (e.g. every city after a search-recovery fallback), narrow it to what the
+  // user actually asked for. Tokens come from the user prompt + inferred intent
+  // (carried in the widget metadata), NOT from appliedQuery (which often only
+  // holds pagination). A token only filters when it PARTITIONS the set — it
+  // matches some records but not all — exactly like the backend's relevance
+  // filter. Keys off value shape only; no entity/company/industry names.
   const filteredRecords = useMemo(() => {
-    const q = collection?.appliedQuery as Record<string, any> | undefined;
-    if (!q || typeof q !== "object") return typedRecords;
+    if (typedRecords.length < 2) return typedRecords;
 
-    const DATE_KEYS =
-      /^(datefrom|dateto|startdate|enddate|checkin|checkout|from|to)$/i;
+    const meta = (window as any).__WIDGET_METADATA__ || {};
+    const promptText = `${meta.user_raw_prompt || ""} ${
+      meta.inferred_intent || ""
+    }`
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ");
 
-    const queryFilters = Object.entries(q).filter(
-      ([k, v]) =>
-        !DATE_KEYS.test(k) &&
-        v !== undefined &&
-        v !== null &&
-        v !== "" &&
-        typeof v !== "object",
+    if (!promptText.trim()) return typedRecords;
+
+    // Entity noun describes the whole set, never a filter token.
+    const entityWords = new Set<string>();
+    const entity = String(collection?.entity || "").toLowerCase();
+    for (const w of entity.split(/\s+/).filter(Boolean)) entityWords.add(w);
+
+    // The app-mention tag ("@Car Rental Pro And Studio") is not a filter —
+    // strip tokens that appear in the company name.
+    const companyName = String(
+      meta.companyName || meta.company_name || "",
+    ).toLowerCase();
+    const companyWords = new Set(
+      companyName.split(/[^a-z0-9]+/).filter(Boolean),
     );
-    if (queryFilters.length === 0) return typedRecords;
 
-    return typedRecords.filter((rec) =>
-      queryFilters.every(([key, queryVal]) => {
-        const qStr = String(queryVal).toLowerCase();
-        // Direct field match
-        const direct = rec[key];
-        if (
-          direct !== undefined &&
-          String(direct).toLowerCase().includes(qStr)
-        )
-          return true;
-        // Nested location.city / location.name / location.country match
-        if (rec.location && typeof rec.location === "object") {
-          const loc = rec.location as Record<string, any>;
-          for (const locKey of Object.keys(loc)) {
-            if (
-              loc[locKey] !== undefined &&
-              String(loc[locKey]).toLowerCase().includes(qStr)
-            )
-              return true;
-          }
-        }
-        // Generic nested objects (1 level)
-        for (const v of Object.values(rec)) {
-          if (v && typeof v === "object" && !Array.isArray(v)) {
-            for (const inner of Object.values(v as Record<string, any>)) {
-              if (
-                inner !== undefined &&
-                String(inner).toLowerCase().includes(qStr)
-              )
-                return true;
-            }
-          }
-        }
+    const DATE_WORDS = new Set([
+      "available", "availability", "show", "list", "cars", "find",
+      "today", "tomorrow", "date", "dates", "night", "nights", "any",
+      "all", "give", "want", "need", "get", "from", "and", "the", "for",
+      "with", "near", "me", "around", "please", "book", "booking",
+      "rent", "rental", "rentals", "per", "day", "week", "month",
+      "cheap", "under", "over", "between", "next", "this", "that",
+    ]);
+
+    const tokens = Array.from(
+      new Set(
+        promptText
+          .split(/\s+/)
+          .map((t) => t.trim())
+          .filter((t) => t.length >= 3 && t.length <= 20)
+          .filter((t) => !DATE_WORDS.has(t))
+          .filter((t) => !entityWords.has(t))
+          .filter((t) => !companyWords.has(t)),
+      ),
+    );
+    if (tokens.length === 0) return typedRecords;
+
+    const recordMatchesToken = (
+      rec: Record<string, any>,
+      token: string,
+    ): boolean => {
+      const check = (val: unknown): boolean => {
+        if (val === null || val === undefined) return false;
+        if (typeof val === "string" || typeof val === "number")
+          return String(val).toLowerCase().includes(token);
         return false;
-      }),
+      };
+      // Top-level string/number fields (make, model, name, category, …) and
+      // one-level-nested objects (location.city, …). Arrays are skipped
+      // (features lists would false-positive on incidental matches).
+      for (const v of Object.values(rec)) {
+        if (typeof v === "string" || typeof v === "number") {
+          if (check(v)) return true;
+        } else if (v && typeof v === "object" && !Array.isArray(v)) {
+          for (const inner of Object.values(v as Record<string, unknown>)) {
+            if (check(inner)) return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    // Keep only tokens that PARTITION the set (match some, not all).
+    const discriminators = tokens.filter((token) => {
+      let count = 0;
+      for (const rec of typedRecords)
+        if (recordMatchesToken(rec, token)) count++;
+      return count >= 1 && count < typedRecords.length;
+    });
+    if (discriminators.length === 0) return typedRecords;
+
+    const filtered = typedRecords.filter((rec) =>
+      discriminators.every((token) => recordMatchesToken(rec, token)),
     );
-  }, [typedRecords, collection?.appliedQuery]);
+    if (filtered.length === 0 || filtered.length === typedRecords.length) {
+      return typedRecords;
+    }
+    return filtered;
+  }, [typedRecords, collection?.entity]);
 
   const selectedRecord: Record<string, any> | null =
     filteredRecords[selectedIndex] || filteredRecords[0] || null;
