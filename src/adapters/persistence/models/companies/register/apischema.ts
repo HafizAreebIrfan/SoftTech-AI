@@ -53,6 +53,10 @@ export const ApiSchema = new mongoose.Schema(
 
     mcpResourceUri: { type: String },
 
+    isWidgetEnabled: { type: Boolean, default: true },
+    isMapViewEnabled: { type: Boolean, default: false },
+    uiConfig: { type: mongoose.Schema.Types.Mixed },
+
     testedonregister: { type: Boolean, default: false },
   },
   { _id: false, strict: false },

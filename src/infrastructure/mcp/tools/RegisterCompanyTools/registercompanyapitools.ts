@@ -474,6 +474,16 @@ export const registerCompanyApiTools = (
             };
           }
 
+          const isWidgetEnabled =
+            api.isWidgetEnabled !== undefined
+              ? api.isWidgetEnabled
+              : (api as any).uiConfig?.uiEnabled !== false;
+
+          const isMapViewEnabled =
+            api.isMapViewEnabled !== undefined
+              ? api.isMapViewEnabled
+              : Boolean((api as any).uiConfig?.mapEnabled);
+
           return buildMcpSuccessResult(
             widgetContent,
             api.name || `API ${index + 1}`,
@@ -482,7 +492,8 @@ export const registerCompanyApiTools = (
             method,
             finalSummary,
             false,
-            (api as any).uiConfig?.uiEnabled,
+            isWidgetEnabled,
+            { mapEnabled: isMapViewEnabled },
           );
         } catch (error: any) {
           // 3. Handle Error Widget
@@ -595,11 +606,18 @@ const buildMcpSuccessResult = (
   summaryText?: string,
   isAuthChallenge = false,
   uiEnabled?: boolean,
+  extraMetadata?: Record<string, any>,
 ) => {
   const metaObject: Record<string, any> = {
-    ui: { resourceUri },
-    "openai/outputTemplate": resourceUri,
-    "openai/widgetAccessible": true,
+    ...(uiEnabled !== false
+      ? {
+          ui: { resourceUri },
+          "openai/outputTemplate": resourceUri,
+          "openai/widgetAccessible": true,
+        }
+      : {
+          "openai/widgetAccessible": false,
+        }),
     "openai/toolInvocation/invoking":
       method !== "GET" ? `Executing ${apiName}...` : `Loading ${apiName}...`,
     "openai/toolInvocation/invoked":
@@ -624,6 +642,8 @@ const buildMcpSuccessResult = (
         // Company toggle: when uiEnabled is explicitly false, the frontend
         // skips widget rendering for this tool. Defaults to true (show widget).
         uiEnabled: uiEnabled !== false,
+        ...(company.googleMapsApiKey ? { googleMapsApiKey: company.googleMapsApiKey } : {}),
+        ...extraMetadata,
       },
     },
   };

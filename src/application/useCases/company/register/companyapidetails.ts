@@ -103,6 +103,27 @@ const transformApiEntry = (api: any, index: number, companyName?: string): any =
     inputFieldMap: Array.isArray(api.inputFieldMap) ? api.inputFieldMap : [],
     outputFieldMap: Array.isArray(api.outputFieldMap) ? api.outputFieldMap : [],
     fallbackWidget: api.fallbackWidget || "",
+    isWidgetEnabled:
+      api.isWidgetEnabled !== undefined
+        ? Boolean(api.isWidgetEnabled)
+        : api.uiConfig?.uiEnabled !== undefined
+          ? Boolean(api.uiConfig.uiEnabled)
+          : true,
+    isMapViewEnabled:
+      api.isMapViewEnabled !== undefined
+        ? Boolean(api.isMapViewEnabled)
+        : api.uiConfig?.mapEnabled !== undefined
+          ? Boolean(api.uiConfig.mapEnabled)
+          : false,
+    uiConfig: api.uiConfig || {
+      uiEnabled:
+        api.isWidgetEnabled !== undefined ? Boolean(api.isWidgetEnabled) : true,
+      uiType: api.uiType || "auto",
+      mapEnabled:
+        api.isMapViewEnabled !== undefined
+          ? Boolean(api.isMapViewEnabled)
+          : false,
+    },
     testedonregister: Boolean(api.testedonregister),
   };
 };
@@ -156,6 +177,10 @@ export async function saveCompanyApiDetails(
 
   if (payload.authStrategy) {
     updateData.authStrategy = payload.authStrategy;
+  }
+
+  if (payload.googleMapsApiKey !== undefined) {
+    updateData.googleMapsApiKey = payload.googleMapsApiKey;
   }
 
   return await companyRepository.update(companyId, updateData);

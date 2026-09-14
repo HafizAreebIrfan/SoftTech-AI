@@ -3,7 +3,6 @@ import { ApiSchema } from "./apischema";
 import { UiPreferenceSchema } from "./uipreferenceschema";
 import { Hashpassword, comparePassword } from "../../../../../infrastructure/middlewares/SecurityMiddleware/bcrypt";
 import { ICompanyForgotPassword, CompanyForgotPasswordFields } from "../forgetPassword/companyForgotPasswordInfo";
-import { McpToolResultPayload } from "../../../../../domain/types/genericWidget.types";
 
 export interface ICompanyDocument extends Document, ICompanyForgotPassword {
   companyName: string;
@@ -15,8 +14,7 @@ export interface ICompanyDocument extends Document, ICompanyForgotPassword {
   apis?: any[];
   authStrategy?: any;
   uiPreference?: any;
-  latestWidgetSnapshot?: McpToolResultPayload | null;
-  latestWidgetSnapshotUpdatedAt?: Date;
+  googleMapsApiKey?: string;
   onboardingStep: number;
   status: string;
   createdAt: Date;
@@ -45,8 +43,7 @@ const CompanySchema = new mongoose.Schema<ICompanyDocument, ICompanyModel>(
     apis: [ApiSchema],
     authStrategy: { type: mongoose.Schema.Types.Mixed, default: null },
     uiPreference: UiPreferenceSchema,
-    latestWidgetSnapshot: { type: mongoose.Schema.Types.Mixed, default: null },
-    latestWidgetSnapshotUpdatedAt: { type: Date },
+    googleMapsApiKey: { type: String, default: "" },
     onboardingStep: { type: Number, default: 1 },
     status: { type: String, default: "draft" },
     ...CompanyForgotPasswordFields,

@@ -58,6 +58,9 @@ export interface IApi {
   outputFieldMap?: any[];
   fallbackWidget?: string;
   mcpResourceUri?: string;
+  isWidgetEnabled?: boolean;
+  isMapViewEnabled?: boolean;
+  uiConfig?: any;
   testedonregister?: boolean;
 }
 
@@ -77,6 +80,7 @@ export interface ICompany {
   apis?: IApi[];
   authStrategy?: ICompanyAuthStrategy;
   uiPreference?: IUiPreference | null;
+  googleMapsApiKey?: string;
   onboardingStep?: number;
   status?: string;
   passwordResetOTP?: string;
