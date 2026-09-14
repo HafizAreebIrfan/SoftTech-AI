@@ -21,6 +21,7 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
       authReady: false,
       apisList: [],
+      googleMapsApiKey: "",
       selectedLayout: "dashboard",
       setAuth: (user: any) => {
         const mappedApis = user?.apis?.map((api: any, index: number) => ({
@@ -81,6 +82,7 @@ export const useAuthStore = create<AuthStore>()(
             api.id === apiId ? { ...api, mcpDescription: description } : api,
           ),
         })),
+      setGoogleMapsApiKey: (key) => set({ googleMapsApiKey: key }),
       clearAuth: () =>
         set({
           user: null,
@@ -95,6 +97,7 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         apisList: state.apisList,
+        googleMapsApiKey: state.googleMapsApiKey,
         selectedLayout: state.selectedLayout,
       }),
     },

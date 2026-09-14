@@ -122,6 +122,10 @@ export interface WidgetMetadata {
   uiEnabled?: boolean;
   /** Backend-injected: data purpose signal from tool classification. */
   purpose?: CollectionPurpose;
+  /** Backend-injected: false when company disabled map for this tool. */
+  mapEnabled?: boolean;
+  /** Frontend-injected: Google Maps API key for map rendering. */
+  googleMapsApiKey?: string;
   /** Fullscreen "Open in {company}" → catalog page. */
   hasProductPages?: boolean;
   shopCatalogUrl?: string;

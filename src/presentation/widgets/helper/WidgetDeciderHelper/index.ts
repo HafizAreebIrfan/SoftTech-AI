@@ -14,6 +14,7 @@ export const buildPresentationPlan = ({
   pagination,
   records = [],
   audience,
+  mapEnabled,
 }: BuildPresentationPlanOptions): PresentationPlan => {
   const purpose = collection?.purpose;
 
@@ -32,7 +33,7 @@ export const buildPresentationPlan = ({
         (r, idx) => extractCoordinates(r as Record<string, any>, idx) !== null,
       );
 
-    if (hasCoordinates) {
+    if (hasCoordinates && mapEnabled === true) {
       explicitLayout = "mapcatalog";
     } else if (records.length === 1) {
       explicitLayout = "general";

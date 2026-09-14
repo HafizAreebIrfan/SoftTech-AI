@@ -36,6 +36,7 @@ export interface AuthStore {
   isAuthenticated: boolean;
   authReady: boolean;
   apisList: ApiConnection[];
+  googleMapsApiKey: string;
   selectedLayout:
     | "dashboard"
     | "catalog"
@@ -61,5 +62,6 @@ export interface AuthStore {
   ) => void;
   updateApiUiConfig: (apiId: string, config: Partial<ToolUiConfig>) => void;
   updateApiDescription: (apiId: string, description: string) => void;
+  setGoogleMapsApiKey: (key: string) => void;
   clearAuth: () => void;
 }

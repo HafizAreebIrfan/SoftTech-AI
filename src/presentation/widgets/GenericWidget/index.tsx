@@ -96,8 +96,21 @@ const GenericWidgetInner: React.FC = () => {
   }, [toolResult, setViewFullCart]);
 
   // Clean, fresh metadata per tool call (prevents previous company's URLs leaking)
-  const currentMetadata = useMemo(
-    () => ({
+  const currentMetadata = useMemo(() => {
+    // Read Google Maps API key from the auth store localStorage (shared origin with Dashboard)
+    let googleMapsApiKey = rawMetadata?.googleMapsApiKey as string | undefined;
+    if (!googleMapsApiKey && typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("softtech-auth-store");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          googleMapsApiKey =
+            parsed?.state?.googleMapsApiKey || parsed?.googleMapsApiKey;
+        }
+      } catch { /* ignore */ }
+    }
+
+    return {
       ...rawMetadata,
       authStrategy: rawAuthStrategy,
       globalCheckoutUrl: currentGlobalCheckoutUrl,
@@ -107,17 +120,18 @@ const GenericWidgetInner: React.FC = () => {
       companyName,
       themeColor:
         themeColor || rawMetadata?.themeColor || rawAuthStrategy?.themeColor,
-    }),
-    [
-      rawMetadata,
-      rawAuthStrategy,
-      currentGlobalCheckoutUrl,
-      currentProductItemUrlTemplate,
-      currentShopCatalogUrl,
-      companyName,
-      themeColor,
-    ],
-  );
+      mapEnabled: rawMetadata?.mapEnabled,
+      googleMapsApiKey,
+    };
+  }, [
+    rawMetadata,
+    rawAuthStrategy,
+    currentGlobalCheckoutUrl,
+    currentProductItemUrlTemplate,
+    currentShopCatalogUrl,
+    companyName,
+    themeColor,
+  ]);
 
   if (typeof window !== "undefined") {
     (window as any).__WIDGET_METADATA__ = currentMetadata;
@@ -222,6 +236,7 @@ const GenericWidgetInner: React.FC = () => {
       pagination: normalizedData.content.pagination,
       audience: (normalizedData.content.audience ||
         normalizedData.content.metadata?.audience) as any,
+      mapEnabled: currentMetadata?.mapEnabled,
     });
   }, [normalizedData]);
 

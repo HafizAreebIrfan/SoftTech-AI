@@ -44,4 +44,6 @@ export interface BuildPresentationPlanOptions {
   platformType?: PlatformType;
   audience?: WidgetAudience;
   intent?: string;
+  /** Company toggle: when false, map layout is suppressed even if records have coordinates. */
+  mapEnabled?: boolean;
 }

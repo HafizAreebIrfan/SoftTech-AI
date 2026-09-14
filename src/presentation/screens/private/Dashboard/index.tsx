@@ -38,7 +38,7 @@ const METHOD_COLORS: Record<string, { bg: string; text: string }> = {
 const Dashboard: FC = () => {
   const navigate = useNavigate();
   const { colors, isDark, toggleTheme } = useThemeStore();
-  const { user, apisList, selectedLayout, setSelectedLayout, clearAuth, updateApiUiConfig, updateApiDescription } =
+  const { user, apisList, selectedLayout, setSelectedLayout, clearAuth, updateApiUiConfig, updateApiDescription, googleMapsApiKey, setGoogleMapsApiKey } =
     useAuthStore();
   const [activeTab, setActiveTab] = useState<"dashboard" | "apis" | "settings">(
     "dashboard",
@@ -664,6 +664,27 @@ const Dashboard: FC = () => {
                   </div>
                 ),
               )}
+            </div>
+
+            {/* Google Maps API Key */}
+            <div className="mt-6">
+              <label className="block text-[11px] font-medium mb-1.5" style={{ color: "#9ca3af" }}>
+                Google Maps API Key
+              </label>
+              <input
+                type="password"
+                value={googleMapsApiKey}
+                onChange={(e) => setGoogleMapsApiKey(e.target.value)}
+                placeholder="Paste your Google Maps JavaScript API key here"
+                className="w-full text-xs rounded-lg px-3 py-2 outline-none border"
+                style={{ background: "#0f1117", borderColor: "#2a2d35", color: "#e5e7eb" }}
+              />
+              <p className="text-[10px] mt-1" style={{ color: "#6b7280" }}>
+                Required for map view. Get a key at{" "}
+                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#818cf8" }}>
+                  Google Cloud Console
+                </a>
+              </p>
             </div>
           </div>
         )}
