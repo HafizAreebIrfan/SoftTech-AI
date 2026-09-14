@@ -477,40 +477,38 @@ const Dashboard: FC = () => {
                           </div>
                         )}
 
-                        {/* Map toggle — only when auto */}
-                        {uiCfg.uiEnabled && uiCfg.uiType === "auto" && (
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={uiCfg.mapEnabled}
-                              onClick={() =>
-                                updateApiUiConfig(api.id, {
-                                  mapEnabled: !uiCfg.mapEnabled,
-                                })
-                              }
-                              className="relative inline-flex h-[18px] w-[32px] items-center rounded-full transition-colors"
-                              style={{
-                                background: uiCfg.mapEnabled ? "#6366f1" : "#374151",
-                              }}
-                            >
-                              <span
-                                className="inline-block h-[12px] w-[12px] rounded-full bg-white transition-transform"
-                                style={{
-                                  transform: uiCfg.mapEnabled
-                                    ? "translateX(16px)"
-                                    : "translateX(3px)",
-                                }}
-                              />
-                            </button>
+                        {/* Map toggle — always visible when card expanded */}
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={uiCfg.mapEnabled}
+                            onClick={() =>
+                              updateApiUiConfig(api.id, {
+                                mapEnabled: !uiCfg.mapEnabled,
+                              })
+                            }
+                            className="relative inline-flex h-[18px] w-[32px] items-center rounded-full transition-colors"
+                            style={{
+                              background: uiCfg.mapEnabled ? "#6366f1" : "#374151",
+                            }}
+                          >
                             <span
-                              className="text-xs"
-                              style={{ color: "#9ca3af" }}
-                            >
-                              Map view
-                            </span>
-                          </label>
-                        )}
+                              className="inline-block h-[12px] w-[12px] rounded-full bg-white transition-transform"
+                              style={{
+                                transform: uiCfg.mapEnabled
+                                  ? "translateX(16px)"
+                                  : "translateX(3px)",
+                              }}
+                            />
+                          </button>
+                          <span
+                            className="text-xs"
+                            style={{ color: "#9ca3af" }}
+                          >
+                            Map view
+                          </span>
+                        </label>
                       </div>
 
                       {/* MCP Tool Description */}
