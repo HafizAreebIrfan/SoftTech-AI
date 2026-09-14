@@ -22,6 +22,8 @@ export interface ApiConnection {
   oauthClientId?: string;
   apiHeaders?: string;
   uiConfig?: ToolUiConfig;
+  isWidgetEnabled?: boolean;
+  isMapViewEnabled?: boolean;
   mcpDescription?: string;
 }
 

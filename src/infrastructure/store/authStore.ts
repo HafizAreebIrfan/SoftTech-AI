@@ -24,25 +24,46 @@ export const useAuthStore = create<AuthStore>()(
       googleMapsApiKey: "",
       selectedLayout: "dashboard",
       setAuth: (user: any) => {
-        const mappedApis = user?.apis?.map((api: any, index: number) => ({
-          id: api.id || `api-${index + 1}`,
-          apiName: api.name || "",
-          apiMethod: api.method || "GET",
-          apiEndpoint:
-            api.baseUrl && api.endpoint ? `${api.baseUrl}${api.endpoint}` : "",
-          apiAuthType: api.authType || "No Auth",
-          apiCredentials:
-            api.bearerToken || api.apiKey || api.oauthClientSecret || "",
-          apiAuthHeader: api.authHeader || "",
-          oauthTokenUrl: api.oauthTokenUrl || "",
-          oauthClientId: api.oauthClientId || "",
-          apiHeaders:
-            api.headers && api.headers.length > 0 ? api.headers[0] : "",
-          apiQueryParams:
-            api.params && api.params.length > 0 ? api.params[0] : "",
-          uiConfig: api.uiConfig || { ...DEFAULT_TOOL_UI_CONFIG },
-          mcpDescription: api.mcpDescription || "",
-        }));
+        const mappedApis = user?.apis?.map((api: any, index: number) => {
+          const isWidgetEnabled =
+            api.isWidgetEnabled !== undefined
+              ? Boolean(api.isWidgetEnabled)
+              : api.uiConfig?.uiEnabled !== undefined
+                ? Boolean(api.uiConfig.uiEnabled)
+                : true;
+          const isMapViewEnabled =
+            api.isMapViewEnabled !== undefined
+              ? Boolean(api.isMapViewEnabled)
+              : api.uiConfig?.mapEnabled !== undefined
+                ? Boolean(api.uiConfig.mapEnabled)
+                : false;
+
+          return {
+            id: api.id || `api-${index + 1}`,
+            apiName: api.name || "",
+            apiMethod: api.method || "GET",
+            apiEndpoint:
+              api.baseUrl && api.endpoint ? `${api.baseUrl}${api.endpoint}` : "",
+            apiAuthType: api.authType || "No Auth",
+            apiCredentials:
+              api.bearerToken || api.apiKey || api.oauthClientSecret || "",
+            apiAuthHeader: api.authHeader || "",
+            oauthTokenUrl: api.oauthTokenUrl || "",
+            oauthClientId: api.oauthClientId || "",
+            apiHeaders:
+              api.headers && api.headers.length > 0 ? api.headers[0] : "",
+            apiQueryParams:
+              api.params && api.params.length > 0 ? api.params[0] : "",
+            isWidgetEnabled,
+            isMapViewEnabled,
+            uiConfig: api.uiConfig || {
+              uiEnabled: isWidgetEnabled,
+              uiType: api.uiType || "auto",
+              mapEnabled: isMapViewEnabled,
+            },
+            mcpDescription: api.mcpDescription || "",
+          };
+        });
 
         set((state) => ({
           user: {
@@ -53,6 +74,11 @@ export const useAuthStore = create<AuthStore>()(
           isAuthenticated: true,
           apisList: mappedApis && mappedApis.length > 0 ? mappedApis : [],
           selectedLayout: normalizeLayout(user?.uiPreference?.layout),
+          googleMapsApiKey:
+            user?.googleMapsApiKey ||
+            user?.uiPreference?.googleMapsApiKey ||
+            state.googleMapsApiKey ||
+            "",
         }));
       },
       setAuthReady: (authReady: boolean) => set({ authReady }),
@@ -64,17 +90,19 @@ export const useAuthStore = create<AuthStore>()(
         set({ selectedLayout: normalizeLayout(layout) }),
       updateApiUiConfig: (apiId, config) =>
         set((state) => ({
-          apisList: state.apisList.map((api) =>
-            api.id === apiId
-              ? {
-                  ...api,
-                  uiConfig: {
-                    ...(api.uiConfig || { ...DEFAULT_TOOL_UI_CONFIG }),
-                    ...config,
-                  },
-                }
-              : api,
-          ),
+          apisList: state.apisList.map((api) => {
+            if (api.id !== apiId) return api;
+            const updatedUiConfig = {
+              ...(api.uiConfig || { ...DEFAULT_TOOL_UI_CONFIG }),
+              ...config,
+            };
+            return {
+              ...api,
+              uiConfig: updatedUiConfig,
+              isWidgetEnabled: updatedUiConfig.uiEnabled,
+              isMapViewEnabled: updatedUiConfig.mapEnabled,
+            };
+          }),
         })),
       updateApiDescription: (apiId, description) =>
         set((state) => ({

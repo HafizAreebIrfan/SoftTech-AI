@@ -14,7 +14,7 @@ import {
   UserIcon,
 } from "../../../../assets/icons";
 import styles from "../../../../styles/dashboard.module.css";
-import { logout } from "../../../../adapters/api/authApi";
+import { logout, saveCompanyApiDetails } from "../../../../adapters/api/authApi";
 import type { ToolUiType } from "../../../../interfaces/auth/auth.interface";
 
 const UI_TYPE_LABELS: Record<ToolUiType, string> = {
@@ -44,6 +44,8 @@ const Dashboard: FC = () => {
     "dashboard",
   );
   const [expandedApi, setExpandedApi] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showMapKey, setShowMapKey] = useState(false);
 
   const handleLogout = () => {
     logout()
@@ -58,6 +60,69 @@ const Dashboard: FC = () => {
           "error",
         );
       });
+  };
+
+  const handleSaveChanges = async () => {
+    if (!user?.id) {
+      showToast("No active company session found. Please sign in again.", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const apisPayload = apisList.map((api) => {
+        let baseUrl = "";
+        let endpoint = api.apiEndpoint;
+        if (api.apiEndpoint.startsWith("http://") || api.apiEndpoint.startsWith("https://")) {
+          try {
+            const parsed = new URL(api.apiEndpoint);
+            baseUrl = parsed.origin;
+            endpoint = parsed.pathname + parsed.search;
+          } catch {
+            baseUrl = "";
+          }
+        }
+
+        return {
+          name: api.apiName,
+          method: api.apiMethod,
+          baseUrl,
+          endpoint,
+          authType: api.apiAuthType,
+          authHeader: api.apiAuthHeader,
+          oauthTokenUrl: api.oauthTokenUrl,
+          oauthClientId: api.oauthClientId,
+          isWidgetEnabled: api.uiConfig?.uiEnabled !== false,
+          isMapViewEnabled: Boolean(api.uiConfig?.mapEnabled),
+          uiConfig: api.uiConfig || {
+            uiEnabled: true,
+            uiType: "auto" as ToolUiType,
+            mapEnabled: false,
+          },
+          mcpDescription: api.mcpDescription || "",
+          params: api.apiQueryParams ? [api.apiQueryParams] : [],
+          headers: api.apiHeaders ? [api.apiHeaders] : [],
+        };
+      });
+
+      const res = await saveCompanyApiDetails(user.id, {
+        apis: apisPayload as any,
+        googleMapsApiKey,
+      });
+
+      if (res?.success !== false) {
+        showToast("Configuration saved to database successfully!", "success");
+      } else {
+        showToast(res?.message || "Failed to save configuration.", "error");
+      }
+    } catch (err: any) {
+      showToast(
+        err.message || "Failed to save configuration. Please try again.",
+        "error",
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const enabledCount = apisList.filter(
@@ -178,17 +243,42 @@ const Dashboard: FC = () => {
               widget.
             </p>
           </div>
-          <button
-            onClick={toggleTheme}
-            className={styles.themeBtn}
-            aria-label="Toggle theme"
-          >
-            {isDark ? (
-              <SunIcon size={18} color={colors.TextHeading} />
-            ) : (
-              <MoonIcon size={18} color={colors.TextHeading} />
+          <div className="flex items-center gap-3">
+            {activeTab === "apis" && (
+              <button
+                type="button"
+                onClick={handleSaveChanges}
+                disabled={isSaving}
+                className="text-xs font-semibold px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-white disabled:opacity-60 shadow-md cursor-pointer hover:opacity-90 active:scale-95"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                }}
+              >
+                {isSaving ? (
+                  <>
+                    <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>💾</span>
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
             )}
-          </button>
+            <button
+              onClick={toggleTheme}
+              className={styles.themeBtn}
+              aria-label="Toggle theme"
+            >
+              {isDark ? (
+                <SunIcon size={18} color={colors.TextHeading} />
+              ) : (
+                <MoonIcon size={18} color={colors.TextHeading} />
+              )}
+            </button>
+          </div>
         </header>
 
         {activeTab === "dashboard" && (
@@ -240,15 +330,16 @@ const Dashboard: FC = () => {
                   {enabledCount} with widget UI enabled
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={() => {
                     apisList.forEach((api) =>
                       updateApiUiConfig(api.id, { uiEnabled: true }),
                     );
                     showToast("All APIs enabled", "success");
                   }}
-                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer hover:opacity-80"
                   style={{
                     borderColor: colors.Border,
                     color: colors.TextBody,
@@ -258,13 +349,14 @@ const Dashboard: FC = () => {
                   Enable All
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     apisList.forEach((api) =>
                       updateApiUiConfig(api.id, { uiEnabled: false }),
                     );
                     showToast("All APIs disabled", "success");
                   }}
-                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer hover:opacity-80"
                   style={{
                     borderColor: colors.Border,
                     color: colors.TextBody,
@@ -272,6 +364,106 @@ const Dashboard: FC = () => {
                   }}
                 >
                   Disable All
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className="text-xs font-semibold px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-white disabled:opacity-60 shadow-sm cursor-pointer hover:opacity-90 active:scale-95"
+                  style={{
+                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                  }}
+                >
+                  {isSaving ? (
+                    <>
+                      <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>💾</span>
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Google Maps API Configuration Card */}
+            <div
+              className="p-4 sm:p-5 rounded-2xl border transition-all"
+              style={{
+                background: colors.BackgroundSecondary,
+                borderColor: googleMapsApiKey ? "#6366f140" : colors.Border,
+              }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+                    style={{ background: "#6366f118" }}
+                  >
+                    🗺️
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4
+                        className="text-sm font-semibold"
+                        style={{ color: colors.TextHeading }}
+                      >
+                        Google Maps API Key
+                      </h4>
+                      <span
+                        className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                        style={{
+                          background: googleMapsApiKey ? "#10b98118" : "#f59e0b18",
+                          color: googleMapsApiKey ? "#10b981" : "#f59e0b",
+                        }}
+                      >
+                        {googleMapsApiKey ? "Configured" : "Not Set"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Required for Map View to render interactive maps with pins in ChatGPT widgets. Saved to database.
+                    </p>
+                  </div>
+                </div>
+
+                <a
+                  href="https://console.cloud.google.com/apis/credentials"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors shrink-0 text-center inline-block"
+                  style={{
+                    borderColor: colors.Border,
+                    color: colors.TextHighlightedHeading,
+                    background: colors.Background,
+                  }}
+                >
+                  Get Key on Google Cloud ↗
+                </a>
+              </div>
+
+              <div className="relative flex items-center">
+                <input
+                  type={showMapKey ? "text" : "password"}
+                  value={googleMapsApiKey}
+                  onChange={(e) => setGoogleMapsApiKey(e.target.value)}
+                  placeholder="Paste your Google Maps JavaScript API key here (e.g. AIzaSy...)"
+                  className="w-full text-xs rounded-xl px-3.5 py-2.5 pr-20 outline-none border transition-all font-mono"
+                  style={{
+                    background: colors.Background,
+                    borderColor: colors.Border,
+                    color: colors.TextBody,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMapKey(!showMapKey)}
+                  className="absolute right-2 text-xs px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+                  style={{ background: colors.BackgroundSecondary }}
+                >
+                  {showMapKey ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
@@ -662,27 +854,6 @@ const Dashboard: FC = () => {
                   </div>
                 ),
               )}
-            </div>
-
-            {/* Google Maps API Key */}
-            <div className="mt-6">
-              <label className="block text-[11px] font-medium mb-1.5" style={{ color: "#9ca3af" }}>
-                Google Maps API Key
-              </label>
-              <input
-                type="password"
-                value={googleMapsApiKey}
-                onChange={(e) => setGoogleMapsApiKey(e.target.value)}
-                placeholder="Paste your Google Maps JavaScript API key here"
-                className="w-full text-xs rounded-lg px-3 py-2 outline-none border"
-                style={{ background: "#0f1117", borderColor: "#2a2d35", color: "#e5e7eb" }}
-              />
-              <p className="text-[10px] mt-1" style={{ color: "#6b7280" }}>
-                Required for map view. Get a key at{" "}
-                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: "#818cf8" }}>
-                  Google Cloud Console
-                </a>
-              </p>
             </div>
           </div>
         )}

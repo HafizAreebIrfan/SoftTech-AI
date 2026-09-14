@@ -51,6 +51,9 @@ export interface ApiConnection {
   oauthAuthorizationUrl?: string;
   oauthClientId?: string;
   apiHeaders?: string;
+  mcpDescription?: string;
+  isWidgetEnabled?: boolean;
+  isMapViewEnabled?: boolean;
 }
 
 export interface StepOneData {
@@ -66,7 +69,7 @@ export interface SignupStore {
   companyId: string | null;
   stepOneData: StepOneData;
   lastSavedStepOneData?: StepOneData | null;
-  authStrategy: CompanyAuthStrategy;
+  authStrategy?: CompanyAuthStrategy;
   apisList: ApiConnection[];
   selectedLayout:
     | "auto"
@@ -98,14 +101,14 @@ export interface SignupStore {
   setCompanyId: (id: string | null) => void;
   setStepOneData: (data: Partial<StepOneData>) => void;
   setLastSavedStepOneData: (data: StepOneData | null) => void;
-  setAuthStrategy: (strategy: Partial<CompanyAuthStrategy>) => void;
+  setAuthStrategy?: (strategy: Partial<CompanyAuthStrategy>) => void;
   setApisList: (
     apis: ApiConnection[] | ((prev: ApiConnection[]) => ApiConnection[]),
   ) => void;
   updateApiField: (id: string, field: keyof ApiConnection, value: any) => void;
   handleAddApi: () => void;
   handleDeleteApi: (id: string) => void;
-  handleDeleteAllApis: () => Promise<void> | void;
+  handleDeleteAllApis?: () => Promise<void> | void;
   importApisBatch: (
     apis: ApiConnection[],
     mode: "append" | "replace",
@@ -128,10 +131,6 @@ export interface SignupStore {
     navigate: (opts: { to: string }) => void,
   ) => Promise<void>;
   handleEndpointUrlChange: (apiId: string, inputUrl: string) => void;
-  importApisBatch: (
-    apis: ApiConnection[],
-    mode: "append" | "replace",
-  ) => void;
   applyTemplateSuggestions: (
     apiId: string,
     field: "apiQueryParams" | "apiHeaders" | "apiRequestBody",

@@ -22,7 +22,7 @@ export const registerCompanyInfo = async (
 
 export const saveCompanyApiDetails = async (
   companyId: string,
-  payload: ApisInformation[] | { apis: ApisInformation[]; authStrategy?: any },
+  payload: ApisInformation[] | { apis: ApisInformation[]; authStrategy?: any; googleMapsApiKey?: string },
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
   const url = `${env.apiBaseUrl}/api/companies/${companyId}/apidetailsstep`;
   const body = Array.isArray(payload) ? { apis: payload } : payload;
