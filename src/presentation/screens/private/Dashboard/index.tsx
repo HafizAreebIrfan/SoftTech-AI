@@ -55,6 +55,7 @@ const Dashboard: FC = () => {
   const {
     user,
     apisList,
+    setApisList,
     selectedLayout,
     setSelectedLayout,
     clearAuth,
@@ -262,6 +263,8 @@ const Dashboard: FC = () => {
     setAiGeneratingApiId(api.id);
     try {
       let finalDesc = "";
+      let newSchema: any = null;
+
       if (mode === "deep" && user?.id) {
         const apiIndex =
           api.rawIndex !== undefined
@@ -270,8 +273,11 @@ const Dashboard: FC = () => {
         if (apiIndex >= 0) {
           try {
             const res = await analyzeSingleCompanyApi(user.id, apiIndex);
-            if (res?.data?.apiSchema?.toolDescription) {
-              finalDesc = res.data.apiSchema.toolDescription;
+            if (res?.data?.apiSchema) {
+              newSchema = res.data.apiSchema;
+              if (res.data.apiSchema.toolDescription) {
+                finalDesc = res.data.apiSchema.toolDescription;
+              }
             }
           } catch (deepErr) {
             console.warn(
@@ -291,7 +297,7 @@ const Dashboard: FC = () => {
           params: api.params,
           body: api.body,
           apiQueryParams: api.apiQueryParams,
-          apiSchema: api.apiSchema,
+          apiSchema: newSchema || api.apiSchema,
         };
         if (mode === "format") {
           finalDesc = formatMcpDescriptionWithAi(
@@ -304,18 +310,29 @@ const Dashboard: FC = () => {
       }
 
       updateApiDescription(api.id, finalDesc);
+
+      const updatedList = apisList.map((a) =>
+        a.id === api.id
+          ? {
+              ...a,
+              mcpDescription: finalDesc,
+              ...(newSchema ? { apiSchema: newSchema, isAnalyzed: true } : {}),
+            }
+          : a,
+      );
+      setApisList(updatedList);
+
       showToast(
         mode === "format"
           ? "Description polished with AI!"
-          : "MCP tool description generated with AI!",
+          : mode === "deep"
+            ? "API schema analyzed & description updated with Gemini!"
+            : "MCP tool description generated with AI!",
         "success",
       );
 
       // Auto-save to DB
       if (user?.id) {
-        const updatedList = apisList.map((a) =>
-          a.id === api.id ? { ...a, mcpDescription: finalDesc } : a,
-        );
         const apisPayload = buildApisPayload(updatedList);
         await saveCompanyApiDetails(user.id, {
           apis: apisPayload as any,

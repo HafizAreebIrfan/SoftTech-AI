@@ -218,7 +218,10 @@ export const generateNewMcpDescription = (input: GenerateDescriptionInput): stri
       /search|filter|find/i.test(endpoint) ||
       /search|filter|find/i.test(apiName);
     const actionVerb = isSearchOrFilter ? "Searches and retrieves" : "Lists";
-    return `${actionVerb} ${entity} from ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}`;
+    const qualificationHint = isSearchOrFilter
+      ? ` Call this tool once key search criteria (such as ${paramText || "location, dates, or budget"}) are known. If the user's inquiry is broad, planning-focused, or missing key details, ask clarifying questions first to gather their preferences before invoking.`
+      : "";
+    return `${actionVerb} ${entity} from ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}${qualificationHint}`;
   }
 
   return `Executes ${apiName || method} for ${entity} from ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}`;
@@ -229,7 +232,7 @@ export const formatMcpDescriptionWithAi = (
   input: GenerateDescriptionInput,
 ): string => {
   const trimmed = currentText?.trim() || "";
-  if (!trimmed) {
+  if (!trimmed || trimmed.length < 10) {
     return generateNewMcpDescription(input);
   }
 
@@ -257,7 +260,7 @@ export const formatMcpDescriptionWithAi = (
     !cleaned.toLowerCase().includes(companyName.toLowerCase()) &&
     companyName !== "the company"
   ) {
-    cleaned = cleaned.replace(/\.$/, ` from ${companyName}.`);
+    cleaned = cleaned.replace(/\.$/, ` in ${companyName}.`);
   }
 
   // Append supported parameters if missing
@@ -267,6 +270,20 @@ export const formatMcpDescriptionWithAi = (
     !cleaned.toLowerCase().includes("supported parameters")
   ) {
     cleaned += ` Supported parameters: ${paramText}.`;
+  }
+
+  // Append qualification guidance if it's a search/list tool and guidance is missing
+  const isSearchOrFilter =
+    filterKeys.length > 0 ||
+    /search|filter|find|list/i.test(input.endpoint || "") ||
+    /search|filter|find|list/i.test(input.apiName || "");
+
+  if (
+    isSearchOrFilter &&
+    !cleaned.toLowerCase().includes("clarifying questions") &&
+    !cleaned.toLowerCase().includes("preferences before invoking")
+  ) {
+    cleaned += ` Call this tool once key search criteria (such as ${paramText || "location, dates, or budget"}) are known. If the user's inquiry is broad, planning-focused, or missing key details, ask clarifying questions first to gather their preferences before invoking.`;
   }
 
   return cleaned;
