@@ -18,6 +18,8 @@ export interface IEnv {
   OPENROUTER_API_KEY: string;
   GROQ_API_KEY: string;
   OAUTH_CALLBACK_URL: string;
+  VITE_GOOGLE_MAPS_API_KEY: string;
+  GOOGLE_MAPS_API_KEY: string;
 }
 
 export const env: IEnv = {
@@ -43,4 +45,6 @@ export const env: IEnv = {
   OAUTH_CALLBACK_URL:
     process.env.OAUTH_CALLBACK_URL ||
     "https://softtech-ai.onrender.com/api/oauth/callback",
+  VITE_GOOGLE_MAPS_API_KEY: process.env.VITE_GOOGLE_MAPS_API_KEY,
+  GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
 };
