@@ -29,6 +29,22 @@ export const saveCompanyApiDetails = async (
   return post(url, body, { skipRedirect: true });
 };
 
+export const updateCompanyApiUiSettings = async (
+  companyId: string,
+  payload: {
+    apiIndex: number;
+    mcpToolName?: string;
+    uiConfig?: {
+      uiEnabled?: boolean;
+      mapEnabled?: boolean;
+      layout?: string;
+    };
+  },
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  const url = `${env.apiBaseUrl}/api/companies/${companyId}/api-ui-settings`;
+  return post(url, payload, { skipRedirect: true });
+};
+
 export const analyzeSingleCompanyApi = async (
   companyId: string,
   apiIndex: number,

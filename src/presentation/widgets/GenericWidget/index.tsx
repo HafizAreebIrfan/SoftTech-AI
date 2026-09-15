@@ -97,8 +97,15 @@ const GenericWidgetInner: React.FC = () => {
 
   // Clean, fresh metadata per tool call (prevents previous company's URLs leaking)
   const currentMetadata = useMemo(() => {
-    // Read Google Maps API key from the auth store localStorage (shared origin with Dashboard)
-    let googleMapsApiKey = rawMetadata?.googleMapsApiKey as string | undefined;
+    // Read Google Maps API key: platform default from env takes priority, with metadata/storage fallbacks
+    let googleMapsApiKey =
+      (typeof import.meta !== "undefined" && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY) ||
+      (rawMetadata?.googleMapsApiKey as string | undefined) ||
+      (typeof window !== "undefined"
+        ? (window as any).__WIDGET_METADATA__?.googleMapsApiKey ||
+          (window as any).VITE_GOOGLE_MAPS_API_KEY
+        : undefined);
+
     if (!googleMapsApiKey && typeof window !== "undefined") {
       try {
         const raw = localStorage.getItem("softtech-auth-store");

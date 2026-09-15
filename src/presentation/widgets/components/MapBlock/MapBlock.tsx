@@ -17,7 +17,7 @@ declare global {
   }
 }
 
-const DARK_MAP_STYLES: google.maps.MapTypeStyle[] = [
+const DARK_MAP_STYLES: any[] = [
   { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
@@ -40,11 +40,19 @@ export const MapBlock: React.FC<MapBlockProps> = ({
   selectedRecord,
   onSelectRecord,
   height = "100%",
-  apiKey,
+  apiKey: propApiKey,
 }) => {
+  const apiKey =
+    propApiKey ||
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY) ||
+    (typeof window !== "undefined"
+      ? (window as any).__WIDGET_METADATA__?.googleMapsApiKey ||
+        (window as any).VITE_GOOGLE_MAPS_API_KEY
+      : "");
+
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<google.maps.Map | null>(null);
-  const overlaysRef = useRef<Map<string | number, { overlay: google.maps.OverlayView; coords: google.maps.LatLng }>>(new Map());
+  const googleMapRef = useRef<any>(null);
+  const overlaysRef = useRef<Map<string | number, { overlay: any; coords: any }>>(new Map());
   const loaderRef = useRef<Loader | null>(null);
 
   const getRecordKey = (rec: Record<string, any>, idx: number): string | number => {
@@ -158,8 +166,27 @@ export const MapBlock: React.FC<MapBlockProps> = ({
 
   if (!apiKey) {
     return (
-      <div className={styles.mapWrapper} style={{ height, display: "flex", alignItems: "center", justifyContent: "center", background: "#121316", color: "#666", fontSize: 13 }}>
-        Map unavailable — Google Maps API key not configured
+      <div
+        className={styles.mapWrapper}
+        style={{
+          height,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#121316",
+          color: "#9ca3af",
+          fontSize: 12,
+          flexDirection: "column",
+          gap: 6,
+          padding: 16,
+          textAlign: "center",
+        }}
+      >
+        <span style={{ fontSize: 24 }}>🗺️</span>
+        <span style={{ fontWeight: 600, color: "#e2e8f0" }}>Interactive Map</span>
+        <span style={{ color: "#64748b", fontSize: 11 }}>
+          Set <code>VITE_GOOGLE_MAPS_API_KEY</code> in environment to activate live map tiles & pins.
+        </span>
       </div>
     );
   }

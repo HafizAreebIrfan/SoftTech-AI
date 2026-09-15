@@ -14,8 +14,22 @@ import {
   UserIcon,
 } from "../../../../assets/icons";
 import styles from "../../../../styles/dashboard.module.css";
-import { logout, saveCompanyApiDetails } from "../../../../adapters/api/authApi";
-import type { ToolUiType } from "../../../../interfaces/auth/auth.interface";
+import {
+  logout,
+  saveCompanyApiDetails,
+  analyzeSingleCompanyApi,
+  saveCompanyUiSelection,
+} from "../../../../adapters/api/authApi";
+import type {
+  ToolUiType,
+  ToolUiConfig,
+  ApiConnection,
+} from "../../../../interfaces/auth/auth.interface";
+import {
+  generateNewMcpDescription,
+  formatMcpDescriptionWithAi,
+  GenerateDescriptionInput,
+} from "../../../../utils/mcpAiDescription";
 
 const UI_TYPE_LABELS: Record<ToolUiType, string> = {
   auto: "Auto (data-driven)",
@@ -38,14 +52,28 @@ const METHOD_COLORS: Record<string, { bg: string; text: string }> = {
 const Dashboard: FC = () => {
   const navigate = useNavigate();
   const { colors, isDark, toggleTheme } = useThemeStore();
-  const { user, apisList, selectedLayout, setSelectedLayout, clearAuth, updateApiUiConfig, updateApiDescription, googleMapsApiKey, setGoogleMapsApiKey } =
-    useAuthStore();
+  const {
+    user,
+    apisList,
+    selectedLayout,
+    setSelectedLayout,
+    clearAuth,
+    updateApiUiConfig,
+    updateApiDescription,
+    googleMapsApiKey,
+    setGoogleMapsApiKey,
+  } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"dashboard" | "apis" | "settings">(
     "dashboard",
   );
   const [expandedApi, setExpandedApi] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [showMapKey, setShowMapKey] = useState(false);
+
+  // Auto-save & AI state tracking
+  const [aiGeneratingApiId, setAiGeneratingApiId] = useState<string | null>(null);
+  const [aiMenuOpenApiId, setAiMenuOpenApiId] = useState<string | null>(null);
+  const [autoSavingApiId, setAutoSavingApiId] = useState<string | null>(null);
+  const [lastAutoSavedApiId, setLastAutoSavedApiId] = useState<string | null>(null);
 
   const handleLogout = () => {
     logout()
@@ -62,48 +90,277 @@ const Dashboard: FC = () => {
       });
   };
 
+  const buildApisPayload = (list: ApiConnection[]) => {
+    return list.map((api) => {
+      let baseUrl = "";
+      let endpoint = api.apiEndpoint;
+      if (
+        api.apiEndpoint.startsWith("http://") ||
+        api.apiEndpoint.startsWith("https://")
+      ) {
+        try {
+          const parsed = new URL(api.apiEndpoint);
+          baseUrl = parsed.origin;
+          endpoint = parsed.pathname + parsed.search;
+        } catch {
+          baseUrl = "";
+        }
+      }
+
+      return {
+        name: api.apiName,
+        method: api.apiMethod,
+        baseUrl,
+        endpoint,
+        authType: api.apiAuthType,
+        authHeader: api.apiAuthHeader,
+        oauthTokenUrl: api.oauthTokenUrl,
+        oauthClientId: api.oauthClientId,
+        isWidgetEnabled: api.uiConfig?.uiEnabled !== false,
+        isMapViewEnabled: Boolean(api.uiConfig?.mapEnabled),
+        uiConfig: api.uiConfig || {
+          uiEnabled: true,
+          uiType: "auto" as ToolUiType,
+          mapEnabled: false,
+        },
+        mcpDescription: api.mcpDescription || "",
+        params:
+          Array.isArray(api.params) && api.params.length > 0
+            ? api.params
+            : api.apiQueryParams
+              ? [api.apiQueryParams]
+              : [],
+        headers:
+          Array.isArray(api.headers) && api.headers.length > 0
+            ? api.headers
+            : api.apiHeaders
+              ? [api.apiHeaders]
+              : [],
+        body: api.body || [],
+        apiSchema: api.apiSchema,
+      };
+    });
+  };
+
+  const persistSingleApiUi = async (
+    api: ApiConnection,
+    newUiConfig: ToolUiConfig,
+  ) => {
+    if (!user?.id) return;
+    setAutoSavingApiId(api.id);
+
+    try {
+      const updatedList = apisList.map((a) =>
+        a.id === api.id
+          ? {
+              ...a,
+              uiConfig: newUiConfig,
+              isWidgetEnabled: newUiConfig.uiEnabled,
+              isMapViewEnabled: newUiConfig.mapEnabled,
+            }
+          : a,
+      );
+      const apisPayload = buildApisPayload(updatedList);
+      await saveCompanyApiDetails(user.id, {
+        apis: apisPayload as any,
+        googleMapsApiKey,
+      });
+    } catch (err: any) {
+      console.error("Auto-save failed:", err);
+    } finally {
+      setAutoSavingApiId(null);
+      setLastAutoSavedApiId(api.id);
+      setTimeout(() => setLastAutoSavedApiId(null), 2500);
+    }
+  };
+
+  const handleToggleWidgetUi = async (api: ApiConnection) => {
+    const currentUi = api.uiConfig || {
+      uiEnabled: false,
+      uiType: "auto" as ToolUiType,
+      mapEnabled: false,
+    };
+    const updatedUi = { ...currentUi, uiEnabled: !currentUi.uiEnabled };
+    updateApiUiConfig(api.id, { uiEnabled: updatedUi.uiEnabled });
+    showToast(
+      updatedUi.uiEnabled
+        ? `Widget UI enabled for ${api.apiName || "API"}`
+        : `Widget UI disabled for ${api.apiName || "API"}`,
+      "success",
+    );
+    await persistSingleApiUi(api, updatedUi);
+  };
+
+  const handleToggleMap = async (api: ApiConnection) => {
+    const currentUi = api.uiConfig || {
+      uiEnabled: false,
+      uiType: "auto" as ToolUiType,
+      mapEnabled: false,
+    };
+    const updatedUi = { ...currentUi, mapEnabled: !currentUi.mapEnabled };
+    updateApiUiConfig(api.id, { mapEnabled: updatedUi.mapEnabled });
+    showToast(
+      updatedUi.mapEnabled
+        ? `Map view enabled for ${api.apiName || "API"}`
+        : `Map view disabled for ${api.apiName || "API"}`,
+      "success",
+    );
+    await persistSingleApiUi(api, updatedUi);
+  };
+
+  const handleLayoutChange = async (
+    api: ApiConnection,
+    newType: ToolUiType,
+  ) => {
+    const currentUi = api.uiConfig || {
+      uiEnabled: false,
+      uiType: "auto" as ToolUiType,
+      mapEnabled: false,
+    };
+    const updatedUi = { ...currentUi, uiType: newType };
+    updateApiUiConfig(api.id, { uiType: newType });
+    showToast(
+      `Layout updated to ${UI_TYPE_LABELS[newType]} for ${api.apiName || "API"}`,
+      "success",
+    );
+    await persistSingleApiUi(api, updatedUi);
+  };
+
+  const handleToggleAllApis = async (enable: boolean) => {
+    apisList.forEach((api) => updateApiUiConfig(api.id, { uiEnabled: enable }));
+    showToast(enable ? "All APIs enabled" : "All APIs disabled", "success");
+
+    if (!user?.id) return;
+    try {
+      const updatedList = apisList.map((a) => ({
+        ...a,
+        uiConfig: {
+          ...(a.uiConfig || {
+            uiEnabled: false,
+            uiType: "auto" as ToolUiType,
+            mapEnabled: false,
+          }),
+          uiEnabled: enable,
+        },
+        isWidgetEnabled: enable,
+      }));
+      const fullPayload = buildApisPayload(updatedList);
+      await saveCompanyApiDetails(user.id, {
+        apis: fullPayload as any,
+        googleMapsApiKey,
+      });
+    } catch (err: any) {
+      console.error("Failed to auto-save toggle all:", err);
+    }
+  };
+
+  const handleGenerateAiDescription = async (
+    api: ApiConnection,
+    mode: "new" | "format" | "deep",
+  ) => {
+    setAiMenuOpenApiId(null);
+    setAiGeneratingApiId(api.id);
+    try {
+      let finalDesc = "";
+      if (mode === "deep" && user?.id) {
+        const apiIndex =
+          api.rawIndex !== undefined
+            ? api.rawIndex
+            : apisList.findIndex((a) => a.id === api.id);
+        if (apiIndex >= 0) {
+          try {
+            const res = await analyzeSingleCompanyApi(user.id, apiIndex);
+            if (res?.data?.apiSchema?.toolDescription) {
+              finalDesc = res.data.apiSchema.toolDescription;
+            }
+          } catch (deepErr) {
+            console.warn(
+              "Deep schema analysis failed, generating from spec:",
+              deepErr,
+            );
+          }
+        }
+      }
+
+      if (!finalDesc) {
+        const input: GenerateDescriptionInput = {
+          apiName: api.apiName,
+          method: api.apiMethod,
+          endpoint: api.apiEndpoint,
+          companyName: user?.name,
+          params: api.params,
+          body: api.body,
+          apiQueryParams: api.apiQueryParams,
+          apiSchema: api.apiSchema,
+        };
+        if (mode === "format") {
+          finalDesc = formatMcpDescriptionWithAi(
+            api.mcpDescription || "",
+            input,
+          );
+        } else {
+          finalDesc = generateNewMcpDescription(input);
+        }
+      }
+
+      updateApiDescription(api.id, finalDesc);
+      showToast(
+        mode === "format"
+          ? "Description polished with AI!"
+          : "MCP tool description generated with AI!",
+        "success",
+      );
+
+      // Auto-save to DB
+      if (user?.id) {
+        const updatedList = apisList.map((a) =>
+          a.id === api.id ? { ...a, mcpDescription: finalDesc } : a,
+        );
+        const apisPayload = buildApisPayload(updatedList);
+        await saveCompanyApiDetails(user.id, {
+          apis: apisPayload as any,
+          googleMapsApiKey,
+        });
+        setLastAutoSavedApiId(api.id);
+        setTimeout(() => setLastAutoSavedApiId(null), 2500);
+      }
+    } catch (err: any) {
+      showToast(
+        err.message || "Failed to generate description with AI.",
+        "error",
+      );
+    } finally {
+      setAiGeneratingApiId(null);
+    }
+  };
+
+  const handleBlurDescription = async (api: ApiConnection) => {
+    if (!user?.id) return;
+    try {
+      const apisPayload = buildApisPayload(apisList);
+      await saveCompanyApiDetails(user.id, {
+        apis: apisPayload as any,
+        googleMapsApiKey,
+      });
+      setLastAutoSavedApiId(api.id);
+      setTimeout(() => setLastAutoSavedApiId(null), 2500);
+    } catch (e) {
+      console.error("Auto-saving description blur failed:", e);
+    }
+  };
+
   const handleSaveChanges = async () => {
     if (!user?.id) {
-      showToast("No active company session found. Please sign in again.", "error");
+      showToast(
+        "No active company session found. Please sign in again.",
+        "error",
+      );
       return;
     }
 
     setIsSaving(true);
     try {
-      const apisPayload = apisList.map((api) => {
-        let baseUrl = "";
-        let endpoint = api.apiEndpoint;
-        if (api.apiEndpoint.startsWith("http://") || api.apiEndpoint.startsWith("https://")) {
-          try {
-            const parsed = new URL(api.apiEndpoint);
-            baseUrl = parsed.origin;
-            endpoint = parsed.pathname + parsed.search;
-          } catch {
-            baseUrl = "";
-          }
-        }
-
-        return {
-          name: api.apiName,
-          method: api.apiMethod,
-          baseUrl,
-          endpoint,
-          authType: api.apiAuthType,
-          authHeader: api.apiAuthHeader,
-          oauthTokenUrl: api.oauthTokenUrl,
-          oauthClientId: api.oauthClientId,
-          isWidgetEnabled: api.uiConfig?.uiEnabled !== false,
-          isMapViewEnabled: Boolean(api.uiConfig?.mapEnabled),
-          uiConfig: api.uiConfig || {
-            uiEnabled: true,
-            uiType: "auto" as ToolUiType,
-            mapEnabled: false,
-          },
-          mcpDescription: api.mcpDescription || "",
-          params: api.apiQueryParams ? [api.apiQueryParams] : [],
-          headers: api.apiHeaders ? [api.apiHeaders] : [],
-        };
-      });
+      const apisPayload = buildApisPayload(apisList);
 
       const res = await saveCompanyApiDetails(user.id, {
         apis: apisPayload as any,
@@ -333,12 +590,7 @@ const Dashboard: FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    apisList.forEach((api) =>
-                      updateApiUiConfig(api.id, { uiEnabled: true }),
-                    );
-                    showToast("All APIs enabled", "success");
-                  }}
+                  onClick={() => handleToggleAllApis(true)}
                   className="text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer hover:opacity-80"
                   style={{
                     borderColor: colors.Border,
@@ -350,12 +602,7 @@ const Dashboard: FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    apisList.forEach((api) =>
-                      updateApiUiConfig(api.id, { uiEnabled: false }),
-                    );
-                    showToast("All APIs disabled", "success");
-                  }}
+                  onClick={() => handleToggleAllApis(false)}
                   className="text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer hover:opacity-80"
                   style={{
                     borderColor: colors.Border,
@@ -385,85 +632,6 @@ const Dashboard: FC = () => {
                       <span>Save Changes</span>
                     </>
                   )}
-                </button>
-              </div>
-            </div>
-
-            {/* Google Maps API Configuration Card */}
-            <div
-              className="p-4 sm:p-5 rounded-2xl border transition-all"
-              style={{
-                background: colors.BackgroundSecondary,
-                borderColor: googleMapsApiKey ? "#6366f140" : colors.Border,
-              }}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                    style={{ background: "#6366f118" }}
-                  >
-                    🗺️
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4
-                        className="text-sm font-semibold"
-                        style={{ color: colors.TextHeading }}
-                      >
-                        Google Maps API Key
-                      </h4>
-                      <span
-                        className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                        style={{
-                          background: googleMapsApiKey ? "#10b98118" : "#f59e0b18",
-                          color: googleMapsApiKey ? "#10b981" : "#f59e0b",
-                        }}
-                      >
-                        {googleMapsApiKey ? "Configured" : "Not Set"}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Required for Map View to render interactive maps with pins in ChatGPT widgets. Saved to database.
-                    </p>
-                  </div>
-                </div>
-
-                <a
-                  href="https://console.cloud.google.com/apis/credentials"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs px-3 py-1.5 rounded-lg border transition-colors shrink-0 text-center inline-block"
-                  style={{
-                    borderColor: colors.Border,
-                    color: colors.TextHighlightedHeading,
-                    background: colors.Background,
-                  }}
-                >
-                  Get Key on Google Cloud ↗
-                </a>
-              </div>
-
-              <div className="relative flex items-center">
-                <input
-                  type={showMapKey ? "text" : "password"}
-                  value={googleMapsApiKey}
-                  onChange={(e) => setGoogleMapsApiKey(e.target.value)}
-                  placeholder="Paste your Google Maps JavaScript API key here (e.g. AIzaSy...)"
-                  className="w-full text-xs rounded-xl px-3.5 py-2.5 pr-20 outline-none border transition-all font-mono"
-                  style={{
-                    background: colors.Background,
-                    borderColor: colors.Border,
-                    color: colors.TextBody,
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowMapKey(!showMapKey)}
-                  className="absolute right-2 text-xs px-2.5 py-1 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
-                  style={{ background: colors.BackgroundSecondary }}
-                >
-                  {showMapKey ? "Hide" : "Show"}
                 </button>
               </div>
             </div>
@@ -611,12 +779,8 @@ const Dashboard: FC = () => {
                             type="button"
                             role="switch"
                             aria-checked={uiCfg.uiEnabled}
-                            onClick={() =>
-                              updateApiUiConfig(api.id, {
-                                uiEnabled: !uiCfg.uiEnabled,
-                              })
-                            }
-                            className="relative inline-flex h-[22px] w-[40px] items-center rounded-full transition-colors"
+                            onClick={() => handleToggleWidgetUi(api)}
+                            className="relative inline-flex h-[22px] w-[40px] items-center rounded-full transition-colors cursor-pointer"
                             style={{
                               background: uiCfg.uiEnabled ? "#6366f1" : "#374151",
                             }}
@@ -647,11 +811,9 @@ const Dashboard: FC = () => {
                             <select
                               value={uiCfg.uiType}
                               onChange={(e) =>
-                                updateApiUiConfig(api.id, {
-                                  uiType: e.target.value as ToolUiType,
-                                })
+                                handleLayoutChange(api, e.target.value as ToolUiType)
                               }
-                              className="text-xs rounded-lg px-2.5 py-1.5 border outline-none"
+                              className="text-xs rounded-lg px-2.5 py-1.5 border outline-none cursor-pointer"
                               style={{
                                 background: colors.Background,
                                 borderColor: colors.Border,
@@ -675,12 +837,8 @@ const Dashboard: FC = () => {
                             type="button"
                             role="switch"
                             aria-checked={uiCfg.mapEnabled}
-                            onClick={() =>
-                              updateApiUiConfig(api.id, {
-                                mapEnabled: !uiCfg.mapEnabled,
-                              })
-                            }
-                            className="relative inline-flex h-[18px] w-[32px] items-center rounded-full transition-colors"
+                            onClick={() => handleToggleMap(api)}
+                            className="relative inline-flex h-[18px] w-[32px] items-center rounded-full transition-colors cursor-pointer"
                             style={{
                               background: uiCfg.mapEnabled ? "#6366f1" : "#374151",
                             }}
@@ -705,23 +863,146 @@ const Dashboard: FC = () => {
 
                       {/* MCP Tool Description */}
                       <div className="mt-4">
-                        <label
-                          className="block text-[11px] font-medium mb-1.5"
-                          style={{ color: "#9ca3af" }}
-                        >
-                          MCP Tool Description{" "}
-                          <span style={{ color: "#6b7280" }}>
-                            (shown to ChatGPT)
-                          </span>
-                        </label>
+                        <div className="flex items-center justify-between gap-2 mb-1.5 relative">
+                          <div className="flex items-center gap-2">
+                            <label
+                              className="text-[11px] font-medium"
+                              style={{ color: "#9ca3af" }}
+                            >
+                              MCP Tool Description{" "}
+                              <span style={{ color: "#6b7280" }}>
+                                (shown to ChatGPT)
+                              </span>
+                            </label>
+                            {lastAutoSavedApiId === api.id && (
+                              <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium transition-all">
+                                Auto-saved ✓
+                              </span>
+                            )}
+                            {autoSavingApiId === api.id && (
+                              <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                <span className="inline-block w-2 h-2 border border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                                Saving...
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Generate with AI Button & Dropdown */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              disabled={aiGeneratingApiId === api.id}
+                              onClick={() =>
+                                setAiMenuOpenApiId(
+                                  aiMenuOpenApiId === api.id ? null : api.id,
+                                )
+                              }
+                              className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm hover:opacity-90 active:scale-95 disabled:opacity-60"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #6366f1, #a855f7)",
+                                color: "#ffffff",
+                              }}
+                            >
+                              {aiGeneratingApiId === api.id ? (
+                                <>
+                                  <span className="inline-block w-2.5 h-2.5 border border-white/40 border-t-white rounded-full animate-spin" />
+                                  <span>Generating with AI...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>✨</span>
+                                  <span>Generate with AI</span>
+                                  <span className="text-[9px] opacity-70">▼</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* AI Dropdown Menu */}
+                            {aiMenuOpenApiId === api.id && (
+                              <div
+                                className="absolute right-0 top-full mt-1.5 w-64 rounded-xl border p-1.5 shadow-2xl z-30 transition-all"
+                                style={{
+                                  background: colors.BackgroundSecondary,
+                                  borderColor: colors.Border,
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleGenerateAiDescription(api, "new")
+                                  }
+                                  className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer"
+                                >
+                                  <span className="text-base shrink-0">✨</span>
+                                  <div>
+                                    <div
+                                      className="font-semibold text-xs"
+                                      style={{ color: colors.TextHeading }}
+                                    >
+                                      Generate New Description
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                                      Synthesize from endpoint, method, params, and schema
+                                    </div>
+                                  </div>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleGenerateAiDescription(api, "format")
+                                  }
+                                  className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer mt-0.5"
+                                >
+                                  <span className="text-base shrink-0">🪄</span>
+                                  <div>
+                                    <div
+                                      className="font-semibold text-xs"
+                                      style={{ color: colors.TextHeading }}
+                                    >
+                                      Format / Polish with AI
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                                      Clean current text and structure supported parameters
+                                    </div>
+                                  </div>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleGenerateAiDescription(api, "deep")
+                                  }
+                                  className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer mt-0.5"
+                                >
+                                  <span className="text-base shrink-0">⚡</span>
+                                  <div>
+                                    <div
+                                      className="font-semibold text-xs"
+                                      style={{ color: colors.TextHeading }}
+                                    >
+                                      Deep Schema AI (Gemini)
+                                    </div>
+                                    <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                                      Analyze live schema through Gemini AI engine
+                                    </div>
+                                  </div>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         <textarea
                           value={api.mcpDescription || ""}
                           onChange={(e) =>
                             updateApiDescription(api.id, e.target.value)
                           }
+                          onBlur={() => handleBlurDescription(api)}
                           placeholder="Auto-generated from API schema if left empty..."
                           rows={3}
-                          className="w-full text-xs rounded-lg px-3 py-2 border outline-none resize-none"
+                          className="w-full text-xs rounded-lg px-3 py-2 border outline-none resize-none transition-colors"
                           style={{
                             background: colors.Background,
                             borderColor: colors.Border,
@@ -783,12 +1064,21 @@ const Dashboard: FC = () => {
                 (lay) => (
                   <div
                     key={lay}
-                    onClick={() => {
+                    onClick={async () => {
                       setSelectedLayout(lay);
                       showToast(
                         `Interface curator set to ${lay.toUpperCase()} layout.`,
                         "success",
                       );
+                      if (user?.id) {
+                        try {
+                          await saveCompanyUiSelection(user.id, {
+                            layout: lay,
+                          } as any);
+                        } catch (err) {
+                          console.error("Failed to auto-save layout selection:", err);
+                        }
+                      }
                     }}
                     className="p-6 rounded-2xl cursor-pointer border-2 transition-all text-left flex flex-col justify-between"
                     style={

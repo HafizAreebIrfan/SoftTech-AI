@@ -38,12 +38,19 @@ export const useAuthStore = create<AuthStore>()(
                 ? Boolean(api.uiConfig.mapEnabled)
                 : false;
 
+          let endpointStr = "";
+          if (api.baseUrl && api.endpoint) {
+            endpointStr = `${api.baseUrl}${api.endpoint}`;
+          } else if (api.endpoint) {
+            endpointStr = api.endpoint;
+          }
+
           return {
-            id: api.id || `api-${index + 1}`,
+            id: api.id || api._id || `api-${index + 1}`,
+            rawIndex: index,
             apiName: api.name || "",
             apiMethod: api.method || "GET",
-            apiEndpoint:
-              api.baseUrl && api.endpoint ? `${api.baseUrl}${api.endpoint}` : "",
+            apiEndpoint: endpointStr,
             apiAuthType: api.authType || "No Auth",
             apiCredentials:
               api.bearerToken || api.apiKey || api.oauthClientSecret || "",
@@ -62,6 +69,11 @@ export const useAuthStore = create<AuthStore>()(
               mapEnabled: isMapViewEnabled,
             },
             mcpDescription: api.mcpDescription || "",
+            mcpToolName: api.mcpToolName || "",
+            headers: api.headers || [],
+            params: api.params || [],
+            body: api.body || [],
+            apiSchema: api.apiSchema,
           };
         });
 

@@ -21,10 +21,16 @@ export interface ApiConnection {
   oauthTokenUrl?: string;
   oauthClientId?: string;
   apiHeaders?: string;
+  headers?: any[];
   uiConfig?: ToolUiConfig;
   isWidgetEnabled?: boolean;
   isMapViewEnabled?: boolean;
   mcpDescription?: string;
+  mcpToolName?: string;
+  apiSchema?: any;
+  params?: any[];
+  body?: any[];
+  rawIndex?: number;
 }
 
 export const DEFAULT_TOOL_UI_CONFIG: ToolUiConfig = {

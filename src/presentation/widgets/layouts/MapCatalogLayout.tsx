@@ -308,7 +308,13 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
             selectedRecord={selectedRecord}
             onSelectRecord={handleSelectRecord}
             height="100%"
-            apiKey={(window as any).__WIDGET_METADATA__?.googleMapsApiKey}
+            apiKey={
+              import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
+              (typeof window !== "undefined"
+                ? (window as any).__WIDGET_METADATA__?.googleMapsApiKey ||
+                  (window as any).VITE_GOOGLE_MAPS_API_KEY
+                : undefined)
+            }
           />
 
           {detailRecord && (
