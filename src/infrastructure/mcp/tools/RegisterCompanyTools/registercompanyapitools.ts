@@ -1506,8 +1506,6 @@ const classifyToolPurpose = (
     /\/user\b|\/profile|\/account|\/me\b|\/my\b|\/customer\b/i.test(endpoint) ||
     /profile|account|my\s|user\s|customer/i.test(name)
   ) {
-    // Sub-check: if the response has booking/order-like arrays, it's a user's
-    // booking list — still "profile" (user-specific data, not browsable products).
     return "profile";
   }
 
@@ -1519,23 +1517,7 @@ const classifyToolPurpose = (
     return "analytics";
   }
 
-  // 4. Utility / metadata / options / filters → "utility"
-  if (
-    /\/categories|\/category-list|\/options|\/filters?|\/tags?|\/types?|\/genres?|\/brands?|\/departments?/i.test(endpoint) ||
-    /categor|option|filter|tag|type|genre|brand|department|list\s/i.test(name)
-  ) {
-    return "utility";
-  }
-
-  // 5. Review / rating endpoints → "utility" (not browsable products)
-  if (
-    /\/reviews?|\/ratings?|\/feedback|\/testimonials?/i.test(endpoint) ||
-    /review|rating|feedback|testimonial/i.test(name)
-  ) {
-    return "utility";
-  }
-
-  // 6. Fallback: if response has commercial shape (price + image) → "product"
+  // 4. Commercial shape check (price + image or price) → "product"
   const data = response && typeof response === "object" && "data" in response
     ? response.data
     : response;
@@ -1549,9 +1531,25 @@ const classifyToolPurpose = (
       const hasImage = Object.keys(sample).some(
         (k) => /image|photo|thumbnail|avatar|cover|picture|img|logo|banner|gallery/i.test(k),
       );
-      if (hasPrice && hasImage) return "product";
-      if (hasPrice) return "product";
+      if (hasPrice || hasImage) return "product";
     }
+  }
+
+  // 5. Utility / metadata / options / filters → "utility"
+  if (
+    /\/categories|\/category-list|\/options|\/filters?|\/tags?|\/genres?|\/brands?|\/departments?/i.test(endpoint) ||
+    /category\s*list|options?\s*list|filter\s*list|tag\s*list/i.test(name) ||
+    /^(categories|options|filters|tags|brands)$/i.test(name)
+  ) {
+    return "utility";
+  }
+
+  // 6. Review / rating endpoints → "utility" (not browsable products)
+  if (
+    /\/reviews?|\/ratings?|\/feedback|\/testimonials?/i.test(endpoint) ||
+    /review|rating|feedback|testimonial/i.test(name)
+  ) {
+    return "utility";
   }
 
   // 7. Default: "product" for GET list endpoints (browsable data)
