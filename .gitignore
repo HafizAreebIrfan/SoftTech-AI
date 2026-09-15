@@ -13,11 +13,10 @@ dist-ssr
 *.local
 .env
 .cursor
+.claude
+scripts
 cursor-plugin
 graphify-out
-cursor-plugin
-.cursor
-.claude
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
