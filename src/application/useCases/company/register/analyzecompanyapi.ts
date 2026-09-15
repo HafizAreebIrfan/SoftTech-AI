@@ -1,6 +1,7 @@
 import { ICompanyRepository } from "../../../ports/companies/register/companyregisterrepository";
 import { analyzeApiResponse } from "../../../../infrastructure/mcp/schema_analyzer/analyzer";
 import { isStaleOrInvalidDescription } from "../../../../infrastructure/mcp/tools/RegisterCompanyTools/mcpDescriptionGenerator";
+import { buildInputFieldMap, buildOutputFieldMap } from "./companyapidetails";
 
 export async function analyzeSingleApi(
   companyRepository: ICompanyRepository,
@@ -14,13 +15,34 @@ export async function analyzeSingleApi(
   }
 
   const targetApi = company.apis[apiIndex];
-  const sample = sampleResponse || (targetApi as any).sampleresponse || (targetApi as any).sampleResponse;
+  let sample = sampleResponse || (targetApi as any).sampleresponse || (targetApi as any).sampleResponse;
+
+  if (!sample && (targetApi.method || "GET").toUpperCase() === "GET" && targetApi.baseUrl && targetApi.endpoint) {
+    try {
+      const fullUrl = targetApi.baseUrl.replace(/\/+$/, "") + "/" + targetApi.endpoint.replace(/^\/+/, "").replace(/\{[^}]+\}/g, "1");
+      const resp = await fetch(fullUrl, {
+        headers: {
+          ...(targetApi.authHeader ? { Authorization: targetApi.authHeader } : {}),
+          ...(targetApi.bearerToken ? { Authorization: `Bearer ${targetApi.bearerToken}` } : {}),
+          ...(targetApi.apiKey ? { "x-api-key": targetApi.apiKey } : {}),
+        },
+      });
+      if (resp.ok) {
+        sample = await resp.json();
+      }
+    } catch (fetchErr) {
+      console.warn("Live fetch for sample response failed:", fetchErr);
+    }
+  }
 
   if (!sample) {
     throw new Error("No sample response provided or stored to analyze.");
   }
 
   const parsedSample = typeof sample === "string" ? JSON.parse(sample) : sample;
+  (company.apis[apiIndex] as any).sampleresponse = parsedSample;
+  (company.apis[apiIndex] as any).sampleResponse = parsedSample;
+
   const generatedSchema = await analyzeApiResponse(parsedSample, {
     apiName: targetApi.name,
     endpoint: targetApi.endpoint,
@@ -28,6 +50,12 @@ export async function analyzeSingleApi(
   });
 
   company.apis[apiIndex].apiSchema = generatedSchema as any;
+  company.apis[apiIndex].inputFieldMap = buildInputFieldMap(company.apis[apiIndex]);
+  company.apis[apiIndex].outputFieldMap = buildOutputFieldMap({
+    ...company.apis[apiIndex],
+    apiSchema: generatedSchema,
+  });
+
   if (
     (generatedSchema as any)?.toolDescription &&
     !isStaleOrInvalidDescription((generatedSchema as any).toolDescription)

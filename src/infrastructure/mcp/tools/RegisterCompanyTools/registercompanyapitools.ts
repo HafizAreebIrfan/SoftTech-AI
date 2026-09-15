@@ -605,6 +605,7 @@ export const registerCompanyApiTools = (
             title: api.name || `API ${index + 1}`,
             description: toolDescription,
             inputSchema: customInputSchema,
+            outputSchema: genericWidgetOutputSchema,
             securitySchemes,
             annotations: {
               readOnlyHint,

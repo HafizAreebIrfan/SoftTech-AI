@@ -53,6 +53,113 @@ const parseHeaders = (api: any): any[] => {
   return [];
 };
 
+export const buildInputFieldMap = (api: any): any[] => {
+  const map: any[] = [];
+  const seenKeys = new Set<string>();
+
+  // 1. Path parameters from endpoint (e.g. /cars/{id}, /users/:userId)
+  const endpoint = String(api.endpoint || api.apiEndpoint || "");
+  const pathParamMatches =
+    endpoint.match(/\{([^}]+)\}|:([a-zA-Z0-9_-]+)|%7B([^%]+)%7D/gi) || [];
+  for (const match of pathParamMatches) {
+    const rawKey = match.replace(/[{}:]|%7B|%7D/gi, "").trim();
+    if (rawKey && !seenKeys.has(rawKey.toLowerCase())) {
+      seenKeys.add(rawKey.toLowerCase());
+      map.push({
+        key: rawKey,
+        label:
+          rawKey.charAt(0).toUpperCase() +
+          rawKey.slice(1).replace(/([A-Z])/g, " $1").trim(),
+        location: "path",
+        type: "string",
+        required: true,
+      });
+    }
+  }
+
+  // 2. Query / Configured parameters
+  const params = Array.isArray(api.params) ? api.params : parseParams(api);
+  for (const p of params) {
+    if (!p) continue;
+    const key = String(p.key || p.name || "").replace(/[{}]/g, "").trim();
+    if (key && !seenKeys.has(key.toLowerCase())) {
+      seenKeys.add(key.toLowerCase());
+      map.push({
+        key,
+        label:
+          p.label ||
+          key.charAt(0).toUpperCase() +
+            key.slice(1).replace(/([A-Z])/g, " $1").trim(),
+        location: p.location || "query",
+        type: p.type || "string",
+        required: Boolean(p.required),
+        description: p.description || "",
+      });
+    }
+  }
+
+  // 3. Body fields
+  const body = Array.isArray(api.body) ? api.body : [];
+  for (const b of body) {
+    if (!b) continue;
+    const key = String(b.key || b.name || "").replace(/[{}]/g, "").trim();
+    if (key && !seenKeys.has(key.toLowerCase())) {
+      seenKeys.add(key.toLowerCase());
+      map.push({
+        key,
+        label:
+          b.label ||
+          key.charAt(0).toUpperCase() +
+            key.slice(1).replace(/([A-Z])/g, " $1").trim(),
+        location: "body",
+        type: b.type || "string",
+        required: Boolean(b.required),
+        description: b.description || "",
+      });
+    }
+  }
+
+  // 4. Headers
+  const headers = Array.isArray(api.headers) ? api.headers : parseHeaders(api);
+  for (const h of headers) {
+    if (!h) continue;
+    const key = String(h.key || h.name || "").trim();
+    if (
+      key &&
+      !seenKeys.has(key.toLowerCase()) &&
+      !/^(authorization|content-type|accept)$/i.test(key)
+    ) {
+      seenKeys.add(key.toLowerCase());
+      map.push({
+        key,
+        label: h.label || key,
+        location: "header",
+        type: "string",
+        required: Boolean(h.required),
+      });
+    }
+  }
+
+  return map;
+};
+
+export const buildOutputFieldMap = (api: any): any[] => {
+  const schema = api.apiSchema || api.schema;
+  const fields = Array.isArray(schema?.fields) ? schema.fields : [];
+  if (fields.length > 0) {
+    return fields.map((f: any) => ({
+      key: f.key,
+      label: f.label || f.key,
+      type: f.type || "text",
+      path: f.path || f.key,
+      uiRole: f.uiRole || null,
+      primary: Boolean(f.primary),
+      hidden: Boolean(f.hidden),
+    }));
+  }
+  return [];
+};
+
 const transformApiEntry = (api: any, index: number, companyName?: string): any => {
   const params = parseParams(api);
   const headers = parseHeaders(api);
@@ -68,6 +175,16 @@ const transformApiEntry = (api: any, index: number, companyName?: string): any =
           clientSecret: api.oauthClientSecret || api.apiKey || "",
         }
       : undefined);
+
+  const inputFieldMap =
+    Array.isArray(api.inputFieldMap) && api.inputFieldMap.length > 0
+      ? api.inputFieldMap
+      : buildInputFieldMap({ ...api, params, headers, body });
+
+  const outputFieldMap =
+    Array.isArray(api.outputFieldMap) && api.outputFieldMap.length > 0
+      ? api.outputFieldMap
+      : buildOutputFieldMap({ ...api, apiSchema: existingSchema });
 
   return {
     name: api.name || api.apiName || "",
@@ -90,6 +207,8 @@ const transformApiEntry = (api: any, index: number, companyName?: string): any =
     isRealtimeApi: Boolean(api.isRealtimeApi),
     streamUrl: api.streamUrl || undefined,
     apiSchema: existingSchema,
+    sampleresponse: api.sampleresponse || api.sampleResponse || undefined,
+    sampleResponse: api.sampleResponse || api.sampleresponse || undefined,
     mcpToolName:
       api.mcpToolName || toToolName(api.name || api.apiName || "", index),
     mcpDescription:
@@ -100,8 +219,8 @@ const transformApiEntry = (api: any, index: number, companyName?: string): any =
           : generateMcpDescription(api, { companyName: companyName || api.companyName }),
     mcpResourceUri: api.mcpResourceUri || "ui://generic/widgets.html",
     requiresAuth: Boolean(api.requiresAuth),
-    inputFieldMap: Array.isArray(api.inputFieldMap) ? api.inputFieldMap : [],
-    outputFieldMap: Array.isArray(api.outputFieldMap) ? api.outputFieldMap : [],
+    inputFieldMap,
+    outputFieldMap,
     fallbackWidget: api.fallbackWidget || "",
     isWidgetEnabled:
       api.isWidgetEnabled !== undefined
