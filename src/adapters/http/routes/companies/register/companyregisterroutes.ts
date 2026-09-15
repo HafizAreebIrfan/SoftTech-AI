@@ -2,6 +2,7 @@ import express from "express";
 import {
   registerCompanyInfoController,
   saveCompanyApiDetailsController,
+  updateCompanyApiUiSettingsController,
   saveCompanyUiSelectionController,
   getGeminiLogsController,
   analyzeSingleApiController,
@@ -14,6 +15,10 @@ CompanyRoutes.post("/registerstep", registerCompanyInfoController);
 CompanyRoutes.post(
   "/:companyId/apidetailsstep",
   saveCompanyApiDetailsController,
+);
+CompanyRoutes.post(
+  "/:companyId/api-ui-settings",
+  updateCompanyApiUiSettingsController,
 );
 CompanyRoutes.post(
   "/:companyId/apis/:apiIndex/analyze",

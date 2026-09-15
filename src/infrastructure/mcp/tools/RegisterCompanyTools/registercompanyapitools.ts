@@ -65,13 +65,33 @@ const getRecordsArray = (
 };
 
 /**
+ * Strips all $-prefixed widget UI metadata keys (e.g. $title, $price, $status, $image, $description)
+ * so structuredContent exposes only clean, pure business data to the LLM and user.
+ */
+const stripInternalWidgetKeys = (val: any): any => {
+  if (Array.isArray(val)) {
+    return val.map(stripInternalWidgetKeys);
+  }
+  if (val && typeof val === "object") {
+    const clean: Record<string, any> = {};
+    for (const [k, v] of Object.entries(val)) {
+      if (k.startsWith("$")) continue;
+      clean[k] = stripInternalWidgetKeys(v);
+    }
+    return clean;
+  }
+  return val;
+};
+
+/**
  * Extracts pure business data records from normalized widgetContent for
  * structuredContent. Unwraps common collection wrappers via getRecordsArray;
  * a single-record or scalar payload is returned as-is.
  */
-const extractCleanData = (widgetContent: any): any => {
+export const extractCleanData = (widgetContent: any): any => {
   const found = getRecordsArray(widgetContent);
-  return found ? found.array : widgetContent?.data;
+  const raw = found ? found.array : widgetContent?.data;
+  return stripInternalWidgetKeys(raw);
 };
 
 export const registerCompanyApiTools = (
@@ -160,30 +180,12 @@ export const registerCompanyApiTools = (
         }
       : undefined;
 
-    registerAppTool(
-      server,
-      toolName,
-      {
-        title: api.name || `API ${index + 1}`,
-        description: toolDescription,
-        inputSchema: customInputSchema,
-        outputSchema: genericWidgetOutputSchema,
-        securitySchemes,
-        annotations: {
-          readOnlyHint,
-          destructiveHint,
-        },
-        _meta: {
-          ui: {
-            resourceUri,
-          },
-          "openai/outputTemplate": resourceUri,
-          "openai/widgetAccessible": true,
-          "openai/toolInvocation/invoking": `Preparing ${api.name || "widget"}...`,
-          "openai/toolInvocation/invoked": "Loaded",
-        },
-      } as any,
-      async (input: any, extra: any) => {
+    const isWidgetEnabled =
+      api.isWidgetEnabled !== undefined
+        ? Boolean(api.isWidgetEnabled)
+        : (api as any).uiConfig?.uiEnabled !== false;
+
+    const toolHandler = async (input: any, extra: any) => {
         try {
           const store = mcpRequestContext.getStore();
           const req = extra?.req || store?.req;
@@ -342,6 +344,16 @@ export const registerCompanyApiTools = (
           // relaxed query, and for empty results.
           const isFullCatalogFallback =
             Boolean(recovery.recovered) && !recovery.effectiveQuery?.trim();
+
+          // 1. First apply generic, schema-driven attribute filter based on explicit tool inputs
+          // (e.g. city, seats, category, color, brand, price, limit)
+          const structuredFilterNote = applyGenericAttributeFilter(
+            widgetContent,
+            input,
+            api.apiSchema,
+          );
+
+          // 2. Second apply keyword / text relevance partition filtering
           const relevanceNote =
             (!recovery.recovered && !recovery.empty) || isFullCatalogFallback
               ? applyRelevanceFilter(widgetContent, {
@@ -353,10 +365,11 @@ export const registerCompanyApiTools = (
                     api.name,
                 })
               : undefined;
+
           // A successful trim already produced the relevant subset — it IS the
           // answer to what the user asked — so it wins over the generic
           // "nearest matches, invite to refine" recovery messaging.
-          const finalSummary = relevanceNote || summaryText;
+          const finalSummary = structuredFilterNote || relevanceNote || summaryText;
 
           // Search matched nothing and recovery could only fall back to the
           // full, unfiltered catalog. If the relevance filter could NOT trim
@@ -557,10 +570,52 @@ export const registerCompanyApiTools = (
             isError: true,
           };
         }
-      },
-    );
-  });
-};
+      };
+
+      if (isWidgetEnabled) {
+        registerAppTool(
+          server,
+          toolName,
+          {
+            title: api.name || `API ${index + 1}`,
+            description: toolDescription,
+            inputSchema: customInputSchema,
+            outputSchema: genericWidgetOutputSchema,
+            securitySchemes,
+            annotations: {
+              readOnlyHint,
+              destructiveHint,
+            },
+            _meta: {
+              ui: {
+                resourceUri,
+              },
+              "openai/outputTemplate": resourceUri,
+              "openai/widgetAccessible": true,
+              "openai/toolInvocation/invoking": `Preparing ${api.name || "widget"}...`,
+              "openai/toolInvocation/invoked": "Loaded",
+            },
+          } as any,
+          toolHandler,
+        );
+      } else {
+        server.registerTool(
+          toolName,
+          {
+            title: api.name || `API ${index + 1}`,
+            description: toolDescription,
+            inputSchema: customInputSchema,
+            securitySchemes,
+            annotations: {
+              readOnlyHint,
+              destructiveHint,
+            },
+          } as any,
+          toolHandler,
+        );
+      }
+    });
+  };
 
 // --- Helper Functions for Formatting ---
 
@@ -608,16 +663,41 @@ const buildMcpSuccessResult = (
   uiEnabled?: boolean,
   extraMetadata?: Record<string, any>,
 ) => {
+  // Extract pure, clean data records for structuredContent:
+  const cleanData = extractCleanData(widgetContent);
+
+  // Clean structuredContent: only clean business data is exposed to ChatGPT & user
+  const cleanStructuredContent: Record<string, any> = {
+    title: String(widgetContent.title || apiName || "Results"),
+    ...(widgetContent.subtitle ? { subtitle: widgetContent.subtitle } : {}),
+    data: cleanData,
+    ...(typeof widgetContent.collection?.total === "number"
+      ? { total: widgetContent.collection.total }
+      : Array.isArray(cleanData)
+        ? { total: cleanData.length }
+        : {}),
+  };
+
+  // If widgets are disabled for this tool, return pure text and structured data without ANY _meta.
+  // This ensures ChatGPT operates as a standard text/structured MCP tool without provisioning or rendering an empty iframe container.
+  if (uiEnabled === false) {
+    return {
+      structuredContent: cleanStructuredContent,
+      content: [
+        {
+          type: "text" as const,
+          text:
+            summaryText ||
+            `${widgetContent.title || apiName} results retrieved successfully.`,
+        },
+      ],
+    };
+  }
+
   const metaObject: Record<string, any> = {
-    ...(uiEnabled !== false
-      ? {
-          ui: { resourceUri },
-          "openai/outputTemplate": resourceUri,
-          "openai/widgetAccessible": true,
-        }
-      : {
-          "openai/widgetAccessible": false,
-        }),
+    ui: { resourceUri },
+    "openai/outputTemplate": resourceUri,
+    "openai/widgetAccessible": true,
     "openai/toolInvocation/invoking":
       method !== "GET" ? `Executing ${apiName}...` : `Loading ${apiName}...`,
     "openai/toolInvocation/invoked":
@@ -639,9 +719,7 @@ const buildMcpSuccessResult = (
       platformtype: widgetContent.platformtype,
       metadata: {
         ...widgetContent.metadata,
-        // Company toggle: when uiEnabled is explicitly false, the frontend
-        // skips widget rendering for this tool. Defaults to true (show widget).
-        uiEnabled: uiEnabled !== false,
+        uiEnabled: true,
         ...(company.googleMapsApiKey ? { googleMapsApiKey: company.googleMapsApiKey } : {}),
         ...extraMetadata,
       },
@@ -654,21 +732,6 @@ const buildMcpSuccessResult = (
       `Bearer resource_metadata="${resourceMetadataUrl}", error="insufficient_scope", error_description="Account authorization is required to access ${company.companyName}"`,
     ];
   }
-
-  // Extract pure, clean data records for structuredContent:
-  const cleanData = extractCleanData(widgetContent);
-
-  // Clean structuredContent: only clean business data is exposed to ChatGPT & user
-  const cleanStructuredContent: Record<string, any> = {
-    title: String(widgetContent.title || apiName || "Results"),
-    ...(widgetContent.subtitle ? { subtitle: widgetContent.subtitle } : {}),
-    data: cleanData,
-    ...(typeof widgetContent.collection?.total === "number"
-      ? { total: widgetContent.collection.total }
-      : Array.isArray(cleanData)
-        ? { total: cleanData.length }
-        : {}),
-  };
 
   return {
     structuredContent: cleanStructuredContent,
@@ -932,6 +995,224 @@ const writeBackRecords = (
 };
 
 /**
+ * Generic, schema-driven in-memory attribute filtering.
+ * Resolves any input parameter extracted by the tool (e.g. city, seats, category, color, brand, maxPrice, limit)
+ * dynamically against the API schema (apiSchema.fields) and collection metadata (collection.fields)
+ * or record properties, without hardcoding any domain- or industry-specific names.
+ */
+const getNestedValue = (obj: any, path: string): any => {
+  if (!obj || typeof obj !== "object") return undefined;
+  const parts = path.split(".");
+  let current = obj;
+  for (const part of parts) {
+    if (current === null || current === undefined) return undefined;
+    current = current[part];
+  }
+  return current;
+};
+
+const resolveRecordValue = (
+  record: any,
+  paramKey: string,
+  schemaFields: any[] = [],
+): any => {
+  if (!record || typeof record !== "object") return undefined;
+  const normKey = paramKey.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  // 1. Try schema fields (from apiSchema.fields or collection.fields)
+  if (Array.isArray(schemaFields) && schemaFields.length > 0) {
+    const matchedField = schemaFields.find((f: any) => {
+      const fKey = String(f.key || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const fPath = String(f.path || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const fLabel = String(f.label || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      return (
+        fKey === normKey ||
+        fPath === normKey ||
+        fPath.endsWith(normKey) ||
+        fLabel === normKey
+      );
+    });
+
+    if (matchedField?.path) {
+      const val = getNestedValue(record, matchedField.path);
+      if (val !== undefined && val !== null) return val;
+    }
+  }
+
+  // 2. Direct property match on record
+  if (record[paramKey] !== undefined && record[paramKey] !== null) {
+    return record[paramKey];
+  }
+
+  // 3. Case-insensitive / normalized top-level key match
+  for (const [k, v] of Object.entries(record)) {
+    if (k.toLowerCase().replace(/[^a-z0-9]/g, "") === normKey) {
+      if (v !== undefined && v !== null) return v;
+    }
+  }
+
+  // 4. One-level nested object scan (e.g. record.location.city, record.address.city, record.details.color)
+  for (const [parentKey, subObj] of Object.entries(record)) {
+    if (
+      subObj &&
+      typeof subObj === "object" &&
+      !Array.isArray(subObj) &&
+      !parentKey.startsWith("$")
+    ) {
+      for (const [k, v] of Object.entries(subObj)) {
+        if (k.toLowerCase().replace(/[^a-z0-9]/g, "") === normKey) {
+          if (v !== undefined && v !== null) return v;
+        }
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const recordMatchesParam = (
+  recordVal: any,
+  inputVal: any,
+  paramKey: string,
+): boolean => {
+  if (recordVal === undefined || recordVal === null) return false;
+  const keyLower = paramKey.toLowerCase();
+
+  // 1. String comparison
+  if (typeof inputVal === "string") {
+    const targetStr = inputVal.trim().toLowerCase();
+    if (!targetStr) return true;
+
+    if (Array.isArray(recordVal)) {
+      return recordVal.some((item) =>
+        String(item).toLowerCase().includes(targetStr),
+      );
+    }
+    return String(recordVal).toLowerCase().includes(targetStr);
+  }
+
+  // 2. Numeric comparison
+  if (
+    typeof inputVal === "number" ||
+    (!isNaN(Number(inputVal)) && inputVal !== "")
+  ) {
+    const targetNum = typeof inputVal === "number" ? inputVal : Number(inputVal);
+    const recNum =
+      typeof recordVal === "number"
+        ? recordVal
+        : parseFloat(String(recordVal).replace(/[^0-9.-]/g, ""));
+    if (isNaN(recNum)) return true;
+
+    // Minimum capacity / count / rating check
+    if (
+      /seat|capacit|min|guest|passenger|rating|score|qty|stock/i.test(keyLower)
+    ) {
+      return recNum >= targetNum;
+    }
+    // Maximum budget / cost / fee check
+    if (/max|budget|price|cost|fee|rate/i.test(keyLower)) {
+      return recNum <= targetNum;
+    }
+    // Default: exact equality
+    return recNum === targetNum;
+  }
+
+  // 3. Boolean comparison
+  if (typeof inputVal === "boolean") {
+    return Boolean(recordVal) === inputVal;
+  }
+
+  return true;
+};
+
+export const applyGenericAttributeFilter = (
+  widgetContent: any,
+  input: any,
+  apiSchema?: any,
+): string | undefined => {
+  if (!input || typeof input !== "object") return undefined;
+  const found = getRecordsArray(widgetContent);
+  if (!found || found.array.length === 0) return undefined;
+  let records = found.array;
+  const initialCount = records.length;
+  const filterDescriptions: string[] = [];
+
+  const schemaFields = [
+    ...(Array.isArray(apiSchema?.fields) ? apiSchema.fields : []),
+    ...(Array.isArray(widgetContent.collection?.fields)
+      ? widgetContent.collection.fields
+      : []),
+  ];
+
+  const SYSTEM_KEYS = new Set([
+    "user_raw_prompt",
+    "inferred_intent",
+    "platformtype",
+    "platformType",
+    "params",
+    "headers",
+    "body",
+  ]);
+
+  // 1. Handle business attributes dynamically against schema and records FIRST
+  for (const [key, val] of Object.entries(input)) {
+    if (SYSTEM_KEYS.has(key) || key.startsWith("$")) continue;
+    if (/^(limit|pagesize|page_size|count|take|perpage|per_page)$/i.test(key))
+      continue;
+    if (val === undefined || val === null || String(val).trim() === "") continue;
+    if (typeof val === "object" && !Array.isArray(val)) continue;
+
+    // Check if any record in the dataset possesses this attribute
+    const hasField = records.some(
+      (r) => resolveRecordValue(r, key, schemaFields) !== undefined,
+    );
+    if (!hasField) continue;
+
+    const matched = records.filter((r) => {
+      const recVal = resolveRecordValue(r, key, schemaFields);
+      return recordMatchesParam(recVal, val, key);
+    });
+
+    if (matched.length < records.length) {
+      records = matched;
+      filterDescriptions.push(`${key}: ${val}`);
+    }
+  }
+
+  // 2. Handle explicit limit / pagination LAST (after business attributes are filtered)
+  for (const [key, val] of Object.entries(input)) {
+    if (SYSTEM_KEYS.has(key) || key.startsWith("$")) continue;
+    if (/^(limit|pagesize|page_size|count|take|perpage|per_page)$/i.test(key)) {
+      const numLimit =
+        typeof val === "number" ? val : parseInt(String(val || ""), 10);
+      if (!isNaN(numLimit) && numLimit > 0 && records.length > numLimit) {
+        records = records.slice(0, numLimit);
+      }
+    }
+  }
+
+  if (records.length !== initialCount) {
+    writeBackRecords(widgetContent, found.ownerKey, records);
+    if (widgetContent.collection) {
+      widgetContent.collection.total = records.length;
+    }
+    const criteria =
+      filterDescriptions.length > 0
+        ? ` (${filterDescriptions.join(", ")})`
+        : "";
+    if (records.length > 0) {
+      widgetContent.subtitle = `Showing ${records.length} matching your request${criteria}`;
+      return `Filtered results to ${records.length} matching options${criteria}.`;
+    } else {
+      widgetContent.subtitle = `No matching options found${criteria}`;
+      return `No results found matching your criteria${criteria}.`;
+    }
+  }
+
+  return undefined;
+};
+
+/**
  * Conservative, entity-agnostic relevance narrowing.
  *
  * Many upstream APIs filter on opaque ids the model can't supply (e.g. a
@@ -944,9 +1225,7 @@ const writeBackRecords = (
  * unchanged. The result is therefore always a non-empty proper subset of the
  * API's own rows, or the original set — it never empties or fabricates.
  *
- * Only runs when the widget holds the complete result set (not a page window)
- * and never touches single-record detail views. Returns a short model-facing
- * note when it trimmed, else undefined.
+ * Returns a short model-facing note when it trimmed, else undefined.
  */
 const applyRelevanceFilter = (
   widgetContent: any,
@@ -956,12 +1235,6 @@ const applyRelevanceFilter = (
   if (!found || found.array.length < 2) return undefined;
   const records = found.array;
 
-  // Hold-complete-set gate: never trim a window of a larger, paged result —
-  // reporting a low count over a partial set would mislead.
-  const collTotal = widgetContent.collection?.total;
-  if (typeof collTotal === "number" && collTotal > records.length) {
-    return undefined;
-  }
   const totalPages = widgetContent.pagination?.totalPages;
   if (typeof totalPages === "number" && totalPages > 1) return undefined;
 
@@ -1014,9 +1287,23 @@ const applyRelevanceFilter = (
 
   if (discriminators.length === 0) return undefined;
 
-  const filtered = records.filter((r) =>
-    discriminators.every((re) => recordMatchesToken(r, re)),
-  );
+  // Score each record by how many discriminators it matches
+  const scored = records.map((r) => {
+    let score = 0;
+    for (const re of discriminators) {
+      if (recordMatchesToken(r, re)) score++;
+    }
+    return { record: r, score };
+  });
+
+  const maxScore = Math.max(...scored.map((s) => s.score));
+  if (maxScore === 0) return undefined;
+
+  // Filter to records matching the highest relevance score
+  const filtered = scored
+    .filter((s) => s.score === maxScore || (maxScore > 1 && s.score >= maxScore - 1))
+    .map((s) => s.record);
+
   if (filtered.length === 0 || filtered.length === records.length) {
     return undefined;
   }

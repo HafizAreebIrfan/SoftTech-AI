@@ -34,6 +34,7 @@ TOOL DESCRIPTION RULES:
 2. Clearly and directly state what this specific tool does based on its HTTP method, endpoint path, and business entity (e.g., searches or lists records, retrieves details by ID, checks availability, creates a record).
 3. Mention key filter parameters or parameters supported by this endpoint (e.g., query keywords, filters, IDs).
 4. Keep the description domain-agnostic, factual, and strictly relevant to what the API performs. Do not include hardcoded company advice, assumptions, or unnecessary commentary.
+5. For search and listing endpoints: explicitly instruct the model to call the tool once key search criteria (such as location, dates, or budget) are known, and to ask qualifying follow-up questions first if the user's inquiry is open-ended or broad.
 
 DATA PATH RULES:
 

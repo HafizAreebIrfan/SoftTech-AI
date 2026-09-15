@@ -164,14 +164,45 @@ export async function saveCompanyApiDetails(
 
   const company = await companyRepository.findById(companyId);
   const companyName = company?.companyName;
+  const existingApis = (company?.apis || []) as any[];
 
-  const apis = apisToProcess.map((api: any, index: number) =>
-    transformApiEntry(api, index, companyName),
-  );
+  const apis = apisToProcess.map((api: any, index: number) => {
+    const existing = existingApis.find(
+      (e: any) =>
+        (api.id && (String(e._id) === String(api.id) || String(e.id) === String(api.id))) ||
+        (api._id && String(e._id) === String(api._id)) ||
+        (api.mcpToolName && e.mcpToolName === api.mcpToolName) ||
+        (api.endpoint && e.endpoint === (api.endpoint || api.apiEndpoint) && (api.method || "GET") === (e.method || "GET")) ||
+        (api.name && e.name === (api.name || api.apiName))
+    ) || existingApis[index];
+
+    const merged = {
+      ...(existing ? (typeof existing.toObject === "function" ? existing.toObject() : existing) : {}),
+      ...api,
+      // If incoming payload has no params/schema, retain existing
+      apiSchema: api.apiSchema || api.schema || existing?.apiSchema || null,
+      params: (Array.isArray(api.params) && api.params.length > 0) ? api.params : (existing?.params || []),
+      headers: (Array.isArray(api.headers) && api.headers.length > 0) ? api.headers : (existing?.headers || []),
+      body: (Array.isArray(api.body) && api.body.length > 0) ? api.body : (existing?.body || []),
+      apiKey: api.apiKey || api.apiKeyVal || existing?.apiKey,
+      bearerToken: api.bearerToken || existing?.bearerToken,
+      oauth: api.oauth || existing?.oauth,
+      inputFieldMap: (api.inputFieldMap && api.inputFieldMap.length > 0) ? api.inputFieldMap : (existing?.inputFieldMap || []),
+      outputFieldMap: (api.outputFieldMap && api.outputFieldMap.length > 0) ? api.outputFieldMap : (existing?.outputFieldMap || []),
+      fallbackWidget: api.fallbackWidget || existing?.fallbackWidget || "",
+      mcpToolName: api.mcpToolName || existing?.mcpToolName || toToolName(api.name || api.apiName || "", index),
+      mcpDescription:
+        api.mcpDescription ||
+        existing?.mcpDescription ||
+        generateMcpDescription(api, { companyName: companyName || api.companyName }),
+    };
+
+    return transformApiEntry(merged, index, companyName);
+  });
 
   const updateData: any = {
     apis,
-    onboardingStep: 2,
+    onboardingStep: Math.max(company?.onboardingStep || 0, 2),
     updatedAt: new Date(),
   };
 
@@ -184,4 +215,75 @@ export async function saveCompanyApiDetails(
   }
 
   return await companyRepository.update(companyId, updateData);
+}
+
+export async function updateSingleApiUiSettings(
+  companyRepository: ICompanyRepository,
+  companyId: string,
+  payload: {
+    apiId?: string;
+    apiIndex?: number;
+    mcpToolName?: string;
+    isWidgetEnabled?: boolean;
+    isMapViewEnabled?: boolean;
+    uiConfig?: any;
+    mcpDescription?: string;
+  },
+): Promise<ICompany | null> {
+  if (!companyId) throw new Error("companyId is required");
+  const company = await companyRepository.findById(companyId);
+  if (!company) throw new Error("Company not found");
+
+  const apis = [...(company.apis || [])] as any[];
+  let targetIndex = -1;
+
+  if (payload.apiId) {
+    targetIndex = apis.findIndex(
+      (a: any) => String(a._id) === String(payload.apiId) || String(a.id) === String(payload.apiId),
+    );
+  }
+  if (targetIndex === -1 && payload.mcpToolName) {
+    targetIndex = apis.findIndex((a: any) => a.mcpToolName === payload.mcpToolName);
+  }
+  if (targetIndex === -1 && typeof payload.apiIndex === "number" && payload.apiIndex >= 0 && payload.apiIndex < apis.length) {
+    targetIndex = payload.apiIndex;
+  }
+
+  if (targetIndex === -1) {
+    throw new Error("Target API not found in company fleet");
+  }
+
+  const existing = apis[targetIndex];
+  const isWidgetEnabled =
+    payload.isWidgetEnabled !== undefined
+      ? Boolean(payload.isWidgetEnabled)
+      : payload.uiConfig?.uiEnabled !== undefined
+        ? Boolean(payload.uiConfig.uiEnabled)
+        : existing.isWidgetEnabled ?? true;
+
+  const isMapViewEnabled =
+    payload.isMapViewEnabled !== undefined
+      ? Boolean(payload.isMapViewEnabled)
+      : payload.uiConfig?.mapEnabled !== undefined
+        ? Boolean(payload.uiConfig.mapEnabled)
+        : existing.isMapViewEnabled ?? false;
+
+  const uiConfig = payload.uiConfig || {
+    uiEnabled: isWidgetEnabled,
+    uiType: payload.uiConfig?.uiType || existing.uiConfig?.uiType || "auto",
+    mapEnabled: isMapViewEnabled,
+  };
+
+  apis[targetIndex] = {
+    ...existing,
+    isWidgetEnabled,
+    isMapViewEnabled,
+    uiConfig,
+    ...(payload.mcpDescription ? { mcpDescription: payload.mcpDescription } : {}),
+  };
+
+  return await companyRepository.update(companyId, {
+    apis,
+    updatedAt: new Date(),
+  });
 }

@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { createCompanyRepository } from "../../../../persistence/mongo/companies/register/companyregisterrepository";
 import { registerCompanyInfo } from "../../../../../application/useCases/company/register/registercompanyinfo";
-import { saveCompanyApiDetails } from "../../../../../application/useCases/company/register/companyapidetails";
+import {
+  saveCompanyApiDetails,
+  updateSingleApiUiSettings,
+} from "../../../../../application/useCases/company/register/companyapidetails";
 import { saveCompanyUiSelection } from "../../../../../application/useCases/company/register/companyuiselection";
 import { analyzeSingleApi } from "../../../../../application/useCases/company/register/analyzecompanyapi";
 import {
@@ -45,6 +48,28 @@ export async function saveCompanyApiDetailsController(
     res.status(200).json({
       success: true,
       message: "API details saved successfully",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateCompanyApiUiSettingsController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const result = await updateSingleApiUiSettings(
+      companyRepository,
+      req.params.companyId as string,
+      req.body,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "API UI settings updated successfully",
       data: result,
     });
   } catch (error) {

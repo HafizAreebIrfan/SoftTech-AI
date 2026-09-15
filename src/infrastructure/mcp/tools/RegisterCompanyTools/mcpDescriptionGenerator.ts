@@ -28,26 +28,32 @@ export const isStaleOrInvalidDescription = (desc?: string): boolean => {
 export const generateMcpDescription = (
   api: any,
   company?: { companyName?: string; industry?: string },
+  options?: { forceRegenerate?: boolean },
 ): string => {
   if (!api) return "Calls a registered company API.";
 
-  // 1. If AI schema analysis generated a clean toolDescription, use it
-  const aiDesc = api.apiSchema?.toolDescription;
-  if (typeof aiDesc === "string" && !isStaleOrInvalidDescription(aiDesc)) {
-    return aiDesc.trim();
-  }
+  if (!options?.forceRegenerate) {
+    // 1. If AI schema analysis generated a clean toolDescription, use it
+    const aiDesc = api.apiSchema?.toolDescription;
+    if (typeof aiDesc === "string" && !isStaleOrInvalidDescription(aiDesc)) {
+      return aiDesc.trim();
+    }
 
-  // 2. If a custom, high-quality description was provided in mcpDescription, respect it
-  const existingDesc = typeof api.mcpDescription === "string" ? api.mcpDescription.trim() : "";
-  if (existingDesc && !isStaleOrInvalidDescription(existingDesc)) {
-    return existingDesc;
+    // 2. If a custom, high-quality description was provided in mcpDescription, respect it
+    const existingDesc =
+      typeof api.mcpDescription === "string" ? api.mcpDescription.trim() : "";
+    if (existingDesc && !isStaleOrInvalidDescription(existingDesc)) {
+      return existingDesc;
+    }
   }
 
   const companyName = company?.companyName || "the company";
   const endpoint = String(api.endpoint || api.apiEndpoint || "").trim();
   const method = String(api.method || api.apiMethod || "GET").toUpperCase();
   const apiName = String(api.name || api.apiName || "").trim();
-  const entity = String(api.apiSchema?.entity || inferEntityFromEndpoint(endpoint, apiName)).toLowerCase();
+  const rawEntity = api.apiSchema?.entity;
+  const isInvalidEntity = !rawEntity || typeof rawEntity !== "string" || rawEntity.includes("{") || rawEntity.includes("%7");
+  const entity = String(!isInvalidEntity ? rawEntity : inferEntityFromEndpoint(endpoint, apiName)).toLowerCase();
   const singularEntity = entity.endsWith("ies")
     ? `${entity.slice(0, -3)}y`
     : entity.endsWith("s") && !entity.endsWith("ss")
@@ -86,22 +92,29 @@ export const generateMcpDescription = (
     return `Checks availability for ${entity} from ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}`;
   }
 
-  // 4. Single Item Details by ID
+  // 4. Single Item Details by ID (GET only)
   const isDetailEndpoint =
+    method === "GET" &&
     (endpoint.includes("{id}") || endpoint.includes(":id") || /%7Bid%7D/i.test(endpoint)) &&
     !endpoint.includes("/availability");
 
-  if (isDetailEndpoint || /detail|get\s*single/i.test(apiName)) {
+  if (isDetailEndpoint || (method === "GET" && /detail|get\s*single/i.test(apiName))) {
     return `Retrieves details for a single ${singularEntity} by ID from ${companyName}.`;
   }
 
-  // 5. Create Record (POST)
+  // 5. Create / Action (POST)
   if (method === "POST") {
+    if (/pay|cancel|checkout|book|reserve|subscribe/i.test(apiName) || /pay|cancel|checkout|book/i.test(endpoint)) {
+      return `Processes ${apiName.toLowerCase() || "request"} for ${singularEntity} in ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}`;
+    }
     return `Creates a new ${singularEntity} in ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}`;
   }
 
-  // 6. Update Record (PUT / PATCH)
+  // 6. Update / Action (PUT / PATCH)
   if (method === "PUT" || method === "PATCH") {
+    if (/cancel|pay|status|toggle|approve|reject/i.test(apiName) || /cancel|pay|status|toggle|approve|reject/i.test(endpoint)) {
+      return `Updates status or processes ${apiName.toLowerCase()} for ${singularEntity} in ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}`;
+    }
     return `Updates an existing ${singularEntity} in ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}`;
   }
 
@@ -114,7 +127,10 @@ export const generateMcpDescription = (
   if (method === "GET") {
     const isSearchOrFilter = filterKeys.length > 0 || /search|filter|find/i.test(endpoint) || /search|filter|find/i.test(apiName);
     const actionVerb = isSearchOrFilter ? "Searches and retrieves" : "Lists";
-    return `${actionVerb} ${entity} from ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}`;
+    const qualificationHint = isSearchOrFilter
+      ? ` Call this tool once key search criteria (such as ${paramText || "location, dates, or budget"}) are known. If the user's inquiry is broad, planning-focused, or missing key details, ask clarifying questions first to gather their preferences before invoking.`
+      : "";
+    return `${actionVerb} ${entity} from ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}${qualificationHint}`;
   }
 
   // 9. Fallback
@@ -122,17 +138,24 @@ export const generateMcpDescription = (
 };
 
 const inferEntityFromEndpoint = (endpoint: string, apiName: string): string => {
-  const cleanEp = endpoint
+  let decoded = endpoint;
+  try {
+    decoded = decodeURIComponent(endpoint);
+  } catch {
+    decoded = endpoint;
+  }
+  const cleanEp = decoded
     .split("?")[0]
     .replace(/\/api\//i, "")
     .replace(/\{[^}]+\}/g, "")
+    .replace(/%7B[^%]+%7D/gi, "")
     .replace(/:[a-zA-Z0-9_-]+/g, "");
   const segments = cleanEp.split("/").filter(Boolean);
-  const skipWords = /^(get|list|search|filter|find|fetch|all|create|update|delete|availability|status)$/i;
+  const skipWords = /^(get|list|search|filter|find|fetch|all|create|update|delete|availability|status|cancel|pay|checkout)$/i;
 
   for (let i = segments.length - 1; i >= 0; i--) {
     const seg = segments[i].toLowerCase();
-    if (!skipWords.test(seg)) {
+    if (!skipWords.test(seg) && !seg.includes("%7")) {
       return seg;
     }
   }
