@@ -27,3 +27,6 @@ OPENAI_PLUGIN_SKILLS_ARCHITECTURE.md
 *.sln
 *.sw?
 .claude
+scripts
+.cursor
+cursor-plugin
