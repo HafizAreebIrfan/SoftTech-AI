@@ -266,15 +266,6 @@ const GenericWidgetInner: React.FC = () => {
     return null;
   }
 
-  // Purpose-based widget gating: utility/action tools return text-only, no widget.
-  const toolPurpose =
-    (collection as any)?.purpose ||
-    currentMetadata?.purpose;
-
-  if (toolPurpose === "utility" || toolPurpose === "action") {
-    return null;
-  }
-
   // Company toggle: when uiEnabled is explicitly false, skip widget rendering.
   if (currentMetadata?.uiEnabled === false) {
     return null;
