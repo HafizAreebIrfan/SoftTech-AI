@@ -1773,8 +1773,9 @@ const SignupStep2: FC = () => {
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
           );
         })}
 
