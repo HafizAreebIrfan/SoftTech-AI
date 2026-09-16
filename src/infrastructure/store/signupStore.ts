@@ -60,6 +60,42 @@ export function trimSampleJson(jsonStr: string, maxLen = 8000): string {
   }
 }
 
+export const detectDefaultWidgetAndMapToggles = (
+  api: Partial<ApiConnection>,
+): { isWidgetEnabled: boolean; isMapViewEnabled: boolean } => {
+  const method = String(api.apiMethod || "GET").toUpperCase();
+  const name = String(api.apiName || "").toLowerCase();
+  const endpoint = String(api.apiEndpoint || "").toLowerCase();
+
+  // Helper / utility / auth / review / mutation / analytics APIs default to OFF:
+  const isActionOrMutation = method !== "GET";
+  const isProfileOrAuth =
+    /user|profile|account|auth|me\b|login|signup/i.test(endpoint) ||
+    /profile|account|current user|user profile/i.test(name);
+  const isHelperOrUtility =
+    /categor|option|filter|tag|brand|availab|rating|review|stat|analytic|report|spending/i.test(
+      endpoint,
+    ) ||
+    /categor|option|filter|tag|brand|availab|rating|review|stat|analytic|report|spending/i.test(
+      name,
+    );
+
+  // Major / Important APIs that should default to ON:
+  // - Search, Listings, Catalog, Products, Cars, Rooms, Hotels, Packages, Locations, Single item detail
+  const isMajorApi =
+    !isActionOrMutation && !isProfileOrAuth && !isHelperOrUtility;
+
+  // Map toggle defaults to true ONLY IF endpoint or name mentions map, location, branch, store, or geo
+  const hasMapSignal =
+    /location|map|branch|store|nearby|places|geo|coordinates/i.test(endpoint) ||
+    /location|map|branch|store|nearby|places/i.test(name);
+
+  return {
+    isWidgetEnabled: isMajorApi,
+    isMapViewEnabled: isMajorApi && hasMapSignal,
+  };
+};
+
 export const parseJsonToRows = (
   jsonStr: string | undefined,
   defaultDynamic: boolean = true,
@@ -433,6 +469,8 @@ export const useSignupStore = create<SignupStore>()(
               apiHeaders: "",
               isRealtimeApi: false,
               streamUrl: "",
+              isWidgetEnabled: true,
+              isMapViewEnabled: false,
             },
           ],
         })),
@@ -1185,6 +1223,11 @@ export const useSignupStore = create<SignupStore>()(
               ...isoauth,
               ...isuseroauth,
               mcpDescription: api.mcpDescription || undefined,
+              isWidgetEnabled:
+                api.isWidgetEnabled !== undefined
+                  ? Boolean(api.isWidgetEnabled)
+                  : true,
+              isMapViewEnabled: Boolean(api.isMapViewEnabled),
             };
           });
 
@@ -1294,10 +1337,22 @@ export const useSignupStore = create<SignupStore>()(
       ) => {
         if (!importedApis || importedApis.length === 0) return;
 
+        const processedImported = importedApis.map((api) => {
+          if (api.isWidgetEnabled === undefined) {
+            const defaults = detectDefaultWidgetAndMapToggles(api);
+            return {
+              ...api,
+              isWidgetEnabled: defaults.isWidgetEnabled,
+              isMapViewEnabled: defaults.isMapViewEnabled,
+            };
+          }
+          return api;
+        });
+
         set((state) => {
           let updatedList: ApiConnection[];
           if (mode === "replace") {
-            updatedList = [...importedApis];
+            updatedList = [...processedImported];
           } else {
             const isSingleEmpty =
               state.apisList.length === 1 &&
@@ -1308,14 +1363,14 @@ export const useSignupStore = create<SignupStore>()(
                 state.apisList[0].apiEndpoint.trim() === "");
 
             if (isSingleEmpty) {
-              updatedList = [...importedApis];
+              updatedList = [...processedImported];
             } else {
-              updatedList = [...state.apisList, ...importedApis];
+              updatedList = [...state.apisList, ...processedImported];
             }
           }
 
           const updatedTestStates = { ...state.apiTestStates };
-          importedApis.forEach((api) => {
+          processedImported.forEach((api) => {
             if (api.sampleresponse) {
               updatedTestStates[api.id] = {
                 status: "success",

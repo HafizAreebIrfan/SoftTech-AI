@@ -105,6 +105,9 @@ const SignupStep2: FC = () => {
     }
   }, [companyId, navigate]);
 
+  const [collapsedApiIds, setCollapsedApiIds] = useState<
+    Record<string, boolean>
+  >({});
   const [activeTabs, setActiveTabs] = useState<
     Record<string, "params" | "auth" | "headers" | "body">
   >({});
@@ -118,6 +121,10 @@ const SignupStep2: FC = () => {
     string | null
   >(null);
   const [sampleInputText, setSampleInputText] = useState("");
+
+  const toggleCollapse = (id: string) => {
+    setCollapsedApiIds((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const getActiveTab = (
     apiId: string,
@@ -223,6 +230,7 @@ const SignupStep2: FC = () => {
             colors,
           );
           const activeTab = getActiveTab(api.id);
+          const isCollapsed = Boolean(collapsedApiIds[api.id]);
 
           return (
             <div
@@ -237,14 +245,20 @@ const SignupStep2: FC = () => {
               <div
                 className={styles.apiBlockHeader}
                 style={{
-                  borderBottom: `1px solid ${colors.CardBorder}`,
+                  borderBottom: isCollapsed
+                    ? "none"
+                    : `1px solid ${colors.CardBorder}`,
+                  cursor: "pointer",
                 }}
+                onClick={() => toggleCollapse(api.id)}
               >
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: "0.5rem",
+                    flex: 1,
+                    minWidth: 0,
                   }}
                 >
                   <DatabaseIcon size={16} color={colors.IconColor} />
@@ -252,22 +266,112 @@ const SignupStep2: FC = () => {
                     className={styles.apiBlockTitle}
                     style={{ color: colors.TextHighlightedHeading }}
                   >
-                    API Connection #{index + 1} {index === 0}
+                    API Connection #{index + 1}
                   </span>
+                  <span
+                    style={{
+                      backgroundColor: methodColors.bg,
+                      color: methodColors.text,
+                      border: `1px solid ${methodColors.border}`,
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: "6px",
+                      marginLeft: "4px",
+                    }}
+                  >
+                    {api.apiMethod || "GET"}
+                  </span>
+                  {api.apiName && (
+                    <span
+                      style={{
+                        color: colors.TextHeading,
+                        fontSize: "0.85rem",
+                        fontWeight: 600,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        marginLeft: "6px",
+                      }}
+                    >
+                      {api.apiName}
+                    </span>
+                  )}
+                  {api.apiEndpoint && (
+                    <span
+                      style={{
+                        color: colors.TextSecondary,
+                        fontSize: "0.78rem",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        marginLeft: "4px",
+                        maxWidth: "260px",
+                      }}
+                    >
+                      {api.apiEndpoint}
+                    </span>
+                  )}
                 </div>
-                {apisList.length > 1 && (
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                  }}
+                >
                   <button
                     type="button"
-                    onClick={() => handleDeleteApi(api.id)}
-                    className={styles.deleteBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCollapse(api.id);
+                    }}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: colors.TextBody,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "0.8rem",
+                      padding: "4px 8px",
+                      borderRadius: "6px",
+                    }}
                   >
-                    <TrashIcon size={13} color="currentColor" />
-                    <span>Delete API</span>
+                    <span>{isCollapsed ? "Expand" : "Collapse"}</span>
+                    <span
+                      style={{
+                        transform: isCollapsed
+                          ? "rotate(-90deg)"
+                          : "rotate(0deg)",
+                        transition: "transform 0.2s ease",
+                        display: "inline-flex",
+                      }}
+                    >
+                      <ChevronDownIcon size={14} color={colors.IconColor} />
+                    </span>
                   </button>
-                )}
+
+                  {apisList.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteApi(api.id);
+                      }}
+                      className={styles.deleteBtn}
+                    >
+                      <TrashIcon size={13} color="currentColor" />
+                      <span>Delete API</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className={styles.apiBlockBody}>
+              {!isCollapsed && (
+                <div className={styles.apiBlockBody}>
                 {/* Section 1: API Name */}
                 <div>
                   <label
@@ -1669,7 +1773,7 @@ const SignupStep2: FC = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           );
         })}
@@ -1985,7 +2089,18 @@ const SignupStep2: FC = () => {
       <ApiImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onImport={(apis, mode) => importApisBatch(apis, mode)}
+        onImport={(apis, mode) => {
+          const collapsedMap: Record<string, boolean> = {};
+          apis.forEach((a) => {
+            collapsedMap[a.id] = true;
+          });
+          setCollapsedApiIds(collapsedMap);
+          importApisBatch(apis, mode);
+          showToast(
+            "APIs imported successfully! Please review your endpoints.",
+            "info",
+          );
+        }}
       />
     </motion.div>
   );

@@ -11,6 +11,50 @@ import { showToast } from "../../../../utils/toasts";
 import { SimulatedWidgetPreview } from "../../../components/common/SimulatedWidgetPreview";
 import styles from "../../../../styles/signup.module.css";
 
+const getMethodBadgeStyle = (
+  method: string,
+  colors: Record<string, string>,
+) => {
+  switch (method) {
+    case "GET":
+      return {
+        bg: colors.MethodGetBg,
+        text: colors.MethodGetText,
+        border: colors.MethodGetBorder,
+      };
+    case "POST":
+      return {
+        bg: colors.MethodPostBg,
+        text: colors.MethodPostText,
+        border: colors.MethodPostBorder,
+      };
+    case "PUT":
+      return {
+        bg: colors.MethodPutBg,
+        text: colors.MethodPutText,
+        border: colors.MethodPutBorder,
+      };
+    case "PATCH":
+      return {
+        bg: colors.MethodPatchBg,
+        text: colors.MethodPatchText,
+        border: colors.MethodPatchBorder,
+      };
+    case "DELETE":
+      return {
+        bg: colors.MethodDeleteBg,
+        text: colors.MethodDeleteText,
+        border: colors.MethodDeleteBorder,
+      };
+    default:
+      return {
+        bg: colors.MethodGetBg,
+        text: colors.MethodGetText,
+        border: colors.MethodGetBorder,
+      };
+  }
+};
+
 const SignupStep3: FC = () => {
   const navigate = useNavigate();
   const { colors } = useThemeStore();
@@ -23,6 +67,7 @@ const SignupStep3: FC = () => {
     stepOneData,
     setSelectedThemeColor,
     setSelectedAudienceDefault,
+    updateApiField,
     clearSignupProgress,
   } = useSignupStore();
   const { setAuth, isAuthenticated } = useAuthStore();
@@ -248,6 +293,178 @@ const SignupStep3: FC = () => {
                 Tables) dynamically per chat query.
               </p>
             </div>
+
+            {/* Configured MCP Tools & Widgets (Compact Collapsed List) */}
+            {apisList.length > 0 && (
+              <div className={styles.apiConfigSection}>
+                <div className={styles.apiConfigHeader}>
+                  <div className={styles.apiConfigTitleCol}>
+                    <h3
+                      className={styles.apiConfigHeading}
+                      style={{ color: colors.TextHeading }}
+                    >
+                      MCP Tools & Widgets
+                    </h3>
+                    <p
+                      className={styles.apiConfigSubheading}
+                      style={{ color: colors.TextBody }}
+                    >
+                      Manage per-tool ChatGPT interactive widget UI and Map View toggles.
+                    </p>
+                  </div>
+                  <div
+                    className={styles.apiConfigStats}
+                    style={{
+                      background: colors.BackgroundSecondary,
+                      border: `1px solid ${colors.CardBorder}`,
+                    }}
+                  >
+                    <span style={{ color: colors.TextSecondary }}>
+                      {apisList.filter((a) => a.isWidgetEnabled !== false).length} / {apisList.length} Active
+                    </span>
+                  </div>
+                </div>
+
+                <div className={styles.apiConfigList}>
+                  {apisList.map((api, idx) => {
+                    const isWidgetOn = api.isWidgetEnabled !== false;
+                    const isMapOn = Boolean(api.isMapViewEnabled);
+                    const methodStyle = getMethodBadgeStyle(
+                      api.apiMethod || "GET",
+                      colors,
+                    );
+
+                    return (
+                      <div
+                        key={api.id || idx}
+                        className={styles.apiConfigRow}
+                        style={{
+                          background: colors.BackgroundSecondary,
+                          border: `1px solid ${colors.CardBorderSecondary}`,
+                        }}
+                      >
+                        {/* Left: Method + Name + Endpoint */}
+                        <div className={styles.apiConfigRowLeft}>
+                          <span
+                            className={styles.apiMethodBadge}
+                            style={{
+                              backgroundColor: methodStyle.bg,
+                              color: methodStyle.text,
+                              border: `1px solid ${methodStyle.border}`,
+                            }}
+                          >
+                            {api.apiMethod || "GET"}
+                          </span>
+                          <div className={styles.apiConfigInfo}>
+                            <span
+                              className={styles.apiConfigName}
+                              style={{ color: colors.TextHeading }}
+                              title={api.apiName || `API Endpoint #${idx + 1}`}
+                            >
+                              {api.apiName || `API Endpoint #${idx + 1}`}
+                            </span>
+                            <span
+                              className={styles.apiConfigEndpoint}
+                              style={{ color: colors.TextSecondary }}
+                              title={api.apiEndpoint}
+                            >
+                              {api.apiEndpoint}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Right: Inline Toggles */}
+                        <div className={styles.apiConfigRowRight}>
+                          {/* Widget Toggle */}
+                          <div className={styles.toggleGroup}>
+                            <span
+                              className={styles.toggleLabel}
+                              style={{
+                                color: isWidgetOn
+                                  ? colors.TextHeading
+                                  : colors.TextSecondary,
+                              }}
+                            >
+                              Widget
+                            </span>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isWidgetOn}
+                              title={isWidgetOn ? "Disable Widget UI" : "Enable Widget UI"}
+                              onClick={() => {
+                                const nextVal = !isWidgetOn;
+                                updateApiField(api.id, "isWidgetEnabled", nextVal);
+                                if (!nextVal) {
+                                  updateApiField(api.id, "isMapViewEnabled", false);
+                                }
+                              }}
+                              className={`${styles.toggleSwitch} ${isWidgetOn ? styles.toggleSwitchActive : ""}`}
+                              style={{
+                                backgroundColor: isWidgetOn
+                                  ? selectedThemeColor
+                                  : colors.CardBorderSecondary,
+                              }}
+                            >
+                              <span className={styles.toggleThumb} />
+                            </button>
+                          </div>
+
+                          {/* Map Toggle */}
+                          <div className={styles.toggleGroup}>
+                            <span
+                              className={styles.toggleLabel}
+                              style={{
+                                color:
+                                  isWidgetOn && isMapOn
+                                    ? colors.TextHeading
+                                    : colors.TextSecondary,
+                                opacity: isWidgetOn ? 1 : 0.4,
+                              }}
+                            >
+                              Map
+                            </span>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isMapOn}
+                              disabled={!isWidgetOn}
+                              title={
+                                !isWidgetOn
+                                  ? "Enable Widget UI first to activate Map View"
+                                  : isMapOn
+                                    ? "Disable Map View"
+                                    : "Enable Map View"
+                              }
+                              onClick={() => {
+                                if (isWidgetOn) {
+                                  updateApiField(
+                                    api.id,
+                                    "isMapViewEnabled",
+                                    !isMapOn,
+                                  );
+                                }
+                              }}
+                              className={`${styles.toggleSwitch} ${isMapOn && isWidgetOn ? styles.toggleSwitchActive : ""}`}
+                              style={{
+                                backgroundColor:
+                                  isMapOn && isWidgetOn
+                                    ? selectedThemeColor
+                                    : colors.CardBorderSecondary,
+                                opacity: isWidgetOn ? 1 : 0.4,
+                                cursor: isWidgetOn ? "pointer" : "not-allowed",
+                              }}
+                            >
+                              <span className={styles.toggleThumb} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Pane (~70%): Interactive Live Widget Preview */}

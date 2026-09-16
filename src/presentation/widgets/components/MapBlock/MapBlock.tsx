@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
-import { Loader } from "@googlemaps/js-api-loader";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import styles from "../../../../styles/mapblock.module.css";
 import { extractCoordinates, formatMarkerPrice } from "../../helper/geoHelper";
 
@@ -11,95 +12,69 @@ interface MapBlockProps {
   apiKey?: string;
 }
 
-declare global {
-  interface Window {
-    google?: any;
-  }
-}
-
-const DARK_MAP_STYLES: any[] = [
-  { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5af" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
-  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] },
-  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] },
-  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#2f3948" }] },
-  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] },
-  { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] },
-];
-
 export const MapBlock: React.FC<MapBlockProps> = ({
   records = [],
   selectedRecord,
   onSelectRecord,
   height = "100%",
-  apiKey: propApiKey,
 }) => {
-  const apiKey =
-    propApiKey ||
-    (typeof import.meta !== "undefined" && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY) ||
-    (typeof window !== "undefined"
-      ? (window as any).__WIDGET_METADATA__?.googleMapsApiKey ||
-        (window as any).VITE_GOOGLE_MAPS_API_KEY
-      : "");
-
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<any>(null);
-  const overlaysRef = useRef<Map<string | number, { overlay: any; coords: any }>>(new Map());
-  const loaderRef = useRef<Loader | null>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<Map<string | number, L.Marker>>(new Map());
 
   const getRecordKey = (rec: Record<string, any>, idx: number): string | number => {
     return rec.id ?? rec._id ?? rec.key ?? rec.title ?? idx;
   };
 
-  // 1. Initialize Google Maps
+  // 1. Initialize Leaflet Map
   useEffect(() => {
-    if (!mapContainerRef.current || !apiKey || googleMapRef.current) return;
+    if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    const initMap = async () => {
-      if (!loaderRef.current) {
-        loaderRef.current = new Loader({ apiKey, version: "weekly", libraries: ["maps", "marker"] });
-      }
-      const google = await loaderRef.current.load();
-      if (!mapContainerRef.current) return;
+    const map = L.map(mapContainerRef.current, {
+      center: [24.8607, 67.0011],
+      zoom: 12,
+      zoomControl: true,
+      attributionControl: true,
+    });
 
-      googleMapRef.current = new google.maps.Map(mapContainerRef.current, {
-        center: { lat: 24.8607, lng: 67.0011 },
-        zoom: 12,
-        zoomControl: true,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: true,
-        styles: DARK_MAP_STYLES,
-      });
-    };
+    // High-performance CartoDB Voyager / Dark Matter tiles (100% free, dark styled, zero API key needed)
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+      {
+        subdomains: "abcd",
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://carto.com/" target="_blank" rel="noopener">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OSM</a>',
+      },
+    ).addTo(map);
 
-    initMap();
+    mapInstanceRef.current = map;
+
+    // Handle container resizing to prevent tile tearing
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize();
+    });
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
+    }
 
     return () => {
-      overlaysRef.current.forEach(({ overlay }) => overlay.setMap(null));
-      overlaysRef.current.clear();
-      googleMapRef.current = null;
+      resizeObserver.disconnect();
+      map.remove();
+      mapInstanceRef.current = null;
     };
-  }, [apiKey]);
+  }, []);
 
-  // 2. Render markers
+  // 2. Render Markers
   useEffect(() => {
-    const map = googleMapRef.current;
-    const google = window.google;
-    if (!map || !google) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
 
-    overlaysRef.current.forEach(({ overlay }) => overlay.setMap(null));
-    overlaysRef.current.clear();
+    // Clear previous markers
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current.clear();
 
-    const bounds = new google.maps.LatLngBounds();
+    const bounds = L.latLngBounds([]);
     let hasBounds = false;
 
     records.forEach((rec, idx) => {
@@ -107,89 +82,72 @@ export const MapBlock: React.FC<MapBlockProps> = ({
       if (!coords) return;
 
       const key = getRecordKey(rec, idx);
-      const isSelected = selectedRecord && getRecordKey(selectedRecord, -1) === key;
+      const isSelected =
+        selectedRecord && getRecordKey(selectedRecord, -1) === key;
       const priceText = formatMarkerPrice(rec) || "View";
-      const latLng = new google.maps.LatLng(coords.lat, coords.lng);
 
-      const overlay = new google.maps.OverlayView();
-      overlay.onAdd = function () {
-        const div = document.createElement("div");
-        div.className = "price-pin" + (isSelected ? " active" : "");
-        div.setAttribute("data-key", String(key));
-        div.innerHTML = `<span class="pin-icon">&#128205;</span><span class="pin-price">${priceText}</span><div class="pin-arrow"></div>`;
-        div.style.cursor = "pointer";
-        div.addEventListener("click", (e) => { e.stopPropagation(); onSelectRecord?.(rec, idx); });
-        (this as any).div_ = div;
-        (this as any).getPane()!.appendChild(div);
-      };
-      overlay.draw = function () {
-        const div = (this as any).div_ as HTMLElement;
-        if (!div) return;
-        const pos = this.getProjection()?.fromLatLngToDivPixel(latLng);
-        if (pos) {
-          div.style.left = pos.x - 42 + "px";
-          div.style.top = pos.y - 28 + "px";
-          div.style.position = "absolute";
-        }
-      };
-      overlay.onRemove = function () {
-        const div = (this as any).div_ as HTMLElement;
-        if (div?.parentNode) div.parentNode.removeChild(div);
-      };
+      const customIcon = L.divIcon({
+        className: "map-price-pin-wrapper",
+        html: `<div class="price-pin ${isSelected ? "active" : ""}" data-key="${key}">
+          <span class="pin-icon">&#128205;</span>
+          <span class="pin-price">${priceText}</span>
+          <div class="pin-arrow"></div>
+        </div>`,
+        iconSize: [80, 32],
+        iconAnchor: [40, 32],
+      });
 
-      overlay.setMap(map);
-      overlaysRef.current.set(key, { overlay, coords: latLng });
-      bounds.extend(latLng);
+      const marker = L.marker([coords.lat, coords.lng], {
+        icon: customIcon,
+        zIndexOffset: isSelected ? 1000 : 0,
+      });
+
+      marker.on("click", (e) => {
+        L.DomEvent.stopPropagation(e);
+        onSelectRecord?.(rec, idx);
+      });
+
+      marker.addTo(map);
+      markersRef.current.set(key, marker);
+
+      bounds.extend([coords.lat, coords.lng]);
       hasBounds = true;
     });
 
-    if (hasBounds) map.fitBounds(bounds, 50);
+    if (hasBounds) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    }
   }, [records, onSelectRecord]);
 
-  // 3. Update active marker + pan
+  // 3. Update Active Marker Styling & Pan on Selection
   useEffect(() => {
-    const map = googleMapRef.current;
+    const map = mapInstanceRef.current;
     if (!map || !selectedRecord) return;
+
     const selectedKey = getRecordKey(selectedRecord, -1);
 
-    overlaysRef.current.forEach(({ overlay, coords }, key) => {
-      const div = (overlay as any).div_ as HTMLElement | undefined;
-      if (!div) return;
-      const pinEl = div.querySelector(".price-pin");
-      if (pinEl) {
-        if (key === selectedKey) { pinEl.classList.add("active"); div.style.zIndex = "10000"; }
-        else { pinEl.classList.remove("active"); div.style.zIndex = "1"; }
+    markersRef.current.forEach((marker, key) => {
+      const isSelected = key === selectedKey;
+      const el = marker.getElement();
+      if (el) {
+        const pinDiv = el.querySelector(".price-pin");
+        if (pinDiv) {
+          if (isSelected) {
+            pinDiv.classList.add("active");
+            marker.setZIndexOffset(1000);
+          } else {
+            pinDiv.classList.remove("active");
+            marker.setZIndexOffset(0);
+          }
+        }
       }
-      if (key === selectedKey) map.panTo(coords);
+
+      if (isSelected) {
+        const latLng = marker.getLatLng();
+        map.panTo(latLng, { animate: true, duration: 0.5 });
+      }
     });
   }, [selectedRecord]);
-
-  if (!apiKey) {
-    return (
-      <div
-        className={styles.mapWrapper}
-        style={{
-          height,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#121316",
-          color: "#9ca3af",
-          fontSize: 12,
-          flexDirection: "column",
-          gap: 6,
-          padding: 16,
-          textAlign: "center",
-        }}
-      >
-        <span style={{ fontSize: 24 }}>🗺️</span>
-        <span style={{ fontWeight: 600, color: "#e2e8f0" }}>Interactive Map</span>
-        <span style={{ color: "#64748b", fontSize: 11 }}>
-          Set <code>VITE_GOOGLE_MAPS_API_KEY</code> in environment to activate live map tiles & pins.
-        </span>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.mapWrapper} style={{ height }}>

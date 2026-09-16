@@ -20,6 +20,11 @@ export const buildPresentationPlan = ({
 
   let explicitLayout = (collection?.layout || "auto").toLowerCase();
 
+  // If map is not enabled, strictly prevent mapcatalog from rendering and fallback to catalog
+  if (explicitLayout === "mapcatalog" && mapEnabled !== true) {
+    explicitLayout = "catalog";
+  }
+
   // Purpose-based routing: when the backend declares a purpose, it takes
   // precedence over auto-detection.
   if (purpose === "profile") {
