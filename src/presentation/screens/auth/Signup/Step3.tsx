@@ -1,0 +1,573 @@
+import React, { FC, useEffect, useState, useMemo } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { motion } from "motion/react";
+import { useThemeStore, useAuthStore, useSignupStore } from "../../../../hooks";
+import {
+  CheckIcon,
+  LeftArrowIcon,
+  SlidersIcon,
+} from "../../../../assets/icons";
+import { showToast } from "../../../../utils/toasts";
+import { SimulatedWidgetPreview } from "../../../components/common/SimulatedWidgetPreview";
+import styles from "../../../../styles/signup.module.css";
+
+const getMethodBadgeStyle = (
+  method: string,
+  colors: Record<string, string>,
+) => {
+  switch (method) {
+    case "GET":
+      return {
+        bg: colors.MethodGetBg,
+        text: colors.MethodGetText,
+        border: colors.MethodGetBorder,
+      };
+    case "POST":
+      return {
+        bg: colors.MethodPostBg,
+        text: colors.MethodPostText,
+        border: colors.MethodPostBorder,
+      };
+    case "PUT":
+      return {
+        bg: colors.MethodPutBg,
+        text: colors.MethodPutText,
+        border: colors.MethodPutBorder,
+      };
+    case "PATCH":
+      return {
+        bg: colors.MethodPatchBg,
+        text: colors.MethodPatchText,
+        border: colors.MethodPatchBorder,
+      };
+    case "DELETE":
+      return {
+        bg: colors.MethodDeleteBg,
+        text: colors.MethodDeleteText,
+        border: colors.MethodDeleteBorder,
+      };
+    default:
+      return {
+        bg: colors.MethodGetBg,
+        text: colors.MethodGetText,
+        border: colors.MethodGetBorder,
+      };
+  }
+};
+
+const SignupStep3: FC = () => {
+  const navigate = useNavigate();
+  const { colors } = useThemeStore();
+  const {
+    companyId,
+    selectedLayout,
+    selectedThemeColor = colors.SwatchIndigo,
+    selectedAudienceDefault = "customer",
+    apisList = [],
+    stepOneData,
+    setSelectedThemeColor,
+    setSelectedAudienceDefault,
+    updateApiField,
+    clearSignupProgress,
+  } = useSignupStore();
+  const { setAuth, isAuthenticated } = useAuthStore();
+
+  const PRESET_COLOR_SWATCHES = useMemo(
+    () => [
+      { name: "Indigo Neon", hex: colors.SwatchIndigo },
+      { name: "Emerald Mint", hex: colors.SwatchEmerald },
+      { name: "Crimson Coral", hex: colors.SwatchCrimson },
+      { name: "Ocean Blue", hex: colors.SwatchOcean },
+      { name: "Cyber Violet", hex: colors.SwatchViolet },
+      { name: "Sunset Amber", hex: colors.SwatchAmber },
+      { name: "Slate Stealth", hex: colors.SwatchSlate },
+    ],
+    [colors],
+  );
+
+  // Audience Tab Visibility Intelligence
+  const { hasAudienceTabs, calculatedAudienceDefault } = useMemo(() => {
+    if (!apisList || apisList.length === 0) {
+      return {
+        hasAudienceTabs: false,
+        calculatedAudienceDefault: "customer" as const,
+      };
+    }
+
+    const hasAdmin = apisList.some((api) => api.audience === "admin");
+    const hasCustomer = apisList.some(
+      (api) => api.audience === "customer" || !api.audience,
+    );
+
+    if (hasAdmin && hasCustomer) {
+      return {
+        hasAudienceTabs: true,
+        calculatedAudienceDefault: "customer" as const,
+      };
+    }
+
+    if (hasAdmin && !hasCustomer) {
+      return {
+        hasAudienceTabs: false,
+        calculatedAudienceDefault: "admin" as const,
+      };
+    }
+
+    return {
+      hasAudienceTabs: false,
+      calculatedAudienceDefault: "customer" as const,
+    };
+  }, [apisList]);
+
+  const [activeAudienceTab, setActiveAudienceTab] = useState<
+    "customer" | "admin"
+  >(selectedAudienceDefault === "admin" ? "admin" : "customer");
+
+  useEffect(() => {
+    if (setSelectedAudienceDefault) {
+      setSelectedAudienceDefault(calculatedAudienceDefault);
+    }
+  }, [calculatedAudienceDefault, setSelectedAudienceDefault]);
+
+  const handleAudienceChange = (tab: "customer" | "admin") => {
+    setActiveAudienceTab(tab);
+    if (setSelectedAudienceDefault) {
+      setSelectedAudienceDefault(tab);
+    }
+  };
+
+  useEffect(() => {
+    if (!companyId && !isAuthenticated) {
+      showToast("Please complete Step 1 first.", "warning");
+      navigate({ to: "/signup/step1" });
+    }
+  }, [companyId, isAuthenticated, navigate]);
+
+  const handleStepThreeSubmit = () => {
+    if (!companyId) {
+      showToast("Company ID is missing. Please restart signup.", "error");
+      navigate({ to: "/signup/step1" });
+      return;
+    }
+
+    navigate({ to: "/signup/provisioning" });
+  };
+
+  const handleColorChange = (hex: string) => {
+    if (setSelectedThemeColor) {
+      setSelectedThemeColor(hex);
+    }
+  };
+
+  return (
+    <motion.div
+      key="signup-step-3"
+      initial={{ opacity: 0, scale: 0.98 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.98 }}
+      className={styles.step3Wrapper}
+    >
+      <div
+        className={styles.signupcard}
+        style={{
+          background: colors.Headerbackground,
+          border: `1px solid ${colors.CardBorder}`,
+          borderRadius: "16px",
+          boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`,
+        }}
+      >
+        <div className={styles.step3Grid}>
+          {/* Left Pane (~30%): Theme Swatches & Brand Styling */}
+          <div className={styles.step3LeftPane}>
+            <div>
+              <h2
+                className={styles.step3Title}
+                style={{ color: colors.TextHeading }}
+              >
+                Brand Theme & Styling
+              </h2>
+              <p
+                className={styles.step3Desc}
+                style={{ color: colors.TextBody }}
+              >
+                Choose your primary brand accent color. SoftTech AI's MCP engine
+                dynamically themes your ChatGPT widgets to match your brand
+                identity.
+              </p>
+            </div>
+
+            {/* Color Swatches Grid */}
+            <div>
+              <label
+                className={styles.step3Label}
+                style={{ color: colors.TextSecondary }}
+              >
+                Brand Color Palette
+              </label>
+              <div className={styles.swatchGrid}>
+                {PRESET_COLOR_SWATCHES.map((swatch) => {
+                  const isSelected =
+                    selectedThemeColor.toLowerCase() ===
+                    swatch.hex.toLowerCase();
+                  return (
+                    <button
+                      key={swatch.name}
+                      type="button"
+                      onClick={() => handleColorChange(swatch.hex)}
+                      title={swatch.name}
+                      className={styles.swatchBtn}
+                      style={{
+                        backgroundColor: swatch.hex,
+                        boxShadow: isSelected
+                          ? `0 0 0 2px ${colors.Headerbackground}, 0 0 0 4px ${swatch.hex}`
+                          : "none",
+                        transform: isSelected ? "scale(1.05)" : "scale(1)",
+                      }}
+                    >
+                      {isSelected && (
+                        <CheckIcon size={14} color={colors.TextOverlay} />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Hex Color Picker Input */}
+            <div>
+              <label
+                className={styles.step3Label}
+                style={{ color: colors.TextSecondary }}
+              >
+                Custom HEX Accent Color
+              </label>
+              <div
+                className={styles.hexInputRow}
+                style={{
+                  background: colors.Headerbackground,
+                  border: `1px solid ${colors.CardBorderSecondary}`,
+                  boxShadow: `0 10px 40px ${colors.OverlayShadow}`,
+                }}
+              >
+                <input
+                  type="color"
+                  value={selectedThemeColor}
+                  onChange={(e) => handleColorChange(e.target.value)}
+                  className={styles.hexColorInput}
+                />
+                <input
+                  type="text"
+                  value={selectedThemeColor}
+                  onChange={(e) => handleColorChange(e.target.value)}
+                  placeholder={colors.SwatchIndigo}
+                  className={styles.hexTextInput}
+                  style={{ color: colors.TextHeading }}
+                />
+              </div>
+            </div>
+
+            {/* AI Auto-Prediction Summary Card */}
+            <div
+              className={styles.aiSummaryCard}
+              style={{
+                background: colors.Headerbackground,
+                border: `1px solid ${colors.CardBorderSecondary}`,
+                boxShadow: `0 10px 40px ${colors.OverlayShadow}`,
+              }}
+            >
+              <div className={styles.aiSummaryHeader}>
+                <SlidersIcon size={14} color={colors.BrandIndigo} />
+                <span
+                  className={styles.aiSummaryTitle}
+                  style={{ color: colors.TextHeading }}
+                >
+                  AI Layout Prediction Active
+                </span>
+              </div>
+              <p
+                className={styles.aiSummaryText}
+                style={{ color: colors.TextBody }}
+              >
+                SoftTech AI automatically formats your {apisList.length || 1}{" "}
+                API(s) into responsive multi-block views (Metrics + Cards + Data
+                Tables) dynamically per chat query.
+              </p>
+            </div>
+
+            {/* Configured MCP Tools & Widgets (Compact Collapsed List) */}
+            {apisList.length > 0 && (
+              <div className={styles.apiConfigSection}>
+                <div className={styles.apiConfigHeader}>
+                  <div className={styles.apiConfigTitleCol}>
+                    <h3
+                      className={styles.apiConfigHeading}
+                      style={{ color: colors.TextHeading }}
+                    >
+                      MCP Tools & Widgets
+                    </h3>
+                    <p
+                      className={styles.apiConfigSubheading}
+                      style={{ color: colors.TextBody }}
+                    >
+                      Manage per-tool ChatGPT interactive widget UI and Map View toggles.
+                    </p>
+                  </div>
+                  <div
+                    className={styles.apiConfigStats}
+                    style={{
+                      background: colors.BackgroundSecondary,
+                      border: `1px solid ${colors.CardBorder}`,
+                    }}
+                  >
+                    <span style={{ color: colors.TextSecondary }}>
+                      {apisList.filter((a) => a.isWidgetEnabled !== false).length} / {apisList.length} Active
+                    </span>
+                  </div>
+                </div>
+
+                <div className={styles.apiConfigList}>
+                  {apisList.map((api, idx) => {
+                    const isWidgetOn = api.isWidgetEnabled !== false;
+                    const isMapOn = Boolean(api.isMapViewEnabled);
+                    const methodStyle = getMethodBadgeStyle(
+                      api.apiMethod || "GET",
+                      colors,
+                    );
+
+                    return (
+                      <div
+                        key={api.id || idx}
+                        className={styles.apiConfigRow}
+                        style={{
+                          background: colors.BackgroundSecondary,
+                          border: `1px solid ${colors.CardBorderSecondary}`,
+                        }}
+                      >
+                        {/* Left: Method + Name + Endpoint */}
+                        <div className={styles.apiConfigRowLeft}>
+                          <span
+                            className={styles.apiMethodBadge}
+                            style={{
+                              backgroundColor: methodStyle.bg,
+                              color: methodStyle.text,
+                              border: `1px solid ${methodStyle.border}`,
+                            }}
+                          >
+                            {api.apiMethod || "GET"}
+                          </span>
+                          <div className={styles.apiConfigInfo}>
+                            <span
+                              className={styles.apiConfigName}
+                              style={{ color: colors.TextHeading }}
+                              title={api.apiName || `API Endpoint #${idx + 1}`}
+                            >
+                              {api.apiName || `API Endpoint #${idx + 1}`}
+                            </span>
+                            <span
+                              className={styles.apiConfigEndpoint}
+                              style={{ color: colors.TextSecondary }}
+                              title={api.apiEndpoint}
+                            >
+                              {api.apiEndpoint}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Right: Inline Toggles */}
+                        <div className={styles.apiConfigRowRight}>
+                          {/* Widget Toggle */}
+                          <div className={styles.toggleGroup}>
+                            <span
+                              className={styles.toggleLabel}
+                              style={{
+                                color: isWidgetOn
+                                  ? colors.TextHeading
+                                  : colors.TextSecondary,
+                              }}
+                            >
+                              Widget
+                            </span>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isWidgetOn}
+                              title={isWidgetOn ? "Disable Widget UI" : "Enable Widget UI"}
+                              onClick={() => {
+                                const nextVal = !isWidgetOn;
+                                updateApiField(api.id, "isWidgetEnabled", nextVal);
+                                if (!nextVal) {
+                                  updateApiField(api.id, "isMapViewEnabled", false);
+                                }
+                              }}
+                              className={`${styles.toggleSwitch} ${isWidgetOn ? styles.toggleSwitchActive : ""}`}
+                              style={{
+                                backgroundColor: isWidgetOn
+                                  ? selectedThemeColor
+                                  : colors.CardBorderSecondary,
+                              }}
+                            >
+                              <span className={styles.toggleThumb} />
+                            </button>
+                          </div>
+
+                          {/* Map Toggle */}
+                          <div className={styles.toggleGroup}>
+                            <span
+                              className={styles.toggleLabel}
+                              style={{
+                                color:
+                                  isWidgetOn && isMapOn
+                                    ? colors.TextHeading
+                                    : colors.TextSecondary,
+                                opacity: isWidgetOn ? 1 : 0.4,
+                              }}
+                            >
+                              Map
+                            </span>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={isMapOn}
+                              disabled={!isWidgetOn}
+                              title={
+                                !isWidgetOn
+                                  ? "Enable Widget UI first to activate Map View"
+                                  : isMapOn
+                                    ? "Disable Map View"
+                                    : "Enable Map View"
+                              }
+                              onClick={() => {
+                                if (isWidgetOn) {
+                                  updateApiField(
+                                    api.id,
+                                    "isMapViewEnabled",
+                                    !isMapOn,
+                                  );
+                                }
+                              }}
+                              className={`${styles.toggleSwitch} ${isMapOn && isWidgetOn ? styles.toggleSwitchActive : ""}`}
+                              style={{
+                                backgroundColor:
+                                  isMapOn && isWidgetOn
+                                    ? selectedThemeColor
+                                    : colors.CardBorderSecondary,
+                                opacity: isWidgetOn ? 1 : 0.4,
+                                cursor: isWidgetOn ? "pointer" : "not-allowed",
+                              }}
+                            >
+                              <span className={styles.toggleThumb} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Pane (~70%): Interactive Live Widget Preview */}
+          <div className={styles.step3RightPane}>
+            {/* Audience Tabs (Rendered ONLY if hasAudienceTabs is true) */}
+            {hasAudienceTabs && (
+              <div
+                className={styles.audienceTabsContainer}
+                style={{
+                  background: colors.Background,
+                  border: `1px solid ${colors.CardBorder}`,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleAudienceChange("customer")}
+                  className={styles.audienceTabBtn}
+                  style={{
+                    background:
+                      activeAudienceTab === "customer"
+                        ? selectedThemeColor
+                        : "transparent",
+                    color:
+                      activeAudienceTab === "customer"
+                        ? colors.TextOverlay
+                        : colors.TextBody,
+                    boxShadow:
+                      activeAudienceTab === "customer"
+                        ? `0 4px 12px ${colors.OverlayShadow}`
+                        : "none",
+                  }}
+                >
+                  Customer View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAudienceChange("admin")}
+                  className={styles.audienceTabBtn}
+                  style={{
+                    background:
+                      activeAudienceTab === "admin"
+                        ? selectedThemeColor
+                        : "transparent",
+                    color:
+                      activeAudienceTab === "admin"
+                        ? colors.TextOverlay
+                        : colors.TextBody,
+                    boxShadow:
+                      activeAudienceTab === "admin"
+                        ? `0 4px 12px ${colors.OverlayShadow}`
+                        : "none",
+                  }}
+                >
+                  Admin View
+                </button>
+              </div>
+            )}
+
+            {/* Real Simulated Live Widget Component */}
+            <SimulatedWidgetPreview
+              activeAudience={activeAudienceTab}
+              accentColor={selectedThemeColor}
+              industry={stepOneData?.primaryIndustry}
+              apisList={apisList}
+            />
+          </div>
+        </div>
+
+        {/* FOOTER ACTION BAR FOR STEP 3 */}
+        <div
+          className={styles.step3Footer}
+          style={{ borderTop: `1px solid ${colors.Border}` }}
+        >
+          <button
+            onClick={() => navigate({ to: "/signup/step2" })}
+            className={styles.step3BackBtn}
+            style={{ color: colors.TextBody }}
+          >
+            <LeftArrowIcon size={16} color={colors.IconColor} /> Back
+          </button>
+
+          <div className={styles.step3RightFooter}>
+            <span
+              className={styles.step3Indicator}
+              style={{ color: colors.TextBody }}
+            >
+              Step 3 of 3
+            </span>
+            <button
+              onClick={handleStepThreeSubmit}
+              className={`${styles.btn}`}
+              style={{
+                background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
+                color: colors.TextOverlay,
+              }}
+            >
+              Finalize & Provision AI
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+export default SignupStep3;

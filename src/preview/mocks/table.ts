@@ -1,0 +1,127 @@
+import type { McpToolResultPayload } from "../../domain/entities/GenericWidget";
+
+/**
+ * Table layout fixture — admin audience + CRUD actions drive the data-grid.
+ * `data.orders` is the array; `collection.dataPath` points at it.
+ */
+const orders = [
+  {
+    id: 1001,
+    orderNumber: "ORD-1001",
+    customer: "Ava Bennett",
+    email: "ava.bennett@example.com",
+    total: 259.98,
+    status: "Paid",
+    items: 3,
+    createdAt: "2026-09-02",
+  },
+  {
+    id: 1002,
+    orderNumber: "ORD-1002",
+    customer: "Liam Carter",
+    email: "liam.carter@example.com",
+    total: 89.0,
+    status: "Pending",
+    items: 1,
+    createdAt: "2026-09-04",
+  },
+  {
+    id: 1003,
+    orderNumber: "ORD-1003",
+    customer: "Noah Diaz",
+    email: "noah.diaz@example.com",
+    total: 412.5,
+    status: "Shipped",
+    items: 5,
+    createdAt: "2026-09-05",
+  },
+  {
+    id: 1004,
+    orderNumber: "ORD-1004",
+    customer: "Mia Foster",
+    email: "mia.foster@example.com",
+    total: 34.5,
+    status: "Cancelled",
+    items: 1,
+    createdAt: "2026-09-07",
+  },
+  {
+    id: 1005,
+    orderNumber: "ORD-1005",
+    customer: "Ethan Gray",
+    email: "ethan.gray@example.com",
+    total: 174.99,
+    status: "Paid",
+    items: 2,
+    createdAt: "2026-09-09",
+  },
+  {
+    id: 1006,
+    orderNumber: "ORD-1006",
+    customer: "Zoe Hughes",
+    email: "zoe.hughes@example.com",
+    total: 59.5,
+    status: "Pending",
+    items: 1,
+    createdAt: "2026-09-11",
+  },
+];
+
+export const tablePayload: McpToolResultPayload = {
+  structuredContent: {
+    title: "Orders",
+    subtitle: "Manage and track customer orders",
+    data: { orders, total: 42, page: 1, limit: 6 },
+    collection: {
+      entity: "orders",
+      dataPath: "orders",
+      layout: "table",
+      itemLabel: "order",
+      total: 42,
+      page: 1,
+      limit: 6,
+      totalPages: 7,
+      fields: [
+        { key: "orderNumber", label: "Order", type: "text", primary: true, searchable: true },
+        { key: "customer", label: "Customer", type: "text", searchable: true },
+        { key: "email", label: "Email", type: "email" },
+        { key: "items", label: "Items", type: "number" },
+        { key: "total", label: "Total", type: "currency", sortable: true },
+        { key: "status", label: "Status", type: "status", filterable: true },
+        { key: "createdAt", label: "Date", type: "date", sortable: true },
+      ],
+    },
+    capabilities: {
+      canCreate: true,
+      canRead: true,
+      canUpdate: true,
+      canDelete: true,
+      canSearch: true,
+      canFilter: true,
+      canSort: true,
+      canPaginate: true,
+    },
+    pagination: {
+      page: 1,
+      limit: 6,
+      total: 42,
+      totalPages: 7,
+      hasNext: true,
+      hasPrevious: false,
+    },
+    actions: [
+      { id: "create_order", label: "New order", tool: "create_order" },
+      { id: "get_order", label: "View", tool: "get_order", requiresItem: true },
+      { id: "update_order", label: "Edit", tool: "update_order", requiresItem: true },
+      {
+        id: "delete_order",
+        label: "Delete",
+        tool: "delete_order",
+        requiresItem: true,
+        requiresConfirmation: true,
+        confirmationMessage: "Delete this order? This cannot be undone.",
+      },
+    ],
+    audience: "admin",
+  },
+};
