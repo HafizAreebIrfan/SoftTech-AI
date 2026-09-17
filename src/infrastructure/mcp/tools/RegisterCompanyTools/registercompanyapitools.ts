@@ -354,11 +354,12 @@ export const registerCompanyApiTools = (
           );
 
           // 2. Second apply keyword / text relevance partition filtering
+          // ONLY run relevance filtering when recovery fell back to the entire raw catalog (isFullCatalogFallback === true).
+          // For regular successful searches, the upstream API results are trusted and must NOT be sliced down.
           const relevanceNote =
-            (!recovery.recovered && !recovery.empty) || isFullCatalogFallback
+            isFullCatalogFallback
               ? applyRelevanceFilter(widgetContent, {
                   userRawPrompt,
-                  inferredIntent,
                   entity:
                     widgetContent.collection?.entity ||
                     api.apiSchema?.entity ||
@@ -677,6 +678,7 @@ const buildMcpSuccessResult = (
       : Array.isArray(cleanData)
         ? { total: cleanData.length }
         : {}),
+    ...(widgetContent.pagination ? { pagination: widgetContent.pagination } : {}),
   };
 
   // If widgets are disabled for this tool, return pure text and structured data without ANY _meta.
@@ -943,7 +945,7 @@ const recordMatchesToken = (value: any, re: RegExp, depth = 0): boolean => {
   if (typeof value === "string" || typeof value === "number") {
     return re.test(String(value));
   }
-  if (depth > 1) return false;
+  if (depth > 0) return false; // Do not scan deep nested sub-objects like location descriptions
   if (Array.isArray(value)) {
     return value.some((item) => recordMatchesToken(item, re, depth + 1));
   }
@@ -951,7 +953,7 @@ const recordMatchesToken = (value: any, re: RegExp, depth = 0): boolean => {
     for (const [key, val] of Object.entries(value as Record<string, any>)) {
       const k = key.toLowerCase();
       if (k === "id" || k === "_id" || k.endsWith("id")) continue;
-      if (/image|thumbnail|photo|url|link|icon/.test(k)) continue;
+      if (/image|thumbnail|photo|url|link|icon|location|address|branch|metadata/.test(k)) continue;
       if (recordMatchesToken(val, re, depth + 1)) return true;
     }
   }
@@ -1228,6 +1230,15 @@ export const applyGenericAttributeFilter = (
  *
  * Returns a short model-facing note when it trimmed, else undefined.
  */
+const CONVERSATIONAL_STOPWORDS = new Set([
+  "rental", "rentals", "rent", "trip", "trips", "booking", "bookings", "book",
+  "reserve", "reservation", "reservations", "service", "services",
+  "best", "good", "great", "cheap", "affordable", "luxury", "budget",
+  "need", "want", "like", "looking", "please", "suggest", "find",
+  "available", "availability", "option", "options", "item", "items",
+  "product", "products", "order", "orders", "dates", "date", "from", "under"
+]);
+
 const applyRelevanceFilter = (
   widgetContent: any,
   ctx: { userRawPrompt?: string; inferredIntent?: string; entity?: unknown },
@@ -1239,7 +1250,8 @@ const applyRelevanceFilter = (
   const totalPages = widgetContent.pagination?.totalPages;
   if (typeof totalPages === "number" && totalPages > 1) return undefined;
 
-  const promptText = `${ctx.userRawPrompt || ""} ${ctx.inferredIntent || ""}`
+  // Never use inferredIntent for word partitioning - only direct user words
+  const promptText = (ctx.userRawPrompt || "")
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ");
   if (!promptText.trim()) return undefined;
@@ -1263,6 +1275,7 @@ const applyRelevanceFilter = (
         .map((t) => t.trim())
         .filter((t) => t.length >= 3)
         .filter((t) => !STOPWORDS.has(t))
+        .filter((t) => !CONVERSATIONAL_STOPWORDS.has(t))
         .filter((t) => !entityWords.has(t)),
     ),
   );

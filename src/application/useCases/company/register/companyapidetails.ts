@@ -398,7 +398,14 @@ export async function updateSingleApiUiSettings(
     isWidgetEnabled,
     isMapViewEnabled,
     uiConfig,
-    ...(payload.mcpDescription ? { mcpDescription: payload.mcpDescription } : {}),
+    ...(payload.mcpDescription
+      ? {
+          mcpDescription: payload.mcpDescription,
+          apiSchema: existing.apiSchema
+            ? { ...existing.apiSchema, toolDescription: payload.mcpDescription }
+            : existing.apiSchema,
+        }
+      : {}),
   };
 
   return await companyRepository.update(companyId, {

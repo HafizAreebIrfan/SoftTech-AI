@@ -33,17 +33,17 @@ export const generateMcpDescription = (
   if (!api) return "Calls a registered company API.";
 
   if (!options?.forceRegenerate) {
-    // 1. If AI schema analysis generated a clean toolDescription, use it
-    const aiDesc = api.apiSchema?.toolDescription;
-    if (typeof aiDesc === "string" && !isStaleOrInvalidDescription(aiDesc)) {
-      return aiDesc.trim();
-    }
-
-    // 2. If a custom, high-quality description was provided in mcpDescription, respect it
+    // 1. If a custom description was explicitly provided or updated in mcpDescription, respect it FIRST
     const existingDesc =
       typeof api.mcpDescription === "string" ? api.mcpDescription.trim() : "";
     if (existingDesc && !isStaleOrInvalidDescription(existingDesc)) {
       return existingDesc;
+    }
+
+    // 2. If AI schema analysis generated a clean toolDescription, use it
+    const aiDesc = api.apiSchema?.toolDescription;
+    if (typeof aiDesc === "string" && !isStaleOrInvalidDescription(aiDesc)) {
+      return aiDesc.trim();
     }
   }
 
