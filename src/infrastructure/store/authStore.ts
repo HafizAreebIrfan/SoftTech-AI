@@ -119,7 +119,15 @@ export const useAuthStore = create<AuthStore>()(
       updateApiDescription: (apiId, description) =>
         set((state) => ({
           apisList: state.apisList.map((api) =>
-            api.id === apiId ? { ...api, mcpDescription: description } : api,
+            api.id === apiId
+              ? {
+                  ...api,
+                  mcpDescription: description,
+                  apiSchema: api.apiSchema
+                    ? { ...api.apiSchema, toolDescription: description }
+                    : api.apiSchema,
+                }
+              : api,
           ),
         })),
       setGoogleMapsApiKey: (key) => set({ googleMapsApiKey: key }),

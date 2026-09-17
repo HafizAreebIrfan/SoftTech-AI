@@ -28,6 +28,10 @@ export interface ApiConnection {
   mcpDescription?: string;
   mcpToolName?: string;
   apiSchema?: any;
+  sampleresponse?: any;
+  sampleResponse?: any;
+  isAnalyzed?: boolean;
+  isTested?: boolean;
   params?: any[];
   body?: any[];
   rawIndex?: number;

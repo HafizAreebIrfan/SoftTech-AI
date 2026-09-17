@@ -75,6 +75,9 @@ const Dashboard: FC = () => {
   const [aiMenuOpenApiId, setAiMenuOpenApiId] = useState<string | null>(null);
   const [autoSavingApiId, setAutoSavingApiId] = useState<string | null>(null);
   const [lastAutoSavedApiId, setLastAutoSavedApiId] = useState<string | null>(null);
+  const [uploadingSampleApi, setUploadingSampleApi] = useState<ApiConnection | null>(null);
+  const [sampleInputText, setSampleInputText] = useState<string>("");
+  const [isAnalyzingSample, setIsAnalyzingSample] = useState<boolean>(false);
 
   const handleLogout = () => {
     logout()
@@ -138,7 +141,15 @@ const Dashboard: FC = () => {
               ? [api.apiHeaders]
               : [],
         body: api.body || [],
-        apiSchema: api.apiSchema,
+        apiSchema: api.apiSchema
+          ? {
+              ...api.apiSchema,
+              toolDescription:
+                api.mcpDescription ||
+                api.apiSchema.toolDescription ||
+                "",
+            }
+          : api.apiSchema,
       };
     });
   };
@@ -255,24 +266,132 @@ const Dashboard: FC = () => {
     }
   };
 
+  const handleSaveSampleAndAnalyze = async (
+    api: ApiConnection,
+    sampleJson: string,
+  ) => {
+    if (!user?.id) {
+      showToast("User session not found. Please re-login.", "error");
+      return;
+    }
+    let formattedJson = sampleJson;
+    try {
+      const parsed = JSON.parse(sampleJson);
+      formattedJson = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      showToast(
+        "Invalid JSON syntax. Please check the pasted JSON response.",
+        "warning",
+      );
+      return;
+    }
+
+    const apiIndex =
+      api.rawIndex !== undefined
+        ? api.rawIndex
+        : apisList.findIndex((a) => a.id === api.id);
+
+    if (apiIndex === -1) {
+      showToast("Could not find target API in list.", "error");
+      return;
+    }
+
+    setIsAnalyzingSample(true);
+    setAiGeneratingApiId(api.id);
+
+    try {
+      const res = await analyzeSingleCompanyApi(
+        user.id,
+        apiIndex,
+        formattedJson,
+      );
+      if (res && res.success && res.data?.apiSchema) {
+        const generatedSchema = res.data.apiSchema;
+        const newToolDesc =
+          generatedSchema.toolDescription ||
+          api.mcpDescription ||
+          "";
+
+        updateApiDescription(api.id, newToolDesc);
+
+        const updatedList = apisList.map((a) =>
+          a.id === api.id
+            ? {
+                ...a,
+                sampleresponse: formattedJson,
+                apiSchema: {
+                  ...generatedSchema,
+                  toolDescription: newToolDesc,
+                },
+                mcpDescription: newToolDesc,
+                isTested: true,
+                isAnalyzed: true,
+              }
+            : a,
+        );
+        setApisList(updatedList);
+
+        const apisPayload = buildApisPayload(updatedList);
+        await saveCompanyApiDetails(user.id, {
+          apis: apisPayload as any,
+          googleMapsApiKey,
+        });
+
+        showToast(
+          "API schema analyzed & tool description generated with Gemini AI!",
+          "success",
+        );
+        setUploadingSampleApi(null);
+        setSampleInputText("");
+      } else {
+        showToast(
+          res?.message || "AI schema analysis could not generate schema.",
+          "warning",
+        );
+      }
+    } catch (err: any) {
+      console.error("Schema analysis failed:", err);
+      showToast(
+        err.message || "Failed to analyze sample response with AI.",
+        "error",
+      );
+    } finally {
+      setIsAnalyzingSample(false);
+      setAiGeneratingApiId(null);
+    }
+  };
+
   const handleGenerateAiDescription = async (
     api: ApiConnection,
-    mode: "new" | "format" | "deep",
+    mode: "new" | "format" | "deep" | "upload",
   ) => {
     setAiMenuOpenApiId(null);
+    if (mode === "upload") {
+      setUploadingSampleApi(api);
+      setSampleInputText(api.sampleresponse || "");
+      return;
+    }
+
     setAiGeneratingApiId(api.id);
     try {
       let finalDesc = "";
       let newSchema: any = null;
 
       if (mode === "deep" && user?.id) {
+        const existingSample =
+          api.sampleresponse || (api as any).sampleResponse;
         const apiIndex =
           api.rawIndex !== undefined
             ? api.rawIndex
             : apisList.findIndex((a) => a.id === api.id);
+
         if (apiIndex >= 0) {
           try {
-            const res = await analyzeSingleCompanyApi(user.id, apiIndex);
+            const res = await analyzeSingleCompanyApi(
+              user.id,
+              apiIndex,
+              existingSample || undefined,
+            );
             if (res?.data?.apiSchema) {
               newSchema = res.data.apiSchema;
               if (res.data.apiSchema.toolDescription) {
@@ -316,7 +435,12 @@ const Dashboard: FC = () => {
           ? {
               ...a,
               mcpDescription: finalDesc,
-              ...(newSchema ? { apiSchema: newSchema, isAnalyzed: true } : {}),
+              apiSchema: newSchema
+                ? { ...newSchema, toolDescription: finalDesc }
+                : a.apiSchema
+                  ? { ...a.apiSchema, toolDescription: finalDesc }
+                  : a.apiSchema,
+              ...(newSchema ? { isAnalyzed: true, isTested: true } : {}),
             }
           : a,
       );
@@ -326,7 +450,7 @@ const Dashboard: FC = () => {
         mode === "format"
           ? "Description polished with AI!"
           : mode === "deep"
-            ? "API schema analyzed & description updated with Gemini!"
+            ? "API schema analyzed & description updated with Gemini AI!"
             : "MCP tool description generated with AI!",
         "success",
       );
@@ -904,110 +1028,164 @@ const Dashboard: FC = () => {
                             )}
                           </div>
 
-                          {/* Generate with AI Button & Dropdown */}
-                          <div className="relative">
-                            <button
-                              type="button"
-                              disabled={aiGeneratingApiId === api.id}
-                              onClick={() =>
-                                setAiMenuOpenApiId(
-                                  aiMenuOpenApiId === api.id ? null : api.id,
-                                )
-                              }
-                              className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm hover:opacity-90 active:scale-95 disabled:opacity-60"
-                              style={{
-                                background:
-                                  "linear-gradient(135deg, #6366f1, #a855f7)",
-                                color: "#ffffff",
-                              }}
-                            >
-                              {aiGeneratingApiId === api.id ? (
-                                <>
-                                  <span className="inline-block w-2.5 h-2.5 border border-white/40 border-t-white rounded-full animate-spin" />
-                                  <span>Generating with AI...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <span>✨</span>
-                                  <span>Generate with AI</span>
-                                  <span className="text-[9px] opacity-70">▼</span>
-                                </>
-                              )}
-                            </button>
+                          {/* Sample JSON Upload Button & Generate with AI Button */}
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const hasValidSchema = Boolean(
+                                api.apiSchema &&
+                                (api.apiSchema.entity || (Array.isArray(api.apiSchema.fields) && api.apiSchema.fields.length > 0)) &&
+                                api.isAnalyzed !== false
+                              );
+                              return (
+                                <button
+                                  type="button"
+                                  disabled={hasValidSchema}
+                                  onClick={() => {
+                                    setUploadingSampleApi(api);
+                                    setSampleInputText(api.sampleresponse || "");
+                                  }}
+                                  title={
+                                    hasValidSchema
+                                      ? "Sample response already analyzed & verified (Schema active)"
+                                      : "Upload sample JSON response to run AI schema analysis"
+                                  }
+                                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
+                                    hasValidSchema
+                                      ? "opacity-50 cursor-not-allowed bg-white/5 text-gray-400 border border-white/10"
+                                      : "cursor-pointer bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 active:scale-95 shadow-sm"
+                                  }`}
+                                >
+                                  <span>{hasValidSchema ? "✓" : "⚠️"}</span>
+                                  <span>{hasValidSchema ? "Sample Analyzed" : "Upload Sample JSON"}</span>
+                                </button>
+                              );
+                            })()}
 
-                            {/* AI Dropdown Menu */}
-                            {aiMenuOpenApiId === api.id && (
-                              <div
-                                className="absolute right-0 top-full mt-1.5 w-64 rounded-xl border p-1.5 shadow-2xl z-30 transition-all"
+                            <div className="relative">
+                              <button
+                                type="button"
+                                disabled={aiGeneratingApiId === api.id}
+                                onClick={() =>
+                                  setAiMenuOpenApiId(
+                                    aiMenuOpenApiId === api.id ? null : api.id,
+                                  )
+                                }
+                                className="text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm hover:opacity-90 active:scale-95 disabled:opacity-60"
                                 style={{
-                                  background: colors.BackgroundSecondary,
-                                  borderColor: colors.Border,
+                                  background:
+                                    "linear-gradient(135deg, #6366f1, #a855f7)",
+                                  color: "#ffffff",
                                 }}
                               >
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleGenerateAiDescription(api, "new")
-                                  }
-                                  className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer"
-                                >
-                                  <span className="text-base shrink-0">✨</span>
-                                  <div>
-                                    <div
-                                      className="font-semibold text-xs"
-                                      style={{ color: colors.TextHeading }}
-                                    >
-                                      Generate New Description
-                                    </div>
-                                    <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
-                                      Synthesize from endpoint, method, params, and schema
-                                    </div>
-                                  </div>
-                                </button>
+                                {aiGeneratingApiId === api.id ? (
+                                  <>
+                                    <span className="inline-block w-2.5 h-2.5 border border-white/40 border-t-white rounded-full animate-spin" />
+                                    <span>Generating with AI...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>✨</span>
+                                    <span>Generate with AI</span>
+                                    <span className="text-[9px] opacity-70">▼</span>
+                                  </>
+                                )}
+                              </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleGenerateAiDescription(api, "format")
-                                  }
-                                  className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer mt-0.5"
+                              {/* AI Dropdown Menu */}
+                              {aiMenuOpenApiId === api.id && (
+                                <div
+                                  className="absolute right-0 top-full mt-1.5 w-64 rounded-xl border p-1.5 shadow-2xl z-30 transition-all"
+                                  style={{
+                                    background: colors.BackgroundSecondary,
+                                    borderColor: colors.Border,
+                                  }}
                                 >
-                                  <span className="text-base shrink-0">🪄</span>
-                                  <div>
-                                    <div
-                                      className="font-semibold text-xs"
-                                      style={{ color: colors.TextHeading }}
-                                    >
-                                      Format / Polish with AI
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleGenerateAiDescription(api, "deep")
+                                    }
+                                    className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer"
+                                  >
+                                    <span className="text-base shrink-0">⚡</span>
+                                    <div>
+                                      <div
+                                        className="font-semibold text-xs"
+                                        style={{ color: colors.TextHeading }}
+                                      >
+                                        Analyze with Gemini AI
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                                        Run full schema analysis and tool description with Gemini
+                                      </div>
                                     </div>
-                                    <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
-                                      Clean current text and structure supported parameters
-                                    </div>
-                                  </div>
-                                </button>
+                                  </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleGenerateAiDescription(api, "deep")
-                                  }
-                                  className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer mt-0.5"
-                                >
-                                  <span className="text-base shrink-0">⚡</span>
-                                  <div>
-                                    <div
-                                      className="font-semibold text-xs"
-                                      style={{ color: colors.TextHeading }}
-                                    >
-                                      Deep Schema AI (Gemini)
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleGenerateAiDescription(api, "upload")
+                                    }
+                                    className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer mt-0.5"
+                                  >
+                                    <span className="text-base shrink-0">📥</span>
+                                    <div>
+                                      <div
+                                        className="font-semibold text-xs"
+                                        style={{ color: colors.TextHeading }}
+                                      >
+                                        Upload Sample JSON & Re-Analyze
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                                        Paste or upload a new JSON sample for AI analysis
+                                      </div>
                                     </div>
-                                    <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
-                                      Analyze live schema through Gemini AI engine
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleGenerateAiDescription(api, "new")
+                                    }
+                                    className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer mt-0.5"
+                                  >
+                                    <span className="text-base shrink-0">✨</span>
+                                    <div>
+                                      <div
+                                        className="font-semibold text-xs"
+                                        style={{ color: colors.TextHeading }}
+                                      >
+                                        Generate New Description
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                                        Synthesize from endpoint, method, params, and schema
+                                      </div>
                                     </div>
-                                  </div>
-                                </button>
-                              </div>
-                            )}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleGenerateAiDescription(api, "format")
+                                    }
+                                    className="w-full text-left p-2 rounded-lg text-xs transition-colors flex items-start gap-2 hover:bg-indigo-500/10 cursor-pointer mt-0.5"
+                                  >
+                                    <span className="text-base shrink-0">🪄</span>
+                                    <div>
+                                      <div
+                                        className="font-semibold text-xs"
+                                        style={{ color: colors.TextHeading }}
+                                      >
+                                        Format / Polish Description
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 mt-0.5 leading-tight">
+                                        Clean current text and structure supported parameters
+                                      </div>
+                                    </div>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -1165,6 +1343,131 @@ const Dashboard: FC = () => {
           </div>
         )}
       </main>
+
+      {/* Sample Response Upload & AI Schema Analysis Modal */}
+      {uploadingSampleApi && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0, 0, 0, 0.75)", backdropFilter: "blur(4px)" }}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl p-6 border shadow-2xl transition-all"
+            style={{
+              background: colors.Headerbackground || "#111827",
+              borderColor: colors.CardBorder || "#374151",
+            }}
+          >
+            <div
+              className="flex items-center justify-between pb-3 border-b"
+              style={{ borderColor: colors.CardBorder }}
+            >
+              <div>
+                <h3
+                  className="text-sm font-bold flex items-center gap-2"
+                  style={{ color: colors.TextHeading }}
+                >
+                  <span>Upload Sample Response JSON</span>
+                  <span className="text-xs px-2 py-0.5 rounded-md font-mono bg-indigo-500/20 text-indigo-300">
+                    {uploadingSampleApi.apiName || uploadingSampleApi.apiEndpoint}
+                  </span>
+                </h3>
+                <p className="text-xs mt-0.5" style={{ color: colors.TextBody }}>
+                  Paste a sample JSON response from your API. Gemini AI will analyze it to detect entities, fields, and generate optimal MCP tool instructions.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUploadingSampleApi(null)}
+                className="text-gray-400 hover:text-white text-lg p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  className="text-xs font-semibold"
+                  style={{ color: colors.TextHeading }}
+                >
+                  JSON Response Body
+                </label>
+                <label className="text-xs text-indigo-400 hover:text-indigo-300 cursor-pointer flex items-center gap-1 font-medium">
+                  <span>📁 Upload .json file</span>
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const content = event.target?.result as string;
+                        setSampleInputText(content || "");
+                      };
+                      reader.readAsText(file);
+                    }}
+                  />
+                </label>
+              </div>
+              <textarea
+                value={sampleInputText}
+                onChange={(e) => setSampleInputText(e.target.value)}
+                placeholder={'{\n  "status": "success",\n  "data": [\n    { "id": "1", "name": "Item Name", "price": 100 }\n  ]\n}'}
+                rows={12}
+                className="w-full text-xs font-mono rounded-xl p-3 border outline-none resize-none transition-colors"
+                style={{
+                  background: colors.Background || "#030712",
+                  borderColor: colors.CardBorder || "#374151",
+                  color: "#10b981",
+                }}
+              />
+            </div>
+
+            <div
+              className="flex items-center justify-end gap-3 mt-4 pt-3 border-t"
+              style={{ borderColor: colors.CardBorder }}
+            >
+              <button
+                type="button"
+                onClick={() => setUploadingSampleApi(null)}
+                className="px-4 py-2 text-xs font-semibold rounded-lg border transition-colors hover:bg-white/5 cursor-pointer"
+                style={{
+                  background: "transparent",
+                  borderColor: colors.CardBorder,
+                  color: colors.TextBody,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isAnalyzingSample || !sampleInputText.trim()}
+                onClick={() =>
+                  handleSaveSampleAndAnalyze(uploadingSampleApi, sampleInputText)
+                }
+                className="px-5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer text-white shadow-lg active:scale-95"
+                style={{
+                  background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                }}
+              >
+                {isAnalyzingSample ? (
+                  <>
+                    <span className="inline-block w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" />
+                    <span>Analyzing with Gemini AI...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>✨</span>
+                    <span>Save & Analyze with AI</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
