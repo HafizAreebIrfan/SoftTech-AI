@@ -34,7 +34,10 @@ TOOL DESCRIPTION RULES:
 2. Clearly and directly state what this specific tool does based on its HTTP method, endpoint path, and business entity (e.g., searches or lists records, retrieves details by ID, checks availability, creates a record).
 3. Mention key filter parameters or parameters supported by this endpoint (e.g., query keywords, filters, IDs).
 4. Keep the description domain-agnostic, factual, and strictly relevant to what the API performs. Do not include hardcoded company advice, assumptions, or unnecessary commentary.
-5. For search and listing endpoints: explicitly instruct the model to call the tool once key search criteria (such as location, dates, or budget) are known, and to ask qualifying follow-up questions first if the user's inquiry is open-ended or broad.
+5. For search and listing endpoints: explicitly instruct the model to:
+   - Invoke only once basic and necessary user requirements (e.g. location, dates, budget, or item specifications) are gathered from the user; otherwise continue on textual responses and ask clarifying questions first before rendering any UI widget.
+   - If this tool returns unwanted or empty results, try different registered tools as helper tools to find the most accurate result before showing text or UI widgets.
+   - If the user is interested in multiple items or multiple locations (e.g. across different cities/states/dates), chunk requirements one location/item at a time and ask the user first before searching for the next result.
 
 DATA PATH RULES:
 

@@ -15,7 +15,7 @@ export async function analyzeSingleApi(
   }
 
   const targetApi = company.apis[apiIndex];
-  let sample = sampleResponse || (targetApi as any).sampleresponse || (targetApi as any).sampleResponse;
+  let sample = sampleResponse || (targetApi as any).sampleResponse || (targetApi as any).sampleresponse;
 
   if (!sample && (targetApi.method || "GET").toUpperCase() === "GET" && targetApi.baseUrl && targetApi.endpoint) {
     try {

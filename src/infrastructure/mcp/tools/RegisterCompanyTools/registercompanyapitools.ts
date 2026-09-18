@@ -185,6 +185,13 @@ export const registerCompanyApiTools = (
         ? Boolean(api.isWidgetEnabled)
         : (api as any).uiConfig?.uiEnabled !== false;
 
+    const isMapViewEnabled =
+      api.isMapViewEnabled !== undefined
+        ? Boolean(api.isMapViewEnabled)
+        : Boolean((api as any).uiConfig?.mapEnabled);
+
+    const isAppTool = isWidgetEnabled || isMapViewEnabled;
+
     const toolHandler = async (input: any, extra: any) => {
         try {
           const store = mcpRequestContext.getStore();
@@ -573,7 +580,7 @@ export const registerCompanyApiTools = (
         }
       };
 
-      if (isWidgetEnabled) {
+      if (isAppTool) {
         registerAppTool(
           server,
           toolName,
@@ -681,9 +688,12 @@ const buildMcpSuccessResult = (
     ...(widgetContent.pagination ? { pagination: widgetContent.pagination } : {}),
   };
 
-  // If widgets are disabled for this tool, return pure text and structured data without ANY _meta.
+  const isMapOnly = uiEnabled === false && Boolean(extraMetadata?.mapEnabled);
+
+  // If widgets are disabled for this tool (and map view is not enabled),
+  // return pure text and structured data without ANY _meta.
   // This ensures ChatGPT operates as a standard text/structured MCP tool without provisioning or rendering an empty iframe container.
-  if (uiEnabled === false) {
+  if (uiEnabled === false && !isMapOnly) {
     return {
       structuredContent: cleanStructuredContent,
       content: [
@@ -694,6 +704,13 @@ const buildMcpSuccessResult = (
             `${widgetContent.title || apiName} results retrieved successfully.`,
         },
       ],
+    };
+  }
+
+  if (isMapOnly && widgetContent.collection) {
+    cleanStructuredContent.collection = {
+      ...widgetContent.collection,
+      layout: "mapcatalog",
     };
   }
 
@@ -714,7 +731,9 @@ const buildMcpSuccessResult = (
     widget: {
       title: widgetContent.title,
       subtitle: widgetContent.subtitle,
-      collection: widgetContent.collection,
+      collection: isMapOnly && widgetContent.collection
+        ? { ...widgetContent.collection, layout: "mapcatalog" }
+        : widgetContent.collection,
       capabilities: widgetContent.capabilities,
       pagination: widgetContent.pagination,
       actions: widgetContent.actions,
@@ -722,7 +741,8 @@ const buildMcpSuccessResult = (
       platformtype: widgetContent.platformtype,
       metadata: {
         ...widgetContent.metadata,
-        uiEnabled: true,
+        uiEnabled: isMapOnly ? false : true,
+        ...(isMapOnly ? { mapOnly: true, mapEnabled: true } : {}),
         ...(company.googleMapsApiKey ? { googleMapsApiKey: company.googleMapsApiKey } : {}),
         ...extraMetadata,
       },

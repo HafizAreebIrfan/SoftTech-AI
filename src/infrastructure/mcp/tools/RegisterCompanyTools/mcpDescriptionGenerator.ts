@@ -127,9 +127,8 @@ export const generateMcpDescription = (
   if (method === "GET") {
     const isSearchOrFilter = filterKeys.length > 0 || /search|filter|find/i.test(endpoint) || /search|filter|find/i.test(apiName);
     const actionVerb = isSearchOrFilter ? "Searches and retrieves" : "Lists";
-    const qualificationHint = isSearchOrFilter
-      ? ` Call this tool once key search criteria (such as ${paramText || "location, dates, or budget"}) are known. If the user's inquiry is broad, planning-focused, or missing key details, ask clarifying questions first to gather their preferences before invoking.`
-      : "";
+    const qualificationHint =
+      ` Invoke only once basic and necessary user requirements (such as ${paramText || "location, dates, or budget"}) are fetched; otherwise continue on textual responses. If this tool returns unwanted or empty results, try other available tools as helper tools to find the most accurate result before showing text or UI widgets. For multiple locations, items, or entities, chunk requirements one location/item at a time and ask clarifying questions first if different requirements are needed.`;
     return `${actionVerb} ${entity} from ${companyName}.${paramText ? ` Supported parameters: ${paramText}.` : ""}${qualificationHint}`;
   }
 

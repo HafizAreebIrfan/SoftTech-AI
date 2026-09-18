@@ -56,8 +56,6 @@ export const ApiSchema = new mongoose.Schema(
     isWidgetEnabled: { type: Boolean, default: true },
     isMapViewEnabled: { type: Boolean, default: false },
     uiConfig: { type: mongoose.Schema.Types.Mixed },
-
-    sampleresponse: { type: mongoose.Schema.Types.Mixed },
     sampleResponse: { type: mongoose.Schema.Types.Mixed },
 
     testedonregister: { type: Boolean, default: false },

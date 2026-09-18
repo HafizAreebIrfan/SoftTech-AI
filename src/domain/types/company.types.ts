@@ -61,7 +61,6 @@ export interface IApi {
   isWidgetEnabled?: boolean;
   isMapViewEnabled?: boolean;
   uiConfig?: any;
-  sampleresponse?: any;
   sampleResponse?: any;
   testedonregister?: boolean;
 }
