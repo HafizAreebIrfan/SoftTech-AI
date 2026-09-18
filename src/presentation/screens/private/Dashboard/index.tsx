@@ -127,6 +127,8 @@ const Dashboard: FC = () => {
           uiType: "auto" as ToolUiType,
           mapEnabled: false,
         },
+        sampleResponse:
+          api.sampleResponse || (api as any).sampleresponse || undefined,
         mcpDescription: api.mcpDescription || "",
         params:
           Array.isArray(api.params) && api.params.length > 0
@@ -318,7 +320,7 @@ const Dashboard: FC = () => {
           a.id === api.id
             ? {
                 ...a,
-                sampleresponse: formattedJson,
+                sampleResponse: formattedJson,
                 apiSchema: {
                   ...generatedSchema,
                   toolDescription: newToolDesc,
@@ -368,7 +370,7 @@ const Dashboard: FC = () => {
     setAiMenuOpenApiId(null);
     if (mode === "upload") {
       setUploadingSampleApi(api);
-      setSampleInputText(api.sampleresponse || "");
+      setSampleInputText(api.sampleResponse || (api as any).sampleresponse || "");
       return;
     }
 
@@ -379,7 +381,7 @@ const Dashboard: FC = () => {
 
       if (mode === "deep" && user?.id) {
         const existingSample =
-          api.sampleresponse || (api as any).sampleResponse;
+          api.sampleResponse || (api as any).sampleresponse;
         const apiIndex =
           api.rawIndex !== undefined
             ? api.rawIndex
@@ -1042,7 +1044,11 @@ const Dashboard: FC = () => {
                                   disabled={hasValidSchema}
                                   onClick={() => {
                                     setUploadingSampleApi(api);
-                                    setSampleInputText(api.sampleresponse || "");
+                                    setSampleInputText(
+                                      api.sampleResponse ||
+                                        (api as any).sampleresponse ||
+                                        "",
+                                    );
                                   }}
                                   title={
                                     hasValidSchema

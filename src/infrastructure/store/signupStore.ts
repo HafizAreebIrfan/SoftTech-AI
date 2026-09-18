@@ -715,7 +715,7 @@ export const useSignupStore = create<SignupStore>()(
               a.id === apiId
                 ? {
                     ...a,
-                    sampleresponse: trimSampleJson(formattedJson),
+                    sampleResponse: trimSampleJson(formattedJson),
                     isTested: response.ok,
                     isAnalyzed: response.ok,
                   }
@@ -815,7 +815,7 @@ export const useSignupStore = create<SignupStore>()(
             a.id === apiId
               ? {
                   ...a,
-                  sampleresponse: trimmedJson,
+                  sampleResponse: trimmedJson,
                   isTested: true,
                   isAnalyzed: true,
                 }
@@ -1001,7 +1001,8 @@ export const useSignupStore = create<SignupStore>()(
 
               const sampleResp =
                 get().apiTestStates[api.id]?.sampleResponse ||
-                api.sampleresponse ||
+                api.sampleResponse ||
+                (api as any).sampleresponse ||
                 "";
 
               const isBodyMethod =
@@ -1019,7 +1020,6 @@ export const useSignupStore = create<SignupStore>()(
                 headers: headersArray,
                 params: paramsArray,
                 body: isBodyMethod ? bodyArray : [],
-                sampleresponse: sampleResp,
                 sampleResponse: sampleResp,
                 testedonregister:
                   get().apiTestStates[api.id]?.status === "success",
@@ -1179,7 +1179,8 @@ export const useSignupStore = create<SignupStore>()(
 
             const sampleResp =
               get().apiTestStates[api.id]?.sampleResponse ||
-              api.sampleresponse ||
+              api.sampleResponse ||
+              (api as any).sampleresponse ||
               "";
 
             const isBodyMethod =
@@ -1197,7 +1198,6 @@ export const useSignupStore = create<SignupStore>()(
               headers: headersArray,
               params: paramsArray,
               body: isBodyMethod ? bodyArray : [],
-              sampleresponse: sampleResp,
               sampleResponse: sampleResp,
               testedonregister:
                 get().apiTestStates[api.id]?.status === "success",
@@ -1371,11 +1371,12 @@ export const useSignupStore = create<SignupStore>()(
 
           const updatedTestStates = { ...state.apiTestStates };
           processedImported.forEach((api) => {
-            if (api.sampleresponse) {
+            const sample = api.sampleResponse || (api as any).sampleresponse;
+            if (sample) {
               updatedTestStates[api.id] = {
                 status: "success",
                 logs: `[${new Date().toLocaleTimeString()}] Imported with sample payload (${api.apiMethod} ${api.apiEndpoint})\nReady for AI schema analysis.\n`,
-                sampleResponse: api.sampleresponse,
+                sampleResponse: sample,
               };
             }
           });

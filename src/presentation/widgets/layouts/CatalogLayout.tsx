@@ -29,9 +29,14 @@ export const CatalogLayout: React.FC<WidgetLayoutProps> = ({
 
   const [localRecords, setLocalRecords] = useState<any[]>(records);
 
-  const hasGeoSupport = useMemo(() => {
-    return localRecords.some((rec, idx) => Boolean(extractCoordinates(rec, idx)));
+  const isMapPermitted = useMemo(() => {
+    return Boolean((window as any).__WIDGET_METADATA__?.mapEnabled);
   }, [localRecords]);
+
+  const hasGeoSupport = useMemo(() => {
+    if (!isMapPermitted) return false;
+    return localRecords.some((rec, idx) => Boolean(extractCoordinates(rec, idx)));
+  }, [localRecords, isMapPermitted]);
 
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
 

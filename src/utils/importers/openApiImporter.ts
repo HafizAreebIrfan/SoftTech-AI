@@ -380,7 +380,7 @@ export function parseOpenApiDocument(
       }
 
       // Sample Response
-      let sampleresponse = "";
+      let sampleResponse = "";
       if (operation.responses) {
         const successRespKey =
           Object.keys(operation.responses).find((k) => k.startsWith("2") || k === "default") ||
@@ -391,20 +391,20 @@ export function parseOpenApiDocument(
           if (isOpenApi3 && resp.content?.["application/json"]) {
             const jsonResp = resp.content["application/json"];
             if (jsonResp.example !== undefined) {
-              sampleresponse = JSON.stringify(jsonResp.example, null, 2);
+              sampleResponse = JSON.stringify(jsonResp.example, null, 2);
             } else if (jsonResp.examples && Object.keys(jsonResp.examples).length > 0) {
               const firstExKey = Object.keys(jsonResp.examples)[0];
               const exVal = jsonResp.examples[firstExKey]?.value ?? jsonResp.examples[firstExKey];
-              sampleresponse = JSON.stringify(exVal, null, 2);
+              sampleResponse = JSON.stringify(exVal, null, 2);
             } else if (jsonResp.schema) {
               const mock = schemaToMock(jsonResp.schema);
-              sampleresponse = JSON.stringify(mock, null, 2);
+              sampleResponse = JSON.stringify(mock, null, 2);
             }
           } else if (isSwagger2 && resp.schema) {
             const mock = schemaToMock(resp.schema);
-            sampleresponse = JSON.stringify(mock, null, 2);
+            sampleResponse = JSON.stringify(mock, null, 2);
           } else if (resp.examples?.["application/json"]) {
-            sampleresponse = JSON.stringify(resp.examples["application/json"], null, 2);
+            sampleResponse = JSON.stringify(resp.examples["application/json"], null, 2);
           }
         }
       }
@@ -496,8 +496,8 @@ export function parseOpenApiDocument(
           apiAuthType,
           opSecurity.length > 0,
         ),
-        sampleresponse: sampleresponse || undefined,
-        isTested: Boolean(sampleresponse),
+        sampleResponse: sampleResponse || undefined,
+        isTested: Boolean(sampleResponse),
         isAnalyzed: false,
       });
     }

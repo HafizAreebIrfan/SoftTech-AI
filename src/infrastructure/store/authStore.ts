@@ -74,6 +74,16 @@ export const useAuthStore = create<AuthStore>()(
             params: api.params || [],
             body: api.body || [],
             apiSchema: api.apiSchema,
+            sampleResponse:
+              api.sampleResponse || api.sampleresponse || undefined,
+            isTested:
+              api.isTested !== undefined
+                ? Boolean(api.isTested)
+                : Boolean(api.sampleResponse || api.sampleresponse),
+            isAnalyzed:
+              api.isAnalyzed !== undefined
+                ? Boolean(api.isAnalyzed)
+                : Boolean(api.apiSchema),
           };
         });
 

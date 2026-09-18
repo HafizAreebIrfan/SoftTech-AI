@@ -123,6 +123,10 @@ export const mapCatalogPayload: McpToolResultPayload = {
     title: "Available cars",
     subtitle: "Pick up near you",
     data: { cars, total: 5 },
+    metadata: {
+      mapEnabled: true,
+      uiEnabled: true,
+    },
     collection: {
       entity: "cars",
       dataPath: "cars",

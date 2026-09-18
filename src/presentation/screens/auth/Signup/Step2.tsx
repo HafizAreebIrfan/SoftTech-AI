@@ -503,7 +503,11 @@ const SignupStep2: FC = () => {
                         type="button"
                         onClick={() => {
                           setUploadingSampleApiId(api.id);
-                          setSampleInputText(api.sampleresponse || "");
+                          setSampleInputText(
+                            api.sampleResponse ||
+                              (api as any).sampleresponse ||
+                              "",
+                          );
                         }}
                         disabled={
                           api.isTested ||
@@ -1738,12 +1742,13 @@ const SignupStep2: FC = () => {
                           </pre>
                         ) : api.isTested ||
                           api.isAnalyzed ||
-                          api.sampleresponse ? (
+                          api.sampleResponse ||
+                          (api as any).sampleresponse ? (
                           <pre
                             className={styles.logPre}
                             style={{ color: colors.SuccessBadgeText }}
                           >
-                            {`[${new Date().toLocaleTimeString()}] Schema Verified & Analyzed ✓\nSample Response Body:\n${api.sampleresponse || "{}"}`}
+                            {`[${new Date().toLocaleTimeString()}] Schema Verified & Analyzed ✓\nSample Response Body:\n${api.sampleResponse || (api as any).sampleresponse || "{}"}`}
                           </pre>
                         ) : (
                           <div className={styles.emptyTerminal}>

@@ -120,6 +120,10 @@ export const catalogPayload: McpToolResultPayload = {
     title: "Products",
     subtitle: "Browse the latest catalog",
     data: { products, total: 24, skip: 0, limit: 8 },
+    metadata: {
+      mapEnabled: false,
+      uiEnabled: true,
+    },
     collection: {
       entity: "products",
       dataPath: "products",

@@ -240,11 +240,24 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     openDetailFor(rec, idx);
   };
 
+  const isMapOnly = Boolean(
+    (window as any).__WIDGET_METADATA__?.mapOnly ||
+    ((window as any).__WIDGET_METADATA__?.uiEnabled === false &&
+      (window as any).__WIDGET_METADATA__?.mapEnabled === true)
+  );
+
   // Leaving the map for the grid closes the docked detail + restores inline.
   const showGrid = () => {
+    if (isMapOnly) return;
     if (detailRecord) closeDetail();
     setViewMode("grid");
   };
+
+  useEffect(() => {
+    if (isMapOnly && viewMode !== "map") {
+      setViewMode("map");
+    }
+  }, [isMapOnly, viewMode]);
 
   return (
     <div className={styles.layoutContainer}>
@@ -258,27 +271,29 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
           </p>
         </div>
 
-        <div className={styles.headerActionsRow}>
-          <button
-            type="button"
-            className={`${styles.viewToggleBtn} ${viewMode === "map" ? styles.viewToggleBtnActive : ""}`}
-            onClick={() => setViewMode("map")}
-            title="Switch to Map View"
-          >
-            <span>🗺️</span>
-            <span>Map</span>
-          </button>
+        {!isMapOnly && (
+          <div className={styles.headerActionsRow}>
+            <button
+              type="button"
+              className={`${styles.viewToggleBtn} ${viewMode === "map" ? styles.viewToggleBtnActive : ""}`}
+              onClick={() => setViewMode("map")}
+              title="Switch to Map View"
+            >
+              <span>🗺️</span>
+              <span>Map</span>
+            </button>
 
-          <button
-            type="button"
-            className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
-            onClick={showGrid}
-            title="Switch to Cards Grid View"
-          >
-            <span>⊞</span>
-            <span>Grid</span>
-          </button>
-        </div>
+            <button
+              type="button"
+              className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
+              onClick={showGrid}
+              title="Switch to Cards Grid View"
+            >
+              <span>⊞</span>
+              <span>Grid</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {viewMode === "grid" ? (

@@ -128,6 +128,8 @@ const GenericWidgetInner: React.FC = () => {
       themeColor:
         themeColor || rawMetadata?.themeColor || rawAuthStrategy?.themeColor,
       mapEnabled: rawMetadata?.mapEnabled,
+      mapOnly: rawMetadata?.mapOnly,
+      uiEnabled: rawMetadata?.uiEnabled,
       googleMapsApiKey,
     };
   }, [
@@ -266,8 +268,14 @@ const GenericWidgetInner: React.FC = () => {
     return null;
   }
 
-  // Company toggle: when uiEnabled is explicitly false, skip widget rendering.
-  if (currentMetadata?.uiEnabled === false) {
+  // Company toggle: when uiEnabled is explicitly false, skip widget rendering
+  // UNLESS map view is enabled (Map-only mode: only show Map UI view for this tool).
+  const isMapOnlyMode =
+    currentMetadata?.mapOnly === true ||
+    (currentMetadata?.uiEnabled === false &&
+      currentMetadata?.mapEnabled === true);
+
+  if (currentMetadata?.uiEnabled === false && !isMapOnlyMode) {
     return null;
   }
 
@@ -294,7 +302,9 @@ const GenericWidgetInner: React.FC = () => {
       ("list" in (rawData as object) && "coord" in (rawData as object)),
     );
 
-  const normalizedLayout = presentationPlan.layout;
+  const normalizedLayout = isMapOnlyMode
+    ? "mapcatalog"
+    : presentationPlan.layout;
 
   const renderLayout = () => {
     const activeSubView = subViewHistory[subViewHistory.length - 1];

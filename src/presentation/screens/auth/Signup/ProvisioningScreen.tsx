@@ -197,7 +197,8 @@ const ProvisioningScreen: FC = () => {
           headers: api.apiHeaders ? [api.apiHeaders] : [],
           params: api.apiQueryParams ? [api.apiQueryParams] : [],
           requestBody: api.apiRequestBody ? [api.apiRequestBody] : [],
-          sampleresponse: api.sampleresponse || "",
+          sampleResponse:
+            api.sampleResponse || (api as any).sampleresponse || "",
           audience: api.audience || "customer",
           isRealtimeApi: Boolean(api.isRealtimeApi),
           streamUrl: api.streamUrl || "",
@@ -259,7 +260,8 @@ const ProvisioningScreen: FC = () => {
               return;
             }
 
-            const sampleJson = api.sampleresponse || "{}";
+            const sampleJson =
+              api.sampleResponse || (api as any).sampleresponse || "{}";
             try {
               const res = await analyzeSingleCompanyApi(
                 companyId,

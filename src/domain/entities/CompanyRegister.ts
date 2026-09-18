@@ -24,7 +24,7 @@ export interface ApisInformation {
   params: any[];
   body?: any[];
   samplequery?: any;
-  sampleresponse?: any;
+  sampleResponse?: any;
   platformType?: PlatformType;
   audience?: WidgetAudience;
   webCheckoutUrl?: string;

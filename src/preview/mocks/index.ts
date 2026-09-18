@@ -26,9 +26,23 @@ export interface PreviewFixture {
  * fixture. The preview toolbar maps over this list. These fixtures double as a
  * living reference for the exact `structuredContent` shape the backend emits.
  */
+const mapOnlyPayload: McpToolResultPayload = {
+  ...mapCatalogPayload,
+  structuredContent: {
+    ...mapCatalogPayload.structuredContent,
+    title: "Map-Only View (Cars)",
+    metadata: {
+      uiEnabled: false,
+      mapEnabled: true,
+      mapOnly: true,
+    },
+  },
+};
+
 export const PREVIEW_FIXTURES: PreviewFixture[] = [
   { label: "Catalog (products)", payload: catalogPayload },
   { label: "Map catalog (cars)", payload: mapCatalogPayload },
+  { label: "Map-Only Mode (UI disabled, Map enabled)", payload: mapOnlyPayload },
   { label: "Table (orders · admin)", payload: tablePayload },
   { label: "Dashboard (admin)", payload: dashboardPayload },
   { label: "Detail — booking calendar", payload: detailBookingPayload },
@@ -38,3 +52,4 @@ export const PREVIEW_FIXTURES: PreviewFixture[] = [
   { label: "Air quality (AQI)", payload: aqiPayload },
   { label: "Cart overlay", payload: cartPayload, kind: "cart", cartItems },
 ];
+

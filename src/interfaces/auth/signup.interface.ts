@@ -43,7 +43,7 @@ export interface ApiConnection {
   isTested?: boolean;
   isAnalyzed?: boolean;
   apiCheckoutTemplate?: string;
-  sampleresponse?: string;
+  sampleResponse?: string;
   apiSchema?: any;
   schema?: any;
   apiAuthHeader?: string;

@@ -331,15 +331,15 @@ export function parsePostmanCollection(
       }
 
       // Sample Response (from saved examples in Postman)
-      let sampleresponse = "";
+      let sampleResponse = "";
       if (Array.isArray(item.response) && item.response.length > 0) {
         const firstResp = item.response[0];
         if (firstResp?.body) {
           try {
             const parsedResp = JSON.parse(firstResp.body);
-            sampleresponse = JSON.stringify(parsedResp, null, 2);
+            sampleResponse = JSON.stringify(parsedResp, null, 2);
           } catch {
-            sampleresponse = firstResp.body;
+            sampleResponse = firstResp.body;
           }
         }
       }
@@ -388,8 +388,8 @@ export function parsePostmanCollection(
           authInfo.apiAuthType,
           Boolean(request.auth),
         ),
-        sampleresponse: sampleresponse || undefined,
-        isTested: Boolean(sampleresponse),
+        sampleResponse: sampleResponse || undefined,
+        isTested: Boolean(sampleResponse),
         isAnalyzed: false,
       });
     }

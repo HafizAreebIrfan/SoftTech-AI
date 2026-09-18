@@ -738,7 +738,7 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
                             Live Stream
                           </span>
                         )}
-                        {api.sampleresponse && (
+                        {(api.sampleResponse || (api as any).sampleresponse) && (
                           <span className={`${styles.featureBadge} ${styles.sampleBadge}`}>
                             Sample Attached ✓
                           </span>
