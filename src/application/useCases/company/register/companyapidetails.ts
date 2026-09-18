@@ -207,8 +207,7 @@ const transformApiEntry = (api: any, index: number, companyName?: string): any =
     isRealtimeApi: Boolean(api.isRealtimeApi),
     streamUrl: api.streamUrl || undefined,
     apiSchema: existingSchema,
-    sampleresponse: api.sampleresponse || api.sampleResponse || undefined,
-    sampleResponse: api.sampleResponse || api.sampleresponse || undefined,
+    sampleResponse: api.sampleResponse || (api as any).sampleresponse || undefined,
     mcpToolName:
       api.mcpToolName || toToolName(api.name || api.apiName || "", index),
     mcpDescription:
@@ -285,6 +284,7 @@ export async function saveCompanyApiDetails(
   const companyName = company?.companyName;
   const existingApis = (company?.apis || []) as any[];
 
+  const usedMcpToolNames = new Set<string>();
   const apis = apisToProcess.map((api: any, index: number) => {
     const existing = existingApis.find(
       (e: any) =>
@@ -309,7 +309,20 @@ export async function saveCompanyApiDetails(
       inputFieldMap: (api.inputFieldMap && api.inputFieldMap.length > 0) ? api.inputFieldMap : (existing?.inputFieldMap || []),
       outputFieldMap: (api.outputFieldMap && api.outputFieldMap.length > 0) ? api.outputFieldMap : (existing?.outputFieldMap || []),
       fallbackWidget: api.fallbackWidget || existing?.fallbackWidget || "",
-      mcpToolName: api.mcpToolName || existing?.mcpToolName || toToolName(api.name || api.apiName || "", index),
+      mcpToolName: (() => {
+        let base = api.mcpToolName || existing?.mcpToolName || toToolName(api.name || api.apiName || "", index);
+        let candidate = base;
+        let count = 2;
+        if (usedMcpToolNames.has(candidate)) {
+          candidate = toToolName(api.name || api.apiName || "", index);
+        }
+        while (usedMcpToolNames.has(candidate)) {
+          candidate = `${base}_${count}`;
+          count++;
+        }
+        usedMcpToolNames.add(candidate);
+        return candidate;
+      })(),
       mcpDescription:
         api.mcpDescription ||
         existing?.mcpDescription ||

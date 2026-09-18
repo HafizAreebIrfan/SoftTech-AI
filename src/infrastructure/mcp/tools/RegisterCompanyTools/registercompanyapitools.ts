@@ -106,14 +106,28 @@ export const registerCompanyApiTools = (
   // linking to its get-by-id tool) instead of the current tool's display name.
   // Generic across companies: derived only from HTTP method + path shape +
   // entity label, never from hardcoded entity/industry names.
-  const toolDirectory = buildEntityToolDirectory(apis);
-
-  apis.forEach((api, index) => {
-    const apiId = String((api as any)._id || api.name || `api_${index + 1}`);
-    const toolName = toToolName(
+  // Ensure guaranteed unique tool names across all registered APIs
+  const usedToolNames = new Set<string>();
+  const apiToolNames: string[] = apis.map((api, index) => {
+    const base = toToolName(
       api.mcpToolName || api.name || `api_${index + 1}`,
       index,
     );
+    let name = base;
+    let count = 2;
+    while (usedToolNames.has(name)) {
+      name = `${base}_${count}`;
+      count++;
+    }
+    usedToolNames.add(name);
+    return name;
+  });
+
+  const toolDirectory = buildEntityToolDirectory(apis, apiToolNames);
+
+  apis.forEach((api, index) => {
+    const apiId = String((api as any)._id || api.name || `api_${index + 1}`);
+    const toolName = apiToolNames[index];
 
     const actionTools = resolveActionTools(api, toolDirectory);
 
@@ -1624,8 +1638,12 @@ const entityKeyFor = (api: any): string => {
  */
 const buildEntityToolDirectory = (
   apis: any[],
+  apiToolNames?: string[],
 ): Map<string, ActionToolLinks> => {
   const directory = new Map<string, ActionToolLinks>();
+  const getToolId = (api: any, index: number) =>
+    apiToolNames?.[index] ||
+    toToolName(api.mcpToolName || api.name || `api_${index + 1}`, index);
 
   // 1. First pass: find optionsTool (e.g. call_product_categories or call_product_category_list)
   let globalOptionsTool: string | undefined;
@@ -1642,10 +1660,7 @@ const buildEntityToolDirectory = (
         name.includes("category list")
       ) {
         if (!globalOptionsTool) {
-          globalOptionsTool = toToolName(
-            api.mcpToolName || api.name || `api_${index + 1}`,
-            index,
-          );
+          globalOptionsTool = getToolId(api, index);
         }
       }
     }
@@ -1656,10 +1671,7 @@ const buildEntityToolDirectory = (
     const key = entityKeyFor(api);
     if (!key) return;
 
-    const toolId = toToolName(
-      api.mcpToolName || api.name || `api_${index + 1}`,
-      index,
-    );
+    const toolId = getToolId(api, index);
     const method = String(api.method || "GET").toUpperCase();
     const endpoint = String(api?.endpoint || "").toLowerCase();
     const roles = directory.get(key) || {};
