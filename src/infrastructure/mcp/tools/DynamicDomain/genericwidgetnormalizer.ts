@@ -91,6 +91,7 @@ export const normalizeApiResponseToWidget = (
   const pagination = extractPagination(data);
 
   const entityName = apiSchema?.entity || collection?.entity || "";
+  const isLocation = isLocationEntity(entityName, apiName);
 
   // Commercial/pickable is decided by data shape (a record carrying both media
   // and a price), never by the entity/company name. Same signal the collection
@@ -173,18 +174,18 @@ export const normalizeApiResponseToWidget = (
       ...(entityName ? { entity: entityName } : {}),
       ...(userRawPrompt ? { user_raw_prompt: userRawPrompt } : {}),
       ...(inferredIntent ? { inferred_intent: inferredIntent } : {}),
-      ...(webCheckoutUrl ? { webCheckoutUrl } : {}),
+      ...(!isLocation && webCheckoutUrl ? { webCheckoutUrl } : {}),
       ...(streamUrl ? { streamUrl } : {}),
       // Registration-gated deep links: each URL is emitted only when the
       // company both enabled the flag and provided the URL, so the widget can
       // treat "URL present in metadata" as "render this redirect button".
-      ...(checkoutLinks?.hasGlobalCheckout && checkoutLinks?.globalCheckoutUrl
+      ...(!isLocation && checkoutLinks?.hasGlobalCheckout && checkoutLinks?.globalCheckoutUrl
         ? { globalCheckoutUrl: checkoutLinks.globalCheckoutUrl }
         : {}),
-      ...(checkoutLinks?.hasProductPages && checkoutLinks?.shopCatalogUrl
+      ...(!isLocation && checkoutLinks?.hasProductPages && checkoutLinks?.shopCatalogUrl
         ? { shopCatalogUrl: checkoutLinks.shopCatalogUrl }
         : {}),
-      ...(checkoutLinks?.hasProductPages && checkoutLinks?.productItemUrlTemplate
+      ...(!isLocation && checkoutLinks?.hasProductPages && checkoutLinks?.productItemUrlTemplate
         ? { productItemUrlTemplate: checkoutLinks.productItemUrlTemplate }
         : {}),
       generatedAt: new Date().toISOString(),
@@ -202,6 +203,20 @@ export const normalizeApiResponseToWidget = (
  * maintain. Used for both the "Select" affordance and the catalog layout so
  * they always agree.
  */
+export const isLocationEntity = (
+  entity?: string,
+  name?: string,
+  endpoint?: string,
+): boolean => {
+  const s = `${entity || ""} ${name || ""} ${endpoint || ""}`.toLowerCase();
+  return /\b(locations?|branch(es)?|shops?|stores?|warehouses?|offices?|pickup_points?)\b/i.test(s);
+};
+
+const isNestedCollectionValue = (val: unknown): boolean => {
+  if (!Array.isArray(val)) return false;
+  return val.length === 0 || val.some((item) => isObject(item));
+};
+
 const hasMediaField = (fields: FieldSchema[]): boolean =>
   fields.some(
     (f) =>
@@ -411,7 +426,7 @@ const sanitizeDataPayload = (
         key !== "_id" &&
         key !== "id" &&
         !isReservedWidgetKey(key) &&
-        !isAvailabilitySignalKey(key)
+        !isAvailabilitySignalKey(key) && !isNestedCollectionValue(value)
       ) {
         continue;
       }
@@ -424,6 +439,19 @@ const sanitizeDataPayload = (
         value.every((v) => typeof v === "string" || typeof v === "number")
       ) {
         finalValue = value.join(", ");
+      } else if (Array.isArray(value) && (value.length === 0 || value.some(isObject))) {
+        finalValue = value.map((item) => {
+          if (!isObject(item)) return item;
+          const cleanItem = sanitizeObject(item as Record<string, JsonValue>, audience);
+          if (!cleanItem.latitude && record.latitude !== undefined) cleanItem.latitude = record.latitude;
+          if (!cleanItem.longitude && record.longitude !== undefined) cleanItem.longitude = record.longitude;
+          if (!cleanItem.city && record.city) cleanItem.city = record.city;
+          if (!cleanItem.locationName && record.name) cleanItem.locationName = record.name;
+          if (cleanItem.make && cleanItem.model && (!cleanItem.$title || cleanItem.$title === cleanItem.make)) {
+            cleanItem.$title = `${cleanItem.make} ${cleanItem.model}`;
+          }
+          return cleanItem;
+        });
       }
 
       cleanRecord[key] = finalValue;

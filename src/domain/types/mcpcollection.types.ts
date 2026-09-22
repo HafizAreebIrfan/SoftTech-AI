@@ -53,7 +53,7 @@ export type CollectionFacet = {
   options?: Array<{ label: string; value: string | number }>;
 };
 
-export type CollectionPurpose = "product" | "profile" | "utility" | "action" | "analytics";
+export type CollectionPurpose = "product" | "profile" | "utility" | "action" | "analytics" | "location";
 
 export type CollectionResult = {
   entity?: string;

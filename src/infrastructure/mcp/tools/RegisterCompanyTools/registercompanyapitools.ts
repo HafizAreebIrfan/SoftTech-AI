@@ -5,6 +5,7 @@ import { genericWidgetOutputSchema } from "../../Schemas/OutputSchema/genericwid
 import {
   normalizeApiResponseToWidget,
   ActionToolLinks,
+  isLocationEntity,
 } from "../DynamicDomain/genericwidgetnormalizer";
 import { translateApiError } from "../../errors/errorTranslator";
 import { buildCustomMcpInputSchema } from "../../Schemas/InputSchema/genericwidgetinputschema";
@@ -130,6 +131,7 @@ export const registerCompanyApiTools = (
     const toolName = apiToolNames[index];
 
     const actionTools = resolveActionTools(api, toolDirectory);
+    const isLocationTool = isLocationEntity(api.apiSchema?.entity as string | undefined, api.name, api.endpoint);
 
     const configuredInputFields = [
       ...(Array.isArray(api.params) ? api.params : []),
@@ -259,8 +261,8 @@ export const registerCompanyApiTools = (
           const processedResponse = formatCheckoutToolResult({
             response: rawResponse,
             config: {
-              isCheckout: Boolean((api as any).isCheckout),
-              webCheckoutUrl: (api as any).webCheckoutUrl,
+              isCheckout: isLocationTool ? false : Boolean((api as any).isCheckout),
+              webCheckoutUrl: isLocationTool ? undefined : (api as any).webCheckoutUrl,
               mobileDeepLinkUrl:
                 (api as any).mobileDeepLinkUrl ?? (api as any).mobileDeepLink,
             },
@@ -352,7 +354,37 @@ export const registerCompanyApiTools = (
             widgetContent.collection.purpose = toolPurpose;
           }
 
-          const summaryText = applyRecoveryMessaging(widgetContent, recovery);
+          let locationSummary: string | undefined;
+          if (toolPurpose === "location" || isLocationTool) {
+            const rawRecs = Array.isArray(widgetContent.data)
+              ? widgetContent.data
+              : widgetContent.data && typeof widgetContent.data === "object"
+                ? [widgetContent.data]
+                : [];
+            const sampleRec: any = rawRecs[0];
+            const nestedItems =
+              sampleRec?.cars ||
+              sampleRec?.products ||
+              sampleRec?.items ||
+              sampleRec?.vehicles ||
+              sampleRec?.inventory;
+            if (Array.isArray(nestedItems) && nestedItems.length > 0) {
+              const itemLabels = nestedItems
+                .slice(0, 5)
+                .map((it: any) => {
+                  const name = (it.make && it.model ? `${it.make} ${it.model}` : it.name || it.title || it.model || it.id || "").trim();
+                  const price = it.dailyRate || it.price || it.rate || it.cost;
+                  const curr = it.currency || "PKR";
+                  return price ? `${name} (${curr} ${price}/day)` : name;
+                })
+                .filter(Boolean)
+                .join(", ");
+              const more = nestedItems.length > 5 ? ` and ${nestedItems.length - 5} more` : "";
+              locationSummary = `${sampleRec.name || "Branch"} in ${sampleRec.city || "the branch"} has ${nestedItems.length} available items: ${itemLabels}${more}.`;
+            }
+          }
+
+          const summaryText = locationSummary || applyRecoveryMessaging(widgetContent, recovery);
 
           // Narrow a padded result set down to what the user actually asked for
           // (e.g. an API that returned every city because it couldn't map the
@@ -1538,7 +1570,7 @@ const isDetailEndpoint = (api: any): boolean => {
 const classifyToolPurpose = (
   api: any,
   response: any,
-): "product" | "profile" | "utility" | "action" | "analytics" => {
+): "product" | "profile" | "utility" | "action" | "analytics" | "location" => {
   const method = String(api?.method || "GET").toUpperCase();
   const endpoint = String(api?.endpoint || "").toLowerCase();
   const name = String(api?.name || "").toLowerCase();
@@ -1546,6 +1578,15 @@ const classifyToolPurpose = (
   // 1. Mutations are always "action"
   if (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") {
     return "action";
+  }
+
+  // 2. Location / branch / shop endpoints → "location"
+  if (
+    /\/locations?\b|\/branch(es)?\b|\/shops?\b|\/stores?\b|\/warehouses?\b|\/offices?\b/i.test(endpoint) ||
+    /locations?|branch(es)?|shops?|stores?|warehouse|office/i.test(name) ||
+    /^(locations?|branches?|shops?|stores?)$/i.test(String(api?.apiSchema?.entity || ""))
+  ) {
+    return "location";
   }
 
   // 2. Profile / user / account endpoints → "profile"
