@@ -1097,3 +1097,133 @@
   cursor: not-allowed;
 }
 
+/* Location Inventory / Available Items Catalog */
+.locationInventorySection {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--widget-card-bg, #12141a);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.locationInventoryHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.locationInventoryTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.locationInventorySubtitle {
+  font-size: 13px;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.locationInventoryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.locationItemCard {
+  background: #09090b;
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.locationItemCard:hover {
+  transform: translateY(-2px);
+  border-color: var(--widget-accent, #3b82f6);
+}
+
+.locationItemImageWrap {
+  width: 100%;
+  height: 140px;
+  position: relative;
+  background: #18181b;
+  overflow: hidden;
+}
+
+.locationItemBody {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.locationItemTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.locationItemSpecs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.locationItemSpecChip {
+  font-size: 11px;
+  color: var(--app-text-secondary, #94a3b8);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.locationItemFooter {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.locationItemPrice {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--widget-accent, #3b82f6);
+}
+
+.locationItemCtaBtn {
+  background: transparent;
+  border: 1px solid var(--widget-accent, #3b82f6);
+  color: var(--widget-accent, #3b82f6);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.locationItemCard:hover .locationItemCtaBtn {
+  background: var(--widget-accent, #3b82f6);
+  color: #ffffff;
+}
+
+.childHeaderBar {
+  margin-bottom: 12px;
+}
+
+

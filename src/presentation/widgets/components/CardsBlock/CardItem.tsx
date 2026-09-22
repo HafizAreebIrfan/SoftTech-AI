@@ -277,10 +277,17 @@ export const CardItem: React.FC<CardItemProps> = ({
             ? `/ ${rec.nights} night${Number(rec.nights) === 1 ? "" : "s"}`
             : "");
 
-  // CTA label from the company's registered action verbs (Book / Order / Add
-  // to cart / …), falling back to "View details". Arrow rendered separately so
-  // the existing hover-gap animation is preserved.
-  const ctaLabel = deriveCtaLabel(actions).replace(/\s*→\s*$/, "");
+  // CTA label: for physical locations / branches / shops, always use "View Details" or "View Cars"
+  const isLocationCard = Boolean(
+    rec?.cars ||
+    rec?.branchManagerId ||
+    (/\b(branch|location|store|shop)\b/i.test(String(rec.name || rec.title || rec.$title || ""))) &&
+    (rec.latitude !== undefined || rec.address || rec.city)
+  );
+
+  const ctaLabel = isLocationCard
+    ? (Array.isArray(rec.cars) && rec.cars.length > 0 ? "View Cars" : "View Details")
+    : deriveCtaLabel(actions).replace(/\s*→\s*$/, "");
 
   // Image candidate (handles comma-lists, arrays, objects). renderImage then
   // does raw → proxied → neutral-fallback internally (no sticky dataset flag).

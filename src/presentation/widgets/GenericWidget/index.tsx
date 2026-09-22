@@ -146,12 +146,24 @@ const GenericWidgetInner: React.FC = () => {
     (window as any).__WIDGET_METADATA__ = currentMetadata;
   }
 
-  // Point ChatGPT fullscreen "Open in {company}" header button to current company catalog
+  // Point ChatGPT fullscreen "Open in {company}" header button to current company catalog (except for locations/branches/shops)
   useEffect(() => {
-    if (currentShopCatalogUrl) {
+    const rawContent = (structuredContent as Record<string, unknown>) || {};
+    const meta = (rawContent.metadata as Record<string, unknown>) || {};
+    const coll = (rawContent.collection as Record<string, unknown>) || {};
+    const entityCheck = String(
+      coll.entity || meta.entity || meta.apiName || rawContent.title || "",
+    ).toLowerCase();
+    const isLocation =
+      coll.purpose === "location" ||
+      /\b(locations?|branch(es)?|shops?|stores?|warehouses?|offices?|pickup_points?)\b/i.test(
+        entityCheck,
+      );
+
+    if (currentShopCatalogUrl && !isLocation) {
       setOpenInApp(currentShopCatalogUrl);
     }
-  }, [currentShopCatalogUrl]);
+  }, [currentShopCatalogUrl, structuredContent]);
 
   const normalizedData = useMemo<NormalizedWidgetData | null>(() => {
     const content = structuredContent as Record<string, unknown>;

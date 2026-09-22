@@ -31,6 +31,19 @@ export const buildPresentationPlan = ({
     explicitLayout = "profile";
   } else if (purpose === "utility" || purpose === "action") {
     explicitLayout = "general";
+  } else if (purpose === "location") {
+    const hasCoordinates =
+      records.length > 0 &&
+      records.some(
+        (r, idx) => extractCoordinates(r as Record<string, any>, idx) !== null,
+      );
+    if (hasCoordinates && mapEnabled === true) {
+      explicitLayout = "mapcatalog";
+    } else if (records.length === 1) {
+      explicitLayout = "general";
+    } else {
+      explicitLayout = "catalog";
+    }
   } else if (explicitLayout === "auto") {
     const hasCoordinates =
       records.length > 0 &&

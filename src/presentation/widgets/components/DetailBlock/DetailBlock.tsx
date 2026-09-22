@@ -233,6 +233,44 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     return null;
   }, [records]);
 
+  // Detect physical location, branch, or shop records
+  const isLocationRecord = useMemo(() => {
+    if (collection?.purpose === "location") return true;
+    const entityStr = `${collection?.entity || ""} ${targetRecord?.entity || ""} ${targetRecord?.type || ""}`.toLowerCase();
+    if (/\b(locations?|branch(es)?|shops?|stores?|warehouses?|offices?)\b/i.test(entityStr)) return true;
+    const hasBranchName = /\b(branch|location|store|shop)\b/i.test(
+      String(targetRecord?.name || targetRecord?.title || targetRecord?.$title || "")
+    );
+    const hasLocationFields = Boolean(
+      (targetRecord?.latitude !== undefined && targetRecord?.longitude !== undefined) ||
+      (targetRecord?.city && targetRecord?.address) ||
+      targetRecord?.phone
+    );
+    const hasNestedItems = Boolean(
+      targetRecord?.cars || targetRecord?.products || targetRecord?.items || targetRecord?.vehicles || targetRecord?.inventory
+    );
+    return Boolean((hasBranchName && hasLocationFields) || (hasLocationFields && hasNestedItems));
+  }, [collection?.purpose, collection?.entity, targetRecord]);
+
+  // Child items (e.g. cars, products, items) available at this location
+  const nestedItems = useMemo(() => {
+    if (!targetRecord) return [];
+    const raw =
+      targetRecord.cars ||
+      targetRecord.products ||
+      targetRecord.items ||
+      targetRecord.vehicles ||
+      targetRecord.inventory ||
+      targetRecord.fleet ||
+      targetRecord.catalog ||
+      targetRecord.menuItems ||
+      targetRecord.rooms;
+    return Array.isArray(raw) ? raw.filter((it): it is Record<string, any> => Boolean(it && typeof it === "object")) : [];
+  }, [targetRecord]);
+
+  // Active child item when user drills into a car or product from this location
+  const [selectedChildItem, setSelectedChildItem] = useState<Record<string, any> | null>(null);
+
   // Fullscreen while a detail is open; restore inline when it closes.
   // The docked (map) variant is rendered INSIDE a parent-owned fullscreen map,
   // so it must not fight the parent for the host display mode.
@@ -285,6 +323,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
    * ------------------------------------------------------------------ */
   const isRental = useMemo(() => {
     if (!targetRecord) return false;
+    if (isLocationRecord) return false;
     const keys = Object.keys(targetRecord);
 
     // (1) Priced per unit of TIME (pricePerDay, dailyRate, pricePerNight,
@@ -1290,19 +1329,20 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     return interpolateTemplate(String(tpl), targetRecord, selectedOptions);
   }, [metadata.productItemUrlTemplate, targetRecord, selectedOptions]);
 
-  // Keep ChatGPT / host header "Open in {Company}" button in sync with single product page
+  // Keep ChatGPT / host header "Open in {Company}" button in sync with single product page (never for locations)
   useEffect(() => {
+    if (isLocationRecord) return;
     const targetUrl =
       productItemUrl || metadata.shopCatalogUrl || metadata.globalCheckoutUrl;
     if (targetUrl) {
       setOpenInApp(targetUrl);
     }
     return () => {
-      if (metadata.shopCatalogUrl) {
+      if (metadata.shopCatalogUrl && !isLocationRecord) {
         setOpenInApp(metadata.shopCatalogUrl);
       }
     };
-  }, [productItemUrl, metadata.shopCatalogUrl, metadata.globalCheckoutUrl]);
+  }, [isLocationRecord, productItemUrl, metadata.shopCatalogUrl, metadata.globalCheckoutUrl]);
 
   const checkoutUrl = useMemo(() => {
     const tpl = metadata.globalCheckoutUrl || metadata.webCheckoutUrl;
@@ -1446,6 +1486,45 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   // is hidden instead of dead. (#6)
   const canGoBack = Boolean(onBack) || subViewHistory.length > 0;
 
+  /* ------------------- Child item in-place drilldown ------------------ */
+  if (selectedChildItem) {
+    const parentLocationName = String(
+      targetRecord?.name || targetRecord?.title || targetRecord?.$title || "Location",
+    );
+
+    return (
+      <div className={styles.container}>
+        <div className={styles.childHeaderBar}>
+          <button
+            type="button"
+            className={styles.backBtn}
+            onClick={() => setSelectedChildItem(null)}
+          >
+            &larr; Back to {parentLocationName}
+          </button>
+        </div>
+        <DetailBlock
+          records={[selectedChildItem]}
+          fields={fields}
+          collection={
+            collection
+              ? {
+                  ...collection,
+                  purpose: "product",
+                  itemLabel: collection.itemLabel === "location" ? "item" : collection.itemLabel,
+                }
+              : undefined
+          }
+          actions={actions}
+          audience={audience}
+          metadata={metadata}
+          onBack={() => setSelectedChildItem(null)}
+          variant={variant}
+        />
+      </div>
+    );
+  }
+
   /* ------------------------------ Guards ------------------------------- */
   if (!targetRecord) {
     return (
@@ -1470,12 +1549,13 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
   const showReviewsSection = reviews.length > 0 || Boolean(reviewWriteAction);
   const showSidebar =
-    Boolean(priceInfo.display) ||
+    !isLocationRecord &&
+    (Boolean(priceInfo.display) ||
     isRental ||
     optionGroups.length > 0 ||
     canAddToCart ||
     Boolean(productItemUrl) ||
-    Boolean(checkoutUrl);
+    Boolean(checkoutUrl));
 
   // Calendar rendering math
   const firstDayOfMonth = new Date(calYear, calMonth, 1).getDay();
@@ -1718,6 +1798,92 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Location Inventory / Available Products Section */}
+      {isLocationRecord && nestedItems.length > 0 && (
+        <div className={styles.locationInventorySection}>
+          <div className={styles.locationInventoryHeader}>
+            <h3 className={styles.locationInventoryTitle}>
+              <span>🚗</span>
+              <span>Available at this Location ({nestedItems.length})</span>
+            </h3>
+            <p className={styles.locationInventorySubtitle}>
+              Select an option below to view its full details, availability, and booking options.
+            </p>
+          </div>
+
+          <div className={styles.locationInventoryGrid}>
+            {nestedItems.map((item: Record<string, any>, idx: number) => {
+              const itemTitle = (
+                item.make && item.model
+                  ? `${item.make} ${item.model}`
+                  : item.name || item.title || item.$title || `Option ${idx + 1}`
+              ).trim();
+              const itemImg =
+                extractFirstImageUrl(item.image) ||
+                extractFirstImageUrl(item.thumbnail) ||
+                extractFirstImageUrl(item.$image) ||
+                extractFirstImageUrl(item.images);
+              const priceVal = item.dailyRate || item.price || item.rate || item.cost;
+              const curr = item.currency || "PKR";
+              const priceStr = priceVal ? `${curr} ${Number(priceVal).toLocaleString()}` : null;
+              const periodStr = item.dailyRate ? "/ day" : item.pricePeriod || "";
+
+              const specs: string[] = [];
+              if (item.transmission) specs.push(String(item.transmission));
+              if (item.seats) specs.push(`${item.seats} seats`);
+              if (item.fuelType) specs.push(String(item.fuelType));
+              if (item.year) specs.push(String(item.year));
+              if (item.category) specs.push(String(item.category));
+
+              return (
+                <div
+                  key={String(item.id || item._id || idx)}
+                  className={styles.locationItemCard}
+                  onClick={() => setSelectedChildItem(item)}
+                >
+                  {itemImg && (
+                    <div className={styles.locationItemImageWrap}>
+                      {renderImage(itemImg, itemTitle, "cover")}
+                    </div>
+                  )}
+                  <div className={styles.locationItemBody}>
+                    <h4 className={styles.locationItemTitle}>{itemTitle}</h4>
+                    {specs.length > 0 && (
+                      <div className={styles.locationItemSpecs}>
+                        {specs.map((sp, sIdx) => (
+                          <span key={sIdx} className={styles.locationItemSpecChip}>
+                            {sp}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className={styles.locationItemFooter}>
+                      {priceStr ? (
+                        <div className={styles.locationItemPrice}>
+                          {priceStr} <span style={{ fontSize: 11, fontWeight: 400, color: "#94a3b8" }}>{periodStr}</span>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 11, color: "#22c55e", fontWeight: 600 }}>Available</span>
+                      )}
+                      <button
+                        type="button"
+                        className={styles.locationItemCtaBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedChildItem(item);
+                        }}
+                      >
+                        View Option &rarr;
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -2057,6 +2223,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             ))}
 
             {/* Quantity Selector */}
+            {!isLocationRecord && (
             <div className={styles.qtySection}>
               <label className={styles.fieldLabel}>Quantity</label>
               <div className={styles.qtyRow}>
@@ -2080,6 +2247,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 </button>
               </div>
             </div>
+            )}
 
             {/* Trust Badges */}
             {(targetRecord.shippingInformation ||
@@ -2120,8 +2288,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               </div>
             )}
 
-            {/* Action Buttons: Add to Cart and Buy Now — only for product purpose */}
-            {collection?.purpose !== "profile" && collection?.purpose !== "utility" && collection?.purpose !== "analytics" && (
+            {/* Action Buttons: Add to Cart and Buy Now — only for product purpose (never for physical locations/branches/shops) */}
+            {collection?.purpose !== "profile" && collection?.purpose !== "utility" && collection?.purpose !== "analytics" && !isLocationRecord && (
             <div className={styles.buttonGroup}>
               <button
                 type="button"
@@ -2154,9 +2322,11 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             </div>
             )}
 
+            {!isLocationRecord && (
             <p className={styles.bookingNote}>
               You won't be charged yet — review and confirm on the next step.
             </p>
+            )}
           </>
         )}
       </div>
