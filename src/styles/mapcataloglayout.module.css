@@ -80,23 +80,37 @@
   color: #ffffff;
 }
 
-/* Full-bleed map stage: breaks out of the widget container's 1.25rem gutters
-   so the map reaches the widget edges left↔right. The header (above) and the
-   floating carousel (inset) keep their own padding. */
+.mapFloatingToggle {
+  position: absolute;
+  top: 14px;
+  right: 64px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(18, 19, 22, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* Full-bleed map stage: reaches widget edges left↔right and full screen height */
 .mapStage {
   position: relative;
   width: auto;
   margin-left: -1.25rem;
   margin-right: -1.25rem;
-  height: calc(100vh - 140px);
-  min-height: 520px;
+  height: 100vh;
+  min-height: 560px;
   overflow: hidden;
   box-sizing: border-box;
 }
 
 /* Fullscreen map while a detail panel is docked. */
 .mapStageDetailOpen {
-  height: calc(100vh - 100px);
+  height: 100vh;
   min-height: 560px;
 }
 

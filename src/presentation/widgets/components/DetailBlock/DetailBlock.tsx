@@ -23,6 +23,7 @@ import {
 } from "../../../../infrastructure/store/cartStore";
 import { addToCartAndSync } from "../../../../utils/cartFlow";
 import { getValue } from "../../../../utils";
+import { enrichRecordViaDetailTool } from "../../helper/detailEnrichment";
 
 /* ------------------------------------------------------------------ *
  * Generic field-role detection. Everything below keys off field
@@ -226,45 +227,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     return null;
   }, [records]);
 
-  // Detect physical location, branch, or shop records
-  const isLocationRecord = useMemo(() => {
-    if (collection?.purpose === "location") return true;
-    const entityStr =
-      `${collection?.entity || ""} ${targetRecord?.entity || ""} ${targetRecord?.type || ""}`.toLowerCase();
-    if (
-      /\b(locations?|branch(es)?|shops?|stores?|warehouses?|offices?)\b/i.test(
-        entityStr,
-      )
-    )
-      return true;
-    const hasBranchName = /\b(branch|location|store|shop)\b/i.test(
-      String(
-        targetRecord?.name || targetRecord?.title || targetRecord?.$title || "",
-      ),
-    );
-    const hasLocationFields = Boolean(
-      (targetRecord?.latitude !== undefined &&
-        targetRecord?.longitude !== undefined) ||
-      (targetRecord?.city && targetRecord?.address) ||
-      targetRecord?.phone,
-    );
-    const hasNestedItems = Boolean(
-      targetRecord &&
-        Object.entries(targetRecord).some(
-          ([key, val]) =>
-            Array.isArray(val) &&
-            val.length > 0 &&
-            typeof val[0] === "object" &&
-            val[0] !== null &&
-            !["bookings", "reviews", "features", "amenities", "images", "photos", "fields", "specifications"].includes(key),
-        ),
-    );
-    return Boolean(
-      (hasBranchName && hasLocationFields) ||
-      (hasLocationFields && hasNestedItems),
-    );
-  }, [collection?.purpose, collection?.entity, targetRecord]);
-
   // Child items (e.g. inventory, products, catalog items) available at this location
   const nestedItems = useMemo(() => {
     if (!targetRecord) return [];
@@ -284,11 +246,74 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     return [];
   }, [targetRecord]);
 
+  // Detect physical location, branch, or facility records (strictly record-based, never forced on child items)
+  const isLocationRecord = useMemo(() => {
+    if (!targetRecord) return false;
+
+    // 1. If the record contains a list of nested inventory/items, it is a location container
+    if (nestedItems.length > 0) return true;
+
+    // 2. If the record has product/item specific attributes, it is an item/product, NEVER a location
+    if (
+      (targetRecord.make && targetRecord.model) ||
+      targetRecord.sku ||
+      targetRecord.dailyRate != null ||
+      targetRecord.pricePerDay != null ||
+      targetRecord.nightlyRate != null ||
+      targetRecord.price != null ||
+      targetRecord.productId != null ||
+      targetRecord.carId != null
+    ) {
+      return false;
+    }
+
+    // 3. Check for physical location indicators on the record itself
+    const nameStr = String(
+      targetRecord.name || targetRecord.title || targetRecord.$title || "",
+    );
+    const hasBranchName =
+      /\b(branch|location|store|shop|facility|warehouse|office)\b/i.test(nameStr);
+    const hasCoords =
+      targetRecord.latitude !== undefined && targetRecord.longitude !== undefined;
+    const hasAddressAndCity = Boolean(targetRecord.address && targetRecord.city);
+
+    if (hasBranchName && (hasCoords || hasAddressAndCity)) {
+      return true;
+    }
+
+    // 4. If collection purpose is explicitly location AND record has coords/address (and no product fields)
+    if (
+      collection?.purpose === "location" &&
+      (hasCoords || hasAddressAndCity || hasBranchName)
+    ) {
+      return true;
+    }
+
+    return false;
+  }, [targetRecord, nestedItems.length, collection?.purpose]);
+
   // Active child item when user drills into a car or product from this location
   const [selectedChildItem, setSelectedChildItem] = useState<Record<
     string,
     any
   > | null>(null);
+
+  const handleSelectChildItem = useCallback(
+    async (item: Record<string, any>) => {
+      setSelectedChildItem(item);
+      try {
+        const enriched = await enrichRecordViaDetailTool(
+          item,
+          actions,
+          collection,
+        );
+        if (enriched && enriched !== item) {
+          setSelectedChildItem(enriched);
+        }
+      } catch {}
+    },
+    [actions, collection],
+  );
 
   // Fullscreen while a detail is open; restore inline when it closes.
   // The docked (map) variant is rendered INSIDE a parent-owned fullscreen map,
@@ -1436,10 +1461,18 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const canAddToCart = Boolean(cartAction);
 
   const productItemUrl = useMemo(() => {
-    const tpl = metadata.productItemUrlTemplate;
-    if (!tpl || !targetRecord) return "";
+    const tpl =
+      metadata.productItemUrlTemplate ||
+      metadata.itemUrlTemplate ||
+      targetRecord?.url ||
+      targetRecord?.productUrl ||
+      targetRecord?.link;
+    if (!tpl) {
+      return metadata.shopCatalogUrl || "";
+    }
+    if (!targetRecord) return "";
     return interpolateTemplate(String(tpl), targetRecord, selectedOptions);
-  }, [metadata.productItemUrlTemplate, targetRecord, selectedOptions]);
+  }, [metadata, targetRecord, selectedOptions]);
 
   // Keep ChatGPT / host header "Open in {Company}" button in sync with single product page (never for locations)
   useEffect(() => {
@@ -1639,24 +1672,37 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           </button>
         </div>
         <DetailBlock
-          records={[selectedChildItem]}
+          records={[
+            {
+              ...selectedChildItem,
+              locationId:
+                selectedChildItem.locationId ||
+                targetRecord?.id ||
+                targetRecord?.locationId,
+              location: selectedChildItem.location || targetRecord?.location || {
+                id: targetRecord?.id,
+                name: targetRecord?.name || targetRecord?.title,
+                city: targetRecord?.city,
+                address: targetRecord?.address,
+              },
+            },
+          ]}
           fields={fields}
           collection={
             collection
               ? {
                   ...collection,
                   purpose: "product",
-                  itemLabel:
-                    collection.itemLabel === "location"
-                      ? "item"
-                      : collection.itemLabel,
+                  entity:
+                    selectedChildItem.category ||
+                    (selectedChildItem.make ? "car" : "item"),
+                  itemLabel: selectedChildItem.category || "item",
                 }
               : undefined
           }
           actions={actions}
           audience={audience}
           metadata={metadata}
-          onBack={() => setSelectedChildItem(null)}
           variant={variant}
         />
       </div>
@@ -1686,14 +1732,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     : "Back";
 
   const showReviewsSection = reviews.length > 0 || Boolean(reviewWriteAction);
-  const showSidebar =
-    !isLocationRecord &&
-    (Boolean(priceInfo.display) ||
-      isRental ||
-      optionGroups.length > 0 ||
-      canAddToCart ||
-      Boolean(productItemUrl) ||
-      Boolean(checkoutUrl));
+  const showSidebar = !isLocationRecord;
 
   // Calendar rendering math
   const firstDayOfMonth = new Date(calYear, calMonth, 1).getDay();
@@ -2001,7 +2040,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 <div
                   key={String(item.id || item._id || idx)}
                   className={styles.locationItemCard}
-                  onClick={() => setSelectedChildItem(item)}
+                  onClick={() => handleSelectChildItem(item)}
                 >
                   {itemImg && (
                     <div className={styles.locationItemImageWrap}>
@@ -2052,7 +2091,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                         className={styles.locationItemCtaBtn}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedChildItem(item);
+                          handleSelectChildItem(item);
                         }}
                       >
                         View Option &rarr;

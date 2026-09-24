@@ -239,40 +239,42 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
 
   return (
     <div className={styles.layoutContainer}>
-      {/* Header Bar */}
-      <div className={styles.headerBar}>
-        <div className={styles.headerTitleCol}>
-          <h2 className={styles.mainTitle}>{displayTitle}</h2>
-          <p className={styles.subTitle}>
-            <span>📍</span>
-            <span>{derivedSubtitle}</span>
-          </p>
-        </div>
-
-        {!isMapOnly && (
-          <div className={styles.headerActionsRow}>
-            <button
-              type="button"
-              className={`${styles.viewToggleBtn} ${viewMode === "map" ? styles.viewToggleBtnActive : ""}`}
-              onClick={() => setViewMode("map")}
-              title="Switch to Map View"
-            >
-              <span>🗺️</span>
-              <span>Map</span>
-            </button>
-
-            <button
-              type="button"
-              className={`${styles.viewToggleBtn} ${viewMode === "grid" ? styles.viewToggleBtnActive : ""}`}
-              onClick={showGrid}
-              title="Switch to Cards Grid View"
-            >
-              <span>⊞</span>
-              <span>Grid</span>
-            </button>
+      {/* Header Bar only shown in grid view; map view is pure fullscreen with no top title/desc */}
+      {viewMode === "grid" && (
+        <div className={styles.headerBar}>
+          <div className={styles.headerTitleCol}>
+            <h2 className={styles.mainTitle}>{displayTitle}</h2>
+            <p className={styles.subTitle}>
+              <span>📍</span>
+              <span>{derivedSubtitle}</span>
+            </p>
           </div>
-        )}
-      </div>
+
+          {!isMapOnly && (
+            <div className={styles.headerActionsRow}>
+              <button
+                type="button"
+                className={styles.viewToggleBtn}
+                onClick={() => setViewMode("map")}
+                title="Switch to Map View"
+              >
+                <span>🗺️</span>
+                <span>Map</span>
+              </button>
+
+              <button
+                type="button"
+                className={`${styles.viewToggleBtn} ${styles.viewToggleBtnActive}`}
+                onClick={showGrid}
+                title="Switch to Cards Grid View"
+              >
+                <span>⊞</span>
+                <span>Grid</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {viewMode === "grid" ? (
         /* VIEW MODE 1: Standard Cards Grid */
@@ -286,8 +288,7 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
           audience={audience}
         />
       ) : (
-        /* VIEW MODE 2: Full-bleed map with a floating peek carousel. Tapping a
-           card docks its detail panel over the map (fullscreen). */
+        /* VIEW MODE 2: Pure fullscreen map with floating peek carousel and docked detail */
         <div
           className={`${styles.mapStage} ${detailRecord ? styles.mapStageDetailOpen : ""}`}
           style={
@@ -296,6 +297,30 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
               : undefined
           }
         >
+          {!isMapOnly && (
+            <div className={styles.mapFloatingToggle}>
+              <button
+                type="button"
+                className={`${styles.viewToggleBtn} ${viewMode === "map" ? styles.viewToggleBtnActive : ""}`}
+                onClick={() => setViewMode("map")}
+                title="Switch to Map View"
+              >
+                <span>🗺️</span>
+                <span>Map</span>
+              </button>
+
+              <button
+                type="button"
+                className={styles.viewToggleBtn}
+                onClick={showGrid}
+                title="Switch to Cards Grid View"
+              >
+                <span>⊞</span>
+                <span>Grid</span>
+              </button>
+            </div>
+          )}
+
           <MapBlock
             records={filteredRecords}
             selectedRecord={selectedRecord}
@@ -330,6 +355,7 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
             fields={fields}
             actions={actions}
             selectedIndex={selectedIndex}
+            isDockOpen={Boolean(detailRecord)}
             onSelect={handleSelectRecord}
             onOpenDetail={handleOpenFullDetail}
           />

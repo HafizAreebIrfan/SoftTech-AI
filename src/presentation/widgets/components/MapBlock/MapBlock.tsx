@@ -38,13 +38,16 @@ export const MapBlock: React.FC<MapBlockProps> = ({
       zoom: 12,
       minZoom: 2,
       maxZoom: 19,
-      zoomControl: true,
+      zoomControl: false,
       attributionControl: true,
       zoomAnimation: true,
       fadeAnimation: true,
       markerZoomAnimation: true,
       worldCopyJump: true,
     });
+
+    // Zoom buttons in top-right corner to never overlap with bottom cards or left docked panel
+    L.control.zoom({ position: "topright" }).addTo(map);
 
     // High-performance CartoDB Voyager tiles with extra buffering to prevent tile tearing on pan/zoom
     L.tileLayer(

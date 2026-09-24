@@ -362,6 +362,11 @@
   z-index: 1000;
   pointer-events: none;
   box-sizing: border-box;
+  transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.carouselOverlayDockOpen {
+  left: min(424px, calc(100% - 330px));
 }
 
 .carouselTrack {
@@ -374,20 +379,11 @@
   pointer-events: auto;
   scrollbar-width: none; /* Hide scrollbar Firefox */
   -ms-overflow-style: none;
-  -webkit-mask-image: linear-gradient(
-    to right,
-    #000 0%,
-    #000 82%,
-    rgba(0, 0, 0, 0.35) 96%,
-    rgba(0, 0, 0, 0) 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    #000 0%,
-    #000 82%,
-    rgba(0, 0, 0, 0.35) 96%,
-    rgba(0, 0, 0, 0) 100%
-  );
+  cursor: grab;
+}
+
+.carouselTrack:active {
+  cursor: grabbing;
 }
 
 .carouselTrack::-webkit-scrollbar {
@@ -440,7 +436,17 @@
   right: 6px;
 }
 
+:global(.leaflet-top.leaflet-right) {
+  top: 14px;
+  right: 14px;
+  z-index: 999;
+}
+
 @media (max-width: 768px) {
+  .carouselOverlayDockOpen {
+    left: 0;
+  }
+
   .carouselNavPrev,
   .carouselNavNext {
     display: none;

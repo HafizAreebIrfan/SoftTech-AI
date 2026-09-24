@@ -7,6 +7,7 @@ interface MapCardCarouselProps {
   selectedIndex: number;
   fields?: Array<Record<string, any>>;
   actions?: any[];
+  isDockOpen?: boolean;
   onSelect: (record: Record<string, any>, index: number) => void;
   onOpenDetail?: (record: Record<string, any>, index: number) => void;
 }
@@ -16,6 +17,7 @@ export const MapCardCarousel: React.FC<MapCardCarouselProps> = ({
   selectedIndex,
   fields = [],
   actions = [],
+  isDockOpen = false,
   onSelect,
   onOpenDetail,
 }) => {
@@ -34,38 +36,54 @@ export const MapCardCarousel: React.FC<MapCardCarouselProps> = ({
     }
   }, [selectedIndex]);
 
-  const handlePrev = () => {
-    const nextIdx = Math.max(0, selectedIndex - 1);
+  // Infinite loop navigation
+  const handlePrev = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (records.length <= 1) return;
+    const nextIdx = (selectedIndex - 1 + records.length) % records.length;
     if (records[nextIdx]) {
       onSelect(records[nextIdx], nextIdx);
     }
   };
 
-  const handleNext = () => {
-    const nextIdx = Math.min(records.length - 1, selectedIndex + 1);
+  const handleNext = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (records.length <= 1) return;
+    const nextIdx = (selectedIndex + 1) % records.length;
     if (records[nextIdx]) {
       onSelect(records[nextIdx], nextIdx);
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (trackRef.current && e.deltaY !== 0) {
+      trackRef.current.scrollLeft += e.deltaY;
     }
   };
 
   if (!records || records.length === 0) return null;
 
   return (
-    <div className={styles.carouselOverlay}>
-      {/* Floating arrows sit ON the cards (desktop only; mobile swipes). */}
+    <div
+      className={`${styles.carouselOverlay} ${isDockOpen ? styles.carouselOverlayDockOpen : ""}`}
+    >
+      {/* Floating arrows loop indefinitely (desktop only; mobile swipes). */}
       {records.length > 1 && (
         <button
           type="button"
           className={`${styles.carouselNavBtn} ${styles.carouselNavPrev}`}
           onClick={handlePrev}
-          disabled={selectedIndex === 0}
-          aria-label="Previous"
+          aria-label="Previous card"
         >
           ‹
         </button>
       )}
 
-      <div className={styles.carouselTrack} ref={trackRef}>
+      <div
+        className={styles.carouselTrack}
+        ref={trackRef}
+        onWheel={handleWheel}
+      >
         {records.map((rec, idx) => (
           <div
             key={rec.id || rec._id || `carousel-card-${idx}`}
@@ -87,8 +105,7 @@ export const MapCardCarousel: React.FC<MapCardCarouselProps> = ({
           type="button"
           className={`${styles.carouselNavBtn} ${styles.carouselNavNext}`}
           onClick={handleNext}
-          disabled={selectedIndex === records.length - 1}
-          aria-label="Next"
+          aria-label="Next card"
         >
           ›
         </button>
