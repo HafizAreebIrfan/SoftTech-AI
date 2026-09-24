@@ -43,20 +43,28 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
   if (!record || typeof record !== "object") return null;
 
   const title =
-    record.make
-      ? `${record.make} ${record.model || ""}`.trim()
-      : (record.$title ||
-         record.title ||
-         record.name ||
-         record.hotelName ||
-         record.propertyName ||
-         "Item");
+    record.$title ||
+    record.title ||
+    record.name ||
+    (record.make && record.model ? `${record.make} ${record.model}`.trim() : "") ||
+    record.hotelName ||
+    record.propertyName ||
+    record.make ||
+    "Item";
 
   const rating = extractRatingInfo(record);
   const statusBadge = deriveStatusBadge(record, fields);
   const locationText = deriveLocationText(record);
   const specChips = deriveSpecChips(record, fields);
-  const ctaLabel = deriveCtaLabel(actions);
+
+  const isLocation =
+    record.purpose === "location" ||
+    (Boolean(record.address || record.city) &&
+      /\b(branch|location|store|shop)\b/i.test(
+        String(record.name || record.title || ""),
+      ));
+
+  const ctaLabel = isLocation ? "View details →" : deriveCtaLabel(actions);
 
   // Pricing & Discounts
   let basePrice: unknown =
@@ -147,6 +155,7 @@ export const MapCardItem: React.FC<MapCardItemProps> = ({
         : "");
 
   const imageUrl =
+    extractFirstImageUrl(record.$image) ||
     extractFirstImageUrl(record.thumbnail) ||
     extractFirstImageUrl(record.image) ||
     extractFirstImageUrl(record.images) ||

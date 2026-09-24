@@ -506,6 +506,32 @@
   box-sizing: border-box;
 }
 
+.staticLocationInfo {
+  background: #09090b;
+  border: 1px solid #22242a;
+  border-radius: 8px;
+  color: #ffffff;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.staticLocationIcon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.staticLocationText {
+  color: #e2e8f0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Insurance Options */
 .insuranceSection {
   display: flex;

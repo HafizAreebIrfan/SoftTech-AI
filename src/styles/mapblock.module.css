@@ -20,6 +20,21 @@
   font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
+/* Fix Leaflet tile disappearance & black canvas on zoom/drag */
+:global(.leaflet-container img.leaflet-tile) {
+  max-width: none !important;
+  max-height: none !important;
+  mix-blend-mode: normal !important;
+}
+
+:global(.leaflet-container .leaflet-tile-container) {
+  pointer-events: none;
+}
+
+:global(.leaflet-container) {
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
 /* Custom HTML Leaflet Price Pin */
 :global(.map-price-pin-wrapper) {
   background: transparent !important;

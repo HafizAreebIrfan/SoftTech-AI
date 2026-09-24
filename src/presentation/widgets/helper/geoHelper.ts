@@ -59,7 +59,7 @@ export const extractCoordinates = (
 ): GeoCoordinate | null => {
   if (!rec || typeof rec !== "object") return null;
 
-  // 1. Direct or nested latitude / longitude
+  // 1. Direct or nested latitude / longitude candidates
   const latCandidate =
     rec.latitude ??
     rec.lat ??
@@ -70,22 +70,55 @@ export const extractCoordinates = (
     rec.position?.lat ??
     rec.position?.latitude ??
     rec.coords?.latitude ??
-    rec.coords?.lat;
+    rec.coords?.lat ??
+    rec.coordinates?.latitude ??
+    rec.coordinates?.lat ??
+    rec.address?.latitude ??
+    rec.address?.lat ??
+    rec.point?.lat ??
+    rec.point?.latitude ??
+    rec.branch?.latitude ??
+    rec.branch?.lat ??
+    rec.store?.latitude ??
+    rec.store?.lat;
 
   const lngCandidate =
     rec.longitude ??
     rec.lng ??
     rec.lon ??
+    rec.long ??
     rec.geo?.longitude ??
     rec.geo?.lng ??
     rec.geo?.lon ??
+    rec.geo?.long ??
     rec.location?.longitude ??
     rec.location?.lng ??
     rec.location?.lon ??
+    rec.location?.long ??
     rec.position?.lng ??
     rec.position?.longitude ??
+    rec.position?.lon ??
+    rec.position?.long ??
     rec.coords?.longitude ??
-    rec.coords?.lng;
+    rec.coords?.lng ??
+    rec.coords?.lon ??
+    rec.coords?.long ??
+    rec.coordinates?.longitude ??
+    rec.coordinates?.lng ??
+    rec.coordinates?.lon ??
+    rec.coordinates?.long ??
+    rec.address?.longitude ??
+    rec.address?.lng ??
+    rec.address?.lon ??
+    rec.address?.long ??
+    rec.point?.lng ??
+    rec.point?.longitude ??
+    rec.point?.lon ??
+    rec.point?.long ??
+    rec.branch?.longitude ??
+    rec.branch?.lng ??
+    rec.store?.longitude ??
+    rec.store?.lng;
 
   const latNum = Number(latCandidate);
   const lngNum = Number(lngCandidate);
@@ -102,12 +135,30 @@ export const extractCoordinates = (
     return { lat: latNum, lng: lngNum };
   }
 
-  // 2. Coordinate array [lng, lat] or [lat, lng]
+  // 2. Comma-separated string coordinate (e.g. "24.8607, 67.0011" or "24.8607,67.0011")
+  const strCandidate =
+    (typeof rec.coordinates === "string" ? rec.coordinates : null) ||
+    (typeof rec.coords === "string" ? rec.coords : null) ||
+    (typeof rec.location === "string" ? rec.location : null) ||
+    (typeof rec.geo === "string" ? rec.geo : null) ||
+    (typeof rec.point === "string" ? rec.point : null);
+
+  if (strCandidate && strCandidate.includes(",")) {
+    const parts = strCandidate.split(",").map((s: string) => Number(s.trim()));
+    if (parts.length >= 2 && isFinite(parts[0]) && isFinite(parts[1])) {
+      const [pLat, pLng] = parts;
+      if (Math.abs(pLat) <= 90 && Math.abs(pLng) <= 180 && (pLat !== 0 || pLng !== 0)) {
+        return { lat: pLat, lng: pLng };
+      }
+    }
+  }
+
+  // 3. Coordinate array [lng, lat] or [lat, lng]
   const rawArray =
-    rec.coordinates ??
-    rec.location?.coordinates ??
-    rec.geo?.coordinates ??
-    rec.position?.coordinates;
+    (Array.isArray(rec.coordinates) ? rec.coordinates : null) ??
+    (Array.isArray(rec.location?.coordinates) ? rec.location.coordinates : null) ??
+    (Array.isArray(rec.geo?.coordinates) ? rec.geo.coordinates : null) ??
+    (Array.isArray(rec.position?.coordinates) ? rec.position.coordinates : null);
 
   if (Array.isArray(rawArray) && rawArray.length >= 2) {
     const a = Number(rawArray[0]);
@@ -123,7 +174,7 @@ export const extractCoordinates = (
     }
   }
 
-  // 3. Fallback: Lookup by city / area name with deterministic offset
+  // 4. Fallback: Lookup by city / area name with deterministic offset
   const cityName =
     rec.location?.city ||
     rec.city ||
@@ -234,9 +285,7 @@ export const formatMarkerPrice = (rec: Record<string, any>): string => {
     rec.currencySymbol ||
     rec.currency_symbol ||
     rec.symbol ||
-    (rec.location?.country === "Pakistan" || rec.city === "Karachi"
-      ? "PKR "
-      : "$");
+    (typeof code === "string" && code.trim() ? `${code.trim()} ` : "$");
 
   const formattedNum = finalNum.toLocaleString(undefined, {
     maximumFractionDigits: finalNum % 1 !== 0 ? 2 : 0,

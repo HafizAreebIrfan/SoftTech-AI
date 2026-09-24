@@ -46,148 +46,72 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     [records],
   );
 
-  // When viewing a single location that contains an inventory of items (e.g. cars, products),
+  // When viewing a single location that contains an inventory of items (e.g. products, items, inventory),
   // unroll the child items so the map peek carousel and cards grid display the available items.
   const isLocationWithNestedItems = useMemo(() => {
     if (typedRecords.length !== 1) return false;
     const rec = typedRecords[0];
-    const items =
-      rec?.cars ||
-      rec?.products ||
-      rec?.items ||
-      rec?.vehicles ||
-      rec?.inventory ||
-      rec?.fleet;
-    return Array.isArray(items) && items.length > 0;
+    if (!rec || typeof rec !== "object") return false;
+    for (const [key, val] of Object.entries(rec)) {
+      if (
+        Array.isArray(val) &&
+        val.length > 0 &&
+        typeof val[0] === "object" &&
+        val[0] !== null &&
+        !["bookings", "reviews", "features", "amenities", "images", "photos", "fields", "specifications"].includes(key)
+      ) {
+        return true;
+      }
+    }
+    return false;
   }, [typedRecords]);
 
   const unpackedLocationItems = useMemo(() => {
     if (!isLocationWithNestedItems) return null;
     const loc = typedRecords[0];
-    const rawItems: any[] =
-      loc.cars ||
-      loc.products ||
-      loc.items ||
-      loc.vehicles ||
-      loc.inventory ||
-      loc.fleet ||
-      [];
+    let rawItems: any[] = [];
+    for (const [key, val] of Object.entries(loc)) {
+      if (
+        Array.isArray(val) &&
+        val.length > 0 &&
+        typeof val[0] === "object" &&
+        val[0] !== null &&
+        !["bookings", "reviews", "features", "amenities", "images", "photos", "fields", "specifications"].includes(key)
+      ) {
+        rawItems = val;
+        break;
+      }
+    }
 
-    return rawItems.map((item, idx) => ({
-      ...item,
-      id: item.id || `${loc.id || "loc"}-item-${idx}`,
-      latitude: item.latitude ?? loc.latitude,
-      longitude: item.longitude ?? loc.longitude,
-      city: item.city ?? loc.city,
-      locationName: item.locationName ?? loc.name,
-      locationId: loc.id,
-      $title:
+    return rawItems.map((item, idx) => {
+      const titleCandidate =
         item.$title ||
-        (item.make && item.model ? `${item.make} ${item.model}` : item.name || item.title || `Option ${idx + 1}`),
-      $price: item.$price || item.dailyRate || item.price,
-      $image: item.$image || item.image || item.thumbnail,
-    }));
+        item.title ||
+        item.name ||
+        (item.make && item.model ? `${item.make} ${item.model}`.trim() : "") ||
+        `Option ${idx + 1}`;
+      const priceCandidate =
+        item.$price ?? item.price ?? item.pricePerDay ?? item.dailyRate ?? item.rate ?? item.cost;
+      const imageCandidate =
+        item.$image || item.image || item.thumbnail || item.photo || (Array.isArray(item.images) ? item.images[0] : null);
+
+      return {
+        ...item,
+        id: item.id || `${loc.id || "loc"}-item-${idx}`,
+        latitude: item.latitude ?? loc.latitude,
+        longitude: item.longitude ?? loc.longitude,
+        city: item.city ?? loc.city,
+        locationName: item.locationName ?? loc.name,
+        locationId: loc.id,
+        $title: titleCandidate,
+        $price: priceCandidate,
+        $image: imageCandidate,
+      };
+    });
   }, [isLocationWithNestedItems, typedRecords]);
 
   const effectiveRecords = unpackedLocationItems || typedRecords;
-
-  // Client-side relevance trim: when the backend hands the widget a padded set
-  // (e.g. every city after a search-recovery fallback), narrow it to what the
-  // user actually asked for. Tokens come from the user prompt + inferred intent
-  // (carried in the widget metadata), NOT from appliedQuery (which often only
-  // holds pagination). A token only filters when it PARTITIONS the set — it
-  // matches some records but not all — exactly like the backend's relevance
-  // filter. Keys off value shape only; no entity/company/industry names.
-  const filteredRecords = useMemo(() => {
-    if (effectiveRecords.length < 2) return effectiveRecords;
-
-    const meta = (window as any).__WIDGET_METADATA__ || {};
-    const promptText = `${meta.user_raw_prompt || ""} ${
-      meta.inferred_intent || ""
-    }`
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ");
-
-    if (!promptText.trim()) return effectiveRecords;
-
-    // Entity noun describes the whole set, never a filter token.
-    const entityWords = new Set<string>();
-    const entity = String(collection?.entity || "").toLowerCase();
-    for (const w of entity.split(/\s+/).filter(Boolean)) entityWords.add(w);
-
-    // The app-mention tag ("@Car Rental Pro And Studio") is not a filter —
-    // strip tokens that appear in the company name.
-    const companyName = String(
-      meta.companyName || meta.company_name || "",
-    ).toLowerCase();
-    const companyWords = new Set(
-      companyName.split(/[^a-z0-9]+/).filter(Boolean),
-    );
-
-    const DATE_WORDS = new Set([
-      "available", "availability", "show", "list", "cars", "find",
-      "today", "tomorrow", "date", "dates", "night", "nights", "any",
-      "all", "give", "want", "need", "get", "from", "and", "the", "for",
-      "with", "near", "me", "around", "please", "book", "booking",
-      "rent", "rental", "rentals", "per", "day", "week", "month",
-      "cheap", "under", "over", "between", "next", "this", "that",
-    ]);
-
-    const tokens = Array.from(
-      new Set(
-        promptText
-          .split(/\s+/)
-          .map((t) => t.trim())
-          .filter((t) => t.length >= 3 && t.length <= 20)
-          .filter((t) => !DATE_WORDS.has(t))
-          .filter((t) => !entityWords.has(t))
-          .filter((t) => !companyWords.has(t)),
-      ),
-    );
-    if (tokens.length === 0) return typedRecords;
-
-    const recordMatchesToken = (
-      rec: Record<string, any>,
-      token: string,
-    ): boolean => {
-      const check = (val: unknown): boolean => {
-        if (val === null || val === undefined) return false;
-        if (typeof val === "string" || typeof val === "number")
-          return String(val).toLowerCase().includes(token);
-        return false;
-      };
-      // Top-level string/number fields (make, model, name, category, …) and
-      // one-level-nested objects (location.city, …). Arrays are skipped
-      // (features lists would false-positive on incidental matches).
-      for (const v of Object.values(rec)) {
-        if (typeof v === "string" || typeof v === "number") {
-          if (check(v)) return true;
-        } else if (v && typeof v === "object" && !Array.isArray(v)) {
-          for (const inner of Object.values(v as Record<string, unknown>)) {
-            if (check(inner)) return true;
-          }
-        }
-      }
-      return false;
-    };
-
-    // Keep only tokens that PARTITION the set (match some, not all).
-    const discriminators = tokens.filter((token) => {
-      let count = 0;
-      for (const rec of typedRecords)
-        if (recordMatchesToken(rec, token)) count++;
-      return count >= 1 && count < typedRecords.length;
-    });
-    if (discriminators.length === 0) return effectiveRecords;
-
-    const filtered = effectiveRecords.filter((rec) =>
-      discriminators.every((token) => recordMatchesToken(rec, token)),
-    );
-    if (filtered.length === 0 || filtered.length === effectiveRecords.length) {
-      return effectiveRecords;
-    }
-    return filtered;
-  }, [effectiveRecords, collection?.entity]);
+  const filteredRecords = effectiveRecords;
 
   const selectedRecord: Record<string, any> | null =
     filteredRecords[selectedIndex] || filteredRecords[0] || null;
@@ -233,25 +157,24 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
 
   // Open (or swap) the docked detail panel for a card. Opens instantly with the
   // summary record + requests the fullscreen map, then enriches via the shared
-  // get-by-id helper (identical to the grid) so booking / date data shows here
-  // too. A sequence guard ignores stale enrichments when cars are switched fast.
-  const openDetailFor = (rec: Record<string, any>, idx: number) => {
-    setSelectedIndex(idx);
-    setDetailRecord(rec);
-    // Freeze the stage height NOW — before requesting fullscreen — so it is
-    // the height the host actually granted. Re-opens while already docked keep
-    // the existing freeze (no reflow churn when swapping cars).
-    setDockedStageHeight((cur) => cur ?? Math.max(window.innerHeight, 520));
-    requestDisplayMode("fullscreen");
-    const seq = ++enrichSeqRef.current;
-    enrichRecordViaDetailTool(rec, actions, collection)
-      .then((enriched) => {
-        if (enrichSeqRef.current === seq) {
-          setDetailRecord((cur) => (cur ? enriched : cur));
-        }
-      })
-      .catch(() => {});
-  };
+  // get-by-id helper. A sequence guard ignores stale enrichments when swapped fast.
+  const openDetailFor = useCallback(
+    (rec: Record<string, any>, idx: number) => {
+      setSelectedIndex(idx);
+      setDetailRecord(rec);
+      setDockedStageHeight((cur) => cur ?? Math.max(window.innerHeight, 560));
+      requestDisplayMode("fullscreen");
+      const seq = ++enrichSeqRef.current;
+      enrichRecordViaDetailTool(rec, actions, collection)
+        .then((enriched) => {
+          if (enrichSeqRef.current === seq) {
+            setDetailRecord((cur) => (cur ? enriched : cur));
+          }
+        })
+        .catch(() => {});
+    },
+    [actions, collection],
+  );
 
   const closeDetail = useCallback(() => {
     enrichSeqRef.current++; // invalidate any in-flight enrichment
@@ -260,43 +183,40 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     requestDisplayMode("inline");
   }, []);
 
-  // The host (ChatGPT) can collapse the fullscreen widget at any time without
-  // notifying the app. Detect it heuristically: while docked, watch the
-  // iframe's own viewport height. The host grants fullscreen by making the
-  // iframe tall; collapsing restores a small inline iframe. A large DROP from
-  // the frozen dock height means the host exited fullscreen — restore the
-  // pre-fullscreen map position (close the dock, back to inline) exactly like
-  // the Back button does. The 0.6 threshold makes normal host-side resizes
-  // (scrollbar, minor reflow) harmless.
+  // Watch for true host collapses to restore inline display mode.
   useEffect(() => {
     if (!detailRecord) return;
-    const frozen = dockedStageHeight ?? 0;
-    if (!frozen) return;
 
     const onResize = () => {
       const vh = window.innerHeight;
-      if (vh < frozen * 0.6 && vh < frozen - 160) {
+      // Only restore inline if the iframe truly collapsed to inline widget height (< 380px)
+      if (vh < 380) {
         closeDetail();
       }
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [detailRecord, dockedStageHeight, closeDetail]);
+  }, [detailRecord, closeDetail]);
 
-  // Map marker / carousel arrow → highlight + auto-center. If the detail panel
-  // is already open, follow the selection (swap the panel to the new item).
-  const handleSelectRecord = (rec: Record<string, any>, idx: number) => {
-    if (detailRecord) {
-      openDetailFor(rec, idx);
-    } else {
-      setSelectedIndex(idx);
-    }
-  };
+  // Map marker / carousel arrow → highlight + auto-center.
+  const handleSelectRecord = useCallback(
+    (rec: Record<string, any>, idx: number) => {
+      if (detailRecord) {
+        openDetailFor(rec, idx);
+      } else {
+        setSelectedIndex(idx);
+      }
+    },
+    [detailRecord, openDetailFor],
+  );
 
   // Card tap → open / replace the docked detail panel over the map.
-  const handleOpenFullDetail = (rec: Record<string, any>, idx: number) => {
-    openDetailFor(rec, idx);
-  };
+  const handleOpenFullDetail = useCallback(
+    (rec: Record<string, any>, idx: number) => {
+      openDetailFor(rec, idx);
+    },
+    [openDetailFor],
+  );
 
   const isMapOnly = Boolean(
     (window as any).__WIDGET_METADATA__?.mapOnly ||

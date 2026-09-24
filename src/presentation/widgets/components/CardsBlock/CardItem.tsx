@@ -277,16 +277,17 @@ export const CardItem: React.FC<CardItemProps> = ({
             ? `/ ${rec.nights} night${Number(rec.nights) === 1 ? "" : "s"}`
             : "");
 
-  // CTA label: for physical locations / branches / shops, always use "View Details" or "View Cars"
+  // CTA label: for physical locations / branches / shops, always use "View Details"
   const isLocationCard = Boolean(
-    rec?.cars ||
-    rec?.branchManagerId ||
-    (/\b(branch|location|store|shop)\b/i.test(String(rec.name || rec.title || rec.$title || ""))) &&
-    (rec.latitude !== undefined || rec.address || rec.city)
+    rec?.purpose === "location" ||
+    (Boolean(rec?.address || rec?.city || rec?.latitude !== undefined) &&
+      /\b(branch|location|store|shop)\b/i.test(
+        String(rec?.name || rec?.title || rec?.$title || ""),
+      ))
   );
 
   const ctaLabel = isLocationCard
-    ? (Array.isArray(rec.cars) && rec.cars.length > 0 ? "View Cars" : "View Details")
+    ? "View Details"
     : deriveCtaLabel(actions).replace(/\s*→\s*$/, "");
 
   // Image candidate (handles comma-lists, arrays, objects). renderImage then

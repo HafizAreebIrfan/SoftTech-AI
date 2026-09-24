@@ -10,7 +10,10 @@ import {
   callMcpTool,
   setOpenInApp,
 } from "../../../../utils/mcpBridge";
-import { extractAllImageUrls } from "../../helper/RenderImage/getproxiedimageurl";
+import {
+  extractAllImageUrls,
+  extractFirstImageUrl,
+} from "../../helper/RenderImage/getproxiedimageurl";
 import { renderImage } from "../../helper/RenderImage";
 import { appendChatUrlToCheckout } from "../../../../utils/checkoutHelper";
 import {
@@ -29,7 +32,8 @@ import { getValue } from "../../../../utils";
  * ------------------------------------------------------------------ */
 const TITLE_KEY_RE = /^\$?(title|name|label|heading|make|brand)$/i;
 const SUBTITLE_KEY_RE = /^\$?(subtitle|tagline|variant|model)$/i;
-const PRICE_KEY_RE = /(price|rate|cost|amount|fee|fare|premium|charge|subtotal|total)/i;
+const PRICE_KEY_RE =
+  /(price|rate|cost|amount|fee|fare|premium|charge|subtotal|total)/i;
 const IMAGE_KEY_RE =
   /(image|img|photo|thumbnail|thumb|picture|avatar|logo|icon|banner|gallery|media)/i;
 const DESCRIPTION_KEY_RE =
@@ -77,7 +81,8 @@ const derivePricePeriod = (key: string): string => {
  */
 const formatPrice = (value: unknown, record: Record<string, any>): string => {
   if (value === null || value === undefined || value === "") return "";
-  if (typeof value === "string" && /[^\d.,\s-]/.test(value)) return value.trim();
+  if (typeof value === "string" && /[^\d.,\s-]/.test(value))
+    return value.trim();
 
   const num = parseNumericPrice(value);
   const code = record.currency || record.currencyCode || record.priceCurrency;
@@ -96,22 +101,8 @@ const formatPrice = (value: unknown, record: Record<string, any>): string => {
     return `${symbol.trim()} ${num.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   }
 
-  // Pakistan detection from location, country or phone
-  const isPakistan =
-    record.location?.country === "Pakistan" ||
-    record.country === "Pakistan" ||
-    String(record.location?.phone || "").startsWith("+92") ||
-    String(record.phone || "").startsWith("+92") ||
-    String(record.location?.city || "").toLowerCase() === "karachi" ||
-    String(record.location?.city || "").toLowerCase() === "islamabad" ||
-    String(record.location?.city || "").toLowerCase() === "lahore";
-  if (isPakistan) {
-    return `Rs. ${num.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-  }
-
-  // Rental with integer rate >= 500
-  if (num >= 500 && num === Math.floor(num) && (record.pricePerDay || record.dailyRate)) {
-    return `Rs. ${num.toLocaleString()}`;
+  if (typeof code === "string" && code.trim()) {
+    return `${code.trim().toUpperCase()} ${num.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   }
 
   // Generic fallback default to '$'
@@ -199,7 +190,8 @@ const collectDates = (value: unknown, out: Set<string>): void => {
     for (const [k, v] of Object.entries(obj)) {
       if (startVal === undefined && RANGE_START_RE.test(k)) startVal = v;
       else if (endVal === undefined && RANGE_END_RE.test(k)) endVal = v;
-      else if (singleVal === undefined && SINGLE_DATE_KEY_RE.test(k)) singleVal = v;
+      else if (singleVal === undefined && SINGLE_DATE_KEY_RE.test(k))
+        singleVal = v;
     }
     const sStr = toDayStr(startVal);
     const eStr = toDayStr(endVal);
@@ -217,6 +209,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   fields = [],
   collection,
   actions = [],
+  audience,
   onBack,
   metadata: propMetadata,
   variant = "default",
@@ -236,40 +229,66 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   // Detect physical location, branch, or shop records
   const isLocationRecord = useMemo(() => {
     if (collection?.purpose === "location") return true;
-    const entityStr = `${collection?.entity || ""} ${targetRecord?.entity || ""} ${targetRecord?.type || ""}`.toLowerCase();
-    if (/\b(locations?|branch(es)?|shops?|stores?|warehouses?|offices?)\b/i.test(entityStr)) return true;
+    const entityStr =
+      `${collection?.entity || ""} ${targetRecord?.entity || ""} ${targetRecord?.type || ""}`.toLowerCase();
+    if (
+      /\b(locations?|branch(es)?|shops?|stores?|warehouses?|offices?)\b/i.test(
+        entityStr,
+      )
+    )
+      return true;
     const hasBranchName = /\b(branch|location|store|shop)\b/i.test(
-      String(targetRecord?.name || targetRecord?.title || targetRecord?.$title || "")
+      String(
+        targetRecord?.name || targetRecord?.title || targetRecord?.$title || "",
+      ),
     );
     const hasLocationFields = Boolean(
-      (targetRecord?.latitude !== undefined && targetRecord?.longitude !== undefined) ||
+      (targetRecord?.latitude !== undefined &&
+        targetRecord?.longitude !== undefined) ||
       (targetRecord?.city && targetRecord?.address) ||
-      targetRecord?.phone
+      targetRecord?.phone,
     );
     const hasNestedItems = Boolean(
-      targetRecord?.cars || targetRecord?.products || targetRecord?.items || targetRecord?.vehicles || targetRecord?.inventory
+      targetRecord &&
+        Object.entries(targetRecord).some(
+          ([key, val]) =>
+            Array.isArray(val) &&
+            val.length > 0 &&
+            typeof val[0] === "object" &&
+            val[0] !== null &&
+            !["bookings", "reviews", "features", "amenities", "images", "photos", "fields", "specifications"].includes(key),
+        ),
     );
-    return Boolean((hasBranchName && hasLocationFields) || (hasLocationFields && hasNestedItems));
+    return Boolean(
+      (hasBranchName && hasLocationFields) ||
+      (hasLocationFields && hasNestedItems),
+    );
   }, [collection?.purpose, collection?.entity, targetRecord]);
 
-  // Child items (e.g. cars, products, items) available at this location
+  // Child items (e.g. inventory, products, catalog items) available at this location
   const nestedItems = useMemo(() => {
     if (!targetRecord) return [];
-    const raw =
-      targetRecord.cars ||
-      targetRecord.products ||
-      targetRecord.items ||
-      targetRecord.vehicles ||
-      targetRecord.inventory ||
-      targetRecord.fleet ||
-      targetRecord.catalog ||
-      targetRecord.menuItems ||
-      targetRecord.rooms;
-    return Array.isArray(raw) ? raw.filter((it): it is Record<string, any> => Boolean(it && typeof it === "object")) : [];
+    for (const [key, val] of Object.entries(targetRecord)) {
+      if (
+        Array.isArray(val) &&
+        val.length > 0 &&
+        typeof val[0] === "object" &&
+        val[0] !== null &&
+        !["bookings", "reviews", "features", "amenities", "images", "photos", "fields", "specifications"].includes(key)
+      ) {
+        return val.filter((it): it is Record<string, any> =>
+          Boolean(it && typeof it === "object"),
+        );
+      }
+    }
+    return [];
   }, [targetRecord]);
 
   // Active child item when user drills into a car or product from this location
-  const [selectedChildItem, setSelectedChildItem] = useState<Record<string, any> | null>(null);
+  const [selectedChildItem, setSelectedChildItem] = useState<Record<
+    string,
+    any
+  > | null>(null);
 
   // Fullscreen while a detail is open; restore inline when it closes.
   // The docked (map) variant is rendered INSIDE a parent-owned fullscreen map,
@@ -359,6 +378,24 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     return false;
   }, [targetRecord, metadata]);
 
+  /* ---------------------- Booking Category & Labels ------------------- */
+  const bookingCategory = useMemo(() => {
+    const text = `${collection?.entity || ""} ${collection?.itemLabel || ""} ${targetRecord?.category || ""} ${targetRecord?.type || ""} ${metadata?.shopCatalogUrl || ""}`.toLowerCase();
+    const isLodging = /hotel|room|apartment|stay|villa|hostel|resort|property|lodging|accommodation/i.test(text);
+    const isVehicle = /car|vehicle|fleet|bike|scooter|auto|suv|sedan|truck/i.test(text);
+
+    return {
+      isLodging,
+      isVehicle,
+      startLabel: isLodging ? "Check-in date" : isVehicle ? "Pick-up date" : "Start date",
+      endLabel: isLodging ? "Check-out date" : isVehicle ? "Drop-off date" : "End date",
+      unitLabel: isLodging ? "night" : "day",
+      unitPlural: isLodging ? "nights" : "days",
+      locationLabel: isLodging ? "Property location" : isVehicle ? "Pick-up location" : "Location",
+      dropoffLabel: isVehicle ? "Drop-off location" : "Return location",
+    };
+  }, [collection?.entity, collection?.itemLabel, targetRecord?.category, targetRecord?.type, metadata?.shopCatalogUrl]);
+
   /* -------------------------- Title / subtitle -------------------------- */
   const { title, subtitle } = useMemo(() => {
     if (!targetRecord) return { title: "", subtitle: "" };
@@ -389,27 +426,33 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       if (!t) {
         t = String(
           targetRecord.title ||
-          targetRecord.packagename ||
-          targetRecord.name ||
-          targetRecord.label ||
-          targetRecord.heading ||
-          targetRecord.productName ||
-          targetRecord.serviceName ||
-          ""
+            targetRecord.packagename ||
+            targetRecord.name ||
+            targetRecord.label ||
+            targetRecord.heading ||
+            targetRecord.productName ||
+            targetRecord.serviceName ||
+            "",
         ).trim();
       }
 
       // 4. Regex search on keys matching TITLE_KEY_RE, strictly excluding IDs
       if (!t) {
         for (const [k, v] of Object.entries(targetRecord)) {
-          if (TITLE_KEY_RE.test(k) && !looksLikeId(k) && isScalar(v) && String(v).trim()) {
+          if (
+            TITLE_KEY_RE.test(k) &&
+            !looksLikeId(k) &&
+            isScalar(v) &&
+            String(v).trim()
+          ) {
             t = String(v).trim();
             break;
           }
         }
       }
 
-      if (!t) t = String(collection?.itemLabel || collection?.entity || "Details");
+      if (!t)
+        t = String(collection?.itemLabel || collection?.entity || "Details");
 
       // Subtitle
       const subField = fields.find((f) => f.uiRole === "subtitle");
@@ -472,7 +515,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     if (Array.isArray(rawPriceVal)) {
       priceList = rawPriceVal.map((p) => String(p).trim()).filter(Boolean);
     } else if (typeof rawPriceVal === "string" && rawPriceVal.includes(",")) {
-      priceList = rawPriceVal.split(",").map((p) => p.trim()).filter(Boolean);
+      priceList = rawPriceVal
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
     }
 
     for (const [k, v] of Object.entries(targetRecord)) {
@@ -499,7 +545,12 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           fieldMap.get(k)?.type === "array")
       ) {
         values = Array.from(
-          new Set(v.split(",").map((x) => x.trim()).filter(Boolean)),
+          new Set(
+            v
+              .split(",")
+              .map((x) => x.trim())
+              .filter(Boolean),
+          ),
         );
       }
 
@@ -524,7 +575,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     return groups;
   }, [targetRecord, fieldMap]);
 
-  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, string>
+  >({});
   useEffect(() => {
     const init: Record<string, string> = {};
     for (const g of optionGroups) init[g.key] = g.values[0];
@@ -540,6 +593,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       originalDisplay: undefined as string | undefined,
       period: "",
       numeric: 0,
+      symbol: "$",
     };
     if (!targetRecord) return empty;
 
@@ -631,7 +685,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         targetRecord.msrp ??
         targetRecord.oldPrice ??
         targetRecord.old_price;
-      const compareAtNum = compareAtRaw != null ? parseNumericPrice(compareAtRaw) : NaN;
+      const compareAtNum =
+        compareAtRaw != null ? parseNumericPrice(compareAtRaw) : NaN;
 
       const saleRaw =
         targetRecord.salePrice ??
@@ -653,7 +708,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         targetRecord.discountAmount ??
         targetRecord.discount_amount ??
         (typeof targetRecord.discount === "number" ||
-        (typeof targetRecord.discount === "string" && !targetRecord.discount.includes("%"))
+        (typeof targetRecord.discount === "string" &&
+          !targetRecord.discount.includes("%"))
           ? targetRecord.discount
           : undefined);
       const flatNum = flatRaw != null ? parseNumericPrice(flatRaw) : NaN;
@@ -676,6 +732,17 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       }
     }
 
+    const symbol =
+      targetRecord.currencySymbol ||
+      targetRecord.symbol ||
+      (typeof targetRecord.currency === "string" && targetRecord.currency
+        ? `${targetRecord.currency} `
+        : "") ||
+      (typeof targetRecord.currencyCode === "string" && targetRecord.currencyCode
+        ? `${targetRecord.currencyCode} `
+        : "") ||
+      (mainDisplay.includes("Rs") ? "Rs. " : "$");
+
     return {
       value: displayVal,
       key,
@@ -683,6 +750,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       display: mainDisplay,
       originalDisplay,
       period,
+      symbol,
     };
   }, [targetRecord, fields, isRental, optionGroups, selectedOptions]);
 
@@ -768,7 +836,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         optionGroups.some(
           (g) =>
             g.values.join(", ").toLowerCase() === candidate.toLowerCase() ||
-            g.values.join(",").toLowerCase() === candidate.replace(/\s+/g, "").toLowerCase()
+            g.values.join(",").toLowerCase() ===
+              candidate.replace(/\s+/g, "").toLowerCase(),
         ))
     ) {
       return "";
@@ -791,7 +860,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               out.push(String(item).trim());
           }
         } else if (typeof v === "string" && v.trim()) {
-          const parts = v.split(/[,;|•]/).map((s) => s.trim()).filter(Boolean);
+          const parts = v
+            .split(/[,;|•]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
           out.push(...parts);
         }
       }
@@ -893,7 +965,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   /* ----------------------- Rental Calendar & Booking ------------------- */
   const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  const [dynamicConflictingBookings, setDynamicConflictingBookings] = useState<any[]>([]);
+  const [dynamicConflictingBookings, setDynamicConflictingBookings] = useState<
+    any[]
+  >([]);
   const [dynamicAvailableDates, setDynamicAvailableDates] = useState<any[]>([]);
 
   useEffect(() => {
@@ -963,10 +1037,15 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     for (const b of allBookings) {
       if (!b || typeof b !== "object") continue;
       const st = String(b.status || "").toUpperCase();
-      if (st === "CANCELLED" || st === "REJECTED" || st === "REFUNDED") continue;
+      if (st === "CANCELLED" || st === "REJECTED" || st === "REFUNDED")
+        continue;
 
-      const sStr = String(b.pickupDate || b.startDate || b.actualPickupDate || "");
-      const eStr = String(b.dropoffDate || b.endDate || b.actualDropoffDate || "");
+      const sStr = String(
+        b.pickupDate || b.startDate || b.actualPickupDate || "",
+      );
+      const eStr = String(
+        b.dropoffDate || b.endDate || b.actualDropoffDate || "",
+      );
       if (!sStr || !eStr) continue;
 
       const s = new Date(sStr.split("T")[0]);
@@ -1034,7 +1113,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const isSelectableDate = (dateStr: string): boolean => {
     if (!dateStr || dateStr < todayStr) return false;
     if (bookedDatesSet.has(dateStr)) return false;
-    if (availableDatesSet.size > 0 && !availableDatesSet.has(dateStr)) return false;
+    if (availableDatesSet.size > 0 && !availableDatesSet.has(dateStr))
+      return false;
     return true;
   };
 
@@ -1048,7 +1128,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       metadata.generatedAt ||
       todayStr;
     const d = new Date(raw);
-    let candidate = isNaN(d.getTime()) ? todayStr : d.toISOString().split("T")[0];
+    let candidate = isNaN(d.getTime())
+      ? todayStr
+      : d.toISOString().split("T")[0];
     // Never allow past dates
     if (candidate < todayStr) candidate = todayStr;
     return candidate;
@@ -1146,52 +1228,78 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     }
   };
 
-  /* ------------------------ Insurance Tiers ---------------------------- */
-  const [selectedInsurance, setSelectedInsurance] = useState<
-    "basic" | "standard" | "premium"
-  >("basic");
+  /* ------------------------ Insurance / Protection / Addons ---------------------------- */
+  interface ProtectionOption {
+    id: string;
+    name: string;
+    dailyRate: number;
+    rateDisplay: string;
+    description: string;
+  }
 
-  const isPakCurrency = useMemo(() => {
-    return (
-      targetRecord?.location?.country === "Pakistan" ||
-      targetRecord?.country === "Pakistan" ||
-      String(targetRecord?.location?.phone || "").startsWith("+92") ||
-      (priceInfo.numeric >= 500 && Math.floor(priceInfo.numeric) === priceInfo.numeric)
-    );
-  }, [targetRecord, priceInfo.numeric]);
+  const currencyPrefix = priceInfo.symbol || (priceInfo.display.includes("Rs") ? "Rs. " : "$");
+  const baseDailyRate = priceInfo.numeric || 0;
 
-  const insuranceOptions = useMemo(() => {
-    return [
-      {
-        id: "basic" as const,
-        name: "Basic",
-        dailyRate: isPakCurrency ? 500 : 10,
-        rateDisplay: isPakCurrency ? "Rs. 500/day" : "$10/day",
-        description: "Third-party liability only",
-      },
-      {
-        id: "standard" as const,
-        name: "Standard",
-        dailyRate: isPakCurrency ? 1200 : 25,
-        rateDisplay: isPakCurrency ? "Rs. 1,200/day" : "$25/day",
-        description: "Collision Damage Waiver + Theft",
-      },
-      {
-        id: "premium" as const,
-        name: "Premium",
-        dailyRate: isPakCurrency ? 2500 : 45,
-        rateDisplay: isPakCurrency ? "Rs. 2,500/day" : "$45/day",
-        description: "Zero deductible + 24/7 Roadside",
-      },
-    ];
-  }, [isPakCurrency]);
+  const insuranceOptions = useMemo<ProtectionOption[]>(() => {
+    if (!targetRecord) return [];
+    // Only construct options if the API record or response explicitly returned insurance or protection plans
+    const rawOptions =
+      targetRecord.insuranceOptions ||
+      targetRecord.protectionPlans ||
+      targetRecord.insuranceTiers ||
+      targetRecord.addons ||
+      targetRecord.insurance;
 
-  const activeInsuranceTier =
-    insuranceOptions.find((o) => o.id === selectedInsurance) || insuranceOptions[0];
+    if (!Array.isArray(rawOptions) || rawOptions.length === 0) {
+      return [];
+    }
 
-  const baseDailyRate = priceInfo.numeric || 18000;
+    const options: ProtectionOption[] = [];
+    for (let idx = 0; idx < rawOptions.length; idx++) {
+      const opt = rawOptions[idx];
+      if (!opt) continue;
+      if (typeof opt === "string") {
+        options.push({
+          id: opt.toLowerCase().replace(/\s+/g, "_"),
+          name: opt,
+          dailyRate: 0,
+          rateDisplay: "Included",
+          description: "",
+        });
+        continue;
+      }
+      const id = String(opt.id || opt.tier || opt.name || `opt_${idx}`);
+      const name = String(opt.name || opt.title || opt.tier || `Plan ${idx + 1}`);
+      const rate = Number(opt.dailyRate ?? opt.pricePerDay ?? opt.price ?? opt.rate ?? 0);
+      const rateDisplay = rate > 0 ? `${currencyPrefix}${rate.toLocaleString()}/day` : "Included";
+      const description = String(opt.description || opt.coverage || opt.details || "");
+      options.push({
+        id,
+        name,
+        dailyRate: rate,
+        rateDisplay,
+        description,
+      });
+    }
+    return options;
+  }, [targetRecord, currencyPrefix]);
+
+  const [selectedInsurance, setSelectedInsurance] = useState<string>("");
+
+  useEffect(() => {
+    if (insuranceOptions.length > 0) {
+      setSelectedInsurance(insuranceOptions[0].id);
+    } else {
+      setSelectedInsurance("");
+    }
+  }, [insuranceOptions]);
+
+  const activeInsuranceTier = useMemo(() => {
+    return insuranceOptions.find((o) => o.id === selectedInsurance) || null;
+  }, [insuranceOptions, selectedInsurance]);
+
   const subtotalCost = baseDailyRate * rentalDays;
-  const insuranceTotalCost = activeInsuranceTier.dailyRate * rentalDays;
+  const insuranceTotalCost = activeInsuranceTier ? activeInsuranceTier.dailyRate * rentalDays : 0;
   const totalRentalCost = subtotalCost + insuranceTotalCost;
 
   /* ----------------------- Location Picker ----------------------------- */
@@ -1207,11 +1315,16 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
     const addLoc = (loc: any, fallbackId?: string) => {
       if (!loc) return;
-      const id = String(loc.id || loc._id || loc.locationId || fallbackId || "").trim();
+      const id = String(
+        loc.id || loc._id || loc.locationId || fallbackId || "",
+      ).trim();
       if (!id) return;
-      const name = String(loc.name || loc.title || loc.address || "Branch").trim();
+      const name = String(
+        loc.name || loc.title || loc.address || "Branch",
+      ).trim();
       const city = String(loc.city || loc.state || "").trim();
-      const displayName = city && !name.includes(city) ? `${name} — ${city}` : name;
+      const displayName =
+        city && !name.includes(city) ? `${name} — ${city}` : name;
       if (!map.has(id)) {
         map.set(id, { id, name, city, displayName });
       }
@@ -1245,9 +1358,17 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       ? rawData
       : Array.isArray(rawData?.data)
         ? rawData.data
-        : Array.isArray(rawData?.cars)
-          ? rawData.cars
-          : [];
+        : Array.isArray(rawData?.items)
+          ? rawData.items
+          : Array.isArray(rawData?.products)
+            ? rawData.products
+            : Array.isArray(rawData?.records)
+              ? rawData.records
+              : Array.isArray(rawData?.inventory)
+                ? rawData.inventory
+                : Array.isArray(rawData?.cars)
+                  ? rawData.cars
+                  : [];
 
     for (const item of list) {
       if (item?.location) {
@@ -1261,28 +1382,6 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
           },
           item.locationId,
         );
-      }
-    }
-
-    // 3. Fallback: if only 1 branch was returned in search results, include standard branches
-    if (
-      map.size <= 1 &&
-      (targetRecord?.location?.country === "Pakistan" ||
-        String(targetRecord?.location?.phone || "").startsWith("+92"))
-    ) {
-      if (!Array.from(map.values()).some((l) => l.city?.toLowerCase() === "islamabad")) {
-        addLoc({
-          id: "cmtjtc4rg0000517l566a2vg6",
-          name: "Islamabad Blue Area Branch",
-          city: "Islamabad",
-        });
-      }
-      if (!Array.from(map.values()).some((l) => l.city?.toLowerCase() === "lahore")) {
-        addLoc({
-          id: "cmtjtc4rg0000517l566a2vg7",
-          name: "Lahore Airport Branch",
-          city: "Lahore",
-        });
       }
     }
 
@@ -1311,6 +1410,19 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     selectedDropoffLocId === "same"
       ? effectivePickupLocationId
       : selectedDropoffLocId || effectivePickupLocationId;
+
+  const hasMultipleLocations = availableLocations.length > 1;
+  const hasDropoffLocationSupport = useMemo(() => {
+    if (bookingCategory.isVehicle) return true;
+    const tpl = String(metadata.globalCheckoutUrl || metadata.webCheckoutUrl || "");
+    return /{.*(drop[_-]?off|return)[_-]?loc.*}/i.test(tpl);
+  }, [bookingCategory.isVehicle, metadata.globalCheckoutUrl, metadata.webCheckoutUrl]);
+  const staticLocationName =
+    availableLocations[0]?.displayName ||
+    targetRecord?.address ||
+    targetRecord?.location?.name ||
+    targetRecord?.city ||
+    "";
 
   /* ------------------------------ Handlers & State -------------------- */
   const [quantity, setQuantity] = useState(1);
@@ -1342,7 +1454,12 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         setOpenInApp(metadata.shopCatalogUrl);
       }
     };
-  }, [isLocationRecord, productItemUrl, metadata.shopCatalogUrl, metadata.globalCheckoutUrl]);
+  }, [
+    isLocationRecord,
+    productItemUrl,
+    metadata.shopCatalogUrl,
+    metadata.globalCheckoutUrl,
+  ]);
 
   const checkoutUrl = useMemo(() => {
     const tpl = metadata.globalCheckoutUrl || metadata.webCheckoutUrl;
@@ -1362,14 +1479,26 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       dateto: dropoffDate,
       dropoffDate,
       endDate: dropoffDate,
-      carId: targetRecord.id,
+      checkin: pickupDate,
+      checkinDate: pickupDate,
+      checkout: dropoffDate,
+      checkoutDate: dropoffDate,
       id: targetRecord.id,
+      itemId: targetRecord.id,
+      productId: targetRecord.id,
+      carId: targetRecord.id,
+      roomId: targetRecord.id,
       locationId: effectivePickupLocationId,
       pickupLocationId: effectivePickupLocationId,
       dropoffLocationId: effectiveDropoffLocationId,
-      insuranceTier: selectedInsurance.toUpperCase(),
-      insurancetier: selectedInsurance.toUpperCase(),
-      tier: selectedInsurance.toUpperCase(),
+      ...(activeInsuranceTier
+        ? {
+            insuranceTier: activeInsuranceTier.id.toUpperCase(),
+            insurancetier: activeInsuranceTier.id.toUpperCase(),
+            tier: activeInsuranceTier.id.toUpperCase(),
+            insuranceCost: insuranceTotalCost,
+          }
+        : {}),
     };
 
     return interpolateTemplate(String(tpl), targetRecord, extraParams);
@@ -1388,7 +1517,8 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     dropoffDate,
     effectivePickupLocationId,
     effectiveDropoffLocationId,
-    selectedInsurance,
+    activeInsuranceTier,
+    insuranceTotalCost,
   ]);
 
   const reviewWriteAction = useMemo(() => {
@@ -1413,7 +1543,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         title,
         price: (priceInfo.value as number | string) ?? 0,
         image: activeImageUrl || undefined,
-        ...(Object.keys(selectedOptions).length ? { options: selectedOptions } : {}),
+        ...(Object.keys(selectedOptions).length
+          ? { options: selectedOptions }
+          : {}),
         ...(productItemUrl ? { productUrl: productItemUrl } : {}),
         ...(checkoutUrl ? { checkoutUrl } : {}),
       },
@@ -1489,7 +1621,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   /* ------------------- Child item in-place drilldown ------------------ */
   if (selectedChildItem) {
     const parentLocationName = String(
-      targetRecord?.name || targetRecord?.title || targetRecord?.$title || "Location",
+      targetRecord?.name ||
+        targetRecord?.title ||
+        targetRecord?.$title ||
+        "Location",
     );
 
     return (
@@ -1511,7 +1646,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               ? {
                   ...collection,
                   purpose: "product",
-                  itemLabel: collection.itemLabel === "location" ? "item" : collection.itemLabel,
+                  itemLabel:
+                    collection.itemLabel === "location"
+                      ? "item"
+                      : collection.itemLabel,
                 }
               : undefined
           }
@@ -1551,19 +1689,22 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const showSidebar =
     !isLocationRecord &&
     (Boolean(priceInfo.display) ||
-    isRental ||
-    optionGroups.length > 0 ||
-    canAddToCart ||
-    Boolean(productItemUrl) ||
-    Boolean(checkoutUrl));
+      isRental ||
+      optionGroups.length > 0 ||
+      canAddToCart ||
+      Boolean(productItemUrl) ||
+      Boolean(checkoutUrl));
 
   // Calendar rendering math
   const firstDayOfMonth = new Date(calYear, calMonth, 1).getDay();
   const daysInCurrentMonth = new Date(calYear, calMonth + 1, 0).getDate();
   const daysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
 
-  const calendarDays: Array<{ day: number; isCurrent: boolean; dateStr?: string }> =
-    [];
+  const calendarDays: Array<{
+    day: number;
+    isCurrent: boolean;
+    dateStr?: string;
+  }> = [];
   // Dimmed days from previous month
   for (let i = firstDayOfMonth - 1; i >= 0; i--) {
     calendarDays.push({ day: daysInPrevMonth - i, isCurrent: false });
@@ -1639,7 +1780,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         {ratingValue !== null && (
           <div className={styles.ratingRow}>
             <span className={styles.ratingStar}>★</span>
-            <span className={styles.ratingNumber}>{ratingValue.toFixed(1)}</span>
+            <span className={styles.ratingNumber}>
+              {ratingValue.toFixed(1)}
+            </span>
             {reviews.length > 0 && (
               <span className={styles.reviewsCountText}>
                 ({reviews.length} {reviews.length === 1 ? "review" : "reviews"})
@@ -1806,11 +1949,12 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         <div className={styles.locationInventorySection}>
           <div className={styles.locationInventoryHeader}>
             <h3 className={styles.locationInventoryTitle}>
-              <span>🚗</span>
+              <span>{bookingCategory.isVehicle ? "🚗" : bookingCategory.isLodging ? "🏨" : "📍"}</span>
               <span>Available at this Location ({nestedItems.length})</span>
             </h3>
             <p className={styles.locationInventorySubtitle}>
-              Select an option below to view its full details, availability, and booking options.
+              Select an option below to view its full details, availability, and
+              booking options.
             </p>
           </div>
 
@@ -1819,24 +1963,39 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               const itemTitle = (
                 item.make && item.model
                   ? `${item.make} ${item.model}`
-                  : item.name || item.title || item.$title || `Option ${idx + 1}`
+                  : item.name ||
+                    item.title ||
+                    item.$title ||
+                    `Option ${idx + 1}`
               ).trim();
               const itemImg =
                 extractFirstImageUrl(item.image) ||
                 extractFirstImageUrl(item.thumbnail) ||
                 extractFirstImageUrl(item.$image) ||
                 extractFirstImageUrl(item.images);
-              const priceVal = item.dailyRate || item.price || item.rate || item.cost;
-              const curr = item.currency || "PKR";
-              const priceStr = priceVal ? `${curr} ${Number(priceVal).toLocaleString()}` : null;
-              const periodStr = item.dailyRate ? "/ day" : item.pricePeriod || "";
+              const priceVal =
+                item.dailyRate || item.price || item.rate || item.cost;
+              const curr =
+                item.currencySymbol ||
+                item.symbol ||
+                (typeof item.currency === "string" && item.currency ? `${item.currency} ` : "") ||
+                priceInfo.symbol ||
+                "$";
+              const priceStr = priceVal
+                ? `${curr}${typeof priceVal === "number" ? priceVal.toLocaleString() : priceVal}`
+                : null;
+              const periodStr = item.dailyRate
+                ? (bookingCategory.isLodging ? "/ night" : "/ day")
+                : item.pricePeriod || "";
 
               const specs: string[] = [];
+              if (item.category) specs.push(String(item.category));
+              if (item.type) specs.push(String(item.type));
               if (item.transmission) specs.push(String(item.transmission));
               if (item.seats) specs.push(`${item.seats} seats`);
+              if (item.rooms || item.bedrooms) specs.push(`${item.rooms || item.bedrooms} beds`);
               if (item.fuelType) specs.push(String(item.fuelType));
               if (item.year) specs.push(String(item.year));
-              if (item.category) specs.push(String(item.category));
 
               return (
                 <div
@@ -1854,7 +2013,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     {specs.length > 0 && (
                       <div className={styles.locationItemSpecs}>
                         {specs.map((sp, sIdx) => (
-                          <span key={sIdx} className={styles.locationItemSpecChip}>
+                          <span
+                            key={sIdx}
+                            className={styles.locationItemSpecChip}
+                          >
                             {sp}
                           </span>
                         ))}
@@ -1863,10 +2025,27 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                     <div className={styles.locationItemFooter}>
                       {priceStr ? (
                         <div className={styles.locationItemPrice}>
-                          {priceStr} <span style={{ fontSize: 11, fontWeight: 400, color: "#94a3b8" }}>{periodStr}</span>
+                          {priceStr}{" "}
+                          <span
+                            style={{
+                              fontSize: 11,
+                              fontWeight: 400,
+                              color: "#94a3b8",
+                            }}
+                          >
+                            {periodStr}
+                          </span>
                         </div>
                       ) : (
-                        <span style={{ fontSize: 11, color: "#22c55e", fontWeight: 600 }}>Available</span>
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "#22c55e",
+                            fontWeight: 600,
+                          }}
+                        >
+                          Available
+                        </span>
                       )}
                       <button
                         type="button"
@@ -1896,7 +2075,14 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
         {/* Price Row */}
         {priceInfo.display && (
           <div className={styles.bookingRateRow}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
               <h2 className={styles.bookingRatePrice}>{priceInfo.display}</h2>
               {priceInfo.originalDisplay && (
                 <span className={styles.bookingOriginalPrice}>
@@ -1905,7 +2091,9 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
               )}
             </div>
             {priceInfo.period && (
-              <span className={styles.bookingRatePeriod}>{priceInfo.period}</span>
+              <span className={styles.bookingRatePeriod}>
+                {priceInfo.period}
+              </span>
             )}
           </div>
         )}
@@ -1918,230 +2106,259 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                 booking data at all, shows a note prompting the user to select
                 dates for an availability check. */}
             {!allVisibleDatesBlocked ? (
-            <div className={styles.calendarCard}>
-              <div className={styles.calendarMonthHeader}>
-                <button
-                  type="button"
-                  className={styles.calNavBtn}
-                  onClick={handlePrevMonth}
-                  aria-label="Previous month"
-                >
-                  &lt;
-                </button>
-                <span>
-                  {MONTH_NAMES[calMonth]} {calYear}
-                </span>
-                <button
-                  type="button"
-                  className={styles.calNavBtn}
-                  onClick={handleNextMonth}
-                  aria-label="Next month"
-                >
-                  &gt;
-                </button>
-              </div>
+              <div className={styles.calendarCard}>
+                <div className={styles.calendarMonthHeader}>
+                  <button
+                    type="button"
+                    className={styles.calNavBtn}
+                    onClick={handlePrevMonth}
+                    aria-label="Previous month"
+                  >
+                    &lt;
+                  </button>
+                  <span>
+                    {MONTH_NAMES[calMonth]} {calYear}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.calNavBtn}
+                    onClick={handleNextMonth}
+                    aria-label="Next month"
+                  >
+                    &gt;
+                  </button>
+                </div>
 
-              <div className={styles.calDaysHeader}>
-                {DAY_NAMES.map((dn) => (
-                  <span key={dn}>{dn}</span>
-                ))}
-              </div>
+                <div className={styles.calDaysHeader}>
+                  {DAY_NAMES.map((dn) => (
+                    <span key={dn}>{dn}</span>
+                  ))}
+                </div>
 
-              <div className={styles.calDaysGrid}>
-                {calendarDays.map((item, idx) => {
-                  if (!item.isCurrent || !item.dateStr) {
+                <div className={styles.calDaysGrid}>
+                  {calendarDays.map((item, idx) => {
+                    if (!item.isCurrent || !item.dateStr) {
+                      return (
+                        <span
+                          key={`dim-${idx}`}
+                          className={`${styles.calDay} ${styles.calDayDimmed}`}
+                        >
+                          {item.day}
+                        </span>
+                      );
+                    }
+                    const isStart = item.dateStr === pickupDate;
+                    const isEnd = item.dateStr === dropoffDate;
+                    const inRange =
+                      pickupDate &&
+                      dropoffDate &&
+                      item.dateStr > pickupDate &&
+                      item.dateStr < dropoffDate;
+
+                    const isPast = item.dateStr
+                      ? item.dateStr < todayStr
+                      : false;
+                    const isBooked = item.dateStr
+                      ? bookedDatesSet.has(item.dateStr)
+                      : false;
+                    const isUnavailable = item.dateStr
+                      ? availableDatesSet.size > 0 &&
+                        !availableDatesSet.has(item.dateStr)
+                      : false;
+                    const isDisabled = isPast || isBooked || isUnavailable;
+
                     return (
-                      <span
-                        key={`dim-${idx}`}
-                        className={`${styles.calDay} ${styles.calDayDimmed}`}
+                      <button
+                        key={`day-${item.dateStr}`}
+                        type="button"
+                        disabled={isDisabled}
+                        title={
+                          isBooked
+                            ? "Booked / Unavailable"
+                            : isUnavailable
+                              ? "Unavailable"
+                              : isPast
+                                ? "Past date"
+                                : undefined
+                        }
+                        className={`${styles.calDay} ${
+                          isStart || isEnd
+                            ? styles.calDaySelected
+                            : inRange
+                              ? styles.calDayInRange
+                              : isBooked
+                                ? styles.calDayBooked
+                                : isPast || isUnavailable
+                                  ? styles.calDayDisabled
+                                  : ""
+                        }`}
+                        onClick={() => handleDateClick(item.dateStr!)}
                       >
                         {item.day}
-                      </span>
+                      </button>
                     );
-                  }
-                  const isStart = item.dateStr === pickupDate;
-                  const isEnd = item.dateStr === dropoffDate;
-                  const inRange =
-                    pickupDate &&
-                    dropoffDate &&
-                    item.dateStr > pickupDate &&
-                    item.dateStr < dropoffDate;
+                  })}
+                </div>
 
-                  const isPast = item.dateStr ? item.dateStr < todayStr : false;
-                  const isBooked = item.dateStr ? bookedDatesSet.has(item.dateStr) : false;
-                  const isUnavailable = item.dateStr
-                    ? availableDatesSet.size > 0 && !availableDatesSet.has(item.dateStr)
-                    : false;
-                  const isDisabled = isPast || isBooked || isUnavailable;
+                <p className={styles.calStatusNote}>
+                  {noBookingData && !pickupDate
+                    ? "Select dates to check availability"
+                    : pickupDate && dropoffDate
+                      ? `${rentalDays} ${rentalDays === 1 ? bookingCategory.unitLabel : bookingCategory.unitPlural} selected (${pickupDate} to ${dropoffDate})`
+                      : pickupDate
+                        ? `${bookingCategory.startLabel}: ${pickupDate} — Select ${bookingCategory.endLabel.toLowerCase()}`
+                        : `Select ${bookingCategory.startLabel.toLowerCase()}`}
+                </p>
+              </div>
+            ) : (
+              <>
+                {allVisibleDatesBlocked && (
+                  <p
+                    className={styles.calStatusNote}
+                    style={{ marginBottom: 8 }}
+                  >
+                    All dates in this period are booked. Select dates manually
+                    below — we'll check for the next available slot.
+                  </p>
+                )}
+                <div className={styles.bookingField}>
+                  <label className={styles.fieldLabel}>{bookingCategory.startLabel}</label>
+                  <input
+                    type="date"
+                    className={styles.selectInput}
+                    min={todayStr}
+                    value={pickupDate}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setPickupDate(v);
+                      if (dropoffDate && dropoffDate <= v) setDropoffDate("");
+                    }}
+                  />
+                </div>
+                <div className={styles.bookingField}>
+                  <label className={styles.fieldLabel}>{bookingCategory.endLabel}</label>
+                  <input
+                    type="date"
+                    className={styles.selectInput}
+                    min={pickupDate || todayStr}
+                    value={dropoffDate}
+                    onChange={(e) => setDropoffDate(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
 
-                  return (
-                    <button
-                      key={`day-${item.dateStr}`}
-                      type="button"
-                      disabled={isDisabled}
-                      title={
-                        isBooked
-                          ? "Booked / Unavailable"
-                          : isUnavailable
-                            ? "Unavailable"
-                            : isPast
-                              ? "Past date"
-                              : undefined
-                      }
-                      className={`${styles.calDay} ${
-                        isStart || isEnd
-                          ? styles.calDaySelected
-                          : inRange
-                            ? styles.calDayInRange
-                            : isBooked
-                              ? styles.calDayBooked
-                              : isPast || isUnavailable
-                                ? styles.calDayDisabled
-                                : ""
-                      }`}
-                      onClick={() => handleDateClick(item.dateStr!)}
+            {/* Location Selector (Dynamic based on data) */}
+            {hasMultipleLocations ? (
+              <>
+                <div className={styles.bookingField}>
+                  <label className={styles.fieldLabel}>{bookingCategory.locationLabel}</label>
+                  <select
+                    className={styles.selectInput}
+                    value={selectedPickupLocId}
+                    onChange={(e) => setSelectedPickupLocId(e.target.value)}
+                  >
+                    {availableLocations.map((loc) => (
+                      <option key={`pick-${loc.id}`} value={loc.id}>
+                        {loc.displayName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {hasDropoffLocationSupport && (
+                  <div className={styles.bookingField}>
+                    <label className={styles.fieldLabel}>{bookingCategory.dropoffLabel}</label>
+                    <select
+                      className={styles.selectInput}
+                      value={selectedDropoffLocId}
+                      onChange={(e) => setSelectedDropoffLocId(e.target.value)}
                     >
-                      {item.day}
-                    </button>
+                      <option value="same">Same as {bookingCategory.locationLabel.toLowerCase()}</option>
+                      {availableLocations.map((loc) => (
+                        <option key={`drop-${loc.id}`} value={loc.id}>
+                          {loc.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </>
+            ) : staticLocationName ? (
+              <div className={styles.bookingField}>
+                <label className={styles.fieldLabel}>{bookingCategory.locationLabel}</label>
+                <div className={styles.staticLocationInfo}>
+                  <span className={styles.staticLocationIcon}>📍</span>
+                  <span className={styles.staticLocationText}>{staticLocationName}</span>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Optional Protection / Insurance Plans - only rendered if returned by API */}
+            {insuranceOptions.length > 0 && (
+              <div className={styles.insuranceSection}>
+                <label className={styles.fieldLabel}>🛡️ Protection & Coverage</label>
+                {insuranceOptions.map((opt) => {
+                  const isSelected = selectedInsurance === opt.id;
+                  return (
+                    <label
+                      key={opt.id}
+                      className={`${styles.insuranceOption} ${
+                        isSelected ? styles.insuranceOptionSelected : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="insuranceTier"
+                        value={opt.id}
+                        checked={isSelected}
+                        onChange={() => setSelectedInsurance(opt.id)}
+                        className={styles.insuranceRadio}
+                      />
+                      <div className={styles.insuranceContent}>
+                        <div className={styles.insuranceTitleRow}>
+                          <span className={styles.insuranceName}>{opt.name}</span>
+                          <span className={styles.insurancePrice}>
+                            {opt.rateDisplay}
+                          </span>
+                        </div>
+                        {opt.description ? (
+                          <span className={styles.insuranceDesc}>
+                            {opt.description}
+                          </span>
+                        ) : null}
+                      </div>
+                    </label>
                   );
                 })}
               </div>
-
-              <p className={styles.calStatusNote}>
-                {noBookingData && !pickupDate
-                  ? "Select dates to check availability"
-                  : pickupDate && dropoffDate
-                    ? `${rentalDays} day${rentalDays === 1 ? "" : "s"} selected (${pickupDate} to ${dropoffDate})`
-                    : pickupDate
-                      ? `Pickup: ${pickupDate} — Select drop-off date`
-                      : "Select pickup date"}
-              </p>
-            </div>
-            ) : (
-            <>
-              {allVisibleDatesBlocked && (
-                <p className={styles.calStatusNote} style={{ marginBottom: 8 }}>
-                  All dates in this period are booked. Select dates manually below — we'll check for the next available slot.
-                </p>
-              )}
-              <div className={styles.bookingField}>
-                <label className={styles.fieldLabel}>Pickup date</label>
-                <input
-                  type="date"
-                  className={styles.selectInput}
-                  min={todayStr}
-                  value={pickupDate}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setPickupDate(v);
-                    if (dropoffDate && dropoffDate <= v) setDropoffDate("");
-                  }}
-                />
-              </div>
-              <div className={styles.bookingField}>
-                <label className={styles.fieldLabel}>Drop-off date</label>
-                <input
-                  type="date"
-                  className={styles.selectInput}
-                  min={pickupDate || todayStr}
-                  value={dropoffDate}
-                  onChange={(e) => setDropoffDate(e.target.value)}
-                />
-              </div>
-            </>
             )}
-
-            {/* Pickup Location Dropdown */}
-            <div className={styles.bookingField}>
-              <label className={styles.fieldLabel}>Pickup location</label>
-              <select
-                className={styles.selectInput}
-                value={selectedPickupLocId}
-                onChange={(e) => setSelectedPickupLocId(e.target.value)}
-              >
-                {availableLocations.map((loc) => (
-                  <option key={`pick-${loc.id}`} value={loc.id}>
-                    {loc.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Drop-off Location Dropdown */}
-            <div className={styles.bookingField}>
-              <label className={styles.fieldLabel}>Drop-off location</label>
-              <select
-                className={styles.selectInput}
-                value={selectedDropoffLocId}
-                onChange={(e) => setSelectedDropoffLocId(e.target.value)}
-              >
-                <option value="same">Same as pickup</option>
-                {availableLocations.map((loc) => (
-                  <option key={`drop-${loc.id}`} value={loc.id}>
-                    {loc.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Insurance Tiers */}
-            <div className={styles.insuranceSection}>
-              <label className={styles.fieldLabel}>🛡️ Insurance</label>
-              {insuranceOptions.map((opt) => {
-                const isSelected = selectedInsurance === opt.id;
-                return (
-                  <label
-                    key={opt.id}
-                    className={`${styles.insuranceOption} ${
-                      isSelected ? styles.insuranceOptionSelected : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="insuranceTier"
-                      value={opt.id}
-                      checked={isSelected}
-                      onChange={() => setSelectedInsurance(opt.id)}
-                      className={styles.insuranceRadio}
-                    />
-                    <div className={styles.insuranceContent}>
-                      <div className={styles.insuranceTitleRow}>
-                        <span className={styles.insuranceName}>{opt.name}</span>
-                        <span className={styles.insurancePrice}>
-                          {opt.rateDisplay}
-                        </span>
-                      </div>
-                      <span className={styles.insuranceDesc}>
-                        {opt.description}
-                      </span>
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
 
             {/* Price Calculation Breakdown */}
             <div className={styles.costBreakdown}>
               <div className={styles.costRow}>
                 <span>
-                  {priceInfo.display} × {rentalDays} day{rentalDays === 1 ? "" : "s"}
+                  {priceInfo.display} × {rentalDays}{" "}
+                  {rentalDays === 1 ? bookingCategory.unitLabel : bookingCategory.unitPlural}
                 </span>
                 <span>
-                  {isPakCurrency ? "Rs. " : "$"}
+                  {currencyPrefix}
                   {subtotalCost.toLocaleString()}
                 </span>
               </div>
-              <div className={styles.costRow}>
-                <span>Insurance ({activeInsuranceTier.name})</span>
-                <span>
-                  {isPakCurrency ? "Rs. " : "$"}
-                  {insuranceTotalCost.toLocaleString()}
-                </span>
-              </div>
+              {insuranceTotalCost > 0 && activeInsuranceTier && (
+                <div className={styles.costRow}>
+                  <span>Protection ({activeInsuranceTier.name})</span>
+                  <span>
+                    {currencyPrefix}
+                    {insuranceTotalCost.toLocaleString()}
+                  </span>
+                </div>
+              )}
               <div className={styles.costTotalRow}>
                 <span>Total</span>
                 <span>
-                  {isPakCurrency ? "Rs. " : "$"}
+                  {currencyPrefix}
                   {totalRentalCost.toLocaleString()}
                 </span>
               </div>
@@ -2211,7 +2428,10 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
                             : ""
                         }`}
                         onClick={() =>
-                          setSelectedOptions((prev) => ({ ...prev, [g.key]: val }))
+                          setSelectedOptions((prev) => ({
+                            ...prev,
+                            [g.key]: val,
+                          }))
                         }
                       >
                         {label}
@@ -2224,29 +2444,29 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
             {/* Quantity Selector */}
             {!isLocationRecord && (
-            <div className={styles.qtySection}>
-              <label className={styles.fieldLabel}>Quantity</label>
-              <div className={styles.qtyRow}>
-                <button
-                  type="button"
-                  className={styles.qtyBtn}
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  disabled={quantity <= 1}
-                  aria-label="Decrease quantity"
-                >
-                  −
-                </button>
-                <span className={styles.qtyDisplay}>{quantity}</span>
-                <button
-                  type="button"
-                  className={styles.qtyBtn}
-                  onClick={() => setQuantity((q) => q + 1)}
-                  aria-label="Increase quantity"
-                >
-                  +
-                </button>
+              <div className={styles.qtySection}>
+                <label className={styles.fieldLabel}>Quantity</label>
+                <div className={styles.qtyRow}>
+                  <button
+                    type="button"
+                    className={styles.qtyBtn}
+                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={quantity <= 1}
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </button>
+                  <span className={styles.qtyDisplay}>{quantity}</span>
+                  <button
+                    type="button"
+                    className={styles.qtyBtn}
+                    onClick={() => setQuantity((q) => q + 1)}
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-            </div>
             )}
 
             {/* Trust Badges */}
@@ -2289,43 +2509,48 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
             )}
 
             {/* Action Buttons: Add to Cart and Buy Now — only for product purpose (never for physical locations/branches/shops) */}
-            {collection?.purpose !== "profile" && collection?.purpose !== "utility" && collection?.purpose !== "analytics" && !isLocationRecord && (
-            <div className={styles.buttonGroup}>
-              <button
-                type="button"
-                className={styles.addToCartBtn}
-                onClick={handleAddToCart}
-              >
-                <span>🛒</span>
-                <span>Add to cart</span>
-              </button>
+            {collection?.purpose !== "profile" &&
+              collection?.purpose !== "utility" &&
+              collection?.purpose !== "analytics" &&
+              !isLocationRecord && (
+                <div className={styles.buttonGroup}>
+                  <button
+                    type="button"
+                    className={styles.addToCartBtn}
+                    onClick={handleAddToCart}
+                  >
+                    <span>🛒</span>
+                    <span>Add to cart</span>
+                  </button>
 
-              <button
-                type="button"
-                className={styles.buyNowBtn}
-                onClick={checkoutUrl ? handleBuyNowOrBook : handleBuyNowWithCart}
-              >
-                <span>⚡</span>
-                <span>Buy now</span>
-              </button>
+                  <button
+                    type="button"
+                    className={styles.buyNowBtn}
+                    onClick={
+                      checkoutUrl ? handleBuyNowOrBook : handleBuyNowWithCart
+                    }
+                  >
+                    <span>⚡</span>
+                    <span>Buy now</span>
+                  </button>
 
-              {productItemUrl && (
-                <button
-                  type="button"
-                  className={styles.viewOnCompanyBtn}
-                  onClick={handleViewOnCompany}
-                >
-                  <span>↗</span>
-                  <span>View on {companyName}</span>
-                </button>
+                  {productItemUrl && (
+                    <button
+                      type="button"
+                      className={styles.viewOnCompanyBtn}
+                      onClick={handleViewOnCompany}
+                    >
+                      <span>↗</span>
+                      <span>View on {companyName}</span>
+                    </button>
+                  )}
+                </div>
               )}
-            </div>
-            )}
 
             {!isLocationRecord && (
-            <p className={styles.bookingNote}>
-              You won't be charged yet — review and confirm on the next step.
-            </p>
+              <p className={styles.bookingNote}>
+                You won't be charged yet — review and confirm on the next step.
+              </p>
             )}
           </>
         )}

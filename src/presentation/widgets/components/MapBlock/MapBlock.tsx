@@ -21,9 +21,12 @@ export const MapBlock: React.FC<MapBlockProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string | number, L.Marker>>(new Map());
+  const fittedSignatureRef = useRef<string>("");
+  const onSelectRef = useRef(onSelectRecord);
+  onSelectRef.current = onSelectRecord;
 
   const getRecordKey = (rec: Record<string, any>, idx: number): string | number => {
-    return rec.id ?? rec._id ?? rec.key ?? rec.title ?? idx;
+    return rec.id ?? rec._id ?? rec.key ?? rec.$title ?? rec.title ?? rec.name ?? idx;
   };
 
   // 1. Initialize Leaflet Map
@@ -33,16 +36,27 @@ export const MapBlock: React.FC<MapBlockProps> = ({
     const map = L.map(mapContainerRef.current, {
       center: [24.8607, 67.0011],
       zoom: 12,
+      minZoom: 2,
+      maxZoom: 19,
       zoomControl: true,
       attributionControl: true,
+      zoomAnimation: true,
+      fadeAnimation: true,
+      markerZoomAnimation: true,
+      worldCopyJump: true,
     });
 
-    // High-performance CartoDB Voyager / Dark Matter tiles (100% free, dark styled, zero API key needed)
+    // High-performance CartoDB Voyager tiles with extra buffering to prevent tile tearing on pan/zoom
     L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
       {
         subdomains: "abcd",
+        minZoom: 2,
         maxZoom: 19,
+        maxNativeZoom: 18,
+        keepBuffer: 8,
+        updateWhenZooming: false,
+        updateWhenIdle: true,
         attribution:
           '&copy; <a href="https://carto.com/" target="_blank" rel="noopener">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OSM</a>',
       },
@@ -50,25 +64,48 @@ export const MapBlock: React.FC<MapBlockProps> = ({
 
     mapInstanceRef.current = map;
 
-    // Handle container resizing to prevent tile tearing
-    const resizeObserver = new ResizeObserver(() => {
-      map.invalidateSize();
+    // Handle container resizing with debouncing to prevent mid-drag tile tearing
+    let prevWidth = 0;
+    let prevHeight = 0;
+    let resizeTimer: any = null;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (Math.abs(width - prevWidth) > 2 || Math.abs(height - prevHeight) > 2) {
+          prevWidth = width;
+          prevHeight = height;
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(() => {
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.invalidateSize({ debounceMoveend: true });
+            }
+          }, 120);
+        }
+      }
     });
+
     if (mapContainerRef.current) {
       resizeObserver.observe(mapContainerRef.current);
     }
 
     return () => {
+      clearTimeout(resizeTimer);
       resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
 
-  // 2. Render Markers
+  // 2. Render Markers & Fit Bounds (only when records set genuinely changes)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
+
+    // Compute signature to avoid resetting bounds during drag/zoom/render
+    const recordsSignature = records
+      .map((r, i) => `${r.id ?? r._id ?? i}:${r.latitude ?? r.lat}:${r.longitude ?? r.lng}`)
+      .join("|");
 
     // Clear previous markers
     markersRef.current.forEach((marker) => marker.remove());
@@ -104,7 +141,7 @@ export const MapBlock: React.FC<MapBlockProps> = ({
 
       marker.on("click", (e) => {
         L.DomEvent.stopPropagation(e);
-        onSelectRecord?.(rec, idx);
+        onSelectRef.current?.(rec, idx);
       });
 
       marker.addTo(map);
@@ -114,12 +151,14 @@ export const MapBlock: React.FC<MapBlockProps> = ({
       hasBounds = true;
     });
 
-    if (hasBounds) {
+    // Only fit bounds ONCE per distinct record set (never mid-zoom or on selection change)
+    if (hasBounds && fittedSignatureRef.current !== recordsSignature) {
+      fittedSignatureRef.current = recordsSignature;
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
     }
-  }, [records, onSelectRecord]);
+  }, [records]);
 
-  // 3. Update Active Marker Styling & Pan on Selection
+  // 3. Update Active Marker Styling & Smoothly Pan on Selection
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map || !selectedRecord) return;
@@ -144,7 +183,10 @@ export const MapBlock: React.FC<MapBlockProps> = ({
 
       if (isSelected) {
         const latLng = marker.getLatLng();
-        map.panTo(latLng, { animate: true, duration: 0.5 });
+        // Pan only if the marker is not already comfortably visible in the viewport
+        if (!map.getBounds().pad(-0.1).contains(latLng)) {
+          map.panTo(latLng, { animate: true, duration: 0.4 });
+        }
       }
     });
   }, [selectedRecord]);
