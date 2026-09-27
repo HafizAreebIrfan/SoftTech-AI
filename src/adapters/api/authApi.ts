@@ -69,7 +69,8 @@ export const saveCompanyUiSelection = async (
 };
 
 export const verifySession = async (): Promise<{ user?: User }> => {
-  return get(`${isDev}/api/company/verify-session`);
+  const url = `${isDev}/api/company/login`;
+  return get(url, { skipRedirect: true });
 };
 
 export const logout = async (): Promise<any> => {
