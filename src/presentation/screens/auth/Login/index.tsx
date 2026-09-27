@@ -1,17 +1,13 @@
-import React, { FC } from "react";
+import { FC } from "react";
 import { useMutation } from "@tanstack/react-query";
-import styles from "../../../../styles/login.module.css";
 import { login } from "../../../../adapters/api/authApi";
 import {
   EmailIcon,
   EyeIcon,
   EyeOffIcon,
-  HelpIcon,
-  LeftArrowIcon,
   LockIcon,
   MoonIcon,
   PhoneIcon,
-  RightArrowIcon,
   SearchIcon,
   SpinnerIcon,
   SunIcon,
@@ -31,15 +27,7 @@ const loginSchema = z.object({
 const Login: FC = () => {
   const { colors, isDark, toggleTheme } = useThemeStore();
   const { setAuth } = useAuthStore();
-  const {
-    email,
-    password,
-    setEmail,
-    setPassword,
-    showPassword,
-    togglepasswordvis,
-    fillCredentials: fillCredentialsStore,
-  } = useLoginStore();
+  const { email, password, showPassword, togglepasswordvis } = useLoginStore();
   const navigate = useNavigate();
 
   const {
@@ -55,8 +43,6 @@ const Login: FC = () => {
         email: data?.email || data?.user?.email || "",
         role: data?.role || data?.user?.role || "",
       };
-      console.log(user.role);
-
       setAuth(user);
       showToast("Logged in successfully!", "success");
       navigate({
@@ -98,7 +84,7 @@ const Login: FC = () => {
     <div
       className="min-h-screen w-full flex overflow-hidden font-sans transition-colors duration-300"
       style={{
-        background: isDark ? "#0b0f19" : "transparent",
+        background: isDark ? "#0b0f19" : "#fff",
       }}
     >
       {/* LEFT COLUMN: FORM */}

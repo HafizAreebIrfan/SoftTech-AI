@@ -23,7 +23,7 @@ const ForgotPassword: FC = () => {
     <div
       className={`min-h-screen w-full flex overflow-hidden font-sans transition-colors duration-300`}
       style={{
-        background: isDark ? "#0b0f19" : "transparent",
+        background: isDark ? "#0b0f19" : "#fff",
       }}
     >
       {/* LEFT COLUMN: Form Area */}
@@ -106,7 +106,7 @@ const ForgotPassword: FC = () => {
           padding: "52px",
           borderTopLeftRadius: "72px",
           borderBottomLeftRadius: "72px",
-          background: isDark ? "#020304ff" : "#f8fafc",
+          background: isDark ? "#020304ff" : "#eff5fcff",
         }}
       >
         <div
