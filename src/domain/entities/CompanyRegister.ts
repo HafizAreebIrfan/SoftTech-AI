@@ -1,3 +1,5 @@
+import { PlatformType, WidgetAudience } from "./GenericWidget";
+
 export interface CompanyInformation {
   id: string;
   name: string;
@@ -22,10 +24,13 @@ export interface ApisInformation {
   params: any[];
   body?: any[];
   samplequery?: any;
-  sampleresponse?: any;
-  platformType?: string;
+  sampleResponse?: any;
+  platformType?: PlatformType;
+  audience?: WidgetAudience;
   webCheckoutUrl?: string;
   mobileDeepLink?: string;
+  isRealtimeApi?: boolean;
+  streamUrl?: string;
   apiSchema?: any;
   schema?: any;
   authHeader?: string;
@@ -36,10 +41,13 @@ export interface ApisInformation {
     clientId?: string;
     clientSecret?: string;
   };
+  mcpDescription?: string;
 }
 
 export interface CompanyUIInformation {
-  layout: string;
+  layout?: string;
+  themeColor?: string;
+  audienceDefault?: string;
 }
 
 export interface SignupResonse {

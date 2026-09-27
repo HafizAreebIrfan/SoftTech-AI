@@ -42,13 +42,41 @@ export const useThemeStore = create<ThemeStore>()((set) => ({
     }),
 }));
 
-export const useApplyGlobalThemeVars = () => {
+const isHex = (color?: string): color is string =>
+  typeof color === "string" && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color.trim());
+
+const parseHex = (hex: string): [number, number, number] => {
+  let c = hex.trim().replace("#", "");
+  if (c.length === 3) c = c.split("").map((x) => x + x).join("");
+  const num = parseInt(c, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+};
+
+const darken = (hex: string, percent = 12): string => {
+  if (!isHex(hex)) return hex;
+  const [r, g, b] = parseHex(hex);
+  const factor = 1 - percent / 100;
+  const dr = Math.max(0, Math.floor(r * factor));
+  const dg = Math.max(0, Math.floor(g * factor));
+  const db = Math.max(0, Math.floor(b * factor));
+  return `#${((1 << 24) + (dr << 16) + (dg << 8) + db).toString(16).slice(1)}`;
+};
+
+const readableOn = (hex: string): string => {
+  if (!isHex(hex)) return "#ffffff";
+  const [r, g, b] = parseHex(hex);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 128 ? "#0f172a" : "#ffffff";
+};
+
+export const useApplyGlobalThemeVars = (accent?: string) => {
   const colors = useThemeStore((state) => state.colors);
   const isDark = useThemeStore((state) => state.isDark);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
+
 
     // Header & Navigation
     root.style.setProperty("--app-header-bg", colors.Headerbackground);
@@ -296,6 +324,53 @@ export const useApplyGlobalThemeVars = () => {
     root.style.setProperty("--app-error-badge-border", colors.ErrorBadgeBorder);
     root.style.setProperty("--app-table-divider", colors.TableDivider);
 
+    /*--*/
+    /* Widget Theme Variables */
+    root.style.setProperty("--widget-container-bg", colors.WidgetContainerBg);
+    root.style.setProperty(
+      "--widget-container-border",
+      colors.WidgetContainerBorder,
+    );
+    root.style.setProperty("--widget-card-bg", colors.WidgetCardBg);
+    root.style.setProperty("--widget-card-border", colors.WidgetCardBorder);
+    root.style.setProperty("--widget-card-hover", colors.WidgetCardHover);
+    root.style.setProperty("--widget-header-title", colors.WidgetHeaderTitle);
+    root.style.setProperty(
+      "--widget-header-subtitle",
+      colors.WidgetHeaderSubtitle,
+    );
+    root.style.setProperty("--widget-metric-val", colors.WidgetMetricVal);
+    root.style.setProperty("--widget-metric-label", colors.WidgetMetricLabel);
+    root.style.setProperty("--widget-badge-bg", colors.WidgetBadgeBg);
+    root.style.setProperty("--widget-badge-text", colors.WidgetBadgeText);
+    root.style.setProperty("--widget-badge-border", colors.WidgetBadgeBorder);
+    root.style.setProperty("--widget-chart-primary", colors.WidgetChartPrimary);
+    root.style.setProperty(
+      "--widget-chart-secondary",
+      colors.WidgetChartSecondary,
+    );
+    root.style.setProperty("--widget-chart-grid", colors.WidgetChartGrid);
+
+    // Palette Swatches
+    root.style.setProperty("--swatch-indigo", colors.SwatchIndigo);
+    root.style.setProperty("--swatch-emerald", colors.SwatchEmerald);
+    root.style.setProperty("--swatch-crimson", colors.SwatchCrimson);
+    root.style.setProperty("--swatch-ocean", colors.SwatchOcean);
+    root.style.setProperty("--swatch-violet", colors.SwatchViolet);
+    root.style.setProperty("--swatch-amber", colors.SwatchAmber);
+    root.style.setProperty("--swatch-slate", colors.SwatchSlate);
+
+    // Widget Accent Variables
+    const effectiveAccent = isHex(accent) ? accent.trim() : colors.BrandIndigo;
+    const accentHover = darken(effectiveAccent, 12);
+    const accentContrast = readableOn(effectiveAccent);
+
+    root.style.setProperty("--widget-accent", effectiveAccent);
+    root.style.setProperty("--widget-accent-hover", accentHover);
+    root.style.setProperty("--widget-accent-contrast", accentContrast);
+    root.style.setProperty("--BrandIndigo", effectiveAccent);
+
     root.setAttribute("data-theme", isDark ? "dark" : "light");
-  }, [colors, isDark]);
+  }, [colors, isDark, accent]);
 };
+

@@ -1,7 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { SignupStore, ParamRow } from "../../interfaces/signup.interface";
-import { saveCompanyApiDetails } from "../../adapters/api/authApi";
+import {
+  SignupStore,
+  ParamRow,
+  ApiConnection,
+} from "../../interfaces/auth/signup.interface";
+import {
+  saveCompanyApiDetails,
+  analyzeSingleCompanyApi,
+  saveCompanyUiSelection,
+} from "../../adapters/api/authApi";
 import { showToast } from "../../utils/toasts";
 
 const getBaseUrl = (urlStr: string): string => {
@@ -22,35 +30,175 @@ const getEndpointPath = (urlStr: string): string => {
   }
 };
 
+export function trimSampleJson(jsonStr: string, maxLen = 8000): string {
+  if (!jsonStr || typeof jsonStr !== "string") return jsonStr;
+  if (jsonStr.length <= maxLen) return jsonStr;
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+
+    const truncateArrays = (obj: any, maxItems = 2): any => {
+      if (Array.isArray(obj)) {
+        return obj
+          .slice(0, maxItems)
+          .map((item) => truncateArrays(item, maxItems));
+      }
+      if (obj !== null && typeof obj === "object") {
+        const result: Record<string, any> = {};
+        for (const key of Object.keys(obj)) {
+          result[key] = truncateArrays(obj[key], maxItems);
+        }
+        return result;
+      }
+      return obj;
+    };
+
+    const trimmed = truncateArrays(parsed, 2);
+    return JSON.stringify(trimmed, null, 2);
+  } catch (e) {
+    return jsonStr.slice(0, maxLen);
+  }
+}
+
+export const detectDefaultWidgetAndMapToggles = (
+  api: Partial<ApiConnection>,
+): { isWidgetEnabled: boolean; isMapViewEnabled: boolean } => {
+  const method = String(api.apiMethod || "GET").toUpperCase();
+  const name = String(api.apiName || "").toLowerCase();
+  const endpoint = String(api.apiEndpoint || "").toLowerCase();
+
+  // Helper / utility / auth / review / mutation / analytics APIs default to OFF:
+  const isActionOrMutation = method !== "GET";
+  const isProfileOrAuth =
+    /user|profile|account|auth|me\b|login|signup/i.test(endpoint) ||
+    /profile|account|current user|user profile/i.test(name);
+  const isHelperOrUtility =
+    /categor|option|filter|tag|brand|availab|rating|review|stat|analytic|report|spending/i.test(
+      endpoint,
+    ) ||
+    /categor|option|filter|tag|brand|availab|rating|review|stat|analytic|report|spending/i.test(
+      name,
+    );
+
+  // Major / Important APIs that should default to ON:
+  // - Search, Listings, Catalog, Products, Cars, Rooms, Hotels, Packages, Locations, Single item detail
+  const isMajorApi =
+    !isActionOrMutation && !isProfileOrAuth && !isHelperOrUtility;
+
+  // Map toggle defaults to true ONLY IF endpoint or name mentions map, location, branch, store, or geo
+  const hasMapSignal =
+    /location|map|branch|store|nearby|places|geo|coordinates/i.test(endpoint) ||
+    /location|map|branch|store|nearby|places/i.test(name);
+
+  return {
+    isWidgetEnabled: isMajorApi,
+    isMapViewEnabled: isMajorApi && hasMapSignal,
+  };
+};
+
 export const parseJsonToRows = (
   jsonStr: string | undefined,
   defaultDynamic: boolean = true,
 ): ParamRow[] => {
   if (!jsonStr || !jsonStr.trim()) {
-    return [{ id: `row-${Date.now()}-0`, key: "", value: "", isDynamic: defaultDynamic }];
+    return [
+      {
+        id: `row-${Date.now()}-0`,
+        key: "",
+        value: "",
+        isDynamic: defaultDynamic,
+      },
+    ];
   }
   try {
     const parsed = JSON.parse(jsonStr);
 
     if (Array.isArray(parsed)) {
       if (parsed.length === 0) {
-        return [{ id: `row-${Date.now()}-0`, key: "", value: "", isDynamic: defaultDynamic }];
+        return [
+          {
+            id: `row-${Date.now()}-0`,
+            key: "",
+            value: "",
+            isDynamic: defaultDynamic,
+          },
+        ];
       }
-      return parsed.map((item, idx) => ({
-        id: `row-${Date.now()}-${idx}`,
-        key: String(item.key ?? item.name ?? ""),
-        value: String(item.value ?? ""),
-        isDynamic: item.isDynamic !== undefined ? Boolean(item.isDynamic) : defaultDynamic,
-      }));
+
+      const rows: ParamRow[] = [];
+      parsed.forEach((item, idx) => {
+        let normalizedItem = item;
+        if (typeof item === "string" && item.trim().startsWith("{")) {
+          try {
+            normalizedItem = JSON.parse(item);
+          } catch {
+            // Keep string if invalid
+          }
+        }
+
+        if (
+          typeof normalizedItem === "object" &&
+          normalizedItem !== null &&
+          !("key" in normalizedItem)
+        ) {
+          Object.entries(normalizedItem).forEach(([k, v], subIdx) => {
+            rows.push({
+              id: `row-${Date.now()}-${idx}-${subIdx}`,
+              key: k,
+              value:
+                typeof v === "object" ? JSON.stringify(v) : String(v ?? ""),
+              isDynamic: defaultDynamic,
+            });
+          });
+        } else if (
+          typeof normalizedItem === "object" &&
+          normalizedItem !== null
+        ) {
+          rows.push({
+            id: `row-${Date.now()}-${idx}`,
+            key: String(normalizedItem.key ?? normalizedItem.name ?? ""),
+            value: String(normalizedItem.value ?? ""),
+            isDynamic:
+              normalizedItem.isDynamic !== undefined
+                ? Boolean(normalizedItem.isDynamic)
+                : defaultDynamic,
+          });
+        } else {
+          rows.push({
+            id: `row-${Date.now()}-${idx}`,
+            key: `param_${idx + 1}`,
+            value: String(normalizedItem ?? ""),
+            isDynamic: defaultDynamic,
+          });
+        }
+      });
+      return rows.length > 0
+        ? rows
+        : [
+            {
+              id: `row-${Date.now()}-0`,
+              key: "",
+              value: "",
+              isDynamic: defaultDynamic,
+            },
+          ];
     }
 
     if (typeof parsed === "object" && parsed !== null) {
       const entries = Object.entries(parsed);
       if (entries.length === 0) {
-        return [{ id: `row-${Date.now()}-0`, key: "", value: "", isDynamic: defaultDynamic }];
+        return [
+          {
+            id: `row-${Date.now()}-0`,
+            key: "",
+            value: "",
+            isDynamic: defaultDynamic,
+          },
+        ];
       }
       return entries.map(([k, v], idx) => {
-        const valStr = typeof v === "object" ? JSON.stringify(v) : String(v ?? "");
+        const valStr =
+          typeof v === "object" ? JSON.stringify(v) : String(v ?? "");
         return {
           id: `row-${Date.now()}-${idx}`,
           key: k,
@@ -62,18 +210,35 @@ export const parseJsonToRows = (
   } catch (e) {
     // Ignore invalid JSON while user is typing
   }
-  return [{ id: `row-${Date.now()}-0`, key: "", value: "", isDynamic: defaultDynamic }];
+  return [
+    {
+      id: `row-${Date.now()}-0`,
+      key: "",
+      value: "",
+      isDynamic: defaultDynamic,
+    },
+  ];
 };
 
-export const rowsToJsonStr = (rows: ParamRow[]): string => {
-  const obj: Record<string, any> = {};
-  rows.forEach((row) => {
-    const trimmedKey = row.key.trim();
-    if (trimmedKey) {
-      obj[trimmedKey] = row.value.trim();
-    }
-  });
-  return JSON.stringify(obj, null, 2);
+export const rowsToJsonStr = (
+  rows: ParamRow[],
+  showDynamicToggle: boolean = true,
+): string => {
+  const validRows = rows.filter((r) => r.key.trim() !== "");
+  if (!showDynamicToggle) {
+    const obj: Record<string, any> = {};
+    validRows.forEach((row) => {
+      obj[row.key.trim()] = row.value.trim();
+    });
+    return JSON.stringify(obj, null, 2);
+  }
+
+  const arr = validRows.map((row) => ({
+    key: row.key.trim(),
+    value: row.value.trim(),
+    isDynamic: Boolean(row.isDynamic),
+  }));
+  return JSON.stringify(arr, null, 2);
 };
 
 export const truncateSampleResponse = (
@@ -116,24 +281,64 @@ export const getSuggestionTemplate = (
 
   if (ind.includes("travel") || ind.includes("booking")) {
     if (m === "GET") {
-      return { search: "", status: "active", category: "", sortBy: "title", limit: 10, page: 1 };
+      return {
+        search: "",
+        status: "active",
+        category: "",
+        sortBy: "title",
+        limit: 10,
+        page: 1,
+      };
     }
-    return { name: "", phone: "", email: "", packageName: "", bookingDate: "", notes: "" };
+    return {
+      name: "",
+      phone: "",
+      email: "",
+      packageName: "",
+      bookingDate: "",
+      notes: "",
+    };
   } else if (ind.includes("ecommerce") || ind.includes("e-commerce")) {
     if (m === "GET") {
-      return { search: "", category: "", status: "", sortBy: "price_asc", limit: 20, page: 1 };
+      return {
+        search: "",
+        category: "",
+        status: "",
+        sortBy: "price_asc",
+        limit: 20,
+        page: 1,
+      };
     }
-    return { customerName: "", email: "", productId: "", quantity: 1, totalAmount: 0.0, shippingAddress: "" };
+    return {
+      customerName: "",
+      email: "",
+      productId: "",
+      quantity: 1,
+      totalAmount: 0.0,
+      shippingAddress: "",
+    };
   } else if (ind.includes("food") || ind.includes("hospitality")) {
     if (m === "GET") {
       return { search: "", category: "", available: true, limit: 20, page: 1 };
     }
-    return { customerName: "", phoneNumber: "", address: "", items: [{ itemId: "", quantity: 1 }], notes: "" };
+    return {
+      customerName: "",
+      phoneNumber: "",
+      address: "",
+      items: [{ itemId: "", quantity: 1 }],
+      notes: "",
+    };
   } else if (ind.includes("logistics")) {
     if (m === "GET") {
       return { search: "", status: "in-transit", limit: 10, page: 1 };
     }
-    return { sender: "", recipient: "", origin: "", destination: "", weight: "" };
+    return {
+      sender: "",
+      recipient: "",
+      origin: "",
+      destination: "",
+      weight: "",
+    };
   }
 
   if (m === "GET") {
@@ -143,6 +348,7 @@ export const getSuggestionTemplate = (
 };
 
 let autoSaveTimer: any = null;
+let stepThreeAutoSaveTimer: any = null;
 
 export const useSignupStore = create<SignupStore>()(
   persist(
@@ -154,13 +360,16 @@ export const useSignupStore = create<SignupStore>()(
         password: "",
         subdomain: "",
         primaryIndustry: "saas",
+        targetPlatform: "web",
       },
+      lastSavedStepOneData: null,
       apisList: [
         {
-          id: "api-1",
-          apiName: "",
+          id: "1",
+          apiName: "Default API",
+          apiEndpoint: "https://api.example.com/data",
           apiMethod: "GET",
-          apiEndpoint: "",
+          audience: "customer",
           apiAuthType: "No Auth",
           apiCredentials: "",
           apiQueryParams: "",
@@ -169,18 +378,65 @@ export const useSignupStore = create<SignupStore>()(
           oauthTokenUrl: "",
           oauthClientId: "",
           apiHeaders: "",
+          isRealtimeApi: false,
+          streamUrl: "",
         },
       ],
-      selectedLayout: "dashboard",
+      selectedLayout: "auto",
+      selectedThemeColor: "#6366f1",
+      selectedAudienceDefault: "customer",
       apiTestStates: {},
       saveStatus: "idle",
       isStepTwoPending: false,
+
+      setSelectedThemeColor: (selectedThemeColor: string) => {
+        set({ selectedThemeColor });
+        get().triggerStepThreeAutoSave();
+      },
+
+      setSelectedAudienceDefault: (
+        selectedAudienceDefault: "customer" | "admin",
+      ) => {
+        set({ selectedAudienceDefault });
+        get().triggerStepThreeAutoSave();
+      },
+
+      setSelectedLayout: (layout) => {
+        set({ selectedLayout: layout });
+        get().triggerStepThreeAutoSave();
+      },
+
+      triggerStepThreeAutoSave: () => {
+        const {
+          companyId,
+          selectedLayout,
+          selectedThemeColor,
+          selectedAudienceDefault,
+        } = get();
+        if (!companyId) return;
+
+        if (stepThreeAutoSaveTimer) clearTimeout(stepThreeAutoSaveTimer);
+
+        stepThreeAutoSaveTimer = setTimeout(async () => {
+          try {
+            await saveCompanyUiSelection(companyId, {
+              layout: selectedLayout || "auto",
+              themeColor: selectedThemeColor || "#6366f1",
+              audienceDefault: selectedAudienceDefault || "customer",
+            });
+          } catch (e) {
+            console.error("Step 3 auto-save failed:", e);
+          }
+        }, 800);
+      },
 
       setCompanyId: (companyId) => set({ companyId }),
       setStepOneData: (data) =>
         set((state) => ({
           stepOneData: { ...state.stepOneData, ...data },
         })),
+      setLastSavedStepOneData: (lastSavedStepOneData) =>
+        set({ lastSavedStepOneData }),
       setApisList: (apis) =>
         set((state) => ({
           apisList: typeof apis === "function" ? apis(state.apisList) : apis,
@@ -211,6 +467,10 @@ export const useSignupStore = create<SignupStore>()(
               oauthTokenUrl: "",
               oauthClientId: "",
               apiHeaders: "",
+              isRealtimeApi: false,
+              streamUrl: "",
+              isWidgetEnabled: true,
+              isMapViewEnabled: false,
             },
           ],
         })),
@@ -221,7 +481,6 @@ export const useSignupStore = create<SignupStore>()(
               ? state.apisList.filter((api) => api.id !== id)
               : state.apisList,
         })),
-      setSelectedLayout: (selectedLayout) => set({ selectedLayout }),
       clearSignupProgress: () =>
         set({
           companyId: null,
@@ -231,6 +490,7 @@ export const useSignupStore = create<SignupStore>()(
             password: "",
             subdomain: "",
             primaryIndustry: "saas",
+            targetPlatform: "web",
           },
           apisList: [
             {
@@ -246,9 +506,13 @@ export const useSignupStore = create<SignupStore>()(
               oauthTokenUrl: "",
               oauthClientId: "",
               apiHeaders: "",
+              isRealtimeApi: false,
+              streamUrl: "",
             },
           ],
-          selectedLayout: "dashboard",
+          selectedLayout: "auto",
+          selectedThemeColor: "#6366f1",
+          selectedAudienceDefault: "customer",
           apiTestStates: {},
           saveStatus: "idle",
           isStepTwoPending: false,
@@ -345,39 +609,68 @@ export const useSignupStore = create<SignupStore>()(
           }
 
           let testUrl = api.apiEndpoint;
-          
-          // Replace path parameters (e.g. :id or :packageId)
+
+          // Replace explicit path parameters from paramsObj if provided
           Object.entries(paramsObj).forEach(([k, v]) => {
-            if (testUrl.includes(`:${k}`)) {
-              testUrl = testUrl.replace(`:${k}`, String(v));
+            if (v !== undefined && v !== null && String(v).trim()) {
+              const valStr = String(v).trim();
+              testUrl = testUrl
+                .replace(new RegExp(`:${k}\\b`, "gi"), valStr)
+                .replace(new RegExp(`\\{${k}\\}`, "gi"), valStr);
             }
           });
 
-          if ((api.apiMethod === "GET" || api.apiMethod === "DELETE") && api.apiQueryParams) {
+          // Fallback sample ID for live testing if path parameter placeholders (:id, {id}, :cartId, {cartId}, etc.) remain unreplaced
+          const sampleTestId =
+            paramsObj.id ||
+            paramsObj.cartId ||
+            paramsObj.productId ||
+            paramsObj.itemId ||
+            "1";
+          testUrl = testUrl
+            .replace(/:id\b/gi, String(sampleTestId))
+            .replace(/\{id\}/gi, String(sampleTestId))
+            .replace(/:cartid\b/gi, String(sampleTestId))
+            .replace(/\{cartid\}/gi, String(sampleTestId))
+            .replace(/:productid\b/gi, String(sampleTestId))
+            .replace(/\{productid\}/gi, String(sampleTestId));
+
+          if (
+            (api.apiMethod === "GET" || api.apiMethod === "DELETE") &&
+            api.apiQueryParams
+          ) {
             try {
               let rawUrl = testUrl;
-              const hasProtocol = rawUrl.startsWith("http://") || rawUrl.startsWith("https://");
+              const hasProtocol =
+                rawUrl.startsWith("http://") || rawUrl.startsWith("https://");
               if (!hasProtocol) {
                 rawUrl = "https://" + rawUrl;
               }
               const urlObj = new URL(rawUrl);
 
               Object.entries(paramsObj).forEach(([k, v]) => {
-                if (v !== undefined && v !== null && !api.apiEndpoint.includes(`:${k}`)) {
+                if (
+                  v !== undefined &&
+                  v !== null &&
+                  !api.apiEndpoint.includes(`:${k}`)
+                ) {
                   urlObj.searchParams.set(k, String(v));
                 }
               });
 
-              testUrl = hasProtocol ? urlObj.toString() : urlObj.toString().replace("https://", "");
+              testUrl = hasProtocol
+                ? urlObj.toString()
+                : urlObj.toString().replace("https://", "");
             } catch (e) {
               // Fallback
             }
           }
 
           const start = performance.now();
-          const fetchUrl = testUrl.startsWith("http://") || testUrl.startsWith("https://")
-            ? testUrl
-            : `https://${testUrl}`;
+          const fetchUrl =
+            testUrl.startsWith("http://") || testUrl.startsWith("https://")
+              ? testUrl
+              : `https://${testUrl}`;
           const response = await fetch(fetchUrl, options);
           const duration = (performance.now() - start).toFixed(0);
 
@@ -409,19 +702,30 @@ export const useSignupStore = create<SignupStore>()(
             recommendationLogs += `\n⚠️ WARNING: Status ${response.status} (Unauthorized/Forbidden).\nIt appears this API requires authentication (e.g. Bearer Token, API Key, Client Credentials or Custom Headers).\nPlease select an 'Auth Type' or add the required headers to authenticate successfully.\n`;
           } else if (response.status === 405) {
             recommendationLogs += `\n⚠️ WARNING: Status 405 (Method Not Allowed).\nVerify if you should use another HTTP method (e.g. GET vs POST).\n`;
-          } else if (response.ok && Array.isArray(parsedJson) && parsedJson.length === 0) {
+          } else if (
+            response.ok &&
+            Array.isArray(parsedJson) &&
+            parsedJson.length === 0
+          ) {
             recommendationLogs += `\n💡 TIP: The API returned an empty list. If this API requires filter parameters (like status or search query) to return data, make sure they are set.\n`;
           }
 
           set((state) => ({
             apisList: state.apisList.map((a) =>
-              a.id === apiId ? { ...a, sampleresponse: formattedJson } : a,
+              a.id === apiId
+                ? {
+                    ...a,
+                    sampleResponse: trimSampleJson(formattedJson),
+                    isTested: response.ok,
+                    isAnalyzed: response.ok,
+                  }
+                : a,
             ),
             apiTestStates: {
               ...state.apiTestStates,
               [apiId]: {
                 status: response.ok ? "success" : "error",
-                sampleResponse: formattedJson,
+                sampleResponse: trimSampleJson(formattedJson),
                 logs:
                   (state.apiTestStates[apiId]?.logs || "") +
                   `[${new Date().toLocaleTimeString()}] Response Status: ${response.status} ${response.statusText}\n` +
@@ -431,10 +735,44 @@ export const useSignupStore = create<SignupStore>()(
               },
             },
           }));
+
+          get().triggerAutoSave();
+
+          if (response.ok) {
+            const { companyId, apisList } = get();
+            const apiIndex = apisList.findIndex((a) => a.id === apiId);
+            if (companyId && apiIndex !== -1) {
+              analyzeSingleCompanyApi(companyId, apiIndex, formattedJson)
+                .then((res) => {
+                  if (res && res.success && res.data?.apiSchema) {
+                    const generatedSchema = res.data.apiSchema;
+                    set((state) => ({
+                      apisList: state.apisList.map((a) =>
+                        a.id === apiId
+                          ? {
+                              ...a,
+                              apiSchema: generatedSchema,
+                              isTested: true,
+                              isAnalyzed: true,
+                            }
+                          : a,
+                      ),
+                    }));
+                  }
+                })
+                .catch(() => {
+                  // Silently ignore background schema generation failure during live test
+                });
+            }
+          }
         } catch (err: any) {
           let suggestion = "";
-          if (err.name === "TypeError" && err.message?.toLowerCase().includes("failed to fetch")) {
-            suggestion = `\n⚠️ SUGGESTION: Connection failed or was blocked by CORS.\n` +
+          if (
+            err.name === "TypeError" &&
+            err.message?.toLowerCase().includes("failed to fetch")
+          ) {
+            suggestion =
+              `\n⚠️ SUGGESTION: Connection failed or was blocked by CORS.\n` +
               `1. Make sure your local/remote server is running and the URL is correct.\n` +
               `2. Ensure your server permits Cross-Origin Requests (CORS) from 'softtechai.com' or localhost.\n` +
               `3. Verify if your API requires specific query parameters, headers, or a Bearer token.`;
@@ -447,13 +785,119 @@ export const useSignupStore = create<SignupStore>()(
               ...state.apiTestStates,
               [apiId]: {
                 status: "error",
+                failCount: (state.apiTestStates[apiId]?.failCount || 0) + 1,
                 logs:
                   (state.apiTestStates[apiId]?.logs || "") +
                   `[${new Date().toLocaleTimeString()}] Error: ${err.message || err}\n` +
-                  `[${new Date().toLocaleTimeString()}] ${suggestion}`,
+                  `[${new Date().toLocaleTimeString()}] ${suggestion}\n` +
+                  ((state.apiTestStates[apiId]?.failCount || 0) + 1 >= 3
+                    ? `[${new Date().toLocaleTimeString()}] ⚠️ 3 live test attempts failed. Test API button disabled. Please enter your expected sample JSON in the Body / Response tab below and click "Analyze Sample JSON".\n`
+                    : ""),
               },
             },
           }));
+        }
+      },
+
+      handleSaveSampleResponse: async (apiId, sampleJson) => {
+        let formattedJson = sampleJson;
+        try {
+          const parsed = JSON.parse(sampleJson);
+          formattedJson = JSON.stringify(parsed, null, 2);
+        } catch (e) {
+          // Store raw string if not valid JSON
+        }
+
+        const trimmedJson = trimSampleJson(formattedJson);
+
+        set((state) => ({
+          apisList: state.apisList.map((a) =>
+            a.id === apiId
+              ? {
+                  ...a,
+                  sampleResponse: trimmedJson,
+                  isTested: true,
+                  isAnalyzed: true,
+                }
+              : a,
+          ),
+          apiTestStates: {
+            ...state.apiTestStates,
+            [apiId]: {
+              status: "success",
+              sampleResponse: formattedJson,
+              logs: `[${new Date().toLocaleTimeString()}] Custom sample response uploaded.\n[${new Date().toLocaleTimeString()}] Requesting Gemini AI schema analysis for this API...\n`,
+            },
+          },
+        }));
+
+        get().triggerAutoSave();
+
+        const { companyId, apisList } = get();
+        const apiIndex = apisList.findIndex((a) => a.id === apiId);
+
+        if (companyId && apiIndex !== -1) {
+          try {
+            const res = await analyzeSingleCompanyApi(
+              companyId,
+              apiIndex,
+              formattedJson,
+            );
+            if (res && res.success && res.data?.apiSchema) {
+              const generatedSchema = res.data.apiSchema;
+              set((state) => ({
+                apisList: state.apisList.map((a) =>
+                  a.id === apiId
+                    ? {
+                        ...a,
+                        apiSchema: generatedSchema,
+                        isTested: true,
+                        isAnalyzed: true,
+                      }
+                    : a,
+                ),
+                apiTestStates: {
+                  ...state.apiTestStates,
+                  [apiId]: {
+                    status: "success",
+                    sampleResponse: formattedJson,
+                    logs:
+                      (state.apiTestStates[apiId]?.logs || "") +
+                      `[${new Date().toLocaleTimeString()}] ✅ Gemini AI Schema generated successfully!\n` +
+                      `Entity: "${generatedSchema.entity || "unknown"}", Fields: ${generatedSchema.fields?.length || 0}\n` +
+                      `Sample Output:\n${formattedJson}`,
+                  },
+                },
+              }));
+              showToast(
+                `API #${apiIndex + 1} schema generated via Gemini AI!`,
+                "success",
+              );
+            } else {
+              const errReason = res?.message || "Failed to generate AI schema.";
+              showToast(`AI Analysis Warning: ${errReason}`, "warning");
+            }
+          } catch (err: any) {
+            const errReason =
+              err.message || "Gemini AI analysis request failed.";
+            showToast(`AI Analysis Error: ${errReason}`, "error");
+            set((state) => ({
+              apiTestStates: {
+                ...state.apiTestStates,
+                [apiId]: {
+                  status: "error",
+                  logs:
+                    (state.apiTestStates[apiId]?.logs || "") +
+                    `[${new Date().toLocaleTimeString()}] ❌ Gemini AI Error: ${errReason}\n`,
+                },
+              },
+            }));
+          }
+        } else {
+          showToast(
+            "Sample response uploaded and marked as analyzed!",
+            "success",
+          );
         }
       },
 
@@ -501,25 +945,70 @@ export const useSignupStore = create<SignupStore>()(
                       oauthTokenUrl: api.oauthTokenUrl,
                       oauthClientId: api.oauthClientId,
                       oauthClientSecret: api.apiCredentials,
+                      oauth: {
+                        tokenUrl: api.oauthTokenUrl,
+                        clientId: api.oauthClientId,
+                        clientSecret: api.apiCredentials,
+                        flow: "client_credentials",
+                      },
+                    }
+                  : {};
+              const isuseroauth =
+                api.apiAuthType === "User OAuth"
+                  ? {
+                      authType: "oauth_user",
+                      authtype: "oauth_user",
+                      oauthAuthorizationUrl: api.oauthAuthorizationUrl,
+                      oauthTokenUrl: api.oauthTokenUrl,
+                      oauthClientId: api.oauthClientId,
+                      oauthClientSecret: api.apiCredentials,
+                      oauth: {
+                        authorizationUrl: api.oauthAuthorizationUrl,
+                        tokenUrl: api.oauthTokenUrl,
+                        clientId: api.oauthClientId,
+                        clientSecret: api.apiCredentials,
+                        flow: "authorization_code",
+                      },
                     }
                   : {};
 
-              const paramRows = parseJsonToRows(api.apiQueryParams, true).filter((r) => r.key.trim() !== "");
+              const paramRows = parseJsonToRows(
+                api.apiQueryParams,
+                true,
+              ).filter((r) => r.key.trim() !== "");
               const paramsArray = paramRows.map((r) => ({
                 key: r.key.trim(),
                 value: r.value.trim(),
                 isDynamic: Boolean(r.isDynamic),
               }));
 
-              const headerRows = parseJsonToRows(api.apiHeaders, false).filter((r) => r.key.trim() !== "");
+              const bodyRows = parseJsonToRows(api.apiRequestBody, true).filter(
+                (r) => r.key.trim() !== "",
+              );
+              const bodyArray = bodyRows.map((r) => ({
+                key: r.key.trim(),
+                value: r.value.trim(),
+                isDynamic: Boolean(r.isDynamic),
+              }));
+
+              const headerRows = parseJsonToRows(api.apiHeaders, false).filter(
+                (r) => r.key.trim() !== "",
+              );
               const headersArray = headerRows.map((r) => ({
                 key: r.key.trim(),
                 value: r.value.trim(),
               }));
 
-              const sampleResp = get().apiTestStates[api.id]?.sampleResponse || api.sampleresponse || "";
+              const sampleResp =
+                get().apiTestStates[api.id]?.sampleResponse ||
+                api.sampleResponse ||
+                (api as any).sampleresponse ||
+                "";
 
-              const isBodyMethod = api.apiMethod === "POST" || api.apiMethod === "PUT" || api.apiMethod === "PATCH";
+              const isBodyMethod =
+                api.apiMethod === "POST" ||
+                api.apiMethod === "PUT" ||
+                api.apiMethod === "PATCH";
 
               return {
                 name: api.apiName,
@@ -529,19 +1018,33 @@ export const useSignupStore = create<SignupStore>()(
                 authType: api.apiAuthType,
                 authtype: api.apiAuthType,
                 headers: headersArray,
-                params: isBodyMethod ? [] : paramsArray,
-                body: isBodyMethod ? paramsArray : [],
-                sampleresponse: sampleResp,
+                params: paramsArray,
+                body: isBodyMethod ? bodyArray : [],
                 sampleResponse: sampleResp,
-                testedonregister: get().apiTestStates[api.id]?.status === "success",
+                testedonregister:
+                  get().apiTestStates[api.id]?.status === "success",
                 platformType: api.platformType || "web",
-                webCheckoutUrl: api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
+                audience: api.audience || "customer",
+                webCheckoutUrl:
+                  api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
                 mobileDeepLink: api.mobileDeepLink || undefined,
-                apiSchema: api.apiSchema || api.schema || undefined,
-                schema: api.apiSchema || api.schema || undefined,
+                isRealtimeApi: Boolean(api.isRealtimeApi),
+                streamUrl: api.streamUrl || undefined,
+                apiSchema:
+                  api.apiSchema ||
+                  api.schema ||
+                  get().apiTestStates[api.id]?.apiSchema ||
+                  undefined,
+                schema:
+                  api.apiSchema ||
+                  api.schema ||
+                  get().apiTestStates[api.id]?.apiSchema ||
+                  undefined,
                 ...isbearertoken,
                 ...isapikey,
                 ...isoauth,
+                ...isuseroauth,
+                mcpDescription: api.mcpDescription || undefined,
               };
             });
 
@@ -551,11 +1054,46 @@ export const useSignupStore = create<SignupStore>()(
               showToast("Auto saved successfully!", "success");
             } else {
               set({ saveStatus: "error" });
-              showToast(res?.message || "Failed to save API details.", "error");
+              const errMsg = res?.message || "Failed to save API details.";
+              showToast(`Auto-save failed: ${errMsg}`, "error");
+              set((state) => {
+                const updatedStates = { ...state.apiTestStates };
+                apisList.forEach((api, idx) => {
+                  const apiNum = idx + 1;
+                  const apiLabel = api.apiName
+                    ? `API #${apiNum} ("${api.apiName}")`
+                    : `API #${apiNum}`;
+                  updatedStates[api.id] = {
+                    status: "error",
+                    logs:
+                      (updatedStates[api.id]?.logs || "") +
+                      `\n[${new Date().toLocaleTimeString()}] ❌ Auto-Save Error in ${apiLabel}: ${errMsg}\n`,
+                  };
+                });
+                return { apiTestStates: updatedStates };
+              });
             }
           } catch (err: any) {
             set({ saveStatus: "error" });
-            showToast("An error occurred during API details save.", "error");
+            const errMsg =
+              err.message || "Network / Server Error during API auto-save.";
+            showToast(`Auto-save error: ${errMsg}`, "error");
+            set((state) => {
+              const updatedStates = { ...state.apiTestStates };
+              apisList.forEach((api, idx) => {
+                const apiNum = idx + 1;
+                const apiLabel = api.apiName
+                  ? `API #${apiNum} ("${api.apiName}")`
+                  : `API #${apiNum}`;
+                updatedStates[api.id] = {
+                  status: "error",
+                  logs:
+                    (updatedStates[api.id]?.logs || "") +
+                    `\n[${new Date().toLocaleTimeString()}] ❌ Auto-Save Error in ${apiLabel}: ${errMsg}\n`,
+                };
+              });
+              return { apiTestStates: updatedStates };
+            });
           }
         }, 3000);
       },
@@ -586,25 +1124,69 @@ export const useSignupStore = create<SignupStore>()(
                     oauthTokenUrl: api.oauthTokenUrl,
                     oauthClientId: api.oauthClientId,
                     oauthClientSecret: api.apiCredentials,
+                    oauth: {
+                      tokenUrl: api.oauthTokenUrl,
+                      clientId: api.oauthClientId,
+                      clientSecret: api.apiCredentials,
+                      flow: "client_credentials",
+                    },
+                  }
+                : {};
+            const isuseroauth =
+              api.apiAuthType === "User OAuth"
+                ? {
+                    authType: "oauth_user",
+                    authtype: "oauth_user",
+                    oauthAuthorizationUrl: api.oauthAuthorizationUrl,
+                    oauthTokenUrl: api.oauthTokenUrl,
+                    oauthClientId: api.oauthClientId,
+                    oauthClientSecret: api.apiCredentials,
+                    oauth: {
+                      authorizationUrl: api.oauthAuthorizationUrl,
+                      tokenUrl: api.oauthTokenUrl,
+                      clientId: api.oauthClientId,
+                      clientSecret: api.apiCredentials,
+                      flow: "authorization_code",
+                    },
                   }
                 : {};
 
-            const paramRows = parseJsonToRows(api.apiQueryParams, true).filter((r) => r.key.trim() !== "");
+            const paramRows = parseJsonToRows(api.apiQueryParams, true).filter(
+              (r) => r.key.trim() !== "",
+            );
             const paramsArray = paramRows.map((r) => ({
               key: r.key.trim(),
               value: r.value.trim(),
               isDynamic: Boolean(r.isDynamic),
             }));
 
-            const headerRows = parseJsonToRows(api.apiHeaders, false).filter((r) => r.key.trim() !== "");
+            const bodyRows = parseJsonToRows(api.apiRequestBody, true).filter(
+              (r) => r.key.trim() !== "",
+            );
+            const bodyArray = bodyRows.map((r) => ({
+              key: r.key.trim(),
+              value: r.value.trim(),
+              isDynamic: Boolean(r.isDynamic),
+            }));
+
+            const headerRows = parseJsonToRows(api.apiHeaders, false).filter(
+              (r) => r.key.trim() !== "",
+            );
             const headersArray = headerRows.map((r) => ({
               key: r.key.trim(),
               value: r.value.trim(),
             }));
 
-            const sampleResp = get().apiTestStates[api.id]?.sampleResponse || api.sampleresponse || "";
+            const sampleResp =
+              get().apiTestStates[api.id]?.sampleResponse ||
+              api.sampleResponse ||
+              (api as any).sampleresponse ||
+              "";
 
-            const isBodyMethod = api.apiMethod === "POST" || api.apiMethod === "PUT" || api.apiMethod === "PATCH";
+            const isBodyMethod =
+              api.apiMethod === "POST" ||
+              api.apiMethod === "PUT" ||
+              api.apiMethod === "PATCH";
 
             return {
               name: api.apiName,
@@ -614,33 +1196,93 @@ export const useSignupStore = create<SignupStore>()(
               authType: api.apiAuthType,
               authtype: api.apiAuthType,
               headers: headersArray,
-              params: isBodyMethod ? [] : paramsArray,
-              body: isBodyMethod ? paramsArray : [],
-              sampleresponse: sampleResp,
+              params: paramsArray,
+              body: isBodyMethod ? bodyArray : [],
               sampleResponse: sampleResp,
-              testedonregister: get().apiTestStates[api.id]?.status === "success",
+              testedonregister:
+                get().apiTestStates[api.id]?.status === "success",
               platformType: api.platformType || "web",
-              webCheckoutUrl: api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
+              audience: api.audience || "customer",
+              webCheckoutUrl:
+                api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
               mobileDeepLink: api.mobileDeepLink || undefined,
-              apiSchema: api.apiSchema || api.schema || undefined,
-              schema: api.apiSchema || api.schema || undefined,
+              isRealtimeApi: Boolean(api.isRealtimeApi),
+              streamUrl: api.streamUrl || undefined,
+              apiSchema:
+                api.apiSchema ||
+                api.schema ||
+                get().apiTestStates[api.id]?.apiSchema ||
+                undefined,
+              schema:
+                api.apiSchema ||
+                api.schema ||
+                get().apiTestStates[api.id]?.apiSchema ||
+                undefined,
               ...isbearertoken,
               ...isapikey,
               ...isoauth,
+              ...isuseroauth,
+              mcpDescription: api.mcpDescription || undefined,
+              isWidgetEnabled:
+                api.isWidgetEnabled !== undefined
+                  ? Boolean(api.isWidgetEnabled)
+                  : true,
+              isMapViewEnabled: Boolean(api.isMapViewEnabled),
             };
           });
 
           const res = await saveCompanyApiDetails(companyId, apisPayload);
           set({ isStepTwoPending: false });
           if (res && res.success) {
-            showToast("API configurations saved successfully!", "success");
+            showToast(
+              "API configurations & AI schemas saved successfully!",
+              "success",
+            );
             navigate({ to: "/signup/step3" });
           } else {
-            showToast(res?.message || "Failed to save API details.", "error");
+            const rawErrorMsg = res?.message || "AI Schema Analysis Failed.";
+            const toastMsg = `API Save Failed: ${rawErrorMsg}`;
+            showToast(toastMsg, "error");
+
+            set((state) => {
+              const updatedStates = { ...state.apiTestStates };
+              apisList.forEach((api, idx) => {
+                const apiNum = idx + 1;
+                const apiLabel = api.apiName
+                  ? `API #${apiNum} ("${api.apiName}")`
+                  : `API #${apiNum}`;
+                updatedStates[api.id] = {
+                  status: "error",
+                  logs:
+                    (updatedStates[api.id]?.logs || "") +
+                    `\n[${new Date().toLocaleTimeString()}] ❌ ${apiLabel} Error: ${rawErrorMsg}\n` +
+                    `[${new Date().toLocaleTimeString()}] Reason: Backend/Gemini failed to process this configuration. Please verify sample JSON and click "Retry AI Analysis" above.\n`,
+                };
+              });
+              return { apiTestStates: updatedStates };
+            });
           }
         } catch (err: any) {
           set({ isStepTwoPending: false });
-          showToast(err.message || "An error occurred during Step 2.", "error");
+          const rawErrorMsg =
+            err.message || "An error occurred during Step 2 API registration.";
+          showToast(`API Registration Error: ${rawErrorMsg}`, "error");
+          set((state) => {
+            const updatedStates = { ...state.apiTestStates };
+            apisList.forEach((api, idx) => {
+              const apiNum = idx + 1;
+              const apiLabel = api.apiName
+                ? `API #${apiNum} ("${api.apiName}")`
+                : `API #${apiNum}`;
+              updatedStates[api.id] = {
+                status: "error",
+                logs:
+                  (updatedStates[api.id]?.logs || "") +
+                  `\n[${new Date().toLocaleTimeString()}] ❌ ${apiLabel} Network/Backend Error: ${rawErrorMsg}\n`,
+              };
+            });
+            return { apiTestStates: updatedStates };
+          });
         }
       },
       handleEndpointUrlChange: (apiId: string, inputUrl: string) => {
@@ -689,15 +1331,79 @@ export const useSignupStore = create<SignupStore>()(
           );
         }
       },
+      importApisBatch: (
+        importedApis: ApiConnection[],
+        mode: "append" | "replace",
+      ) => {
+        if (!importedApis || importedApis.length === 0) return;
+
+        const processedImported = importedApis.map((api) => {
+          if (api.isWidgetEnabled === undefined) {
+            const defaults = detectDefaultWidgetAndMapToggles(api);
+            return {
+              ...api,
+              isWidgetEnabled: defaults.isWidgetEnabled,
+              isMapViewEnabled: defaults.isMapViewEnabled,
+            };
+          }
+          return api;
+        });
+
+        set((state) => {
+          let updatedList: ApiConnection[];
+          if (mode === "replace") {
+            updatedList = [...processedImported];
+          } else {
+            const isSingleEmpty =
+              state.apisList.length === 1 &&
+              (!state.apisList[0].apiName ||
+                !state.apisList[0].apiName.trim()) &&
+              (!state.apisList[0].apiEndpoint ||
+                state.apisList[0].apiEndpoint === "https://" ||
+                state.apisList[0].apiEndpoint.trim() === "");
+
+            if (isSingleEmpty) {
+              updatedList = [...processedImported];
+            } else {
+              updatedList = [...state.apisList, ...processedImported];
+            }
+          }
+
+          const updatedTestStates = { ...state.apiTestStates };
+          processedImported.forEach((api) => {
+            const sample = api.sampleResponse || (api as any).sampleresponse;
+            if (sample) {
+              updatedTestStates[api.id] = {
+                status: "success",
+                logs: `[${new Date().toLocaleTimeString()}] Imported with sample payload (${api.apiMethod} ${api.apiEndpoint})\nReady for AI schema analysis.\n`,
+                sampleResponse: sample,
+              };
+            }
+          });
+
+          return {
+            apisList: updatedList,
+            apiTestStates: updatedTestStates,
+          };
+        });
+
+        get().triggerAutoSave();
+        showToast(
+          `Successfully imported ${importedApis.length} API endpoint(s)!`,
+          "success",
+        );
+      },
       applyTemplateSuggestions: (apiId, field, industry, apiName, method) => {
         const { updateApiField } = get();
         const template = getSuggestionTemplate(industry, apiName, method);
-        const rows: ParamRow[] = Object.entries(template).map(([k, v], idx) => ({
-          id: `row-${Date.now()}-${idx}`,
-          key: k,
-          value: String(v ?? ""),
-          isDynamic: true,
-        }));
+        const rows: ParamRow[] = Object.entries(template).map(
+          ([k, v], idx) => ({
+            id: `row-${Date.now()}-${idx}`,
+            key: k,
+            value: String(v ?? ""),
+            isDynamic: true,
+          }),
+        );
         updateApiField(apiId, field, rowsToJsonStr(rows));
         showToast("Applied industry template suggestions!", "success");
       },
@@ -707,8 +1413,11 @@ export const useSignupStore = create<SignupStore>()(
       partialize: (state) => ({
         companyId: state.companyId,
         stepOneData: state.stepOneData,
+        lastSavedStepOneData: state.lastSavedStepOneData,
         apisList: state.apisList,
+        apiTestStates: state.apiTestStates,
         selectedLayout: state.selectedLayout,
+        selectedThemeColor: state.selectedThemeColor,
       }),
     },
   ),

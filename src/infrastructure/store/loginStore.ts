@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { LoginStore } from "../../interfaces/login.interface";
+import { LoginStore } from "../../interfaces/auth/login.interface";
 
 export const useLoginStore = create<LoginStore>((set) => ({
   email: "",

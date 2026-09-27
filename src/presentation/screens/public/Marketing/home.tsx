@@ -249,13 +249,9 @@ const Homescreen: React.FC = () => {
             <div className={`cardItem ${styles.cardEngine}`}>
               <div className={styles.engineGlow}></div>
               <div className={styles.engineIconSquare}>
-                <BoltIcon size={40} color="#ffffff" />
+                <BoltIcon size={40} color={colors.TextOverlay} />
               </div>
-              <h3 className={styles.engineHeading}>
-                Translation
-                <br />
-                Engine
-              </h3>
+              <h3 className={styles.engineHeading}>SoftTech AI</h3>
               <p className={styles.engineDesc}>
                 Standard REST mapped dynamically into MCP context automatically.
               </p>
@@ -623,7 +619,7 @@ const Homescreen: React.FC = () => {
                             </span>
                             <span
                               style={{
-                                color: "#34d399",
+                                color: colors.SuccessBadgeText,
                                 fontSize: "0.625rem",
                                 fontWeight: 700,
                               }}
@@ -651,7 +647,7 @@ const Homescreen: React.FC = () => {
                               style={{
                                 height: "30%",
                                 width: "100%",
-                                backgroundColor: "#334155",
+                                backgroundColor: colors.BackgroundGradientTwo,
                                 borderRadius: "2px",
                               }}
                             ></div>
@@ -659,7 +655,7 @@ const Homescreen: React.FC = () => {
                               style={{
                                 height: "45%",
                                 width: "100%",
-                                backgroundColor: "#334155",
+                                backgroundColor: colors.BrandFuchsia,
                                 borderRadius: "2px",
                               }}
                             ></div>
@@ -667,7 +663,7 @@ const Homescreen: React.FC = () => {
                               style={{
                                 height: "60%",
                                 width: "100%",
-                                backgroundColor: "#334155",
+                                backgroundColor: colors.BrandEmerald,
                                 borderRadius: "2px",
                               }}
                             ></div>
@@ -675,7 +671,7 @@ const Homescreen: React.FC = () => {
                               style={{
                                 height: "80%",
                                 width: "100%",
-                                backgroundColor: "rgba(52, 211, 153, 0.4)",
+                                backgroundColor: colors.BrandIndigo,
                                 borderRadius: "2px",
                               }}
                             ></div>
@@ -683,9 +679,8 @@ const Homescreen: React.FC = () => {
                               style={{
                                 height: "100%",
                                 width: "100%",
-                                backgroundColor: "#10b981",
+                                backgroundColor: colors.BrandIndigoHover,
                                 borderRadius: "2px",
-                                boxShadow: "0 0 10px rgba(52,211,153,0.5)",
                               }}
                             ></div>
                           </div>
@@ -708,7 +703,7 @@ const Homescreen: React.FC = () => {
                                 style={{
                                   fontSize: "0.75rem",
                                   fontWeight: 700,
-                                  color: "#ffffff",
+                                  color: colors.TextHeading,
                                 }}
                               >
                                 Dr. Evelyn Reed
@@ -747,7 +742,7 @@ const Homescreen: React.FC = () => {
                                 style={{
                                   fontSize: "1.125rem",
                                   fontWeight: 900,
-                                  color: "#ffffff",
+                                  color: colors.TextHeading,
                                 }}
                               >
                                 JFK
@@ -765,7 +760,7 @@ const Homescreen: React.FC = () => {
                             <div className={styles.flightLineWrapper}>
                               <span
                                 style={{
-                                  color: "#e879f9",
+                                  color: colors.SuccessBadgeText,
                                   fontSize: "0.5625rem",
                                   fontWeight: 700,
                                 }}
@@ -787,7 +782,7 @@ const Homescreen: React.FC = () => {
                                 style={{
                                   fontSize: "1.125rem",
                                   fontWeight: 900,
-                                  color: "#ffffff",
+                                  color: colors.TextHeading,
                                 }}
                               >
                                 LHR
@@ -804,10 +799,15 @@ const Homescreen: React.FC = () => {
                             </div>
                           </div>
                           <div className={styles.flightLogo}>
-                            <span style={{ color: "#94a3b8" }}>
+                            <span style={{ color: colors.TextBody }}>
                               Virgin Atlantic - VS4
                             </span>
-                            <span style={{ color: "#ffffff", fontWeight: 700 }}>
+                            <span
+                              style={{
+                                color: colors.TextHeading,
+                                fontWeight: 700,
+                              }}
+                            >
                               $410
                             </span>
                           </div>
@@ -823,9 +823,9 @@ const Homescreen: React.FC = () => {
                             className={styles.mockupBtn}
                             style={{
                               width: "50%",
-                              backgroundColor: "rgba(255,255,255,0.05)",
-                              border: "1px solid rgba(255,255,255,0.1)",
-                              color: "#ffffff",
+                              backgroundColor: colors.ButtonOverlaySecondary,
+                              border: `1px solid ${colors.Border}`,
+                              color: colors.TextHeading,
                             }}
                           >
                             Export CSV
@@ -834,9 +834,9 @@ const Homescreen: React.FC = () => {
                             className={styles.mockupBtn}
                             style={{
                               width: "50%",
-                              backgroundColor: "rgba(16,185,129,0.2)",
-                              border: "1px solid rgba(16,185,129,0.3)",
-                              color: "#34d399",
+                              backgroundColor: colors.ButtonGradientTwo,
+                              border: `1px solid ${colors.Border}`,
+                              color: colors.TextOverlay,
                             }}
                           >
                             Manage billing
@@ -981,7 +981,7 @@ const Homescreen: React.FC = () => {
         <div className={styles.sectionHeader}>
           <span
             className={styles.sectionLabel}
-            style={{ color: colors.RatingIconColor }}
+            style={{ color: colors.TextHighlightedHeading }}
           >
             Have Questions?
           </span>
@@ -1027,13 +1027,10 @@ const Homescreen: React.FC = () => {
 
       {/* 9. CTA SECTION */}
       <section id="cta-section" className={styles.ctaSection}>
-        <div className={styles.ctaGlowLeft}></div>
         <div className={styles.ctaGlowRight}></div>
 
         <div className={styles.ctaContainer}>
           <div id="cta-block" className={styles.ctaBlock}>
-            <div className={styles.ctaReflection}></div>
-
             <div className={styles.ctaIconCircle}>
               <BoltIcon size={40} color={colors.TextHighlightedHeading} />
             </div>
@@ -1068,7 +1065,7 @@ const Homescreen: React.FC = () => {
         onClick={scrollToTop}
         aria-label="Scroll to Top"
       >
-        <ChevronUpIcon size={20} color="#ffffff" />
+        <ChevronUpIcon size={20} color={colors.TextOverlay} />
       </button>
     </div>
   );

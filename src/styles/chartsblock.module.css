@@ -1,0 +1,90 @@
+.container {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.card {
+  width: 100%;
+  background-color: var(--app-card, var(--widget-card-bg, #0f172a));
+  border: 1px solid var(--app-card-border, var(--widget-card-border, rgba(255, 255, 255, 0.08)));
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  color: var(--app-text-heading, var(--widget-header-title, #ffffff));
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.typeBadge {
+  font-size: 0.725rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: var(--app-bg-secondary, var(--widget-badge-bg, rgba(255, 255, 255, 0.06)));
+  color: var(--widget-accent, var(--widget-badge-text, #6366f1));
+  border: 1px solid var(--app-card-border, var(--widget-badge-border, rgba(255, 255, 255, 0.12)));
+}
+
+.scrollWrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+  display: block;
+}
+
+.chartInner {
+  width: 100%;
+  min-width: 100%;
+  height: 260px;
+  display: block;
+}
+
+.tooltipCard {
+  background: var(--app-card, #0f172a);
+  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.15));
+  border-radius: 8px;
+  padding: 8px 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color: var(--app-text-primary, #f8fafc);
+  font-size: 12px;
+}
+
+.tooltipLabel {
+  font-weight: 600;
+  color: var(--app-text-secondary, #94a3b8);
+  margin-bottom: 4px;
+}
+
+.tooltipValue {
+  font-weight: 700;
+  color: var(--widget-accent, #6366f1);
+}
+
+.chartInnerWide {
+  min-width: 650px;
+}
+
+@media (max-width: 500px) {
+  .card {
+    padding: 12px 14px;
+  }
+}

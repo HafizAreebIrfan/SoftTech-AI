@@ -74,6 +74,22 @@ const Navbar: React.FC = () => {
               Start Building
             </Link>
 
+            <Link to="/checkout" className={styles.primaryBtn}>
+              Preview
+            </Link>
+
+            {/* Dev-only: standalone widget preview harness (never ships). */}
+            {import.meta.env.DEV && (
+              <a
+                href="/preview.html"
+                target="_blank"
+                rel="noreferrer"
+                className={styles.primaryBtn}
+              >
+                Widget Preview
+              </a>
+            )}
+
             <button
               id="menu-toggle"
               className={styles.menuBtn}
@@ -157,6 +173,14 @@ const Navbar: React.FC = () => {
           </div>
           <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
             <Link
+              to="/checkout"
+              className={styles.mobilePrimaryBtn}
+              style={{ flex: 1, textAlign: "center" }}
+              onClick={closeMobileMenu}
+            >
+              Preview
+            </Link>
+            <Link
               to="/admin-preview"
               className={styles.mobilePrimaryBtn}
               style={{ flex: 1, textAlign: "center" }}
@@ -165,6 +189,19 @@ const Navbar: React.FC = () => {
               Admin Preview
             </Link>
           </div>
+          {/* Dev-only: standalone widget preview harness (never ships). */}
+          {import.meta.env.DEV && (
+            <a
+              href="/preview.html"
+              target="_blank"
+              rel="noreferrer"
+              className={styles.mobilePrimaryBtn}
+              style={{ width: "100%", textAlign: "center" }}
+              onClick={closeMobileMenu}
+            >
+              Widget Preview
+            </a>
+          )}
         </div>
       </div>
     </>

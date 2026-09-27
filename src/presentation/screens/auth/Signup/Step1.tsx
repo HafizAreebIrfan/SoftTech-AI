@@ -20,13 +20,21 @@ import { IndustryOptions } from "../../../../types/industryoptions";
 const SignupStep1: FC = () => {
   const navigate = useNavigate();
   const { colors } = useThemeStore();
-  const { setCompanyId, stepOneData, setStepOneData } = useSignupStore();
+  const {
+    companyId,
+    setCompanyId,
+    stepOneData,
+    setStepOneData,
+    lastSavedStepOneData,
+    setLastSavedStepOneData,
+  } = useSignupStore();
 
   const { mutate: stepOneMutate, isPending: isStepOnePending } = useMutation({
     mutationFn: registerCompanyInfo,
     onSuccess: (res) => {
       if (res && res.success && res.data) {
         setCompanyId(res.data._id);
+        setLastSavedStepOneData({ ...stepOneData });
         showToast("Company information saved successfully!", "success");
         navigate({ to: "/signup/step2" });
       } else {
@@ -48,6 +56,7 @@ const SignupStep1: FC = () => {
       password: stepOneData.password || "",
       mcpSlug: stepOneData.subdomain || "",
       primaryIndustry: stepOneData.primaryIndustry || "saas",
+      targetPlatform: stepOneData.targetPlatform || "web",
     },
     onSubmit: async ({ value }) => {
       const parsed = stepOneSchema.safeParse(value);
@@ -55,6 +64,22 @@ const SignupStep1: FC = () => {
         showToast("Please correct the errors in the form.", "error");
         return;
       }
+
+      const isUnchanged =
+        Boolean(companyId) &&
+        Boolean(lastSavedStepOneData) &&
+        lastSavedStepOneData?.companyName === value.companyName &&
+        lastSavedStepOneData?.adminEmail === value.adminEmail &&
+        lastSavedStepOneData?.password === value.password &&
+        lastSavedStepOneData?.subdomain === value.mcpSlug &&
+        lastSavedStepOneData?.primaryIndustry === value.primaryIndustry &&
+        lastSavedStepOneData?.targetPlatform === value.targetPlatform;
+
+      if (isUnchanged) {
+        navigate({ to: "/signup/step2" });
+        return;
+      }
+
       stepOneMutate({
         companyName: value.companyName,
         email: value.adminEmail,
@@ -80,9 +105,9 @@ const SignupStep1: FC = () => {
       <div
         className={styles.signupcard}
         style={{
-          background: colors.BackgroundSecondary,
+          background: colors.Headerbackground,
           border: `1px solid ${colors.CardBorder}`,
-          borderLeft: `4px solid ${colors.CardActiveBorder}`,
+          borderRadius: "16px",
           boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`,
         }}
       >
@@ -530,6 +555,42 @@ const SignupStep1: FC = () => {
                 />
               </div>
             </div>
+
+            <div className={styles.formField}>
+              <div className="flex flex-col gap-2">
+                <label
+                  className="font-label text-[10px] uppercase tracking-widest font-bold"
+                  style={{ color: colors.TextBody }}
+                >
+                  Target Platform
+                </label>
+                <signupForm.Field
+                  name="targetPlatform"
+                  children={(field) => (
+                    <div className="relative">
+                      <select
+                        value={stepOneData.targetPlatform || "web"}
+                        onChange={(e) => {
+                          const val = e.target.value as any;
+                          field.handleChange(val);
+                          setStepOneData({ targetPlatform: val });
+                        }}
+                        className={`block w-full py-3 px-4 text-sm font-label rounded-xl`}
+                        style={{
+                          background: colors.Background,
+                          borderColor: colors.CardBorder,
+                          color: colors.TextBody,
+                        }}
+                      >
+                        <option value="web">Web Application</option>
+                        <option value="mobile">Mobile Application Only</option>
+                        <option value="both">Both (Web & Mobile)</option>
+                      </select>
+                    </div>
+                  )}
+                />
+              </div>
+            </div>
           </form>
         </div>
 
@@ -559,7 +620,7 @@ const SignupStep1: FC = () => {
               style={{
                 background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
                 opacity: isStepOnePending ? 0.7 : 1,
-                color: colors.TextBody,
+                color: colors.TextOverlay,
               }}
               disabled={isStepOnePending}
             >

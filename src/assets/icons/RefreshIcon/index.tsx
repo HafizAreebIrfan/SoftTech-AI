@@ -1,7 +1,10 @@
-import React from 'react';
+import React from "react";
 import { IconProps } from "../../../types/icontypes";
 
-const RefreshIcon: React.FC<IconProps> = ({ size = 24, color = "currentColor" }) => {
+const RefreshIcon: React.FC<IconProps> = ({
+  color = "currentColor",
+  size = 24,
+}) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -19,6 +22,6 @@ const RefreshIcon: React.FC<IconProps> = ({ size = 24, color = "currentColor" })
       <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
     </svg>
   );
-}
+};
 
 export default RefreshIcon;

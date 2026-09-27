@@ -1,8 +1,8 @@
 import React from "react";
 import {
-  createRootRoute,
-  createRoute,
   createRouter,
+  createRoute,
+  createRootRoute,
   Outlet,
   redirect,
 } from "@tanstack/react-router";
@@ -12,6 +12,7 @@ import Signup from "../../presentation/screens/auth/Signup";
 import SignupStep1 from "../../presentation/screens/auth/Signup/Step1";
 import SignupStep2 from "../../presentation/screens/auth/Signup/Step2";
 import SignupStep3 from "../../presentation/screens/auth/Signup/Step3";
+import ProvisioningScreen from "../../presentation/screens/auth/Signup/ProvisioningScreen";
 import ForgotPassword from "../../presentation/screens/auth/ForgotPassword";
 import ForgotPasswordStep1 from "../../presentation/screens/auth/ForgotPassword/Step1";
 import ForgotPasswordStep2 from "../../presentation/screens/auth/ForgotPassword/Step2";
@@ -21,6 +22,7 @@ import NotFound from "../../presentation/screens/public/NotFound";
 import ServiceUnavailable from "../../presentation/screens/public/ServiceUnavailable";
 import PublicLayout from "../../presentation/layouts/PublicLayout";
 import AuthLayout from "../../presentation/layouts/AuthLayout";
+import CheckoutDummy from "../../presentation/screens/public/DummyPages/checkoutdummy";
 import { useAuthStore } from "../store/authStore";
 import AdminPreview from "../../presentation/screens/admin/AdminPreview";
 import ProcessingIntegration from "../../presentation/screens/onboarding/ProcessingIntegration";
@@ -42,7 +44,7 @@ const rootRoute = createRootRoute({
   component: () => <Outlet />,
 });
 
-// 2. Establish pathless layout routes
+// 2. Establish layouts (Pathless / Layout Routes)
 const publicLayout = createRoute({
   getParentRoute: () => rootRoute,
   id: "_public", // Prefix with underscore for pathless layout
@@ -89,7 +91,6 @@ const loginRoute = createRoute({
   component: Login,
 });
 
-
 const signupRoute = createRoute({
   getParentRoute: () => authLayout,
   path: "/signup",
@@ -120,6 +121,12 @@ const signupStep3Route = createRoute({
   getParentRoute: () => signupRoute,
   path: "/step3",
   component: SignupStep3,
+});
+
+const signupProvisioningRoute = createRoute({
+  getParentRoute: () => signupRoute,
+  path: "/provisioning",
+  component: ProvisioningScreen,
 });
 
 const forgotPasswordRoute = createRoute({
@@ -238,6 +245,12 @@ const checkoutSofttechRoute = createRoute({
   },
 });
 
+const checkoutDummy = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/checkout",
+  component: CheckoutDummy,
+});
+
 const paymentResultSofttechRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/payment_result_softtech_ai_updated",
@@ -345,6 +358,7 @@ const routeTree = rootRoute.addChildren([
       signupStep1Route,
       signupStep2Route,
       signupStep3Route,
+      signupProvisioningRoute,
     ]),
     forgotPasswordRoute.addChildren([
       forgotPasswordIndexRoute,
@@ -359,6 +373,7 @@ const routeTree = rootRoute.addChildren([
   mcpSimulationRoute,
   plansSofttechRoute,
   checkoutSofttechRoute,
+  checkoutDummy,
   paymentResultSofttechRoute,
   deploymentSofttechRoute,
   deploymentInProgressSofttechRoute,

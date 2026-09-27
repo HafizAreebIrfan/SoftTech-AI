@@ -1,89 +1,310 @@
 .container {
-  margin-bottom: 1.5rem;
-}
-
-.title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--app-text-heading, #ffffff);
-  margin-bottom: 0.75rem;
+  width: 100%;
+  margin-bottom: 1rem;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1rem;
+  gap: 16px;
+  width: 100%;
 }
 
-.card {
-  background: var(--app-card-bg, #18191c);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.08));
-  border-radius: 12px;
-  padding: 1rem;
+.cardItem {
+  background-color: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 14px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  justify-content: space-between;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+  box-sizing: border-box;
+  text-decoration: none;
+  position: relative;
+  cursor: pointer;
 }
 
-.card:hover {
-  border-color: var(--app-card-active-border, #6366f1);
+.cardItem:hover {
+  border-color: rgba(255, 255, 255, 0.18);
   transform: translateY(-2px);
 }
 
-.image {
-  width: 100%;
-  height: 140px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-
-.headerRow {
+.productPlaceholderIcon {
+  font-size: 48px;
+  opacity: 0.8;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: center;
+  user-select: none;
 }
 
-.cardTitle {
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--app-text-heading, #ffffff);
+/* Banner Colors matching Image 1 */
+.bannerWrapper {
+  position: relative;
+  height: 180px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
-.badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: var(--app-badge-bg, rgba(99, 102, 241, 0.15));
-  color: var(--app-badge-text, #818cf8);
+/* Plain wrapper for real images: NO gradient/background behind the image,
+   fixed height; the image fills it edge-to-edge (`cover` via renderImage),
+   matching the map card so the grid looks consistent. */
+.bannerWrapperPlain {
+  position: relative;
+  height: 180px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: transparent;
 }
 
-.subtitle {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--app-text-body, #8a8d98);
+.bannerOlive {
+  background: linear-gradient(135deg, #3d5a27 0%, #2f451f 100%);
 }
 
-.attributeList {
-  margin-top: 0.5rem;
+.bannerPurple {
+  background: linear-gradient(135deg, #33285c 0%, #261d47 100%);
+}
+
+.bannerBurgundy {
+  background: linear-gradient(135deg, #4e2c2c 0%, #3d2020 100%);
+}
+
+.bannerViolet {
+  background: linear-gradient(135deg, #42214e 0%, #30163b 100%);
+}
+
+.bannerEmerald {
+  background: linear-gradient(135deg, #1f573c 0%, #17422d 100%);
+}
+
+.bannerWine {
+  background: linear-gradient(135deg, #531e3d 0%, #40142e 100%);
+}
+
+.bannerNavy {
+  background: linear-gradient(135deg, #233a64 0%, #192a4a 100%);
+}
+
+.bannerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bannerSilhouette {
+  width: 52px;
+  height: 52px;
+  opacity: 0.4;
+  color: #ffffff;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+}
+
+.availableBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #10b981;
+  color: #ffffff;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.outOfStockBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(239, 68, 68, 0.85);
+  color: #ffffff;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Card Content Body */
+.contentBody {
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 8px;
+  flex: 1;
 }
 
-.attributeRow {
+.titleRow {
   display: flex;
-  justify-content: space-between;
-  font-size: 0.75rem;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.attributeLabel {
-  color: var(--app-text-secondary, #8a8d98);
+.carTitle {
+  font-size: 14.5px;
+  font-weight: 750;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.3;
 }
 
-.attributeValue {
-  color: var(--app-text-heading, #ffffff);
+.carVariant {
+  font-size: 12.5px;
+  color: var(--app-text-secondary, #94a3b8);
   font-weight: 500;
+}
+
+.locationRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Spec Pills */
+.specsPillsRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 2px;
+}
+
+.specPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 11.5px;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+/* Card Bottom Footer */
+.cardFooterRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.priceGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.priceValue {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.originalPrice {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-decoration: line-through;
+  opacity: 0.85;
+  line-height: 1.2;
+}
+
+.pricePeriod {
+  font-size: 11px;
+  color: var(--app-text-secondary, #94a3b8);
+}
+
+.bookNowBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--widget-accent, #3b82f6);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  transition: gap 0.15s ease, opacity 0.15s ease;
+}
+
+.bookNowBtn:hover {
+  opacity: 0.9;
+  gap: 7px;
+}
+
+/* Responsive: tablet — tighten the grid + card chrome. */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .bannerWrapper,
+  .bannerWrapperPlain {
+    height: 150px;
+  }
+
+  .contentBody {
+    padding: 12px 13px;
+    gap: 7px;
+  }
+
+  .priceValue {
+    font-size: 15px;
+  }
+}
+
+/* Responsive: phone — single column, comfortable touch targets. */
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .bannerWrapper,
+  .bannerWrapperPlain {
+    height: 170px;
+  }
+
+  .carTitle {
+    font-size: 14px;
+  }
+
+  .cardFooterRow {
+    padding-top: 12px;
+  }
+
+  .bookNowBtn {
+    font-size: 12.5px;
+    padding: 4px 0;
+  }
 }

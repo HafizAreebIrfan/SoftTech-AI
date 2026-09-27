@@ -1,6 +1,4 @@
-import { SaaSPlan, SaaSMember, SaaSInvoice, SaaSUsage, SaaSClientAccount, SaaSProviderKPI } from "../../types/saas";
-
-export const SAAS_PLANS: SaaSPlan[] = [
+export const SAAS_PLANS: any[] = [
   {
     id: "free",
     name: "Free Trial",
@@ -64,13 +62,13 @@ export const SAAS_PLANS: SaaSPlan[] = [
   }
 ];
 
-export const INITIAL_USAGE: SaaSUsage = {
+export const INITIAL_USAGE: any = {
   seats: { current: 4, max: 5 },
   storageGb: { current: 14, max: 20 },
   apiCalls: { current: 8200, max: 10000 }
 };
 
-export const INITIAL_MEMBERS: SaaSMember[] = [
+export const INITIAL_MEMBERS: any[] = [
   {
     id: "mem-1",
     name: "Alex Mercer",
@@ -105,7 +103,7 @@ export const INITIAL_MEMBERS: SaaSMember[] = [
   }
 ];
 
-export const INITIAL_INVOICES: SaaSInvoice[] = [
+export const INITIAL_INVOICES: any[] = [
   { id: "INV-2026-004", date: "July 15, 2026", amount: 29, status: "Paid" },
   { id: "INV-2026-003", date: "June 15, 2026", amount: 29, status: "Paid" },
   { id: "INV-2026-002", date: "May 15, 2026", amount: 29, status: "Paid" }
@@ -118,7 +116,7 @@ export const saasMock = {
   blocks: [] as any[]
 };
 
-export const INITIAL_CLIENTS: SaaSClientAccount[] = [
+export const INITIAL_CLIENTS: any[] = [
   {
     id: "cli-1",
     companyName: "Acme Corporation",
@@ -171,7 +169,7 @@ export const INITIAL_CLIENTS: SaaSClientAccount[] = [
   }
 ];
 
-export const INITIAL_PROVIDER_KPIS: SaaSProviderKPI[] = [
+export const INITIAL_PROVIDER_KPIS: any[] = [
   {
     id: "kpi-mrr",
     label: "Monthly Recurring Revenue",

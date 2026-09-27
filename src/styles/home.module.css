@@ -2,17 +2,17 @@
   position: relative;
   width: 100%;
   overflow: visible;
-  background-color: var(--app-bg, #000000);
-  color: var(--app-text-primary, #f8fafc);
-  font-family: "Inter", sans-serif;
+  background-color: var(--app-bg);
+  color: var(--app-text-primary);
+  font-family: "Poppins", sans-serif;
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
 }
 
 .homeWrapper::selection {
-  background-color: rgba(99, 102, 241, 0.3);
-  color: #ffffff;
+  background-color: var(--app-bg-secondary);
+  color: var(--app-text-grad-1);
 }
 
 /* SCROLL TRACK & PINNED SECTION */
@@ -60,23 +60,23 @@
   gap: 0.5rem;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  background-color: rgba(99, 102, 241, 0.1);
-  color: var(--app-text-highlighted-heading, #818cf8);
+  border: 1px solid var(--app-card-active-border);
+  background-color: var(--app-bg-secondary);
+  color: var(--app-text-highlighted-heading);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   margin-bottom: 1.5rem;
   margin-top: 10px;
   backdrop-filter: blur(4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px var(--app-overlay-shadow);
 }
 
 .heroHeading {
   font-size: 2.75rem;
   font-weight: 900;
   letter-spacing: -0.025em;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   line-height: 1.1;
   max-width: 64rem;
   text-align: center;
@@ -236,14 +236,14 @@
     var(--app-btn-grad-1),
     var(--app-btn-grad-2)
   );
-  color: #ffffff;
+  color: var(--app-text-overlay);
   padding: 0.875rem 2rem;
   border-radius: 9999px;
   font-size: 1rem;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 25px -5px var(--app-overlay-shadow);
   transition: all 0.3s ease;
   pointer-events: auto;
   text-decoration: none;
@@ -251,7 +251,7 @@
 }
 
 .stepBtn:hover {
-  box-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 30px var(--app-overlay-shadow);
   transform: translateY(-2px);
 }
 
@@ -274,10 +274,10 @@
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
-  box-shadow: var(--app-overlay-shadow, 0 25px 50px -12px rgba(0, 0, 0, 0.5));
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
-  background-color: var(--app-card, rgba(10, 10, 10, 0.9));
-  color: var(--app-text-primary, #ffffff);
+  box-shadow: var(--app-overlay-shadow, 0 25px 50px -12px);
+  border: 2px solid var(--app-card-border);
+  background-color: var(--app-card);
+  color: var(--app-text-primary);
 }
 
 .floatingTagDot {
@@ -291,29 +291,26 @@
   left: 50%;
 }
 
-.tagTl .floatingTagDot {
-  background-color: #818cf8;
-  box-shadow: 0 0 10px rgba(129, 140, 248, 0.8);
+.tagTl .floatingTagDot, 
+.tagBc .floatingTagDot {
+  background-color: var(--app-btn-grad-1);
+  box-shadow: 0 0 10px var(--app-overlay-shadow);
 }
 
 .tagTr {
   top: 35%;
   left: 60%;
-  background-color: var(--app-text-primary, #ffffff);
-  color: var(--app-bg, #000000);
+  background-color: var(--app-bg);
+  filter: invert(1);
+  color: var(--app-text-primary);
   font-weight: 700;
-  box-shadow: 0 0 25px -5px rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 25px -5px var(--app-overlay-shadow);
 }
 
 .tagBc {
-  top: 85%;
-  left: 60%;
-  border-color: rgba(168, 85, 247, 0.4);
-}
-
-.tagBc .floatingTagDot {
-  background-color: #c084fc;
-  box-shadow: 0 0 10px rgba(192, 132, 252, 0.8);
+  top: 75%;
+  left: -5%;
+  border-color: var(--app-card-border);
 }
 
 /* CARDS STACK CONTAINER & ITEMS */
@@ -331,9 +328,9 @@
   width: 18rem;
   height: 24rem;
   border-radius: 1rem;
-  background-color: var(--app-card, #0a0a0a);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
-  box-shadow: var(--app-overlay-shadow, 0 25px 50px -12px rgba(0, 0, 0, 0.8));
+  background-color: var(--app-card);
+  border: 1px solid var(--app-card-active-border);
+  box-shadow: var(--app-overlay-shadow, 0 25px 50px -12px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -394,7 +391,7 @@
     var(--app-brand-indigo, var(--app-btn-grad-1)),
     var(--app-brand-fuchsia, var(--app-btn-grad-2))
   );
-  color: #ffffff;
+  color: var(--app-text-overlay);
   font-size: 0.75rem;
   font-weight: 700;
   border-radius: 0.5rem;
@@ -402,7 +399,7 @@
   border: none;
   cursor: not-allowed;
   opacity: 0.9;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 4px 12px var(--app-overlay-shadow);
   text-align: center;
   margin-top: auto;
 }
@@ -410,8 +407,8 @@
 /* CARD HEADER & SNIPPETS */
 .cardHeader {
   padding: 1rem;
-  border-bottom: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
-  background-color: var(--app-card-secondary, rgba(255, 255, 255, 0.05));
+  border-bottom: 1px solid var(--app-card-border);
+  background-color: var(--app-card-secondary);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -427,42 +424,25 @@
   width: 0.75rem;
   height: 0.75rem;
   border-radius: 9999px;
-  background-color: var(--app-text-secondary, #475569);
+  background-color: var(--app-text-secondary);
 }
 
 .cardTitle {
-  font-family: monospace;
+  font-family: "Poppins", sans-serif;
   font-size: 0.625rem;
-  color: var(--app-text-highlighted-heading, #818cf8);
+  color: var(--app-text-highlighted-heading);
   font-weight: 700;
 }
 
 .cardBodyCode {
   padding: 1.5rem;
-  font-family: monospace;
+  font-family: "Poppins", sans-serif;
   font-size: 0.75rem;
-  color: var(--app-text-primary, #cbd5e1);
+  color: var(--app-text-primary);
   line-height: 2;
-  background-color: var(--app-bg, #050505);
+  background-color: var(--app-bg);
   flex-grow: 1;
   overflow: hidden;
-}
-
-.codeGet {
-  color: #34d399;
-  font-weight: 700;
-}
-
-:global([data-theme="light"]) .codeGet {
-  color: #059669;
-}
-
-.codeAuth {
-  color: #60a5fa;
-}
-
-:global([data-theme="light"]) .codeAuth {
-  color: #2563eb;
 }
 
 /* CARD 2: SECURITY VAULT */
@@ -472,17 +452,11 @@
     var(--app-card),
     var(--app-bg)
   );
-  border-color: rgba(168, 85, 247, 0.3);
+  border-color: var(--app-card-border);
   align-items: center;
   justify-content: center;
   padding: 2rem;
   text-align: center;
-}
-
-:global([data-theme="light"]) .cardVault {
-  background-image: none;
-  background-color: var(--app-card);
-  border-color: var(--app-card-border);
 }
 
 .vaultBlurGlow {
@@ -491,7 +465,7 @@
   right: 0;
   width: 8rem;
   height: 8rem;
-  background-color: rgba(168, 85, 247, 0.1);
+  background-color: var(--app-bg);
   border-radius: 9999px;
   filter: blur(24px);
 }
@@ -500,25 +474,25 @@
   width: 5rem;
   height: 5rem;
   border-radius: 9999px;
-  background-color: rgba(168, 85, 247, 0.2);
+  background-color: var(--app-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 1.5rem;
-  border: 1px solid rgba(168, 85, 247, 0.4);
-  box-shadow: 0 0 30px -5px rgba(168, 85, 247, 0.4);
+  border: 1px solid var(--app-card-active-border);
+  box-shadow: 0 0 30px -5px var(--app-overlay-shadow);
 }
 
 .vaultHeading {
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
 }
 
 .vaultDesc {
   font-size: 0.875rem;
-  color: var(--app-text-secondary, #94a3b8);
+  color: var(--app-text-secondary);
   font-weight: 500;
   margin-top: 0.5rem;
 }
@@ -526,21 +500,17 @@
 /* CARD 3: ENGINE */
 .cardEngine {
   background-color: var(--app-card);
-  border-color: rgba(99, 102, 241, 0.4);
+  border-color: var(--app-card-border);
   align-items: center;
   justify-content: center;
   padding: 2rem;
   text-align: center;
 }
 
-:global([data-theme="light"]) .cardEngine {
-  border-color: var(--app-card-border);
-}
-
 .engineGlow {
   position: absolute;
   inset: 0;
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: var(--app-bg-secondary);
   filter: blur(16px);
   border-radius: 9999px;
 }
@@ -558,9 +528,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 25px -5px var(--app-overlay-shadow);
   margin-bottom: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--app-card-border);
   z-index: 10;
   transition: transform 0.5s ease;
 }
@@ -581,13 +551,15 @@
 .engineHeading {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
+  z-index: 9999999999;
   margin-bottom: 0.75rem;
 }
 
 .engineDesc {
   font-size: 0.875rem;
-  color: var(--app-text-secondary, #94a3b8);
+  color: var(--app-text-secondary);
+  z-index: 9999999999;
   line-height: 1.625;
   font-weight: 500;
 }
@@ -596,6 +568,7 @@
 .cardWidgets {
   padding: 1.25rem;
   background-color: var(--app-card);
+  border-color: var(--app-card-border);
 }
 
 .widgetHeader {
@@ -604,17 +577,17 @@
   gap: 0.5rem;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--app-card-border);
 }
 
 .widgetHeaderTitle {
   font-weight: 700;
   font-size: 0.875rem;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
 }
 
 .widgetCanvas {
-  background-color: var(--app-bg, #050505);
+  background-color: var(--app-bg);
   width: 100%;
   height: 100%;
   border-radius: 0.75rem;
@@ -622,7 +595,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--app-card-border);
 }
 
 .msgRow {
@@ -635,27 +608,23 @@
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 9999px;
-  background-color: rgba(99, 102, 241, 0.3);
+  background-color: var(--app-overlay-shadow);
   flex-shrink: 0;
 }
 
-:global([data-theme="light"]) .msgAvatar {
-  background-color: rgba(99, 102, 241, 0.1);
-}
-
 .msgBubble {
-  background-color: var(--app-card-secondary, #111111);
+  background-color: var(--app-card-secondary);
   padding: 0.75rem;
   border-radius: 0.5rem;
   border-top-left-radius: 0;
   width: 100%;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--app-card-border);
 }
 
 .bubbleLine {
   height: 0.5rem;
   border-radius: 0.25rem;
-  background-color: var(--app-text-secondary, #333333);
+  background-color: var(--app-text-secondary);
 }
 
 .bubbleLineFull {
@@ -691,9 +660,9 @@
 .productThumb {
   width: 3rem;
   height: 3rem;
-  background-color: var(--app-bg-secondary, #111111);
+  background-color: var(--app-bg-secondary);
   border-radius: 0.25rem;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--app-card-border);
 }
 
 .productTextGroup {
@@ -703,7 +672,7 @@
 
 .productTitleLine {
   height: 0.5rem;
-  background-color: var(--app-text-secondary, #333333);
+  background-color: var(--app-text-secondary);
   border-radius: 0.25rem;
   width: 75%;
   margin-bottom: 0.5rem;
@@ -711,41 +680,30 @@
 
 .productStatusLine {
   height: 0.5rem;
-  background-color: #34d399;
+  background-color: var(--app-brand-emerald);
   border-radius: 0.25rem;
   width: 50%;
-  box-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
-}
-
-:global([data-theme="light"]) .productStatusLine {
-  background-color: #059669;
+  box-shadow: 0 0 10px var(--app-overlay-shadow);
 }
 
 .widgetBtn {
   width: 100%;
   margin-top: 0.75rem;
   padding: 0.5rem 0;
-  background-color: rgba(99, 102, 241, 0.2);
-  color: var(--app-text-highlighted-heading, #818cf8);
+  background-color: var(--app-bg-secondary);
+  color: var(--app-text-highlighted-heading);
   font-size: 0.75rem;
   font-weight: 700;
   border-radius: 0.25rem;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid var(--app-card-border);
   cursor: pointer;
-}
-
-:global([data-theme="light"]) .widgetBtn {
-  background-color: rgba(99, 102, 241, 0.1);
-  color: var(--app-header-item-active, #4f46e5);
-  border-color: rgba(99, 102, 241, 0.2);
 }
 
 /* CARD 5: LIVE ChatGPT DEPLOYMENT - FLUID WIDTH REDESIGN FOR RESPONSIVENESS */
 .cardLive {
   background-color: var(--app-card);
   padding: 1.25rem;
-  width: 18rem; /* Set to match other cards to prevent overflow in smaller viewport */
-  height: 24rem; /* Match size with other cards */
+  border-color: var(--app-card-border);
 }
 
 .liveHeader {
@@ -754,7 +712,7 @@
   justify-content: space-between;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--app-card-border);
 }
 
 .liveIndicatorGroup {
@@ -776,7 +734,7 @@
   width: 100%;
   height: 100%;
   border-radius: 9999px;
-  background-color: #34d399;
+  background-color: var(--app-brand-emerald);
   opacity: 0.75;
   animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
@@ -787,12 +745,12 @@
   width: 0.625rem;
   height: 0.625rem;
   border-radius: 9999px;
-  background-color: #10b981;
+  background-color: var(--app-btn-grad-2);
 }
 
 .liveHeaderText {
   font-weight: 700;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -801,15 +759,15 @@
 .liveHeaderVersion {
   font-size: 0.625rem;
   font-weight: 700;
-  color: var(--app-text-highlighted-heading, #818cf8);
-  background-color: rgba(99, 102, 241, 0.1);
+  color: var(--app-text-highlighted-heading);
+  background-color: var(--app-bg);
   padding: 0.125rem 0.5rem;
   border-radius: 9999px;
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid var(--app-card-border);
 }
 
 .liveCanvas {
-  background-color: var(--app-bg, #050505);
+  background-color: var(--app-bg);
   width: 100%;
   height: 100%;
   border-radius: 0.75rem;
@@ -817,7 +775,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--app-card-border);
   gap: 0.75rem;
 }
 
@@ -833,22 +791,22 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--app-card-secondary, #111111);
+  background-color: var(--app-card-secondary);
   padding: 0.625rem;
   border-radius: 0.5rem;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--app-card-border);
 }
 
 .liveLabel {
   font-size: 0.6875rem;
   font-weight: 700;
-  color: var(--app-text-secondary, #94a3b8);
+  color: var(--app-text-secondary);
 }
 
 .liveVal {
-  font-family: monospace;
+  font-family: "Poppins", sans-serif;
   font-size: 0.625rem;
-  color: var(--app-text-primary, #cbd5e1);
+  color: var(--app-text-primary);
 }
 
 .liveDoubleGrid {
@@ -858,10 +816,10 @@
 }
 
 .liveGridBox {
-  background-color: var(--app-card-secondary, #111111);
+  background-color: var(--app-card-secondary);
   padding: 0.625rem;
   border-radius: 0.5rem;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--app-card-border);
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -870,7 +828,7 @@
 .liveBoxLabel {
   font-size: 0.5625rem;
   font-weight: 900;
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -878,31 +836,27 @@
 .liveBoxValGreen {
   font-size: 0.75rem;
   font-weight: 900;
-  color: #34d399;
-}
-
-:global([data-theme="light"]) .liveBoxValGreen {
-  color: #059669;
+  color: var(--app-text-highlighted-heading);
 }
 
 .liveBoxValWhite {
   font-size: 0.75rem;
   font-weight: 900;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
 }
 
 .liveDeployBtn {
-  background-color: var(--app-card-secondary, #111111);
-  color: var(--app-text-primary, #ffffff);
-  margin-top: auto; /* Push to bottom naturally */
+  background-color: var(--app-btn-grad-1);
+  color: var(--app-text-overlay);
+  margin-top: auto;
   width: 100%;
   padding: 1rem 0.5rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 600;
   border: none;
-  cursor: pointer;
-  box-shadow: var(--app-overlay-shadow, 0 10px 25px -5px rgba(0, 0, 0, 0.5));
+  cursor: pointer !important;
+  box-shadow: var(--app-overlay-shadow, 0 10px 25px -5px);
   transition: all 0.3s ease;
   pointer-events: auto;
   text-decoration: none;
@@ -911,13 +865,7 @@
 }
 
 .liveDeployBtn:hover {
-  box-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
-}
-
-:global([data-theme="light"]) .liveDeployBtn {
-  background-color: var(--app-card-secondary);
-  border: 1px solid var(--app-card-border);
-  box-shadow: none;
+  box-shadow: 0 0 30px var(--app-overlay-shadow);
 }
 
 @keyframes ping {
@@ -932,8 +880,8 @@
 .logoTickerSection {
   width: 100%;
   padding: 4rem 0;
-  background-color: var(--app-bg, #000000);
-  border-top: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  background-color: var(--app-bg);
+  border-top: 1px solid var(--app-card-border);
   position: relative;
   z-index: 20;
   overflow: hidden;
@@ -951,7 +899,7 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text-secondary);
 }
 
 .tickerWrapper {
@@ -972,7 +920,7 @@
   pointer-events: none;
   background-image: linear-gradient(
     to right,
-    var(--app-bg, #000000),
+    var(--app-bg),
     transparent
   );
 }
@@ -987,7 +935,7 @@
   pointer-events: none;
   background-image: linear-gradient(
     to left,
-    var(--app-bg, #000000),
+    var(--app-bg),
     transparent
   );
 }
@@ -1018,7 +966,7 @@
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text-secondary);
   font-weight: 700;
   font-size: 1.125rem;
   letter-spacing: 0.05em;
@@ -1033,9 +981,9 @@
 /* FEATURES SECTION */
 .featuresSection {
   width: 100%;
-  background-color: var(--app-bg, #000000);
+  background-color: var(--app-bg);
   padding: 8rem 0;
-  border-top: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border-top: 1px solid var(--app-card-border);
   position: relative;
   z-index: 20;
 }
@@ -1052,7 +1000,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--app-text-highlighted-heading, #818cf8);
+  color: var(--app-text-highlighted-heading);
   margin-bottom: 0.75rem;
   display: block;
 }
@@ -1060,7 +1008,7 @@
 .sectionHeading {
   font-size: 1.875rem;
   font-weight: 900;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   margin-bottom: 1.5rem;
 }
 
@@ -1071,7 +1019,7 @@
 }
 
 .sectionDesc {
-  color: var(--app-text-secondary, #94a3b8);
+  color: var(--app-text-secondary);
   font-size: 1.125rem;
   max-width: 40rem;
   margin: 0 auto;
@@ -1095,11 +1043,11 @@
 }
 
 .featureCard {
-  background-color: var(--app-card, #0a0a0a);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
+  background-color: var(--app-card);
+  border: 1px solid var(--app-card-border);
   padding: 2rem;
   border-radius: 1rem;
-  box-shadow: var(--app-overlay-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.3));
+  box-shadow: var(--app-overlay-shadow, 0 10px 15px -3px);
   transition:
     background-color 0.3s ease,
     border-color 0.3s ease;
@@ -1111,7 +1059,7 @@
 }
 
 .featureCard:hover {
-  background-color: var(--app-card-secondary, #111111);
+  background-color: var(--app-card-secondary);
 }
 
 .featureIconCircle {
@@ -1122,22 +1070,22 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 1.5rem;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--app-card-border);
 }
 
 .iconIndigo {
-  background-color: rgba(99, 102, 241, 0.2);
-  border-color: rgba(99, 102, 241, 0.2);
+  background-color: var(--app-bg-secondary);
+  border-color: var(--app-card-border);
 }
 
 .iconPurple {
-  background-color: rgba(168, 85, 247, 0.2);
-  border-color: rgba(168, 85, 247, 0.2);
+  background-color: var(--app-bg-secondary);
+  border-color: var(--app-card-border);
 }
 
 .iconEmerald {
-  background-color: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.2);
+  background-color: var(--app-bg-secondary);
+  border-color: var(--app-card-border);
 }
 
 .featureIcon {
@@ -1148,12 +1096,12 @@
 .featureTitle {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   margin-bottom: 0.75rem;
 }
 
 .featureDesc {
-  color: var(--app-text-secondary, #94a3b8);
+  color: var(--app-text-secondary);
   font-size: 0.875rem;
   line-height: 1.625;
   font-weight: 500;
@@ -1162,9 +1110,9 @@
 /* BUILT FOR EVERY INDUSTRY (STACK TRACK) - GLOBAL CLASS FOR GSAP Sticky trigger */
 .industrySection {
   width: 100%;
-  background-color: var(--app-bg, #000000);
+  background-color: var(--app-bg);
   padding: 8rem 0;
-  border-top: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border-top: 1px solid var(--app-card-border);
   position: relative;
   z-index: 20;
 }
@@ -1187,14 +1135,14 @@
   height: 24rem;
   border-radius: 1.5rem;
   overflow: hidden;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
-  box-shadow: var(--app-overlay-shadow, 0 25px 50px -12px rgba(0, 0, 0, 0.8));
-  background-color: var(--app-card, #0a0a0a);
+  border: 1px solid var(--app-card-border);
+  box-shadow: var(--app-overlay-shadow, 0 25px 50px -12px);
+  background-color: var(--app-card);
   transition: border-color 0.3s ease;
 }
 
 :global(.industryStackCard):hover {
-  border-color: var(--card-hover-border, #6366f1);
+  border-color: var(--card-hover-border);
 }
 
 .cardBgImage {
@@ -1264,7 +1212,7 @@
 .cardTitleStack {
   font-size: 1.5rem;
   font-weight: 900;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   margin-bottom: 1rem;
 }
 
@@ -1275,7 +1223,7 @@
 }
 
 .cardDesc {
-  color: var(--app-text-secondary, #cbd5e1);
+  color: var(--app-text-secondary);
   font-size: 0.875rem;
   line-height: 1.625;
   font-weight: 500;
@@ -1299,15 +1247,9 @@
   font-weight: 700;
   padding: 0.25rem 0.625rem;
   border-radius: 9999px;
-  background-color: var(--tag-bg, rgba(99, 102, 241, 0.1));
-  color: var(--tag-color, #818cf8);
-  border: 1px solid var(--tag-border, rgba(99, 102, 241, 0.2));
-}
-
-:global([data-theme="light"]) .cardTag {
-  background-color: #f1f5f9 !important;
-  color: #4f46e5 !important;
-  border-color: rgba(79, 70, 229, 0.1) !important;
+  background-color: var(--tag-bg);
+  color: var(--tag-color);
+  border: 1px solid var(--tag-border);
 }
 
 /* WIDGET TEMPLATES */
@@ -1315,14 +1257,14 @@
   display: none;
   width: 20rem;
   height: 16rem;
-  background-color: var(--app-card-secondary, rgba(3, 3, 3, 0.8));
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
+  background-color: var(--app-card-secondary);
+  border: 1px solid var(--app-card-border);
   border-radius: 1rem;
   padding: 1.25rem;
   flex-direction: column;
   justify-content: space-between;
   backdrop-filter: blur(8px);
-  box-shadow: var(--app-overlay-shadow, 0 25px 50px -12px rgba(0, 0, 0, 0.5));
+  box-shadow: var(--app-overlay-shadow);
 }
 
 @media (min-width: 1024px) {
@@ -1331,28 +1273,23 @@
   }
 }
 
-:global([data-theme="light"]) .templateMockup {
-  background-color: var(--app-card) !important;
-  border-color: var(--app-card-border) !important;
-}
-
 .mockupHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border-bottom: 1px solid var(--app-card-border);
 }
 
 .mockupTitle {
-  font-family: monospace;
+  font-family: "Poppins", sans-serif;
   font-size: 0.625rem;
   font-weight: 700;
 }
 
 .mockupStatus {
   font-size: 0.625rem;
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text-secondary);
 }
 
 .mockupBody {
@@ -1370,13 +1307,13 @@
 .mockupText {
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--app-text-secondary, #cbd5e1);
+  color: var(--app-text-secondary);
 }
 
 .mockupVal {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
 }
 
 .mockupFooter {
@@ -1385,14 +1322,14 @@
 
 .mockupLine {
   height: 1px;
-  background-color: var(--app-card-border, rgba(255, 255, 255, 0.05));
+  background-color: var(--app-card-border);
   margin-bottom: 0.75rem;
 }
 
 .mockupBtn {
   width: 100%;
   padding: 0.625rem 0;
-  color: #ffffff;
+  color: var(--app-text-overlay);
   font-size: 0.75rem;
   font-weight: 700;
   border-radius: 0.5rem;
@@ -1406,7 +1343,7 @@
   --tag-bg: rgba(99, 102, 241, 0.1);
   --tag-color: var(--app-brand-indigo, #818cf8);
   --tag-border: rgba(99, 102, 241, 0.2);
-  --card-hover-border: var(--app-brand-indigo, #6366f1);
+  --card-hover-border: var(--app-brand-emerald, #10b981);
 }
 .indigoTheme .cardCategory {
   color: var(--app-brand-indigo, #818cf8);
@@ -1446,7 +1383,7 @@
   --tag-bg: rgba(59, 130, 246, 0.1);
   --tag-color: var(--app-brand-blue, #60a5fa);
   --tag-border: rgba(59, 130, 246, 0.2);
-  --card-hover-border: var(--app-brand-blue, #3b82f6);
+  --card-hover-border: var(--app-brand-emerald, #10b981);
 }
 .blueTheme .cardCategory {
   color: var(--app-brand-blue, #60a5fa);
@@ -1466,7 +1403,7 @@
   --tag-bg: rgba(217, 70, 239, 0.1);
   --tag-color: #f5f3ff;
   --tag-border: rgba(217, 70, 239, 0.2);
-  --card-hover-border: var(--app-brand-fuchsia, #d946ef);
+  --card-hover-border: var(--app-brand-emerald, #10b981);
 }
 .fuchsiaTheme .cardCategory {
   color: var(--app-brand-fuchsia, #e879f9);
@@ -1629,13 +1566,13 @@
 }
 
 .saveBadge {
-  background-color: rgba(99, 102, 241, 0.2);
-  color: var(--app-text-highlighted-heading, #818cf8);
+  background-color: var(--app-brand-blue);
+  color: var(--app-text-overlay);
   font-size: 0.625rem;
   padding: 0.125rem 0.5rem;
   border-radius: 9999px;
   font-weight: 800;
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid var(--app-card-border);
 }
 
 .pricingToggleSlider {
@@ -1644,7 +1581,7 @@
   bottom: 0.375rem;
   left: 0.375rem;
   width: 5.3rem;
-  background-color: var(--app-btn-grad-1, #4f46e5);
+  background-color: var(--app-btn-grad-1);
   border-radius: 9999px;
   z-index: 0;
   transition: all 0.3s ease-out;
@@ -1667,8 +1604,8 @@
 }
 
 :global(.pricingCard) {
-  background-color: var(--app-card, #0a0a0a);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
+  background-color: var(--app-card);
+  border: 1px solid var(--app-card-border);
   border-radius: 1.5rem;
   padding: 2rem;
   display: flex;
@@ -1680,7 +1617,7 @@
 }
 
 :global(.pricingCard):hover {
-  border-color: var(--app-card-active-border, rgba(255, 255, 255, 0.2));
+  border-color: var(--app-card-active-border);
 }
 
 .popularBadge {
@@ -1688,8 +1625,8 @@
   top: -1px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: var(--app-btn-grad-1, #6366f1);
-  color: var(--app-text-overlay, #ffffff);
+  background-color: var(--app-btn-grad-1);
+  color: var(--app-text-overlay);
   font-size: 0.625rem;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -1697,7 +1634,7 @@
   border-bottom-left-radius: 0.75rem;
   border-bottom-right-radius: 0.75rem;
   text-transform: uppercase;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px var(--app-overlay-shadow);
 }
 
 .pricingCardPro {
@@ -1707,26 +1644,26 @@
     var(--app-card-secondary),
     var(--app-card)
   );
-  border: 2px solid var(--app-card-active-border, rgba(99, 102, 241, 0.8));
+  border: 2px solid var(--app-card-active-border);
   box-shadow: var(
     --app-overlay-shadow,
-    0 25px 50px -12px rgba(99, 102, 241, 0.15)
+    0 25px 50px -12px
   );
 }
 
 .pricingCardPro:hover {
-  border-color: var(--app-text-highlighted-heading, #818cf8);
+  border-color: var(--app-text-highlighted-heading);
 }
 
 .planName {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   margin-bottom: 0.5rem;
 }
 
 .planDesc {
-  color: var(--app-text-secondary, #94a3b8);
+  color: var(--app-text-secondary);
   font-size: 0.875rem;
   line-height: 1.5;
   margin-bottom: 1.5rem;
@@ -1741,12 +1678,12 @@
 .planPrice {
   font-size: 3rem;
   font-weight: 900;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   transition: all 0.2s ease;
 }
 
 .planPeriod {
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text-secondary);
   font-size: 0.875rem;
   margin-left: 0.5rem;
   font-weight: 500;
@@ -1754,7 +1691,7 @@
 
 .pricingDivider {
   height: 1px;
-  background-color: var(--app-card-border, rgba(255, 255, 255, 0.05));
+  background-color: var(--app-card-border);
   margin-bottom: 2rem;
 }
 
@@ -1773,25 +1710,25 @@
   gap: 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--app-text-primary, #cbd5e1);
+  color: var(--app-text-primary);
 }
 
 .featureCheck {
   width: 1rem;
   height: 1rem;
-  color: var(--app-text-highlighted-heading, #818cf8);
+  color: var(--app-text-highlighted-heading);
   flex-shrink: 0;
 }
 
 .featureCross {
   width: 1rem;
   height: 1rem;
-  color: var(--app-text-secondary, #475569);
+  color: var(--app-text-secondary);
   flex-shrink: 0;
 }
 
 .featureDisabled {
-  color: var(--app-text-secondary, #64748b);
+  color: var(--app-text-secondary);
 }
 
 .pricingBtn {
@@ -1802,14 +1739,13 @@
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: var(--app-card-secondary, rgba(255, 255, 255, 0.05));
-  color: var(--app-text-primary, #ffffff);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
+  background-color: var(--app-card-secondary);
+  color: var(--app-text-primary);
+  border: 1px solid var(--app-card-border);
 }
 
 .pricingBtn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--app-card-active-border);
 }
 
 .pricingBtnPro {
@@ -1825,22 +1761,22 @@
     var(--app-btn-grad-1),
     var(--app-btn-grad-2)
   );
-  color: #ffffff;
+  color: var(--app-text-overlay);
   border: none;
-  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 10px 20px var(--app-overlay-shadow);
 }
 
 .pricingBtnPro:hover {
-  box-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 30px var(--app-overlay-shadow);
   transform: translateY(-1px);
 }
 
 /* FAQ SECTION */
 .faqSection {
   width: 100%;
-  background-color: var(--app-bg, #000000);
+  background-color: var(--app-bg);
   padding: 8rem 0;
-  border-top: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.05));
+  border-top: 1px solid var(--app-card-border);
   position: relative;
   z-index: 20;
 }
@@ -1855,8 +1791,8 @@
 }
 
 :global(.faqItem) {
-  background-color: var(--app-card, #0a0a0a);
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
+  background-color: var(--app-card);
+  border: 1px solid var(--app-card-border);
   border-radius: 1rem;
   overflow: hidden;
   transition: all 0.3s ease;
@@ -1876,12 +1812,12 @@
   border: none;
   cursor: pointer;
   text-align: left;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   transition: color 0.2s ease;
 }
 
 .faqTrigger:hover {
-  color: var(--app-text-highlighted-heading, #818cf8);
+  color: var(--app-text-highlighted-heading);
 }
 
 .faqQuestion {
@@ -1898,13 +1834,13 @@
 .faqChevron {
   width: 1.25rem;
   height: 1.25rem;
-  color: var(--app-text-secondary, #94a3b8);
+  color: var(--app-text-secondary);
   transition: transform 0.3s ease;
 }
 
 .faqChevronActive {
   transform: rotate(180deg);
-  color: var(--app-text-highlighted-heading, #818cf8);
+  color: var(--app-text-highlighted-heading);
 }
 
 .faqAnswerWrapper {
@@ -1915,7 +1851,7 @@
 
 .faqAnswer {
   padding: 0 1.5rem 1.5rem 1.5rem;
-  color: var(--app-text-secondary, #cbd5e1);
+  color: var(--app-text-secondary);
   font-size: 0.875rem;
   line-height: 1.625;
   font-weight: 500;
@@ -1930,23 +1866,11 @@
 /* CTA SECTION */
 .ctaSection {
   width: 100%;
-  background-color: var(--app-bg, #000000);
+  background-color: var(--app-bg);
   padding: 8rem 0;
   position: relative;
   z-index: 20;
   overflow: hidden;
-}
-
-.ctaGlowLeft {
-  position: absolute;
-  top: -8rem;
-  left: -8rem;
-  width: 24rem;
-  height: 24rem;
-  background-color: rgba(99, 102, 241, 0.1);
-  border-radius: 9999px;
-  filter: blur(64px);
-  pointer-events: none;
 }
 
 .ctaGlowRight {
@@ -1955,7 +1879,7 @@
   right: -8rem;
   width: 24rem;
   height: 24rem;
-  background-color: rgba(168, 85, 247, 0.1);
+  background-color: var(--app-card-secondary);
   border-radius: 9999px;
   filter: blur(64px);
   pointer-events: none;
@@ -1969,18 +1893,14 @@
 }
 
 .ctaBlock {
-  background-image: linear-gradient(
-    to bottom right,
-    var(--app-card-secondary),
-    var(--app-card)
-  );
-  border: 1px solid var(--app-card-border, rgba(99, 102, 241, 0.3));
+  background-color: var(--app-bg-secondary);
+  border: 1px solid var(--tag-border);
   border-radius: 2rem;
   padding: 3rem 1.5rem;
   text-align: center;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--app-overlay-shadow, 0 0 50px rgba(99, 102, 241, 0.1));
+  box-shadow: var(--app-overlay-shadow, 0 0 50px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1992,40 +1912,23 @@
   }
 }
 
-.ctaReflection {
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(
-    to right,
-    transparent,
-    rgba(255, 255, 255, 0.05),
-    transparent
-  );
-  transform: translateX(-100%);
-  transition: transform 1s ease-in-out;
-}
-
-.ctaBlock:hover .ctaReflection {
-  transform: translateX(100%);
-}
-
 .ctaIconCircle {
   width: 5rem;
   height: 5rem;
   border-radius: 1.5rem;
-  background-color: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background-color: var(--app-bg);
+  border: 1px solid var(--tag-border);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 2rem;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 2px 4px var(--app-overlay-shadow);
 }
 
 .ctaHeading {
   font-size: 2.25rem;
   font-weight: 900;
-  color: var(--app-text-primary, #ffffff);
+  color: var(--app-text-primary);
   line-height: 1.1;
   max-width: 48rem;
   margin-bottom: 1.5rem;
@@ -2047,13 +1950,13 @@
   background-clip: text;
   color: transparent;
   text-decoration: underline;
-  text-decoration-color: rgba(99, 102, 241, 0.4);
+  text-decoration-color: var(--app-highlight-glow);
   text-decoration-style: wavy;
   text-underline-offset: 8px;
 }
 
 .ctaDesc {
-  color: var(--app-text-secondary, #cbd5e1);
+  color: var(--app-text-secondary);
   font-size: 1.125rem;
   max-width: 36rem;
   margin: 0 auto 2.5rem auto;
@@ -2083,15 +1986,15 @@
 }
 
 .ctaPrimaryBtn {
-  background-color: var(--app-text-primary, #ffffff);
-  color: var(--app-bg, #000000);
+  background-color: var(--app-btn-grad-1);
+  color: var(--app-bg);
   padding: 1rem 2rem;
   border-radius: 9999px;
   font-weight: 700;
   font-size: 1rem;
   border: none;
   cursor: pointer;
-  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px var(--app-overlay-shadow);
   transition: all 0.2s ease;
   width: 100%;
   max-width: 16rem;
@@ -2104,13 +2007,13 @@
 }
 
 .ctaSecondaryBtn {
-  background-color: var(--app-card-secondary, rgba(255, 255, 255, 0.05));
-  color: var(--app-text-primary, #ffffff);
+  background-color: var(--app-card-secondary);
+  color: var(--app-text-primary);
   padding: 1rem 2rem;
   border-radius: 9999px;
   font-weight: 700;
   font-size: 1rem;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--app-card-border);
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
@@ -2120,8 +2023,7 @@
 }
 
 .ctaSecondaryBtn:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--card-hover-border);
 }
 
 /* SCROLL TO TOP BUTTON */
@@ -2131,10 +2033,10 @@
   right: 1.5rem;
   padding: 0.75rem;
   border-radius: 9999px;
-  background-color: var(--app-btn-grad-1, #4f46e5);
-  color: #ffffff;
-  border: 1px solid var(--app-card-border, rgba(255, 255, 255, 0.1));
-  box-shadow: var(--app-overlay-shadow, 0 10px 15px -3px rgba(0, 0, 0, 0.3));
+  background-color: var(--app-btn-grad-1);
+  color: var(--app-text-primary);
+  border: 1px solid var(--app-card-border);
+  box-shadow: var(--app-overlay-shadow, 0 10px 15px -3px);
   cursor: pointer;
   z-index: 50;
   display: flex;

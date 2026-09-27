@@ -18,15 +18,41 @@ export const registerCompanyInfo = async (
   payload: any,
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
   const url = `${isDev}/api/companies/registerstep`;
-  return post(url, payload);
+  return post(url, payload, { skipRedirect: true });
 };
 
 export const saveCompanyApiDetails = async (
   companyId: string,
-  apis: ApisInformation[],
+  payload: ApisInformation[] | { apis: ApisInformation[]; authStrategy?: any; googleMapsApiKey?: string },
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
   const url = `${isDev}/api/companies/${companyId}/apidetailsstep`;
-  return post(url, { apis });
+  const body = Array.isArray(payload) ? { apis: payload } : payload;
+  return post(url, body, { skipRedirect: true });
+};
+
+export const updateCompanyApiUiSettings = async (
+  companyId: string,
+  payload: {
+    apiIndex: number;
+    mcpToolName?: string;
+    uiConfig?: {
+      uiEnabled?: boolean;
+      mapEnabled?: boolean;
+      layout?: string;
+    };
+  },
+): Promise<{ success: boolean; message: string; data?: any }> => {
+  const url = `${isDev}/api/companies/${companyId}/api-ui-settings`;
+  return post(url, payload, { skipRedirect: true });
+};
+
+export const analyzeSingleCompanyApi = async (
+  companyId: string,
+  apiIndex: number,
+  sampleResponse?: string,
+): Promise<{ success: boolean; message: string; data: { apiIndex: number; apiSchema: any; api: any } }> => {
+  const url = `${isDev}/api/companies/${companyId}/apis/${apiIndex}/analyze`;
+  return post(url, { sampleResponse }, { skipRedirect: true });
 };
 
 export const saveCompanyUiSelection = async (
@@ -39,12 +65,11 @@ export const saveCompanyUiSelection = async (
   token?: string;
 }> => {
   const url = `${isDev}/api/companies/${companyId}/uiselectionstep`;
-  return post(url, { uiPreference });
+  return post(url, { uiPreference }, { skipRedirect: true });
 };
 
 export const verifySession = async (): Promise<{ user?: User }> => {
-  const url = `${isDev}/api/company/login`;
-  return get(url, { skipRedirect: true });
+  return get(`${isDev}/api/company/verify-session`);
 };
 
 export const logout = async (): Promise<any> => {
@@ -79,4 +104,18 @@ export const resetPassword = async (payload: {
     password: payload.newPassword,
     newPassword: payload.newPassword,
   });
+};
+
+export const sendForgotPasswordOtpApi = async (
+  email: string,
+): Promise<{ success: boolean; message: string }> => {
+  const url = `${isDev}/api/company/forgot-password`;
+  return post(url, { email }, { skipRedirect: true });
+};
+
+export const resetPasswordApi = async (
+  payload: { email: string; otp: string; password: string },
+): Promise<{ success: boolean; message: string }> => {
+  const url = `${isDev}/api/company/forgot-password/reset`;
+  return post(url, payload, { skipRedirect: true });
 };

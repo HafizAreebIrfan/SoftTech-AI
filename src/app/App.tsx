@@ -7,6 +7,7 @@ import { useAuthSync } from "../hooks";
 import { useAuthStore } from "../infrastructure/store/authStore";
 import "react-toastify/dist/ReactToastify.css";
 import AppLoading from "../presentation/components/common/apploading";
+import { CriticalErrorModal } from "../presentation/components/common/CriticalErrorModal";
 
 const App: React.FC = () => {
   useApplyGlobalThemeVars();
@@ -22,6 +23,7 @@ const App: React.FC = () => {
     <>
       <RouterProvider router={router} />
       <ToastContainer />
+      <CriticalErrorModal />
     </>
   );
 };

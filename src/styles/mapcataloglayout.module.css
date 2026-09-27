@@ -1,0 +1,171 @@
+/* Full-bleed Map Catalog Layout Styles */
+
+.layoutContainer {
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--app-text-primary, #ffffff);
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header Bar with Title, Subtitle, and View Switcher */
+.headerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 4px;
+}
+
+.headerTitleCol {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mainTitle {
+  font-family: 'Jost', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.subTitle {
+  font-size: 13px;
+  color: var(--app-text-secondary, #94a3b8);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.headerActionsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.viewToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 8px;
+  color: var(--app-text-secondary, #94a3b8);
+  padding: 6px 12px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewToggleBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.viewToggleBtnActive {
+  background: rgba(0, 108, 228, 0.15);
+  border-color: var(--widget-accent, #006ce4);
+  color: #ffffff;
+}
+
+.mapFloatingToggle {
+  position: absolute;
+  top: 14px;
+  right: 64px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(18, 19, 22, 0.85);
+  backdrop-filter: blur(8px);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* Full-bleed map stage: reaches widget edges left↔right and full screen height */
+.mapStage {
+  position: relative;
+  width: auto;
+  margin-left: -1.25rem;
+  margin-right: -1.25rem;
+  height: 100vh;
+  min-height: 560px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Fullscreen map while a detail panel is docked. */
+.mapStageDetailOpen {
+  height: 100vh;
+  min-height: 560px;
+}
+
+/* Floating detail panel docked over the fullscreen map — a left panel on
+   desktop, a bottom sheet on mobile. Size + scroll live here; the DetailBlock
+   inside renders in its compact single-column "mapDock" variant. */
+.mapDetailDock {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  bottom: 14px;
+  width: min(400px, calc(100% - 28px));
+  z-index: 1200;
+  background: var(--widget-card-bg, #121316);
+  border: 1px solid var(--widget-card-border, #22242a);
+  border-radius: 16px;
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.62);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mapDetailDock::-webkit-scrollbar {
+  width: 8px;
+}
+
+.mapDetailDock::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .mainTitle {
+    font-size: 20px;
+  }
+
+  .mapStage {
+    height: 70vh;
+    min-height: 440px;
+  }
+
+  .mapStageDetailOpen {
+    height: 78vh; /* fallback only (no inline px set) */
+    max-height: 900px;
+  }
+
+  .mapDetailDock {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 82%;
+    border-radius: 18px 18px 0 0;
+  }
+}

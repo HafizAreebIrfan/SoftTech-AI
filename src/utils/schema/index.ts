@@ -1,1 +1,1 @@
-export * from './contactinfo';
+export * from "./getValue";
