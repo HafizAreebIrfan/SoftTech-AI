@@ -1,28 +1,24 @@
 import React, { FC, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { motion } from "motion/react";
 import { useThemeStore, useForgotPasswordStore } from "../../../../hooks";
 import {
-  DEMO_OTP,
   requestPasswordResetOtp,
   verifyPasswordResetOtp,
 } from "../../../../adapters/api/authApi";
-import { CheckIcon, RefreshIcon } from "../../../../assets/icons";
+import { EmailIcon, LeftArrowIcon } from "../../../../assets/icons";
 import { showToast } from "../../../../utils/toasts";
 import { otpSchema } from "../../../../infrastructure/validation/forgotPasswordSchemas";
-import styles from "../../../../styles/forgotpassword.module.css";
-import StepActionBar from "./components/StepActionBar";
 import OtpInputGroup from "./components/OtpInputGroup";
 
 const RESEND_COOLDOWN = 30;
 
 const ForgotPasswordStep2: FC = () => {
   const navigate = useNavigate();
-  const { colors } = useThemeStore();
+  const { colors, isDark } = useThemeStore();
   const { email, otp, setOtp, isOtpVerified, setOtpVerified } =
     useForgotPasswordStore();
-  const [error, setError] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
@@ -38,19 +34,21 @@ const ForgotPasswordStep2: FC = () => {
   }, [cooldown]);
 
   const { mutate: verifyOtp, isPending: isVerifying } = useMutation({
-    mutationFn: verifyPasswordResetOtp,
+    mutationFn: (code: string) => verifyPasswordResetOtp(email, code),
     onSuccess: (res) => {
       if (res.success) {
-        setError(null);
+        setErrorMsg(null);
         setOtpVerified(true);
+        showToast("Code verified successfully!", "success");
+        navigate({ to: "/forgot-password/step3" });
       } else {
         setOtpVerified(false);
-        setError(res.message);
+        setErrorMsg(res.message || "Invalid verification code.");
       }
     },
-    onError: () => {
+    onError: (err: any) => {
       setOtpVerified(false);
-      setError("Invalid code, please try again.");
+      setErrorMsg(err?.message || "Invalid code, please try again.");
     },
   });
 
@@ -59,15 +57,18 @@ const ForgotPasswordStep2: FC = () => {
     onSuccess: (res) => {
       setOtp("");
       setOtpVerified(false);
-      setError(null);
+      setErrorMsg(null);
       setCooldown(RESEND_COOLDOWN);
-      showToast(res.message, "success");
+      showToast(res.message || "New verification code sent.", "success");
+    },
+    onError: (err: any) => {
+      showToast(err?.message || "Failed to resend code. Try again.", "error");
     },
   });
 
   const handleOtpChange = (value: string) => {
     setOtp(value);
-    setError(null);
+    if (errorMsg) setErrorMsg(null);
     if (otpSchema.safeParse(value).success) {
       verifyOtp(value);
     } else {
@@ -76,204 +77,111 @@ const ForgotPasswordStep2: FC = () => {
   };
 
   const handleContinue = () => {
+    if (!otp || otp.length !== 6) {
+      setErrorMsg("Please enter the complete 6-digit code.");
+      return;
+    }
     if (!isOtpVerified) {
-      setError("Please enter and verify the code first.");
+      verifyOtp(otp);
       return;
     }
     navigate({ to: "/forgot-password/step3" });
   };
 
   return (
-    <>
-      {/* ── MAIN CONTENT ────────────────────────────────────── */}
-      <main className={styles.forgotmain}>
-        <motion.div
-          key="forgot-password-step-2"
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          style={{ width: "100%", maxWidth: "28rem", position: "relative", zIndex: 10 }}
+    <div className="flex flex-col items-center text-center">
+      {/* Icon Box */}
+      <div
+        className={`w-12 h-12 rounded-xl border flex items-center justify-center mb-6 shadow-sm ${
+          isDark ? "border-slate-800 bg-slate-900/60" : "border-slate-200 bg-white"
+        }`}
+      >
+        <EmailIcon size={24} color={isDark ? "#94a3b8" : "#475569"} />
+      </div>
+
+      <h1
+        className={`text-2xl sm:text-3xl font-bold mb-2 tracking-tight ${
+          isDark ? "text-white" : "text-slate-900"
+        }`}
+      >
+        Password reset
+      </h1>
+      <p
+        className={`text-sm mb-6 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+      >
+        We sent a 6-digit code to{" "}
+        <span
+          className={`font-semibold ${isDark ? "text-white" : "text-slate-900"}`}
         >
-          {/* Card */}
-          <div
-            className={styles.forgotcard}
-            style={{
-              background: colors.BackgroundSecondary,
-              border: `1px solid ${colors.CardBorder}`,
-              borderLeft: `4px solid ${colors.CardActiveBorder}`,
-              boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`,
-            }}
-          >
-            {/* Blur accent blob (top-right of card) */}
-            <div
-              className={styles.cardAccentBlob}
-              style={{ background: `${colors.CardActiveBorder}0d` }}
-            />
+          {email || "your email"}
+        </span>
+      </p>
 
-            <div style={{ position: "relative", zIndex: 10 }}>
-              {/* Heading */}
-              <h1
-                style={{
-                  color: colors.TextHeading,
-                  fontSize: "2.25rem",
-                  fontWeight: 700,
-                  marginBottom: "1rem",
-                  letterSpacing: "-0.025em",
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                }}
-              >
-                Enter OTP
-              </h1>
+      <div className="w-full">
+        <OtpInputGroup
+          colors={colors}
+          length={6}
+          value={otp}
+          onChange={handleOtpChange}
+          hasError={!!errorMsg}
+        />
 
-              {/* Subtitle */}
-              <p
-                style={{
-                  color: colors.TextBody,
-                  fontSize: "0.875rem",
-                  lineHeight: "1.6",
-                  marginBottom: "2.5rem",
-                  fontFamily: "'Inter', sans-serif",
-                }}
-              >
-                We've sent a verification code to your email.{" "}
-                <br />
-                Demo OTP:{" "}
-                <span
-                  style={{
-                    color: colors.TextHighlightedHeading,
-                    fontFamily: "monospace",
-                    fontWeight: 700,
-                    letterSpacing: "0.2em",
-                    marginLeft: "0.25rem",
-                  }}
-                >
-                  {DEMO_OTP}
-                </span>
-              </p>
+        {errorMsg && (
+          <span className="text-xs text-red-500 -mt-2 mb-4 block font-medium">
+            {errorMsg}
+          </span>
+        )}
 
-              {/* OTP Input Group + Status */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-                <OtpInputGroup
-                  colors={colors}
-                  value={otp}
-                  onChange={handleOtpChange}
-                  hasError={!!error}
-                />
-
-                {/* Verified success badge */}
-                {isOtpVerified && (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.5rem",
-                      padding: "0.5rem 1rem",
-                      borderRadius: "9999px",
-                      color: colors.BrandEmerald,
-                      background: `${colors.BrandEmerald}1a`,
-                      border: `1px solid ${colors.BrandEmerald}33`,
-                    }}
-                  >
-                    <CheckIcon size={14} color={colors.BrandEmerald} />
-                    <span
-                      style={{
-                        fontFamily: "'Inter', sans-serif",
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Verified successfully!
-                    </span>
-                  </div>
-                )}
-
-                {/* Error message */}
-                {!isOtpVerified && error && (
-                  <p
-                    style={{
-                      textAlign: "center",
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      color: "#ef4444",
-                      fontFamily: "'Inter', sans-serif",
-                    }}
-                  >
-                    {isVerifying ? "Checking code..." : error}
-                  </p>
-                )}
-
-                {/* Resend code */}
-                <div style={{ textAlign: "center", paddingTop: "0.5rem" }}>
-                  <button
-                    type="button"
-                    onClick={() => resendOtp()}
-                    disabled={isResending || cooldown > 0}
-                    style={{
-                      color: colors.TextBody,
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: "0.75rem",
-                      background: "none",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.5rem",
-                      transition: "color 0.2s ease",
-                      opacity: isResending || cooldown > 0 ? 0.5 : 1,
-                    }}
-                  >
-                    <RefreshIcon size={14} color={colors.IconColor} />
-                    {cooldown > 0
-                      ? `Resend available in ${cooldown}s`
-                      : isResending
-                        ? "Resending..."
-                        : "Resend verification code"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── "Secured by Protocol" divider ─────────────── */}
-          <div
-            className={styles.securedDivider}
-            style={{ color: colors.IconColor }}
-          >
-            <div
-              className={styles.securedLine}
-              style={{ background: colors.IconColor }}
-            />
-            <span className={styles.securedText}>Secured by Protocol</span>
-            <div
-              className={styles.securedLine}
-              style={{ background: colors.IconColor }}
-            />
-          </div>
-        </motion.div>
-
-        {/* ── Page Number Decoration ──────────────────────── */}
-        <div
-          className={styles.pageNumDecoration}
-          style={{ color: colors.CardActiveBorder }}
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={otp.length !== 6 || isVerifying}
+          className={`w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-base font-semibold text-white transition-all duration-200 shadow-sm ${
+            otp.length !== 6 || isVerifying
+              ? "opacity-70 cursor-not-allowed bg-blue-500"
+              : "bg-blue-600 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          }`}
         >
-          02
+          {isVerifying ? "Verifying..." : "Continue"}
+        </button>
+
+        <div className="text-center mt-6 text-sm">
+          <span className={isDark ? "text-slate-400" : "text-slate-500"}>
+            Didn't receive the email?{" "}
+          </span>
+          <button
+            type="button"
+            onClick={() => resendOtp()}
+            disabled={isResending || cooldown > 0}
+            className={`font-semibold transition-colors ${
+              isResending || cooldown > 0
+                ? "opacity-60 cursor-not-allowed text-slate-400"
+                : isDark
+                  ? "text-blue-400 hover:text-blue-300"
+                  : "text-blue-600 hover:text-blue-700"
+            }`}
+          >
+            {cooldown > 0
+              ? `Resend in ${cooldown}s`
+              : isResending
+                ? "Sending..."
+                : "Click to resend"}
+          </button>
         </div>
-      </main>
+      </div>
 
-      {/* ── FOOTER ACTION BAR ───────────────────────────────── */}
-      <StepActionBar
-        colors={colors}
-        step={2}
-        onSubmit={handleContinue}
-        disabled={!isOtpVerified}
-        label="Continue"
-        icon={<CheckIcon size={16} color="#ffffff" />}
-        variant="emerald"
-      />
-    </>
+      <button
+        type="button"
+        onClick={() => navigate({ to: "/login" })}
+        className={`flex items-center justify-center gap-2 text-sm font-semibold mt-8 transition-colors ${
+          isDark
+            ? "text-slate-400 hover:text-white"
+            : "text-slate-600 hover:text-slate-900"
+        }`}
+      >
+        <LeftArrowIcon size={16} /> Back to log in
+      </button>
+    </div>
   );
 };
 

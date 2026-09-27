@@ -1,9 +1,9 @@
 import React, { FC, useRef } from "react";
 import { ThemeColors } from "../../../../../utils/theme/colors";
-import styles from "../../../../../styles/forgotpassword.module.css";
+import { useThemeStore } from "../../../../../hooks";
 
 interface OtpInputGroupProps {
-  colors: ThemeColors;
+  colors?: ThemeColors;
   length?: number;
   value: string;
   onChange: (value: string) => void;
@@ -11,12 +11,12 @@ interface OtpInputGroupProps {
 }
 
 const OtpInputGroup: FC<OtpInputGroupProps> = ({
-  colors,
-  length = 5,
+  length = 6,
   value,
   onChange,
   hasError,
 }) => {
+  const { isDark } = useThemeStore();
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const digits = Array.from({ length }, (_, i) => value[i] || "");
 
@@ -63,27 +63,20 @@ const OtpInputGroup: FC<OtpInputGroupProps> = ({
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "center",
-        gap: "10px",
-      }}
-    >
+    <div className="flex justify-center gap-2 sm:gap-2.5 my-6">
       {digits.map((digit, index) => (
         <input
           key={index}
           ref={(el) => {
             inputsRef.current[index] = el;
           }}
-          className={styles.otpInput}
-          style={{
-            background: colors.Background,
-            borderColor: hasError
-              ? colors.WarningBorder
-              : `${colors.CardActiveBorder}80`,
-            color: colors.TextHighlightedHeading,
-          }}
+          className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold rounded-xl border outline-none transition-all ${
+            hasError
+              ? "border-red-500 text-red-500 bg-red-50/10 focus:ring-2 focus:ring-red-500/20"
+              : isDark
+                ? "bg-[#0f1115] border-slate-800 text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                : "bg-slate-50/50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+          }`}
           maxLength={1}
           inputMode="numeric"
           type="text"

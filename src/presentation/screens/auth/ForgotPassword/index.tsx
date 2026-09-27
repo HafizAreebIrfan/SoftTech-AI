@@ -1,122 +1,157 @@
 import React, { FC } from "react";
 import { Outlet, useNavigate, useLocation } from "@tanstack/react-router";
 import { useThemeStore } from "../../../../hooks";
-import { CheckIcon, LeftArrowIcon, SunIcon, MoonIcon, HelpIcon } from "../../../../assets/icons";
-import styles from "../../../../styles/forgotpassword.module.css";
-import signupStyles from "../../../../styles/signup.module.css";
+import { SunIcon, MoonIcon } from "../../../../assets/icons";
+import { AnimatePresence, motion } from "motion/react";
+import dashboardLight from "../../../../assets/images/dashboard-light.png";
+import dashboardDark from "../../../../assets/images/dashboard-dark.png";
 
 const ForgotPassword: FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { colors, isDark, toggleTheme } = useThemeStore();
+  const { isDark, toggleTheme, colors } = useThemeStore();
 
-  const forgotStep = location.pathname.endsWith('/step2') ? 2 : location.pathname.endsWith('/step3') ? 3 : 1;
+  const forgotStep = location.pathname.endsWith("/step2")
+    ? 2
+    : location.pathname.endsWith("/step3")
+      ? 3
+      : 1;
 
-  const handleLogoClick = () => {
-    navigate({ to: '/' });
-  };
+  const visualIndex = forgotStep - 1;
 
   return (
-    <div className={signupStyles.signupwrapper} style={{ background: colors.Background, minHeight: '100vh', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
-      {/* Ambient nebula glow — fixed behind all content */}
-      <div className={styles.nebulaGlow} />
-
-      {/* Universal stardust texture overlay */}
-      <div className={styles.stardustOverlay} />
-
-      {/* ── HEADER ────────────────────────────────────────────── */}
-      <header className={`${signupStyles.signupheader}`} style={{ background: colors.Headerbackground, borderBottom: `1px solid ${colors.HeaderBottomBorder}`, boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`, paddingTop: "1.25rem", paddingBottom: "1.25rem" }}>
-        <div className="flex items-center justify-between md:block flex-grow md:flex-grow-0">
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => {
-                if (forgotStep === 1) {
-                  navigate({ to: '/login' });
-                } else if (forgotStep === 2) {
-                  navigate({ to: '/forgot-password/step1' });
-                } else {
-                  navigate({ to: '/forgot-password/step2' });
-                }
-              }}
-              className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors group cursor-pointer"
+    <div
+      className={`min-h-screen w-full flex overflow-hidden font-sans transition-colors duration-300`}
+      style={{
+        background: isDark ? "#0b0f19" : "transparent",
+      }}
+    >
+      {/* LEFT COLUMN: Form Area */}
+      <div
+        className={`w-full lg:w-1/2 flex flex-col min-h-screen lg:h-screen overflow-y-auto relative z-10 transition-colors duration-300`}
+      >
+        {/* Header */}
+        <header className="flex justify-between items-center w-full p-6 sm:p-8">
+          <div
+            className="flex items-center gap-2 cursor-pointer group"
+            onClick={() => navigate({ to: "/" })}
+          >
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
+              <div className="w-3.5 h-3.5 border-2 border-white rounded-xs transform rotate-45" />
+            </div>
+            <span
+              className={`text-xl font-bold tracking-tight transition-transform group-hover:scale-105 ${
+                isDark ? "text-white" : "text-slate-900"
+              }`}
             >
-              <LeftArrowIcon size={18} color={colors.AuthIconColor} />
-            </button>
-            <div className="flex flex-col text-left">
-              <span className={signupStyles.logoText} style={{ backgroundImage: `linear-gradient(135deg, ${colors.TextGradientOne}, ${colors.TextGradientTwo}, ${colors.TextGradientThree})`, cursor: 'pointer' }} onClick={handleLogoClick}>
-                SoftTech AI
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex items-center gap-4 text-left">
-          {/* Step 1 badge */}
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-headline font-bold text-sm`}
-              style={forgotStep === 1 ? { background: `linear-gradient(90deg, ${colors.BackgroundGradientOne}, ${colors.BackgroundGradientTwo})`, color: colors.TextOverlay } : forgotStep > 1 ? { background: colors.UISelectionCardBackground, color: colors.TextHeading } : { background: colors.Background, color: colors.TextHeading }}
-            >
-              {forgotStep > 1 ? <CheckIcon size={16} color={colors.IconColor} /> : "1"}
-            </div>
-            <div className="hidden lg:block">
-              <p className={`font-label text-[10px] mb-0 uppercase tracking-wider`} style={{ color: colors.TextHighlightedHeading }}>
-                {forgotStep === 1 ? 'Current' : 'Step 1'}
-              </p>
-              <p className={`font-body text-xs font-normal`} style={{ color: colors.TextHeading }}>Verify Email</p>
-            </div>
+              SoftTech AI
+            </span>
           </div>
 
-          <div className="w-8 h-[2px]" style={{ background: colors.Background, filter: 'invert(1)' }}></div>
-
-          {/* Step 2 badge */}
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-headline font-bold text-sm`}
-              style={forgotStep === 2 ? { background: `linear-gradient(90deg, ${colors.BackgroundGradientOne}, ${colors.BackgroundGradientTwo})`, color: colors.TextOverlay } : forgotStep > 2 ? { background: colors.UISelectionCardBackground, color: colors.TextHeading } : { background: colors.Background, color: colors.TextHeading }}>
-              {forgotStep > 2 ? <CheckIcon size={16} color={colors.IconColor} /> : "2"}
-            </div>
-            <div className="hidden lg:block">
-              <p className={`font-label text-[10px] mb-0 uppercase tracking-wider ${forgotStep === 2 ? 'text-indigo-400' : 'text-slate-500'}`}>
-                {forgotStep === 2 ? 'Current' : 'Step 2'}
-              </p>
-              <p className={`font-body text-xs font-normal`} style={{ color: colors.TextHeading }}>Enter OTP</p>
-            </div>
-          </div>
-
-          <div className="w-8 h-[2px]" style={{ background: colors.Background, filter: 'invert(1)' }}></div>
-
-          {/* Step 3 badge */}
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-headline font-bold text-sm`}
-              style={forgotStep === 3 ? { background: `linear-gradient(90deg, ${colors.BackgroundGradientOne}, ${colors.BackgroundGradientTwo})`, color: colors.TextOverlay } : forgotStep > 3 ? { background: colors.UISelectionCardBackground, color: colors.TextHeading } : { background: colors.Background, color: colors.TextHeading }}>
-              {forgotStep > 3 ? <CheckIcon size={16} color={colors.IconColor} /> : "3"}
-            </div>
-            <div className="hidden lg:block">
-              <p className={`font-label text-[10px] mb-0 uppercase tracking-wider ${forgotStep === 3 ? 'text-indigo-400' : 'text-slate-500'}`}>
-                {forgotStep === 3 ? 'Current' : 'Step 3'}
-              </p>
-              <p className={`font-body text-xs font-normal`} style={{ color: colors.TextHeading }}>New Password</p>
-            </div>
-          </div>
-        </nav>
-
-        <div className="md:flex items-center gap-4">
-          <button className="p-2 hover:text-white" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-            <HelpIcon size={20} color={colors.HeaderIconColor} />
-          </button>
           <button
             onClick={toggleTheme}
-            className={isDark ? signupStyles.themeButton : signupStyles.themeButtonLight}
-            aria-label="Toggle theme"
-            id="theme-toggle"
-            style={{ border: 'none', cursor: 'pointer' }}
+            className={`p-2 rounded-full transition-all duration-300 ${
+              isDark
+                ? "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+            aria-label="Toggle Theme"
           >
-            {isDark ? <SunIcon size={20} color={colors.HeaderIconColor} /> : <MoonIcon size={20} color={colors.HeaderIconColor} />}
+            {isDark ? (
+              <SunIcon size={18} color={colors.IconColor} />
+            ) : (
+              <MoonIcon size={18} color={colors.IconColor} />
+            )}
           </button>
-        </div>
-      </header>
+        </header>
 
-      {/* ── STEP CONTENT (injected via Outlet) ─────────────── */}
-      <Outlet />
+        {/* Main Content Area */}
+        <div className="flex-grow flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-8">
+          <div className="w-full max-w-[380px] mx-auto">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={visualIndex}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Outlet />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Footer Pagination Dots */}
+        <div className="pb-10 pt-4 flex justify-center gap-2">
+          {[0, 1, 2].map((dot) => (
+            <div
+              key={dot}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                visualIndex === dot
+                  ? "w-8 bg-blue-600"
+                  : isDark
+                    ? "w-4 bg-slate-800"
+                    : "w-4 bg-slate-200"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: Dashboard Mockup Area */}
+      <div
+        className="hidden lg:flex w-3/4 relative transition-colors duration-300"
+        style={{
+          padding: "52px",
+          borderTopLeftRadius: "72px",
+          borderBottomLeftRadius: "72px",
+          background: isDark ? "#020304ff" : "#f8fafc",
+        }}
+      >
+        <div
+          className={`w-full h-full rounded-[36px] relative overflow-hidden flex flex-col border shadow-2xl transition-colors duration-300 ${
+            isDark
+              ? "bg-[#0b0e17] border-slate-800/90 shadow-black/80"
+              : "bg-white border-slate-200 shadow-slate-300/60"
+          }`}
+        >
+          {/* Top Browser Bar Mockup */}
+          <div
+            className={`h-12 w-full flex-shrink-0 flex items-center px-6 gap-4 border-b transition-colors duration-300 ${
+              isDark
+                ? "border-slate-800/80 bg-[#0e1320]"
+                : "border-slate-100 bg-slate-50/80"
+            }`}
+          >
+            <div className="flex gap-2">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
+              <div className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
+            </div>
+            <div
+              className={`flex-1 max-w-sm h-7 rounded-lg border mx-auto flex items-center justify-center px-3 text-[11px] font-mono tracking-wide transition-colors duration-300 ${
+                isDark
+                  ? "bg-slate-900/60 border-slate-800 text-slate-400"
+                  : "bg-white border-slate-200 text-slate-500 shadow-2xs"
+              }`}
+            >
+              softtechai.com/dashboard
+            </div>
+            <div className="w-12" />
+          </div>
+
+          {/* Full Height / Covering Dashboard Image */}
+          <div className="flex-1 w-full h-full overflow-hidden relative">
+            <img
+              src={isDark ? dashboardDark : dashboardLight}
+              alt="SoftTech AI Dashboard Preview"
+              className="w-full h-full object-cover object-left-top select-none pointer-events-none transition-opacity duration-300"
+              loading="eager"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

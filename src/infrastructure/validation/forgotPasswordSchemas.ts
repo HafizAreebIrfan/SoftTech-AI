@@ -7,7 +7,7 @@ export const emailSchema = z
 
 export const otpSchema = z
   .string()
-  .length(5, "Enter the full 5-digit code")
+  .length(6, "Enter the full 6-digit code")
   .regex(/^\d+$/, "Code must contain digits only");
 
 export const passwordRequirements = {

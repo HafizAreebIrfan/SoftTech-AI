@@ -72,6 +72,15 @@ const adminPreviewRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin-preview",
   component: AdminPreview,
+  beforeLoad: () => {
+    const { isAuthenticated, user } = useAuthStore.getState();
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
+    if (user?.role !== "admin") {
+      throw redirect({ to: "/dashboard" });
+    }
+  },
 });
 
 const loginRoute = createRoute({

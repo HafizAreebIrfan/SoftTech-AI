@@ -1,233 +1,139 @@
-import React, { FC } from "react";
+import React, { FC, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useForm } from "@tanstack/react-form";
 import { useNavigate } from "@tanstack/react-router";
-import { motion } from "motion/react";
 import { useThemeStore, useForgotPasswordStore } from "../../../../hooks";
 import { requestPasswordResetOtp } from "../../../../adapters/api/authApi";
-import { EmailIcon, RightArrowIcon } from "../../../../assets/icons";
+import { LeftArrowIcon, LockIcon } from "../../../../assets/icons";
 import { showToast } from "../../../../utils/toasts";
 import { emailSchema } from "../../../../infrastructure/validation/forgotPasswordSchemas";
-import styles from "../../../../styles/forgotpassword.module.css";
-import StepActionBar from "./components/StepActionBar";
 
 const ForgotPasswordStep1: FC = () => {
   const navigate = useNavigate();
-  const { colors } = useThemeStore();
+  const { isDark, colors } = useThemeStore();
   const { email, setEmail, setOtpVerified } = useForgotPasswordStore();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { mutate: sendOtp, isPending } = useMutation({
     mutationFn: requestPasswordResetOtp,
     onSuccess: (res) => {
       setOtpVerified(false);
-      showToast(res.message, "success");
+      showToast(
+        res.message || "Verification code sent to your email.",
+        "success",
+      );
       navigate({ to: "/forgot-password/step2" });
     },
     onError: (err: any) => {
-      showToast(
-        err?.message || "Failed to send verification code. Try again.",
-        "error",
-      );
+      const msg =
+        err?.message || "Failed to send verification code. Try again.";
+      setErrorMsg(msg);
+      showToast(msg, "error");
     },
   });
 
-  const form = useForm({
-    defaultValues: { email: email || "" },
-    onSubmit: async ({ value }) => {
-      const parsed = emailSchema.safeParse(value.email);
-      if (!parsed.success) {
-        showToast("Please enter a valid email address.", "error");
-        return;
-      }
-      setEmail(value.email);
-      sendOtp(value.email);
-    },
-  });
-
-  const handleSubmit = () => form.handleSubmit();
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const parsed = emailSchema.safeParse(email);
+    if (!parsed.success) {
+      const msg =
+        parsed.error.issues[0]?.message ||
+        "Please enter a valid email address.";
+      setErrorMsg(msg);
+      showToast(msg, "error");
+      return;
+    }
+    setErrorMsg(null);
+    sendOtp(email);
+  };
 
   return (
-    <>
-      {/* ── MAIN CONTENT ────────────────────────────────────── */}
-      <main className={styles.forgotmain}>
-        <motion.div
-          key="forgot-password-step-1"
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="w-full max-w-2xl"
-          style={{ position: "relative", zIndex: 10 }}
-        >
-          {/* Card */}
-          <div
-            className={styles.forgotcard}
-            style={{
-              background: colors.BackgroundSecondary,
-              border: `1px solid ${colors.CardBorder}`,
-              borderLeft: `4px solid ${colors.CardActiveBorder}`,
-              boxShadow: `0 10px 40px ${colors.HeaderBoxShadow}`,
-            }}
+    <div className="flex flex-col items-center text-center">
+      {/* Icon Box */}
+      <div
+        className={`w-12 h-12 rounded-xl border flex items-center justify-center mb-6 shadow-sm ${
+          isDark
+            ? "border-slate-800 bg-slate-900/60"
+            : "border-slate-200 bg-white"
+        }`}
+      >
+        <LockIcon size={22} color={isDark ? "#94a3b8" : "#475569"} />
+      </div>
+
+      <h1
+        className={`text-2xl sm:text-3xl font-bold mb-2 tracking-tight ${
+          isDark ? "text-white" : "text-slate-900"
+        }`}
+      >
+        Forgot password?
+      </h1>
+      <p
+        className={`text-sm mb-8 ${isDark ? "text-slate-400" : "text-slate-500"}`}
+      >
+        No worries, we'll send you reset instructions.
+      </p>
+
+      <form onSubmit={handleSubmit} className="w-full space-y-5 text-left">
+        <div>
+          <label
+            htmlFor="forgot-email"
+            className={`block text-sm font-medium mb-1.5 ${
+              isDark ? "text-slate-300" : "text-slate-700"
+            }`}
           >
-            {/* Heading block */}
-            <div style={{ marginBottom: "2.5rem" }}>
-              <h2
-                className="font-headline"
-                style={{
-                  color: colors.TextHeading,
-                  fontSize: "1.875rem",
-                  fontWeight: 700,
-                  marginBottom: "1rem",
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                }}
-              >
-                Reset password
-              </h2>
-              <p
-                style={{
-                  color: colors.TextBody,
-                  fontSize: "1.125rem",
-                  lineHeight: "1.75",
-                  fontFamily: "'Manrope', sans-serif",
-                }}
-              >
-                Enter your email address to receive a 5-digit verification code.
-                We'll help you secure your account.
-              </p>
-            </div>
-
-            {/* Form */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSubmit();
-              }}
-              style={{ display: "flex", flexDirection: "column", gap: "2rem" }}
-            >
-              <div className={styles.formField}>
-                <label
-                  className="font-label"
-                  htmlFor="email"
-                  style={{
-                    color: colors.TextBody,
-                    fontSize: "0.875rem",
-                    fontFamily: "'Inter', sans-serif",
-                  }}
-                >
-                  Email Address
-                </label>
-                <form.Field
-                  name="email"
-                  validators={{
-                    onChange: ({ value }) => {
-                      const res = emailSchema.safeParse(value);
-                      return res.success
-                        ? undefined
-                        : res.error.issues[0].message;
-                    },
-                  }}
-                  children={(field) => (
-                    <div className="relative">
-                      <span
-                        style={{
-                          position: "absolute",
-                          left: "1rem",
-                          top: "19px",
-                          display: "flex",
-                          alignItems: "center",
-                          pointerEvents: "none",
-                        }}
-                      >
-                        <EmailIcon size={18} color={colors.IconColor} />
-                      </span>
-                      <input
-                        id="email"
-                        type="email"
-                        placeholder="name@company.com"
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        className="block w-full rounded-xl outline-none transition-all text-sm font-label"
-                        style={{
-                          background: colors.Background,
-                          border: `1px solid ${
-                            field.state.meta.errors?.length > 0
-                              ? colors.WarningBorder
-                              : colors.CardBorder
-                          }`,
-                          color: colors.TextPrimary,
-                          paddingLeft: "3rem",
-                          paddingRight: "1rem",
-                          paddingTop: "0.75rem",
-                          paddingBottom: "0.75rem",
-                          height: "3.5rem",
-                        }}
-                      />
-                      {field.state.meta.errors?.length > 0 && (
-                        <span
-                          style={{
-                            display: "block",
-                            marginTop: "0.25rem",
-                            fontSize: "0.6875rem",
-                            color: "#ef4444",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {field.state.meta.errors.join(", ")}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                />
-              </div>
-            </form>
-          </div>
-
-          {/* ── Progress Dots (Step Indicator) ────────────── */}
-          <div className={styles.progressDots}>
-            <div className={styles.progressDotsRow}>
-              {/* Active dot */}
-              <div
-                className={styles.progressDot}
-                style={{ background: colors.CardActiveBorder }}
-              />
-              {/* Inactive dots */}
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={styles.progressDot}
-                  style={{ background: colors.IconColor }}
-                />
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── Bottom-right ambient visual ─────────────────── */}
-        <div className={styles.ambientVisual}>
-          <div
-            className={styles.ambientVisualImg}
-            style={{
-              width: "100%",
-              height: "100%",
-              borderRadius: "50%",
-              background: `radial-gradient(circle, ${colors.CardActiveBorder}40 0%, transparent 70%)`,
+            Email
+          </label>
+          <input
+            id="forgot-email"
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (errorMsg) setErrorMsg(null);
             }}
+            className={`block w-full px-4 py-3 rounded-xl outline-none transition-all text-base border focus:ring-2 focus:ring-opacity-50 ${
+              errorMsg
+                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                : isDark
+                  ? "bg-[#0f1115] border-slate-800 text-white focus:border-indigo-500 focus:ring-indigo-500/20"
+                  : "bg-slate-50/50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"
+            }`}
           />
+          {errorMsg && (
+            <span className="text-xs text-red-500 mt-1.5 block font-medium ml-1">
+              {errorMsg}
+            </span>
+          )}
         </div>
-      </main>
 
-      {/* ── FOOTER ACTION BAR ───────────────────────────────── */}
-      <StepActionBar
-        colors={colors}
-        step={1}
-        onSubmit={handleSubmit}
-        loading={isPending}
-        loadingLabel="Sending..."
-        label="Send OTP Code"
-        icon={<RightArrowIcon size={16} color="#ffffff" />}
-        variant="gradient"
-      />
-    </>
+        <button
+          type="submit"
+          disabled={isPending}
+          style={{
+            background: isDark
+              ? `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`
+              : `linear-gradient(240deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
+          }}
+          className={`cursor-pointer w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-base font-semibold text-white transition-all duration-200 shadow-sm ${
+            isPending
+              ? "opacity-70 cursor-not-allowed bg-blue-500"
+              : "bg-blue-600 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+          }`}
+        >
+          {isPending ? "Sending..." : "Reset password"}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        onClick={() => navigate({ to: "/login" })}
+        className={`cursor-pointer flex items-center justify-center gap-2 text-sm font-semibold mt-8 transition-colors 
+          ${isDark ? "text-slate-300" : "text-slate-700"}
+          `}
+      >
+        <LeftArrowIcon size={16} color={colors.IconColor} /> Back to log in
+      </button>
+    </div>
   );
 };
 
