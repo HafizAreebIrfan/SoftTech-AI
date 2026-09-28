@@ -57,13 +57,7 @@ const Signup: FC = () => {
               <LeftArrowIcon size={18} color={colors.AuthIconColor} />
             </button>
             <div className="flex flex-col text-left">
-              <span
-                className={styles.logoText}
-                style={{
-                  color: colors.TextHeading,
-                }}
-                onClick={handleLogoClick}
-              >
+              <span className={styles.logoText} style={{ backgroundImage: `linear-gradient(135deg, ${colors.TextGradientOne}, ${colors.TextGradientTwo}, ${colors.TextGradientThree})`, cursor: 'pointer' }} onClick={handleLogoClick}>
                 SoftTech AI
               </span>
             </div>

@@ -7,7 +7,8 @@ import {
 import { env } from "../../infrastructure/config/env";
 import { get, post } from "./httpClient";
 
-const LOGIN_URL = `${env.apiBaseUrl}/api/company/login`;
+const isDev = env.isDev ? env.apiBaseUrlLocal : env.apiBaseUrl;
+const LOGIN_URL = `${isDev}/api/company/login`;
 
 export const login = async (credentials: LoginCredentials): Promise<any> => {
   return post(LOGIN_URL, credentials);
@@ -16,7 +17,7 @@ export const login = async (credentials: LoginCredentials): Promise<any> => {
 export const registerCompanyInfo = async (
   payload: any,
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
-  const url = `${env.apiBaseUrl}/api/companies/registerstep`;
+  const url = `${isDev}/api/companies/registerstep`;
   return post(url, payload, { skipRedirect: true });
 };
 
@@ -24,7 +25,7 @@ export const saveCompanyApiDetails = async (
   companyId: string,
   payload: ApisInformation[] | { apis: ApisInformation[]; authStrategy?: any; googleMapsApiKey?: string },
 ): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
-  const url = `${env.apiBaseUrl}/api/companies/${companyId}/apidetailsstep`;
+  const url = `${isDev}/api/companies/${companyId}/apidetailsstep`;
   const body = Array.isArray(payload) ? { apis: payload } : payload;
   return post(url, body, { skipRedirect: true });
 };
@@ -41,7 +42,7 @@ export const updateCompanyApiUiSettings = async (
     };
   },
 ): Promise<{ success: boolean; message: string; data?: any }> => {
-  const url = `${env.apiBaseUrl}/api/companies/${companyId}/api-ui-settings`;
+  const url = `${isDev}/api/companies/${companyId}/api-ui-settings`;
   return post(url, payload, { skipRedirect: true });
 };
 
@@ -50,7 +51,7 @@ export const analyzeSingleCompanyApi = async (
   apiIndex: number,
   sampleResponse?: string,
 ): Promise<{ success: boolean; message: string; data: { apiIndex: number; apiSchema: any; api: any } }> => {
-  const url = `${env.apiBaseUrl}/api/companies/${companyId}/apis/${apiIndex}/analyze`;
+  const url = `${isDev}/api/companies/${companyId}/apis/${apiIndex}/analyze`;
   return post(url, { sampleResponse }, { skipRedirect: true });
 };
 
@@ -63,29 +64,59 @@ export const saveCompanyUiSelection = async (
   data: SignupResonse;
   token?: string;
 }> => {
-  const url = `${env.apiBaseUrl}/api/companies/${companyId}/uiselectionstep`;
+  const url = `${isDev}/api/companies/${companyId}/uiselectionstep`;
   return post(url, { uiPreference }, { skipRedirect: true });
 };
 
 export const verifySession = async (): Promise<{ user?: User }> => {
-  const url = `${env.apiBaseUrl}/api/company/login`;
+  const url = `${isDev}/api/company/login`;
   return get(url, { skipRedirect: true });
 };
 
 export const logout = async (): Promise<any> => {
-  return post(`${env.apiBaseUrl}/api/company/logout`, {});
+  return post(`${isDev}/api/company/logout`, {});
+};
+
+// --- Forgot Password API routes ---
+export const requestPasswordResetOtp = async (
+  email: string,
+): Promise<{ success: boolean; message: string }> => {
+  const url = `${isDev}/api/company/forgot-password`;
+  return post(url, { email });
+};
+
+export const verifyPasswordResetOtp = async (
+  email: string,
+  otp: string,
+): Promise<{ success: boolean; message: string }> => {
+  const url = `${isDev}/api/company/forgot-password/verify`;
+  return post(url, { email, otp });
+};
+
+export const resetPassword = async (payload: {
+  email: string;
+  otp: string;
+  newPassword: string;
+}): Promise<{ success: boolean; message: string }> => {
+  const url = `${isDev}/api/company/forgot-password/reset`;
+  return post(url, {
+    email: payload.email,
+    otp: payload.otp,
+    password: payload.newPassword,
+    newPassword: payload.newPassword,
+  });
 };
 
 export const sendForgotPasswordOtpApi = async (
   email: string,
 ): Promise<{ success: boolean; message: string }> => {
-  const url = `${env.apiBaseUrl}/api/company/forgot-password`;
+  const url = `${isDev}/api/company/forgot-password`;
   return post(url, { email }, { skipRedirect: true });
 };
 
 export const resetPasswordApi = async (
   payload: { email: string; otp: string; password: string },
 ): Promise<{ success: boolean; message: string }> => {
-  const url = `${env.apiBaseUrl}/api/company/forgot-password/reset`;
+  const url = `${isDev}/api/company/forgot-password/reset`;
   return post(url, payload, { skipRedirect: true });
 };

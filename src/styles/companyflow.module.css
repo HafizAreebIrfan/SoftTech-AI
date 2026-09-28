@@ -1,0 +1,519 @@
+.companyShell {
+  min-height: 100vh;
+  background: var(--company-bg);
+  color: var(--company-text);
+  font-family: "Manrope", sans-serif;
+}
+
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 30;
+  display: flex;
+  width: 240px;
+  height: 100vh;
+  flex: 0 0 240px;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--company-sidebar);
+  padding: 2rem 1rem;
+  box-shadow: 20px 0 40px var(--company-shadow);
+  transition: flex-basis 0.2s ease, width 0.2s ease, padding 0.2s ease;
+}
+
+.sidebarCollapsed {
+  width: 80px;
+  flex-basis: 80px;
+  padding-inline: 0.75rem;
+}
+
+.brandBlock {
+  margin-bottom: 2.5rem;
+  padding: 0 0.5rem;
+}
+
+.brandBlockCollapsed {
+  display: flex;
+  justify-content: center;
+  padding: 0;
+}
+
+.brandIcon {
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  background: linear-gradient(135deg, var(--company-button-one), var(--company-button-two));
+  color: var(--company-button-text);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 900;
+}
+
+.brand {
+  margin: 0;
+  background: linear-gradient(90deg, var(--company-button-one), var(--company-button-two));
+  color: transparent;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.brandSub {
+  margin-top: 0.25rem;
+  color: var(--company-faint);
+  font-family: "Inter", sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.nav {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3rem;
+  border: 0;
+  border-left: 4px solid transparent;
+  border-radius: 0.75rem;
+  background: transparent;
+  color: var(--company-muted);
+  padding: 0 1rem;
+  text-align: left;
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 700;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.navItemCollapsed {
+  justify-content: center;
+  gap: 0;
+  border-left-width: 0;
+  padding-inline: 0;
+}
+
+.navItem:hover {
+  background: var(--company-hover);
+  color: var(--company-primary);
+}
+
+.navActive {
+  border-left-color: var(--company-button-one);
+  background: var(--company-hover);
+  color: var(--company-heading);
+}
+
+.logout {
+  margin-top: auto;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--company-border);
+}
+
+.logoutCollapsed {
+  padding-inline: 0;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  height: 60px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--company-border);
+  background: var(--company-topbar);
+  padding: 0 1.5rem;
+  backdrop-filter: blur(20px);
+}
+
+.topbarButton {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--company-muted);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.topbarButton:hover {
+  background: var(--company-hover);
+  color: var(--company-heading);
+}
+
+.topbarDivider {
+  width: 1px;
+  height: 1.5rem;
+  background: var(--company-border-strong);
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  color: var(--company-muted);
+}
+
+.avatar {
+  display: flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  background: var(--company-primary-soft);
+  color: var(--company-primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.content {
+  width: 100%;
+  max-width: 80rem;
+  margin: 0 auto;
+  padding: 2rem 2.25rem 5rem;
+}
+
+.pageHeader {
+  margin-bottom: 2.5rem;
+}
+
+.title {
+  margin: 0 0 0.5rem;
+  color: var(--company-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: clamp(2.25rem, 4vw, 3.1rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+.subtitle {
+  color: var(--company-muted);
+  font-family: "Inter", sans-serif;
+}
+
+.banner {
+  margin-bottom: 2.5rem;
+  overflow: hidden;
+  border: 1px solid var(--company-primary-border);
+  border-radius: 1rem;
+  background: linear-gradient(90deg, var(--company-primary-wash), var(--company-secondary-wash), transparent);
+  padding: 1.5rem;
+}
+
+.bannerInner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.rocketBadge,
+.iconBadge {
+  display: flex;
+  width: 3rem;
+  height: 3rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--company-primary-soft);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.statCard,
+.panel {
+  border: 1px solid var(--company-border);
+  background: var(--company-surface);
+  box-shadow: 0 10px 20px -5px var(--company-card-shadow);
+}
+
+.statCard {
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.statCard:hover,
+.panel:hover {
+  transform: translateY(-3px);
+}
+
+.statTop {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--company-primary-soft);
+  color: var(--company-primary);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.statLabel {
+  color: var(--company-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.statValue {
+  margin: 0.25rem 0 0;
+  color: var(--company-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.9rem;
+  font-weight: 800;
+}
+
+.panel {
+  border-radius: 1.5rem;
+  overflow: hidden;
+  transition: transform 0.25s ease;
+}
+
+.panelPad {
+  padding: 2rem;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 2rem;
+  border-bottom: 1px solid var(--company-border);
+}
+
+.panelTitle {
+  margin: 0;
+  color: var(--company-heading);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.primaryButton {
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--company-button-one), var(--company-button-two));
+  color: var(--company-button-text);
+  padding: 0.75rem 1.5rem;
+  font-weight: 800;
+  box-shadow: 0 10px 24px var(--company-button-glow);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th {
+  background: var(--company-surface-high);
+  color: var(--company-muted);
+  padding: 1.25rem 2rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.table td {
+  border-top: 1px solid var(--company-border);
+  color: var(--company-heading);
+  padding: 1.25rem 2rem;
+  font-weight: 700;
+}
+
+.code {
+  border: 1px solid var(--company-border);
+  border-radius: 0.5rem;
+  background: var(--company-bg);
+  color: var(--company-muted);
+  padding: 0.35rem 0.7rem;
+  font-family: "Inter", monospace;
+  font-size: 0.78rem;
+}
+
+.method {
+  border-radius: 0.4rem;
+  background: var(--company-primary-soft);
+  color: var(--company-primary);
+  padding: 0.3rem 0.55rem;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.status,
+.statusError {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.status {
+  background: var(--company-primary-soft);
+  color: var(--company-primary);
+}
+
+.statusError {
+  background: var(--company-error-soft);
+  color: var(--company-error);
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 2rem;
+}
+
+.chartBox {
+  height: 300px;
+  position: relative;
+}
+
+.donutWrap {
+  position: relative;
+  width: 12rem;
+  height: 12rem;
+  margin: 2rem auto 0;
+}
+
+.donutCenter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.profileGrid {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.profileHero {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.profileAvatar {
+  display: flex;
+  width: 5rem;
+  height: 5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--company-button-one), var(--company-button-two));
+  color: var(--company-button-text);
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.detailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--company-border);
+}
+
+.detailLabel {
+  color: var(--company-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.settingsList {
+  display: grid;
+  gap: 1rem;
+}
+
+.settingCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  border: 0;
+  border-radius: 0.85rem;
+  background: var(--company-surface-high);
+  color: var(--company-heading);
+  padding: 1.25rem;
+  text-align: left;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.settingCard:hover {
+  transform: translateY(-3px);
+  background: var(--company-surface-bright);
+}
+
+@media (max-width: 1000px) {
+  .sidebar {
+    display: none;
+  }
+
+  .statsGrid,
+  .chartsGrid,
+  .profileGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .content {
+    padding-inline: 1.25rem;
+  }
+}

@@ -1,7 +1,8 @@
-import { FC } from "react";
+import React from "react";
+import AnalyticsTab from "../AdminPreview/components/AnalyticsTab";
 
-const AdminAnalytics: FC = () => {
-  return null;
+const AdminAnalytics: React.FC = () => {
+  return <AnalyticsTab />;
 };
 
 export default AdminAnalytics;

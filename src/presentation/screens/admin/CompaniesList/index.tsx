@@ -1,7 +1,8 @@
-import { FC } from "react";
+import React from "react";
+import CompaniesTab from "../AdminPreview/components/CompaniesTab";
 
-const CompaniesList: FC = () => {
-  return null;
+const CompaniesList: React.FC = () => {
+  return <CompaniesTab />;
 };
 
 export default CompaniesList;

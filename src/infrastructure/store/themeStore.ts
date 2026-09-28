@@ -137,6 +137,19 @@ export const useApplyGlobalThemeVars = (accent?: string) => {
     root.style.setProperty("--app-btn-grad-1", colors.ButtonGradientOne);
     root.style.setProperty("--app-btn-grad-2", colors.ButtonGradientTwo);
     root.style.setProperty("--app-btn-secondary", colors.ButtonSecondary);
+
+    // 3-Tier Buttons
+    root.style.setProperty("--app-btn-primary-bg", colors.ButtonPrimaryBg);
+    root.style.setProperty("--app-btn-primary-text", colors.ButtonPrimaryText);
+    root.style.setProperty("--app-btn-primary-hover", colors.ButtonPrimaryHover);
+    root.style.setProperty("--app-btn-secondary-bg", colors.ButtonSecondaryBg);
+    root.style.setProperty("--app-btn-secondary-text", colors.ButtonSecondaryText);
+    root.style.setProperty("--app-btn-secondary-border", colors.ButtonSecondaryBorder);
+    root.style.setProperty("--app-btn-secondary-hover", colors.ButtonSecondaryHover);
+    root.style.setProperty("--app-btn-tertiary-bg", colors.ButtonTertiaryBg);
+    root.style.setProperty("--app-btn-tertiary-text", colors.ButtonTertiaryText);
+    root.style.setProperty("--app-btn-tertiary-hover", colors.ButtonTertiaryHover);
+    root.style.setProperty("--app-surface-elevated", colors.SurfaceElevated);
     root.style.setProperty("--app-button-secondary", colors.ButtonSecondary); // Fallback
     root.style.setProperty(
       "--app-delete-api-button-bg",

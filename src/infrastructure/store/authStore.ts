@@ -92,6 +92,7 @@ export const useAuthStore = create<AuthStore>()(
             id: user._id || user.id || "",
             name: user.companyName || user.name || "",
             email: user.email || "",
+            role: user.role || "company",
           },
           isAuthenticated: true,
           apisList: mappedApis && mappedApis.length > 0 ? mappedApis : [],

@@ -1,19 +1,13 @@
-@import url('https://cdn.jsdelivr.net/npm/@fontsource/poppins@5.0.8/index.css');
-@import url('https://cdn.jsdelivr.net/npm/@fontsource/jost@5.0.8/index.css');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Jost:ital,wght@0,100..900;1,100..900&family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+@source "../";
 
-* {
-  padding: 0;
-  margin: 0;
-  box-sizing: border-box;
-  text-decoration: none !important;
-  list-style: none !important;
-  scroll-behavior: smooth;
-  font-family: 'Poppins', sans-serif;
-}
-
-h1, h2, h3, h4, h5, h6, .font-headline {
-  font-family: 'Jost', sans-serif !important;
+@layer base {
+  * {
+    box-sizing: border-box;
+    scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
 }
 
 /* Glassmorphic & Theme-Aware Toast Styling */
@@ -32,7 +26,7 @@ h1, h2, h3, h4, h5, h6, .font-headline {
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   padding: 0.875rem 1.125rem !important;
-  font-family: 'Poppins', sans-serif !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
   font-size: 0.875rem !important;
   font-weight: 500 !important;
   line-height: 1.4 !important;
@@ -70,4 +64,3 @@ h1, h2, h3, h4, h5, h6, .font-headline {
   opacity: 1 !important;
   color: var(--app-text-heading) !important;
 }
-

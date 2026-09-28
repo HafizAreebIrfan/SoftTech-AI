@@ -13,7 +13,7 @@
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",
     "@modelcontextprotocol/ext-apps": "^1.7.4",
-    "@tailwindcss/vite": "^4.3.0",
+    "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-form": "^1.33.0",
     "@tanstack/react-query": "^5.100.5",
     "@tanstack/react-router": "^1.170.10",
@@ -32,7 +32,7 @@
     "react-toastify": "^11.1.0",
     "recharts": "^3.10.1",
     "socket.io-client": "^4.8.1",
-    "tailwindcss": "^4.3.0",
+    "tailwindcss": "^4.3.3",
     "tsconfig": "^7.0.0",
     "typescript": "^6.0.3",
     "yaml": "^2.9.0",

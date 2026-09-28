@@ -28,6 +28,8 @@ export { default as ChevronUpIcon } from './ChevronUpIcon/index';
 export { default as HeartIcon } from './HeartIcon/index';
 export { default as CartIcon } from './CartIcon/index';
 export { default as EyeIcon } from './EyeIcon/index';
+export { default as EyeOffIcon } from './EyeOffIcon/index';
+export { default as RefreshIcon } from './RefreshIcon/index';
 export { default as SearchIcon } from './SearchIcon/index';
 export { default as ListIcon } from './ListIcon/index';
 export { default as TrendingUpIcon } from './TrendingUpIcon/index';
@@ -39,5 +41,5 @@ export { default as SpinnerIcon } from './SpinnerIcon/index';
 export { default as CodeIcon } from './CodeIcon/index';
 export { default as ShieldLockIcon } from './ShieldLockIcon/index';
 export { default as XMarkIcon } from './XMarkIcon/index';
-export { default as RefreshIcon } from './RefreshIcon/index';
+
 export { default as UploadIcon } from './UploadIcon/index';
