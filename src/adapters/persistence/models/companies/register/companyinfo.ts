@@ -4,7 +4,10 @@ import { UiPreferenceSchema } from "./uipreferenceschema";
 import { Hashpassword, comparePassword } from "../../../../../infrastructure/middlewares/SecurityMiddleware/bcrypt";
 import { ICompanyForgotPassword, CompanyForgotPasswordFields } from "../forgetPassword/companyForgotPasswordInfo";
 
+export type CompanyRole = "admin" | "company" | "user";
+
 export interface ICompanyDocument extends Document, ICompanyForgotPassword {
+  role: CompanyRole;
   companyName: string;
   mcpSlug?: string;
   industry: string;
@@ -46,6 +49,11 @@ const CompanySchema = new mongoose.Schema<ICompanyDocument, ICompanyModel>(
     googleMapsApiKey: { type: String, default: "" },
     onboardingStep: { type: Number, default: 1 },
     status: { type: String, default: "draft" },
+    role: {
+      type: String,
+      enum: ["admin", "company", "user"],
+      default: "company",
+    },
     ...CompanyForgotPasswordFields,
   },
   { timestamps: true },

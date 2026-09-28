@@ -73,3 +73,31 @@ export async function resetCompanyPassword(
     throw new Error("Failed to update password");
   }
 }
+
+export async function verifyForgotPasswordOtp(
+  companyRepository: ICompanyForgotPasswordRepository,
+  email: string,
+  otp: string,
+): Promise<boolean> {
+  const repo = createCompanyForgotPasswordRepositoryPort(companyRepository);
+  const company = await repo.findByEmail(email);
+
+  if (!company) {
+    throw new Error("Company with this email was not found");
+  }
+
+  if (!company.passwordResetOTP || !company.passwordResetOTPExpires) {
+    throw new Error("No password reset request is active for this account");
+  }
+
+  if (new Date(company.passwordResetOTPExpires) < new Date()) {
+    throw new Error("OTP has expired");
+  }
+
+  const isValidOtp = await comparePassword(otp, company.passwordResetOTP);
+  if (!isValidOtp) {
+    throw new Error("Invalid OTP");
+  }
+
+  return true;
+}

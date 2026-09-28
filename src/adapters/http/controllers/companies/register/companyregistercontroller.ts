@@ -148,3 +148,24 @@ export async function analyzeSingleApiController(
     next(error);
   }
 }
+
+export async function getCompanyController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const company = await companyRepository.findById(req.params.companyId as string);
+    if (!company) {
+      res.status(404).json({ success: false, error: "Company not found" });
+      return;
+    }
+    const sanitized: any = typeof (company as any).toObject === "function" ? (company as any).toObject() : { ...company };
+    delete sanitized.password;
+    delete sanitized.passwordResetOTP;
+    delete sanitized.passwordResetOTPExpires;
+    res.status(200).json({ success: true, data: sanitized });
+  } catch (error) {
+    next(error);
+  }
+}

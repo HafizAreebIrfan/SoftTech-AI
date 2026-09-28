@@ -1,4 +1,3 @@
-import path from "path";
 import express, { Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -12,6 +11,8 @@ import { CompanyLoginRoutes } from "../../adapters/http/routes/companies/login/c
 import { CompanyLogoutRoutes } from "../../adapters/http/routes/companies/logout/companylogoutroute";
 import { mcpRoutes } from "../../adapters/http/routes/mcp/mcpRoutes";
 import { ImageRoutes } from "../../adapters/http/routes/mcp/imageproxyroutes";
+import { adminRoutes } from "../../adapters/http/routes/admin/adminRoutes";
+import { apiLimiter, authLimiter, mcpLimiter } from "../middlewares/RateLimitMiddleware/rateLimiter";
 import oauthRoutes from "../routes/oauthRoutes";
 
 export const buildApp = (): Express => {
@@ -39,11 +40,19 @@ export const buildApp = (): Express => {
     next();
   });
 
+  // Rate Limiting Middlewares
+  app.use("/api/company/login", authLimiter);
+  app.use("/api/company/forgot-password", authLimiter);
+  app.use("/api", apiLimiter);
+  app.use("/mcp", mcpLimiter);
+
+  // Application Routes
   app.use("/", healthRoutes);
   app.use("/api/companies", CompanyRoutes);
   app.use("/api/company", CompanyLoginRoutes);
   app.use("/api/company", CompanyLogoutRoutes);
   app.use("/api/company", CompanyForgetPasswordRoutes);
+  app.use("/api/admin", adminRoutes);
   app.use("/mcp", mcpRoutes);
   app.use("/api/images", ImageRoutes);
   app.use("/api/oauth", oauthRoutes);
