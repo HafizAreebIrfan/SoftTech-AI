@@ -3,6 +3,7 @@ import {
   registerCompanyInfoController,
   saveCompanyApiDetailsController,
   updateCompanyApiUiSettingsController,
+  updateCompanyApisController,
   saveCompanyUiSelectionController,
   getGeminiLogsController,
   analyzeSingleApiController,
@@ -18,6 +19,7 @@ export const CompanyRoutes = express.Router();
 
 // Public route: Initial company registration step
 CompanyRoutes.post("/registerstep", registerCompanyInfoController);
+CompanyRoutes.post("/register", registerCompanyInfoController);
 
 // Protected routes: Require valid JWT token (Bearer or cookie) + ownership/admin authorization
 CompanyRoutes.get(
@@ -34,8 +36,69 @@ CompanyRoutes.post(
   saveCompanyApiDetailsController,
 );
 
+CompanyRoutes.put(
+  "/:companyId/apis",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyApisController,
+);
+CompanyRoutes.put(
+  "/:companyId/apidetails",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyApisController,
+);
+CompanyRoutes.put(
+  "/:companyId/apidetailsstep",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyApisController,
+);
+CompanyRoutes.post(
+  "/:companyId/update-apis",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyApisController,
+);
+CompanyRoutes.post(
+  "/:companyId/apidetails",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  saveCompanyApiDetailsController,
+);
+
 CompanyRoutes.post(
   "/:companyId/api-ui-settings",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyApiUiSettingsController,
+);
+CompanyRoutes.put(
+  "/:companyId/api-ui-settings",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyApiUiSettingsController,
+);
+CompanyRoutes.patch(
+  "/:companyId/api-ui-settings",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyApiUiSettingsController,
+);
+CompanyRoutes.put(
+  "/:companyId/apis/:apiIndex",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyApiUiSettingsController,
+);
+CompanyRoutes.patch(
+  "/:companyId/apis/:apiIndex",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyApiUiSettingsController,
+);
+CompanyRoutes.post(
+  "/:companyId/apis/:apiIndex",
   authenticateToken,
   requireCompanyOrAdmin,
   updateCompanyApiUiSettingsController,
@@ -50,6 +113,12 @@ CompanyRoutes.post(
 
 CompanyRoutes.post(
   "/:companyId/uiselectionstep",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  saveCompanyUiSelectionController,
+);
+CompanyRoutes.post(
+  "/:companyId/uiselection",
   authenticateToken,
   requireCompanyOrAdmin,
   saveCompanyUiSelectionController,

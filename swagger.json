@@ -1,0 +1,1862 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "SoftTech AI Enterprise API & MCP Gateway",
+    "description": "Enterprise REST API and Model Context Protocol (MCP) server for SoftTech AI. Enables company onboarding, automated API tool ingestion, admin telemetry, and ChatGPT Custom Actions integration.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "SoftTech AI Engineering",
+      "email": "support@softtech.ai",
+      "url": "https://softtech.ai"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000",
+      "description": "Local Development Server"
+    },
+    {
+      "url": "https://api.softtech.ai",
+      "description": "Production Gateway"
+    }
+  ],
+  "tags": [
+    {
+      "name": "System",
+      "description": "Health checks and gateway status"
+    },
+    {
+      "name": "Auth",
+      "description": "Company authentication, tokens, and session management"
+    },
+    {
+      "name": "Password Recovery",
+      "description": "OTP verification and password recovery"
+    },
+    {
+      "name": "Company Onboarding",
+      "description": "Multi-step tenant registration and API configuration"
+    },
+    {
+      "name": "Admin Dashboard",
+      "description": "Administrative analytics, company management, and system health"
+    },
+    {
+      "name": "MCP Gateway",
+      "description": "Model Context Protocol tools and ChatGPT custom action endpoints"
+    },
+    {
+      "name": "Utilities",
+      "description": "Image proxy and asset delivery"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Check gateway health status",
+        "description": "Returns uptime, server timestamp, and environment status.",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "System is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "example": "2026-10-09T00:00:00.000Z"
+                    },
+                    "uptime": {
+                      "type": "number",
+                      "example": 12450.5
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/company/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Authenticate company user",
+        "description": "Authenticates with email and password. Sets an HTTP-only JWT cookie and returns the token in response.",
+        "operationId": "loginCompany",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid email or password format"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "429": {
+            "description": "Too many login attempts, rate limited"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Verify active company session",
+        "description": "Checks JWT token in Authorization header or cookie and returns user profile.",
+        "operationId": "verifySession",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session is valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/CompanyUser"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized / expired token"
+          }
+        }
+      }
+    },
+    "/api/company/verify-session": {
+      "get": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Verify session alias",
+        "description": "Alternative endpoint to check authentication status.",
+        "operationId": "verifySessionAlias",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session is valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/CompanyUser"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/company/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Sign out company user",
+        "description": "Clears session cookies and invalidates JWT token.",
+        "operationId": "logoutCompany",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Logged out successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Logged out successfully"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/company/forgot-password": {
+      "post": {
+        "tags": [
+          "Password Recovery"
+        ],
+        "summary": "Request OTP for password reset",
+        "description": "Sends a 6-digit OTP code to the provided email.",
+        "operationId": "requestForgotPasswordOtp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "admin@acme.corp"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "OTP sent to your email"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Email not found"
+          },
+          "429": {
+            "description": "Rate limit exceeded"
+          }
+        }
+      }
+    },
+    "/api/company/forgot-password/verify": {
+      "post": {
+        "tags": [
+          "Password Recovery"
+        ],
+        "summary": "Verify password reset OTP",
+        "description": "Validates the 6-digit code and returns a reset verification token.",
+        "operationId": "verifyForgotPasswordOtp",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "otp"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "admin@acme.corp"
+                  },
+                  "otp": {
+                    "type": "string",
+                    "example": "123456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verified successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "resetToken": {
+                      "type": "string",
+                      "example": "eyJhbGciOi..."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired OTP"
+          }
+        }
+      }
+    },
+    "/api/company/forgot-password/reset": {
+      "post": {
+        "tags": [
+          "Password Recovery"
+        ],
+        "summary": "Reset company password",
+        "description": "Sets new password using validated reset token or email/OTP combination.",
+        "operationId": "resetCompanyPassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "newPassword"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "admin@acme.corp"
+                  },
+                  "newPassword": {
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "SecurePass@2026"
+                  },
+                  "resetToken": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Password has been reset successfully"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/companies/registerstep": {
+      "post": {
+        "tags": [
+          "Company Onboarding"
+        ],
+        "summary": "Step 1: Register organization account",
+        "description": "Creates tenant profile, provisions organization ID, and sets credentials.",
+        "operationId": "registerCompanyStep1",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompanyRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Company registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "companyId": {
+                      "type": "string",
+                      "example": "6704b123456789abcdef0123"
+                    },
+                    "token": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Company registered successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already registered"
+          }
+        }
+      }
+    },
+    "/api/companies/{companyId}": {
+      "get": {
+        "tags": [
+          "Company Onboarding"
+        ],
+        "summary": "Get company tenant details",
+        "description": "Retrieves complete onboarding progress, API tools, and UI configuration.",
+        "operationId": "getCompanyDetails",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Unique Company ObjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Company details retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CompanyDetail"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Company not found"
+          }
+        }
+      }
+    },
+    "/api/companies/{companyId}/apidetailsstep": {
+      "post": {
+        "tags": [
+          "Company Onboarding"
+        ],
+        "summary": "Step 2: Save backend API specifications",
+        "description": "Registers API endpoints, HTTP methods, headers, and parameter definitions for MCP generation.",
+        "operationId": "saveCompanyApiDetails",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "apis"
+                ],
+                "properties": {
+                  "apis": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/ApiEndpointSpec"
+                    }
+                  },
+                  "onboardingStep": {
+                    "type": "number",
+                    "example": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "API specifications saved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "APIs saved successfully"
+                    },
+                    "company": {
+                      "$ref": "#/components/schemas/CompanyDetail"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/companies/{companyId}/api-ui-settings": {
+      "post": {
+        "tags": [
+          "Company Onboarding"
+        ],
+        "summary": "Update API UI curator preferences",
+        "description": "Configures how each API tool is visually rendered in the chat and dashboard.",
+        "operationId": "updateApiUiSettings",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "apiSettings": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "UI settings updated"
+          }
+        }
+      }
+    },
+    "/api/companies/{companyId}/apis/{apiIndex}/analyze": {
+      "post": {
+        "tags": [
+          "Company Onboarding"
+        ],
+        "summary": "AI analysis and schema inference for single API",
+        "description": "Uses Google Gemini to analyze an endpoint definition and suggest MCP parameters, descriptions, and validations.",
+        "operationId": "analyzeSingleApi",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "apiIndex",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AI analysis completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "analysis": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/companies/{companyId}/uiselectionstep": {
+      "post": {
+        "tags": [
+          "Company Onboarding"
+        ],
+        "summary": "Step 3: Select UI theme and finish onboarding",
+        "description": "Sets the visual design system, colors, and layout preference for the MCP widgets.",
+        "operationId": "saveUiSelection",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "theme"
+                ],
+                "properties": {
+                  "theme": {
+                    "type": "string",
+                    "example": "modern-dark"
+                  },
+                  "accentColor": {
+                    "type": "string",
+                    "example": "#818cf8"
+                  },
+                  "layout": {
+                    "type": "string",
+                    "example": "compact"
+                  },
+                  "onboardingStep": {
+                    "type": "number",
+                    "example": 3
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "UI preferences saved"
+          }
+        }
+      }
+    },
+    "/api/admin/me": {
+      "get": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "Verify current admin identity",
+        "description": "Ensures caller has admin role privileges.",
+        "operationId": "getAdminMe",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin confirmed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "$ref": "#/components/schemas/CompanyUser"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - Admin access required"
+          }
+        }
+      }
+    },
+    "/api/admin/dashboard/stats": {
+      "get": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "Get overall platform analytics & metrics",
+        "description": "Returns total tenant counts, status breakdown, revenue totals, and onboarding funnel.",
+        "operationId": "getAdminStats",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Platform statistics retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AdminDashboardStats"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/dashboard/summary": {
+      "get": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "Get executive dashboard summary",
+        "description": "Lightweight summary for high-level metric cards.",
+        "operationId": "getAdminSummary",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Executive summary retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "totalCompanies": {
+                          "type": "integer",
+                          "example": 128
+                        },
+                        "lifetimeEarnings": {
+                          "type": "number",
+                          "example": 452000
+                        },
+                        "revenueThisYear": {
+                          "type": "number",
+                          "example": 89000
+                        },
+                        "publishedCompanies": {
+                          "type": "integer",
+                          "example": 98
+                        },
+                        "onboardingCompanies": {
+                          "type": "integer",
+                          "example": 30
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/dashboard/all-companies": {
+      "get": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "List all registered tenant organizations",
+        "description": "Returns complete directory of companies with plans, API counts, and onboarding state.",
+        "operationId": "getAllCompaniesAdmin",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Companies list retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AdminCompanySummary"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/dashboard/top-companies": {
+      "get": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "List top organizations by API volume / revenue",
+        "description": "Retrieves top enterprise tenants sorted by traffic or spend.",
+        "operationId": "getTopCompaniesAdmin",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 5
+            },
+            "description": "Maximum number of companies to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Top companies retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AdminCompanySummary"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/dashboard/charts": {
+      "get": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "Get telemetry charts and growth timeseries",
+        "description": "Returns annual revenue and tenant growth breakdown.",
+        "operationId": "getAdminCharts",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Chart data retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "revenueByYear": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "number"
+                          }
+                        },
+                        "companyGrowthByYear": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/dashboard/{companyId}": {
+      "get": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "Get deep tenant details for administration",
+        "description": "Inspects full configuration, registered APIs, and audit metadata of any tenant.",
+        "operationId": "getAdminCompanyDetail",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "companyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant details retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AdminCompanySummary"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Company not found"
+          }
+        }
+      }
+    },
+    "/api/admin/companies/{id}/role": {
+      "patch": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "Update user/company authorization role",
+        "description": "Promotes or demotes an account between 'admin', 'company', or 'user'.",
+        "operationId": "updateCompanyRole",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "admin",
+                      "company",
+                      "user"
+                    ],
+                    "example": "admin"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Role updated successfully"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/logs": {
+      "get": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "Get HTTP audit & security logs",
+        "description": "Returns recent HTTP traffic, client IP, route methods, status codes, and execution duration.",
+        "operationId": "getAdminLogs",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit logs retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "method": {
+                            "type": "string",
+                            "example": "POST"
+                          },
+                          "path": {
+                            "type": "string",
+                            "example": "/api/company/login"
+                          },
+                          "ip": {
+                            "type": "string",
+                            "example": "127.0.0.1"
+                          },
+                          "statusCode": {
+                            "type": "integer",
+                            "example": 200
+                          },
+                          "responseTime": {
+                            "type": "number",
+                            "example": 42.5
+                          },
+                          "timestamp": {
+                            "type": "string",
+                            "example": "2026-10-09T00:00:00.000Z"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/health": {
+      "get": {
+        "tags": [
+          "Admin Dashboard"
+        ],
+        "summary": "Real-time system health and process telemetry",
+        "description": "Returns server uptime, Node memory usage (RSS, heap), MongoDB connection state, and total request counts.",
+        "operationId": "getAdminSystemHealth",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "System health telemetry retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SystemHealth"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp/{mcpSlug}": {
+      "get": {
+        "tags": [
+          "MCP Gateway"
+        ],
+        "summary": "Establish MCP SSE stream for AI agent",
+        "description": "Server-Sent Events connection for ChatGPT and Claude Model Context Protocol agents.",
+        "operationId": "connectMcpSse",
+        "parameters": [
+          {
+            "name": "mcpSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "quantum"
+            },
+            "description": "Tenant unique MCP slug identifier"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE connection stream established",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "MCP Gateway"
+        ],
+        "summary": "Execute MCP JSON-RPC 2.0 tool call",
+        "description": "Executes tools registered for the tenant organization via MCP protocol.",
+        "operationId": "executeMcpTool",
+        "parameters": [
+          {
+            "name": "mcpSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "quantum"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "jsonrpc",
+                  "method",
+                  "id"
+                ],
+                "properties": {
+                  "jsonrpc": {
+                    "type": "string",
+                    "example": "2.0"
+                  },
+                  "method": {
+                    "type": "string",
+                    "example": "tools/call"
+                  },
+                  "params": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "example": "get_user_profile"
+                      },
+                      "arguments": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "id": {
+                    "type": "string",
+                    "example": "call_123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tool execution result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "jsonrpc": {
+                      "type": "string",
+                      "example": "2.0"
+                    },
+                    "result": {
+                      "type": "object"
+                    },
+                    "id": {
+                      "type": "string",
+                      "example": "call_123"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp/{mcpSlug}/.well-known/oauth-protected-resource": {
+      "get": {
+        "tags": [
+          "MCP Gateway"
+        ],
+        "summary": "RFC 9728 OAuth discovery for ChatGPT Actions",
+        "description": "Returns OAuth discovery metadata enabling ChatGPT Custom Actions to authenticate against this tenant MCP gateway.",
+        "operationId": "getMcpOAuthProtectedResourceMetadata",
+        "parameters": [
+          {
+            "name": "mcpSlug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "quantum"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resource metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "resource": {
+                      "type": "string"
+                    },
+                    "authorization_servers": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "scopes_supported": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/images/proxy": {
+      "get": {
+        "tags": [
+          "Utilities"
+        ],
+        "summary": "Secure image proxy with caching",
+        "description": "Safely proxies external image URLs for tenant logos and widget media.",
+        "operationId": "proxyImage",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            },
+            "description": "Target image URL to fetch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Streamed image binary",
+            "content": {
+              "image/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Standard JWT Bearer token passed in the 'Authorization: Bearer <token>' header."
+      },
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "token",
+        "description": "HTTP-only cookie containing JWT token set automatically on successful login."
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-KEY",
+        "description": "Tenant API Key used for direct MCP invocation."
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "ceo@quantumleap.tech"
+          },
+          "password": {
+            "type": "string",
+            "example": "SuperSecret123!"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Login successful"
+          },
+          "token": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "company": {
+            "$ref": "#/components/schemas/CompanyUser"
+          }
+        }
+      },
+      "CompanyUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "6704b123456789abcdef0123"
+          },
+          "companyName": {
+            "type": "string",
+            "example": "Quantum Leap Technologies"
+          },
+          "email": {
+            "type": "string",
+            "example": "contact@quantumleap.tech"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "company",
+              "user"
+            ],
+            "example": "company"
+          },
+          "onboardingStep": {
+            "type": "integer",
+            "example": 3
+          },
+          "mcpSlug": {
+            "type": "string",
+            "example": "quantum"
+          }
+        }
+      },
+      "CompanyRegisterRequest": {
+        "type": "object",
+        "required": [
+          "companyName",
+          "email",
+          "password"
+        ],
+        "properties": {
+          "companyName": {
+            "type": "string",
+            "example": "Quantum Leap Technologies"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "contact@quantumleap.tech"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "example": "SuperSecret123!"
+          },
+          "industry": {
+            "type": "string",
+            "example": "Artificial Intelligence"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+1 555-0199"
+          }
+        }
+      },
+      "ApiEndpointSpec": {
+        "type": "object",
+        "required": [
+          "name",
+          "endpoint",
+          "method"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Search Customers"
+          },
+          "endpoint": {
+            "type": "string",
+            "example": "https://api.crm.quantum.com/v1/customers"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "PATCH",
+              "DELETE"
+            ],
+            "example": "GET"
+          },
+          "description": {
+            "type": "string",
+            "example": "Searches customers by name or query"
+          },
+          "authType": {
+            "type": "string",
+            "example": "Bearer Token"
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "query"
+                },
+                "type": {
+                  "type": "string",
+                  "example": "string"
+                },
+                "required": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Search keyword"
+                }
+              }
+            }
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CompanyDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "industry": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "mcpSlug": {
+            "type": "string"
+          },
+          "onboardingStep": {
+            "type": "integer"
+          },
+          "apis": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiEndpointSpec"
+            }
+          }
+        }
+      },
+      "AdminDashboardStats": {
+        "type": "object",
+        "properties": {
+          "totalCompanies": {
+            "type": "integer",
+            "example": 128
+          },
+          "publishedCompanies": {
+            "type": "integer",
+            "example": 98
+          },
+          "onboardingCompanies": {
+            "type": "integer",
+            "example": 30
+          },
+          "lifetimeEarnings": {
+            "type": "number",
+            "example": 452000
+          },
+          "revenueThisYear": {
+            "type": "number",
+            "example": 89000
+          },
+          "revenueByYear": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "statusBreakdown": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        }
+      },
+      "AdminCompanySummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "industry": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "totalSpent": {
+            "type": "number"
+          },
+          "apisCount": {
+            "type": "integer"
+          },
+          "mcpSlug": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        }
+      },
+      "SystemHealth": {
+        "type": "object",
+        "properties": {
+          "uptime": {
+            "type": "number",
+            "example": 12450.5
+          },
+          "totalRequests": {
+            "type": "integer",
+            "example": 84210
+          },
+          "memory": {
+            "type": "object",
+            "properties": {
+              "rss": {
+                "type": "integer",
+                "example": 125829120
+              },
+              "heapTotal": {
+                "type": "integer",
+                "example": 83886080
+              },
+              "heapUsed": {
+                "type": "integer",
+                "example": 52428800
+              },
+              "external": {
+                "type": "integer",
+                "example": 4194304
+              }
+            }
+          },
+          "database": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "example": "connected"
+              },
+              "readyState": {
+                "type": "integer",
+                "example": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

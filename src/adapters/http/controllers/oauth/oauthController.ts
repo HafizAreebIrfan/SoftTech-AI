@@ -12,7 +12,7 @@ import {
 } from "../../../persistence/mongo/oauth/oauthConnectionRepository";
 import { exchangeAuthorizationCode } from "../../../../application/services/oauth/OAuthTokenService";
 import { env } from "../../../../infrastructure/config/env";
-import { resolveMcpUserId } from "../../middlewares/mcpUserAuthMiddleware";
+import { resolveMcpUserId } from "../../../../infrastructure/middlewares/McpMiddleware/mcpUserAuthMiddleware";
 
 const TRANSACTION_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -88,14 +88,17 @@ export async function initiateUserOAuthController(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const companyId = String(req.query.companyId || req.query.company_id || "").trim();
+    const companyId = String(
+      req.query.companyId || req.query.company_id || "",
+    ).trim();
     const apiId = String(req.query.apiId || req.query.api_id || "").trim();
     const userId = resolveMcpUserId(req);
 
     if (!companyId || !apiId) {
       res.status(400).json({
         success: false,
-        message: "Missing required query parameters: companyId and apiId are required.",
+        message:
+          "Missing required query parameters: companyId and apiId are required.",
       });
       return;
     }
@@ -128,7 +131,12 @@ export async function initiateUserOAuthController(
 
     const oauth = api.oauth;
 
-    if (!oauth || !oauth.authorizationUrl || !oauth.clientId || !oauth.tokenUrl) {
+    if (
+      !oauth ||
+      !oauth.authorizationUrl ||
+      !oauth.clientId ||
+      !oauth.tokenUrl
+    ) {
       res.status(400).json({
         success: false,
         message: `OAuth configuration for API "${api.name || apiId}" is incomplete.`,
@@ -210,7 +218,11 @@ export async function handleOAuthCallbackController(
     const transaction = await consumeTransaction(state);
 
     if (!transaction) {
-      res.status(400).send("Invalid or expired OAuth state. Please initiate authorization again.");
+      res
+        .status(400)
+        .send(
+          "Invalid or expired OAuth state. Please initiate authorization again.",
+        );
       return;
     }
 

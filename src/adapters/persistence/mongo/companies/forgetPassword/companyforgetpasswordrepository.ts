@@ -5,7 +5,9 @@ import { ICompany } from "../../../../../domain/types/company.types";
 export function createCompanyForgotPasswordRepository(): ICompanyForgotPasswordRepository {
   return {
     async findByEmail(email: string): Promise<any> {
-      return await CompanyModel.findOne({ email }).lean();
+      const normalizedEmail = (email || "").trim().toLowerCase();
+      const escaped = normalizedEmail.replace(/[-\[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      return await CompanyModel.findOne({ email: { $regex: new RegExp("^" + escaped + "$", "i") } }).lean();
     },
 
     async update(companyId: string, updates: Partial<ICompany>): Promise<any> {

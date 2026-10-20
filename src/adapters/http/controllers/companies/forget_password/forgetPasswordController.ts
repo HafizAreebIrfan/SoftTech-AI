@@ -15,7 +15,15 @@ export async function sendForgotPasswordOtpController(
       success: true,
       message: "A 6-digit verification code has been sent to your email address.",
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message?.includes("Company with this email was not found")) {
+      res.status(404).json({
+        success: false,
+        message: "Company with this email was not found",
+        error: "Company with this email was not found",
+      });
+      return;
+    }
     next(error);
   }
 }

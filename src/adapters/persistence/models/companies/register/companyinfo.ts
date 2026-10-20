@@ -18,6 +18,9 @@ export interface ICompanyDocument extends Document, ICompanyForgotPassword {
   authStrategy?: any;
   uiPreference?: any;
   googleMapsApiKey?: string;
+  totalSpent?: number;
+  currentPlan?: string | null;
+  onBoarding?: boolean;
   onboardingStep: number;
   status: string;
   createdAt: Date;
@@ -47,8 +50,14 @@ const CompanySchema = new mongoose.Schema<ICompanyDocument, ICompanyModel>(
     authStrategy: { type: mongoose.Schema.Types.Mixed, default: null },
     uiPreference: UiPreferenceSchema,
     googleMapsApiKey: { type: String, default: "" },
+    totalSpent: { type: Number, default: 0 },
+    currentPlan: { type: String, default: null },
+    onBoarding: { type: Boolean, default: true },
     onboardingStep: { type: Number, default: 1 },
-    status: { type: String, default: "draft" },
+    status: {
+      type: String,
+      default: "draft",
+    },
     role: {
       type: String,
       enum: ["admin", "company", "user"],
@@ -65,27 +74,26 @@ CompanySchema.pre<ICompanyDocument>("save", async function () {
   }
 });
 
-CompanySchema.statics.login = async function (email, password) {
-  try {
-    const user = await this.findOne({ email });
-    if (!user) {
-      throw new Error("incorrect email");
-    }
-
-    if (!user.password) {
-      throw new Error("this account does not have a password configured");
-    }
-
-    const auth = await comparePassword(password, user.password);
-    if (!auth) {
-      throw new Error("incorrect password");
-    }
-
-    return user;
-  } catch (error: any) {
-    throw new Error(error.message);
+CompanySchema.statics.login = async function (email: string, password: string) {
+  const normalizedEmail = (email || "").trim().toLowerCase();
+  const escaped = normalizedEmail.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+  const company = await this.findOne({
+    email: { $regex: new RegExp("^" + escaped + "$", "i") },
+  });
+  if (!company) {
+    throw new Error("Invalid credentials");
   }
+  const isMatch = await comparePassword(password, company.password);
+  if (!isMatch) {
+    throw new Error("Invalid credentials");
+  }
+  return company;
 };
 
-export const CompanyModel = mongoose.model<ICompanyDocument, ICompanyModel>("CompanyModel", CompanySchema);
+export const CompanyModel = mongoose.model<ICompanyDocument, ICompanyModel>(
+  "CompanyModel",
+  CompanySchema,
+  "companymodels"
+);
+
 export default CompanyModel;

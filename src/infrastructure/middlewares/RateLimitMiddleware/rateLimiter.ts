@@ -1,15 +1,18 @@
 import rateLimit from "express-rate-limit";
 
 // Rate limit for sensitive authentication routes (login, forgot-password, reset-password)
-// Max 15 attempts per 15 minutes per IP to prevent brute-force attacks and OTP flooding
+// Max 15 attempts per 1 minute per IP to prevent brute-force attacks and OTP flooding
+// Skips CORS OPTIONS preflights and GET session-check requests so they don't consume login quota
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 1 * 60 * 1000, // 1 minute
   max: 15,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === "OPTIONS" || req.method === "GET",
   message: {
     success: false,
-    error: "Too many authentication attempts from this IP, please try again in 15 minutes.",
+    error: "Too many authentication attempts from this IP, please try again in 1 minute.",
+    message: "Too many authentication attempts from this IP, please try again in 1 minute.",
   },
 });
 
@@ -23,6 +26,7 @@ export const apiLimiter = rateLimit({
   message: {
     success: false,
     error: "Too many requests, please slow down and try again later.",
+    message: "Too many requests, please slow down and try again later.",
   },
 });
 
@@ -36,5 +40,6 @@ export const mcpLimiter = rateLimit({
   message: {
     success: false,
     error: "Rate limit exceeded for MCP endpoints. Please throttle your tool requests.",
+    message: "Rate limit exceeded for MCP endpoints. Please throttle your tool requests.",
   },
 });

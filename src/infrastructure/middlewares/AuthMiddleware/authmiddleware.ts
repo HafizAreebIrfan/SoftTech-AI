@@ -106,7 +106,7 @@ export const PostrequireAuth = async (
       user: userObj,
     });
   } catch (e: any) {
-    return res.status(400).json({ error: e.message });
+    return res.status(400).json({ error: e.message, message: e.message });
   }
 };
 

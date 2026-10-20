@@ -4,3 +4,4 @@ import { getHealthController } from "../../controllers/root/healthController";
 export const healthRoutes = express.Router();
 
 healthRoutes.get("/", getHealthController);
+healthRoutes.get("/health", getHealthController);

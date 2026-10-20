@@ -9,7 +9,7 @@ import {
   invalidateToken,
 } from "../../../../application/services/oauth/OAuthTokenService";
 import { env } from "../../../../infrastructure/config/env";
-import { resolveMcpUserId } from "../../../../adapters/http/middlewares/mcpUserAuthMiddleware";
+import { resolveMcpUserId } from "../../../middlewares/McpMiddleware/mcpUserAuthMiddleware";
 import { mcpRequestContext } from "../../../../adapters/http/controllers/mcp/mcptransportlayer";
 import {
   SearchRecoveryInfo,
@@ -120,7 +120,13 @@ export const callRegisteredApi = async (
   // Many APIs use singular endpoints (/api/vehicle) but the model sends
   // plural values (/api/vehicles). Try toggling path param values between
   // singular and plural before falling back to query relaxation.
-  const singularResult = await trySingularPathParams(api, input, companyId, apiId, req);
+  const singularResult = await trySingularPathParams(
+    api,
+    input,
+    companyId,
+    apiId,
+    req,
+  );
   if (singularResult !== undefined) {
     if (recovery) {
       recovery.recovered = true;
@@ -321,7 +327,8 @@ const executeApiCall = async (
     }
   }
 
-  const sentAuthHeader = (options.headers as Record<string, string>)?.Authorization;
+  const sentAuthHeader = (options.headers as Record<string, string>)
+    ?.Authorization;
   console.log(
     `[API Handler Outgoing] → ${method} ${url.toString()} | Auth: ${sentAuthHeader ? `Bearer (${sentAuthHeader.substring(0, 18)}...)` : "NONE"}`,
     options.body ? `body=${options.body}` : "(no body)",
@@ -570,7 +577,8 @@ const buildApiUrl = (api: IApi, input: any): URL => {
       if (!key) continue;
       if (endpointContainsParameter(endpointTemplate, key)) continue;
       if (url.searchParams.has(key)) continue;
-      if (val === undefined || val === null || String(val).trim() === "") continue;
+      if (val === undefined || val === null || String(val).trim() === "")
+        continue;
       if (typeof val === "object") continue;
 
       url.searchParams.set(key, String(val).trim());
@@ -618,31 +626,42 @@ const trySingularPathParams = async (
     const rawVal =
       allInputValues[paramKey] ??
       allInputValues[cleanParameterKey(paramKey)] ??
-      (paramKey.toLowerCase().includes("category") || paramKey.toLowerCase() === "slug"
-        ? allInputValues.category ??
+      (paramKey.toLowerCase().includes("category") ||
+      paramKey.toLowerCase() === "slug"
+        ? (allInputValues.category ??
           allInputValues.categoryname ??
           allInputValues.categoryName ??
           allInputValues.slug ??
-          allInputValues.id
+          allInputValues.id)
         : allInputValues.id);
 
-    if (rawVal === undefined || rawVal === null || String(rawVal).trim() === "") continue;
+    if (rawVal === undefined || rawVal === null || String(rawVal).trim() === "")
+      continue;
 
     const strVal = String(rawVal).trim();
     const candidates = new Set<string>();
 
-    const slugified = strVal.toLowerCase().replace(/['"]/g, "").replace(/\s+/g, "-");
+    const slugified = strVal
+      .toLowerCase()
+      .replace(/['"]/g, "")
+      .replace(/\s+/g, "-");
     if (slugified !== strVal) candidates.add(slugified);
 
-    if (slugified.includes("women-")) candidates.add(slugified.replace("women-", "womens-"));
-    if (slugified.includes("womens-")) candidates.add(slugified.replace("womens-", "women-"));
-    if (slugified.includes("men-")) candidates.add(slugified.replace("men-", "mens-"));
-    if (slugified.includes("mens-")) candidates.add(slugified.replace("mens-", "men-"));
+    if (slugified.includes("women-"))
+      candidates.add(slugified.replace("women-", "womens-"));
+    if (slugified.includes("womens-"))
+      candidates.add(slugified.replace("womens-", "women-"));
+    if (slugified.includes("men-"))
+      candidates.add(slugified.replace("men-", "mens-"));
+    if (slugified.includes("mens-"))
+      candidates.add(slugified.replace("mens-", "men-"));
 
     const singular = toggleNumber(strVal);
     if (singular && singular !== strVal) {
       candidates.add(singular);
-      candidates.add(singular.toLowerCase().replace(/['"]/g, "").replace(/\s+/g, "-"));
+      candidates.add(
+        singular.toLowerCase().replace(/['"]/g, "").replace(/\s+/g, "-"),
+      );
     }
 
     for (const candidate of candidates) {
@@ -658,7 +677,13 @@ const trySingularPathParams = async (
       }
 
       try {
-        const result = await executeApiCall(companyId, apiId, api, modifiedInput, req);
+        const result = await executeApiCall(
+          companyId,
+          apiId,
+          api,
+          modifiedInput,
+          req,
+        );
         if (isUserAuthRequiredNotice(result)) return result;
         if (!isEmptyResult(result)) {
           console.log(
@@ -876,7 +901,11 @@ const resolveParameterValue = (
         inputValues.product_id ??
         inputValues.itemId ??
         inputValues.item_id;
-      if (idAlias !== undefined && idAlias !== null && String(idAlias).trim() !== "") {
+      if (
+        idAlias !== undefined &&
+        idAlias !== null &&
+        String(idAlias).trim() !== ""
+      ) {
         return idAlias;
       }
     }
@@ -967,14 +996,18 @@ const buildHeaders = async (
   console.log(`[MCP Auth Resolution] API "${api.name || apiId}"`, {
     foundInAsyncStore: Boolean(store?.authHeader),
     foundInReq: Boolean(req?.headers?.authorization),
-    incomingAuthPreview: incomingAuth ? `${incomingAuth.substring(0, 18)}...` : "NONE",
+    incomingAuthPreview: incomingAuth
+      ? `${incomingAuth.substring(0, 18)}...`
+      : "NONE",
     configuredAuthType: api.authType,
     requiresAuth: api.requiresAuth,
   });
 
   if (incomingAuth) {
     headers.Authorization = String(incomingAuth).trim();
-    console.log(`[MCP Auth Attached] Forwarding ChatGPT Bearer token to API "${api.name || apiId}"`);
+    console.log(
+      `[MCP Auth Attached] Forwarding ChatGPT Bearer token to API "${api.name || apiId}"`,
+    );
     return headers;
   }
 

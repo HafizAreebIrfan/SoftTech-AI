@@ -47,6 +47,9 @@ export interface IApi {
   authHeader?: string;
   bearerToken?: string;
   oauth?: IOAuth;
+  oauthTokenUrl?: string;
+  oauthClientId?: string;
+  oauthClientSecret?: string;
   platformType?: "web" | "mobile" | "both";
   audience?: "customer" | "admin";
   webCheckoutUrl?: string;
@@ -54,9 +57,9 @@ export interface IApi {
   isRealtimeApi?: boolean;
   streamUrl?: string;
   apiSchema?: Record<string, unknown>;
-  inputFieldMap?: any[];
-  outputFieldMap?: any[];
-  fallbackWidget?: string;
+  inputFieldMap?: any;
+  outputFieldMap?: any;
+  fallbackWidget?: any;
   mcpResourceUri?: string;
   isWidgetEnabled?: boolean;
   isMapViewEnabled?: boolean;
@@ -71,7 +74,18 @@ export interface IUiPreference {
   audienceDefault?: string;
 }
 
+export type CompanyStatus =
+  | "draft"
+  | "ready-for-testing"
+  | "active"
+  | "pending"
+  | "published"
+  | "not_applied";
+
 export interface ICompany {
+  _id?: string;
+  id?: string;
+  role?: "admin" | "company" | "user";
   companyName: string;
   mcpSlug?: string;
   industry: string;
@@ -82,8 +96,12 @@ export interface ICompany {
   authStrategy?: ICompanyAuthStrategy;
   uiPreference?: IUiPreference | null;
   googleMapsApiKey?: string;
+  onBoarding?: boolean;
   onboardingStep?: number;
-  status?: string;
+  status?: CompanyStatus | string;
+  plan?: string;
+  currentPlan?: string | null;
+  totalSpent?: number;
   passwordResetOTP?: string;
   passwordResetOTPExpires?: Date;
   createdAt?: Date;

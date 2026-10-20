@@ -10,6 +10,7 @@ export function createCompany(data: ICompany): ICompany {
     phone: data.phone || "",
     apis: data.apis || [],
     uiPreference: data.uiPreference || null,
+    onBoarding: data.onBoarding ?? true,
     onboardingStep: data.onboardingStep || 1,
     status: data.status || "draft",
     createdAt: data.createdAt || new Date(),

@@ -360,6 +360,14 @@ export async function updateSingleApiUiSettings(
     isMapViewEnabled?: boolean;
     uiConfig?: any;
     mcpDescription?: string;
+    sampleResponse?: string;
+    apiSchema?: any;
+    apiName?: string;
+    apiEndpoint?: string;
+    apiMethod?: string;
+    headers?: any[];
+    params?: any[];
+    body?: any[];
   },
 ): Promise<ICompany | null> {
   if (!companyId) throw new Error("companyId is required");
@@ -406,19 +414,25 @@ export async function updateSingleApiUiSettings(
     mapEnabled: isMapViewEnabled,
   };
 
+  const newMcpDesc = payload.mcpDescription !== undefined ? payload.mcpDescription : existing.mcpDescription;
+  const newSchema = payload.apiSchema || (existing.apiSchema
+    ? { ...existing.apiSchema, ...(newMcpDesc ? { toolDescription: newMcpDesc } : {}) }
+    : newMcpDesc ? { toolDescription: newMcpDesc } : undefined);
+
   apis[targetIndex] = {
     ...existing,
     isWidgetEnabled,
     isMapViewEnabled,
     uiConfig,
-    ...(payload.mcpDescription
-      ? {
-          mcpDescription: payload.mcpDescription,
-          apiSchema: existing.apiSchema
-            ? { ...existing.apiSchema, toolDescription: payload.mcpDescription }
-            : existing.apiSchema,
-        }
-      : {}),
+    ...(newMcpDesc !== undefined ? { mcpDescription: newMcpDesc } : {}),
+    ...(newSchema !== undefined ? { apiSchema: newSchema } : {}),
+    ...(payload.sampleResponse !== undefined ? { sampleResponse: payload.sampleResponse } : {}),
+    ...(payload.apiName ? { apiName: payload.apiName } : {}),
+    ...(payload.apiEndpoint ? { apiEndpoint: payload.apiEndpoint, endpoint: payload.apiEndpoint } : {}),
+    ...(payload.apiMethod ? { apiMethod: payload.apiMethod, method: payload.apiMethod } : {}),
+    ...(payload.headers ? { headers: payload.headers } : {}),
+    ...(payload.params ? { params: payload.params } : {}),
+    ...(payload.body ? { body: payload.body } : {}),
   };
 
   return await companyRepository.update(companyId, {

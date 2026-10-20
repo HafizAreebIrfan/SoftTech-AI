@@ -13,13 +13,33 @@ export function createCompanyRepository(): ICompanyRepository {
     },
 
     async findByEmail(email: string): Promise<any> {
-      return await CompanyModel.findOne({ email }).lean();
+      const normalizedEmail = (email || "").trim().toLowerCase();
+      const escaped = normalizedEmail.replace(/[-\[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      return await CompanyModel.findOne({ email: { $regex: new RegExp("^" + escaped + "$", "i") } }).lean();
     },
 
     async update(companyId: string, updates: Partial<ICompany>): Promise<any> {
       return await CompanyModel.findByIdAndUpdate(companyId, updates, {
         returnDocument: "after",
       }).lean();
+    },
+
+    async findTopCompanies(limit: number): Promise<any> {
+      return await CompanyModel.find({})
+        .sort({ totalSpent: -1, createdAt: -1 })
+        .limit(limit)
+        .lean();
+    },
+
+    async findLatestCompanies(limit: number): Promise<any> {
+      return await CompanyModel.find({})
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean();
+    },
+
+    async findAllCompanies(): Promise<any> {
+      return await CompanyModel.find({}).sort({ createdAt: -1 }).lean();
     },
   };
 }
