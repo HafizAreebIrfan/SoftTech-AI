@@ -9,18 +9,14 @@ import AnalyticsTab from "./components/AnalyticsTab";
 import CompaniesTab from "./components/CompaniesTab";
 import CompanyDetailScreen from "./components/CompanyDetailScreen";
 
-/* ──────────────────────────────────────
-   Types
-────────────────────────────────────── */
 type Tab = "dashboard" | "analytics" | "companies";
-type View = { screen: "tabs" } | { screen: "company-detail"; companyId?: string };
+type View =
+  | { screen: "tabs" }
+  | { screen: "company-detail"; companyId?: string };
 
-/* ──────────────────────────────────────
-   Make sure Google Fonts + Material Symbols are loaded once
-────────────────────────────────────── */
 function ensureFonts() {
   if (typeof document === "undefined") return;
-  const fontId = "admin-preview-fonts";
+  const fontId = "admin-dashboard-fonts";
   if (document.getElementById(fontId)) return;
 
   const link = document.createElement("link");
@@ -47,22 +43,17 @@ function ensureFonts() {
 
 ensureFonts();
 
-/* ──────────────────────────────────────
-   Root component
-────────────────────────────────────── */
 const AdminPreview: React.FC = () => {
-  useThemeStore(); // subscribe so theme vars propagate via useApplyGlobalThemeVars in App
+  useThemeStore();
 
   const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const [view, setView] = useState<View>({ screen: "tabs" });
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
-  /* Sidebar collapse toggle */
   const handleToggleSidebar = () => {
     setIsSidebarCollapsed((prev) => !prev);
   };
 
-  /* Navigate to company detail (called from Add Company button or eye icon) */
   const handleAddCompany = () => {
     setView({ screen: "company-detail" });
   };
@@ -71,13 +62,11 @@ const AdminPreview: React.FC = () => {
     setView({ screen: "company-detail", companyId: id });
   };
 
-  /* Navigate back to the companies list */
   const handleBackToCompanies = () => {
     setActiveTab("companies");
     setView({ screen: "tabs" });
   };
 
-  /* When tab changes, always return to tabs view */
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     setView({ screen: "tabs" });
@@ -93,7 +82,9 @@ const AdminPreview: React.FC = () => {
       />
 
       {/* ── Scrollable main area ── */}
-      <main className={`${s.mainArea} ${isSidebarCollapsed ? s.mainAreaCollapsed : ""}`}>
+      <main
+        className={`${s.mainArea} ${isSidebarCollapsed ? s.mainAreaCollapsed : ""}`}
+      >
         {/* Sticky top bar */}
         <AdminTopBar
           isSidebarCollapsed={isSidebarCollapsed}
@@ -102,12 +93,15 @@ const AdminPreview: React.FC = () => {
 
         {/* Content */}
         {view.screen === "company-detail" ? (
-          <CompanyDetailScreen onBack={handleBackToCompanies} />
+          <CompanyDetailScreen
+            companyId={view.companyId}
+            onBack={handleBackToCompanies}
+          />
         ) : (
           <>
-            {activeTab === "dashboard"  && <DashboardTab />}
-            {activeTab === "analytics"  && <AnalyticsTab />}
-            {activeTab === "companies"  && (
+            {activeTab === "dashboard" && <DashboardTab />}
+            {activeTab === "analytics" && <AnalyticsTab />}
+            {activeTab === "companies" && (
               <CompaniesTab
                 onAddCompany={handleAddCompany}
                 onViewCompany={handleViewCompany}

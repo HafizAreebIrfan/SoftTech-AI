@@ -18,7 +18,7 @@ import {
   SparklesIcon,
   BoltIcon,
 } from "../../../assets/icons";
-import { showToast } from "../../../utils/toasts";
+import { showToast } from "../../../utils/toast";
 import styles from "../../../styles/apiImportModal.module.css";
 
 interface ApiImportModalProps {
@@ -34,14 +34,16 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
   onImport,
   hasExistingManualApis = false,
 }) => {
-  const { colors } = useThemeStore();
+  const { colors, isDark } = useThemeStore();
   const fileInputId = useId();
 
   // Primary Tab: openapi vs postman
   const [activeTab, setActiveTab] = useState<"openapi" | "postman">("openapi");
 
   // OpenAPI Sub-mode: url vs file vs paste
-  const [openApiMode, setOpenApiMode] = useState<"url" | "file" | "paste">("url");
+  const [openApiMode, setOpenApiMode] = useState<"url" | "file" | "paste">(
+    "url",
+  );
   // Postman Sub-mode: file vs paste
   const [postmanMode, setPostmanMode] = useState<"file" | "paste">("file");
 
@@ -51,7 +53,9 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
   const [isLoadingUrl, setIsLoadingUrl] = useState(false);
 
   // Filters
-  const [audienceScope, setAudienceScope] = useState<"all" | "customer" | "admin">("all");
+  const [audienceScope, setAudienceScope] = useState<
+    "all" | "customer" | "admin"
+  >("all");
   const [excludeInternalAuth, setExcludeInternalAuth] = useState(true);
 
   // Parsed State
@@ -88,7 +92,10 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
   // Handle URL fetch & parse (with smart endpoint probing)
   const handleFetchUrl = async () => {
     if (!urlInput.trim()) {
-      showToast("Please enter a valid OpenAPI / Swagger URL or backend base URL.", "warning");
+      showToast(
+        "Please enter a valid OpenAPI / Swagger URL or backend base URL.",
+        "warning",
+      );
       return;
     }
 
@@ -128,7 +135,8 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
 
           if (
             response.data &&
-            (typeof response.data === "object" || typeof response.data === "string")
+            (typeof response.data === "object" ||
+              typeof response.data === "string")
           ) {
             const parsed = parseOpenApiDocument(response.data);
             if (parsed.success && parsed.apis.length > 0) {
@@ -138,7 +146,11 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
           }
         } catch (e: any) {
           lastError = e.message || lastError;
-          if (raw.endsWith(".json") || raw.endsWith(".yaml") || raw.endsWith(".yml")) {
+          if (
+            raw.endsWith(".json") ||
+            raw.endsWith(".yaml") ||
+            raw.endsWith(".yml")
+          ) {
             break;
           }
         }
@@ -147,7 +159,7 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
       if (!successfulParse) {
         showToast(
           `Could not find OpenAPI schema at ${raw}. Please ensure the URL serves openapi.json or upload the file.`,
-          "error"
+          "error",
         );
         return;
       }
@@ -162,12 +174,12 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
       applyInitialSelection(successfulParse.apis);
       showToast(
         `Discovered ${successfulParse.apis.length} endpoint(s) from OpenAPI specification!`,
-        "success"
+        "success",
       );
     } catch (err: any) {
       showToast(
         `Failed to fetch OpenAPI URL: ${err.message || "Network or CORS error"}`,
-        "error"
+        "error",
       );
     } finally {
       setIsLoadingUrl(false);
@@ -197,12 +209,15 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
         applyInitialSelection(parsed.apis);
         showToast(
           `Parsed ${parsed.apis.length} endpoint(s) from ${file.name}!`,
-          "success"
+          "success",
         );
       } else {
         const parsed = parsePostmanCollection(content);
         if (!parsed.success) {
-          showToast(parsed.error || "Failed to parse Postman collection.", "error");
+          showToast(
+            parsed.error || "Failed to parse Postman collection.",
+            "error",
+          );
           return;
         }
         setParsedApis(parsed.apis);
@@ -213,7 +228,7 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
         applyInitialSelection(parsed.apis);
         showToast(
           `Parsed ${parsed.apis.length} endpoint(s) from ${file.name}!`,
-          "success"
+          "success",
         );
       }
     };
@@ -243,12 +258,15 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
       applyInitialSelection(parsed.apis);
       showToast(
         `Discovered ${parsed.apis.length} endpoint(s) from pasted schema!`,
-        "success"
+        "success",
       );
     } else {
       const parsed = parsePostmanCollection(rawTextInput);
       if (!parsed.success) {
-        showToast(parsed.error || "Failed to parse Postman collection.", "error");
+        showToast(
+          parsed.error || "Failed to parse Postman collection.",
+          "error",
+        );
         return;
       }
       setParsedApis(parsed.apis);
@@ -259,7 +277,7 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
       applyInitialSelection(parsed.apis);
       showToast(
         `Discovered ${parsed.apis.length} endpoint(s) from Postman collection!`,
-        "success"
+        "success",
       );
     }
   };
@@ -283,9 +301,12 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
     setParsedApis((prev) =>
       prev.map((api) =>
         api.id === id
-          ? { ...api, audience: api.audience === "admin" ? "customer" : "admin" }
-          : api
-      )
+          ? {
+              ...api,
+              audience: api.audience === "admin" ? "customer" : "admin",
+            }
+          : api,
+      ),
     );
   };
 
@@ -323,7 +344,8 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
     setExcludeInternalAuth(exclude);
     const matching = parsedApis.filter((api) => {
       if (exclude && api.isInternalAuthRoute) return false;
-      if (audienceScope === "customer" && api.audience === "admin") return false;
+      if (audienceScope === "customer" && api.audience === "admin")
+        return false;
       if (audienceScope === "admin" && api.audience !== "admin") return false;
       return true;
     });
@@ -332,7 +354,9 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
 
   const toggleSelectAll = () => {
     const displayedIds = displayedApis.map((a) => a.id);
-    const allDisplayedSelected = displayedIds.every((id) => selectedIds.has(id));
+    const allDisplayedSelected = displayedIds.every((id) =>
+      selectedIds.has(id),
+    );
 
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -349,7 +373,10 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
   const handleFinalImport = () => {
     const selected = displayedApis.filter((api) => selectedIds.has(api.id));
     if (selected.length === 0) {
-      showToast("Please select at least one API endpoint to import.", "warning");
+      showToast(
+        "Please select at least one API endpoint to import.",
+        "warning",
+      );
       return;
     }
     onImport(selected, importMode);
@@ -373,34 +400,28 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
     }
   };
 
-  const dynamicThemeVars = {
-    "--modal-bg": colors.BackgroundSecondary,
-    "--modal-border": colors.CardBorder,
-    "--modal-text-heading": colors.TextHeading,
-    "--modal-text-body": colors.TextBody,
-    "--modal-brand": colors.BrandIndigo,
-    "--modal-btn-one": colors.ButtonGradientOne,
-    "--modal-btn-two": colors.ButtonGradientTwo,
-    "--modal-input-bg": colors.Background,
-  } as React.CSSProperties;
-
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div
         className={styles.modalContainer}
-        style={dynamicThemeVars}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className={styles.modalHeader}>
           <div className={styles.headerInfo}>
             <div className={styles.headerIconWrapper}>
-              <SparklesIcon size={20} color={colors.BrandIndigo} />
+              <SparklesIcon size={20} color={colors.SuccessScreenIconBg} />
             </div>
             <div>
-              <h3 className={styles.headerTitle}>1-Click API Importer</h3>
+              <div className="flex items-center gap-2">
+                <h3 className={styles.headerTitle}>1-Click API Importer</h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  OpenAPI / Postman
+                </span>
+              </div>
               <p className={styles.headerSubtitle}>
-                Import all backend endpoints from OpenAPI / Swagger or Postman Collection in seconds.
+                Import all backend endpoints from OpenAPI / Swagger or Postman
+                Collection in seconds.
               </p>
             </div>
           </div>
@@ -408,6 +429,7 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
             type="button"
             className={styles.closeButton}
             onClick={onClose}
+            aria-label="Close modal"
           >
             <XMarkIcon size={18} color="currentColor" />
           </button>
@@ -426,7 +448,6 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
           >
             <ServerIcon size={15} color="currentColor" />
             <span>OpenAPI / Swagger (3.0, 3.1 & 2.0)</span>
-            {activeTab === "openapi" && <span className={styles.tabIndicator} />}
           </button>
 
           <button
@@ -440,7 +461,6 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
           >
             <DatabaseIcon size={15} color="currentColor" />
             <span>Postman Collection (v2.0 & v2.1)</span>
-            {activeTab === "postman" && <span className={styles.tabIndicator} />}
           </button>
         </div>
 
@@ -540,19 +560,42 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
               <input
                 type="file"
                 id={fileInputId}
-                accept={activeTab === "openapi" ? ".json,.yaml,.yml,text/plain" : ".json,text/plain"}
+                accept={
+                  activeTab === "openapi"
+                    ? ".json,.yaml,.yml,text/plain"
+                    : ".json,text/plain"
+                }
                 style={{ display: "none" }}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) handleFileUpload(file);
                 }}
               />
-              <UploadIcon size={28} color={colors.BrandIndigo} />
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-1">
+                <UploadIcon size={24} color="currentColor" />
+              </div>
               <div className={styles.dropzoneTitle}>
-                Click to browse or drag & drop {activeTab === "openapi" ? "OpenAPI / Swagger file" : "Postman collection"}
+                Click to browse or drag & drop{" "}
+                {activeTab === "openapi"
+                  ? "OpenAPI / Swagger file"
+                  : "Postman collection"}
               </div>
               <div className={styles.dropzoneSub}>
-                {activeTab === "openapi" ? "Supports .json, .yaml, and .yml specifications up to 10MB" : "Supports Postman v2.0 / v2.1 .json exports"}
+                {activeTab === "openapi"
+                  ? "Supports .json, .yaml, and .yml specifications up to 10MB"
+                  : "Supports Postman v2.0 / v2.1 .json exports"}
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  {activeTab === "openapi"
+                    ? "OpenAPI 3.0 / 3.1"
+                    : "Postman v2.1"}
+                </span>
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  {activeTab === "openapi"
+                    ? "Swagger 2.0"
+                    : "Auto Schema Synthesis"}
+                </span>
               </div>
             </div>
           )}
@@ -601,8 +644,21 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
             <div className={styles.previewSection}>
               {/* Audience Scope & Auth Filter Bar */}
               <div className={styles.filterToolbar}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "0.75rem", fontWeight: 600, color: colors.TextHeading }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      color: colors.TextHeading,
+                    }}
+                  >
                     Filter Scope:
                   </span>
                   <div className={styles.scopeFilterRow}>
@@ -618,14 +674,30 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
                       onClick={() => handleAudienceScopeChange("customer")}
                       className={`${styles.scopeFilterBtn} ${audienceScope === "customer" ? styles.scopeFilterBtnActive : ""}`}
                     >
-                      Customer / User ({parsedApis.filter((a) => a.audience !== "admin" && (!excludeInternalAuth || !a.isInternalAuthRoute)).length})
+                      Customer / User (
+                      {
+                        parsedApis.filter(
+                          (a) =>
+                            a.audience !== "admin" &&
+                            (!excludeInternalAuth || !a.isInternalAuthRoute),
+                        ).length
+                      }
+                      )
                     </button>
                     <button
                       type="button"
                       onClick={() => handleAudienceScopeChange("admin")}
                       className={`${styles.scopeFilterBtn} ${audienceScope === "admin" ? styles.scopeFilterBtnActive : ""}`}
                     >
-                      Admin ({parsedApis.filter((a) => a.audience === "admin" && (!excludeInternalAuth || !a.isInternalAuthRoute)).length})
+                      Admin (
+                      {
+                        parsedApis.filter(
+                          (a) =>
+                            a.audience === "admin" &&
+                            (!excludeInternalAuth || !a.isInternalAuthRoute),
+                        ).length
+                      }
+                      )
                     </button>
                   </div>
                 </div>
@@ -638,7 +710,8 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
                     className={styles.excludeAuthCheckbox}
                   />
                   <span className={styles.excludeAuthLabel}>
-                    Exclude internal auth endpoints (login, register, mfa, logout)
+                    Exclude internal auth endpoints (login, register, mfa,
+                    logout)
                   </span>
                 </label>
               </div>
@@ -647,7 +720,9 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
               <div className={styles.previewHeader}>
                 <div className={styles.metaBadgeRow}>
                   <span className={styles.docTitle}>
-                    {docMeta?.title || docMeta?.collectionName || "Discovered APIs"}
+                    {docMeta?.title ||
+                      docMeta?.collectionName ||
+                      "Discovered APIs"}
                   </span>
                   {docMeta?.version && (
                     <span className={styles.metaTag}>v{docMeta.version}</span>
@@ -657,8 +732,11 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
                       Base: {docMeta.baseUrl}
                     </span>
                   )}
-                  <span className={`${styles.metaTag} ${styles.metaSelectedCount}`}>
-                    {displayedApis.filter((a) => selectedIds.has(a.id)).length} of {displayedApis.length} selected
+                  <span
+                    className={`${styles.metaTag} ${styles.metaSelectedCount}`}
+                  >
+                    {displayedApis.filter((a) => selectedIds.has(a.id)).length}{" "}
+                    of {displayedApis.length} selected
                   </span>
                 </div>
 
@@ -700,7 +778,9 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
                           onClick={(e) => e.stopPropagation()}
                           className={styles.endpointCheckbox}
                         />
-                        <span className={`${styles.methodBadge} ${methodBadgeClass}`}>
+                        <span
+                          className={`${styles.methodBadge} ${methodBadgeClass}`}
+                        >
                           {api.apiMethod}
                         </span>
                         <div className={styles.endpointDetails}>
@@ -721,25 +801,39 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
                           title="Click to toggle Customer / Admin audience"
                           style={{
                             cursor: "pointer",
-                            border: "1px solid rgba(255, 255, 255, 0.12)",
-                            background: api.audience === "admin" ? "rgba(239, 68, 68, 0.15)" : "rgba(59, 130, 246, 0.15)",
-                            color: api.audience === "admin" ? "#f87171" : "#60a5fa",
+                            border:
+                              api.audience === "admin"
+                                ? "1px solid rgba(239, 68, 68, 0.3)"
+                                : "1px solid rgba(37, 99, 235, 0.3)",
+                            background:
+                              api.audience === "admin"
+                                ? "rgba(239, 68, 68, 0.12)"
+                                : "rgba(37, 99, 235, 0.12)",
+                            color:
+                              api.audience === "admin" ? "#ef4444" : "#2563eb",
                           }}
                         >
                           {api.audience || "customer"} ⇄
                         </button>
                         {api.apiAuthType && api.apiAuthType !== "No Auth" && (
-                          <span className={`${styles.featureBadge} ${styles.authBadge}`}>
+                          <span
+                            className={`${styles.featureBadge} ${styles.authBadge}`}
+                          >
                             {api.apiAuthType}
                           </span>
                         )}
                         {api.isRealtimeApi && (
-                          <span className={`${styles.featureBadge} ${styles.streamBadge}`}>
+                          <span
+                            className={`${styles.featureBadge} ${styles.streamBadge}`}
+                          >
                             Live Stream
                           </span>
                         )}
-                        {(api.sampleResponse || (api as any).sampleresponse) && (
-                          <span className={`${styles.featureBadge} ${styles.sampleBadge}`}>
+                        {(api.sampleResponse ||
+                          (api as any).sampleresponse) && (
+                          <span
+                            className={`${styles.featureBadge} ${styles.sampleBadge}`}
+                          >
                             Sample Attached ✓
                           </span>
                         )}
@@ -794,11 +888,17 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
             <button
               type="button"
               onClick={handleFinalImport}
-              disabled={displayedApis.filter((a) => selectedIds.has(a.id)).length === 0}
+              disabled={
+                displayedApis.filter((a) => selectedIds.has(a.id)).length === 0
+              }
               className={styles.actionBtn}
             >
               <CheckIcon size={14} color="#ffffff" />
-              <span>Import {displayedApis.filter((a) => selectedIds.has(a.id)).length} Selected API(s)</span>
+              <span>
+                Import{" "}
+                {displayedApis.filter((a) => selectedIds.has(a.id)).length}{" "}
+                Selected API(s)
+              </span>
             </button>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ForgotPasswordStore } from "../../interfaces/forgotpassword.interface";
+import { ForgotPasswordStore } from "../../interfaces/auth/forgotPassword.interface";
 
 export const useForgotPasswordStore = create<ForgotPasswordStore>((set) => ({
   email: "",

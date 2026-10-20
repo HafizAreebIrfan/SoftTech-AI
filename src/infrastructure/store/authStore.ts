@@ -2,10 +2,9 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
   AuthStore,
-  ApiConnection,
-  ToolUiConfig,
   DEFAULT_TOOL_UI_CONFIG,
 } from "../../interfaces/auth/auth.interface";
+import { updateCompanyOnboardingStepApi } from "../../adapters/api/authApi";
 
 const normalizeLayout = (layout: string): any => {
   if (layout === "grid") return "dashboard";
@@ -21,7 +20,7 @@ export const useAuthStore = create<AuthStore>()(
       isAuthenticated: false,
       authReady: false,
       apisList: [],
-      googleMapsApiKey: "",
+      MapsApiKey: "",
       selectedLayout: "dashboard",
       setAuth: (user: any) => {
         const mappedApis = user?.apis?.map((api: any, index: number) => {
@@ -93,14 +92,28 @@ export const useAuthStore = create<AuthStore>()(
             name: user.companyName || user.name || "",
             email: user.email || "",
             role: user.role || "company",
+            isSignupOnboardingDone: Boolean(user?.isSignupOnboardingDone),
+            signupOnboardingStep:
+              typeof user?.signupOnboardingStep === "number"
+                ? user.signupOnboardingStep
+                : 1,
+            onboardingStep:
+              typeof user?.onboardingStep === "number"
+                ? user.onboardingStep
+                : 1,
+            status: user?.status || "",
+            mcpSlug:
+              user?.mcpSlug ||
+              user?.companyName?.toLowerCase().replace(/[^a-z0-9]/g, "") ||
+              "",
           },
           isAuthenticated: true,
           apisList: mappedApis && mappedApis.length > 0 ? mappedApis : [],
           selectedLayout: normalizeLayout(user?.uiPreference?.layout),
-          googleMapsApiKey:
-            user?.googleMapsApiKey ||
-            user?.uiPreference?.googleMapsApiKey ||
-            state.googleMapsApiKey ||
+          MapsApiKey:
+            user?.MapsApiKey ||
+            user?.uiPreference?.MapsApiKey ||
+            state.MapsApiKey ||
             "",
         }));
       },
@@ -111,6 +124,40 @@ export const useAuthStore = create<AuthStore>()(
         })),
       setSelectedLayout: (layout) =>
         set({ selectedLayout: normalizeLayout(layout) }),
+      setSignupOnboardingDone: (done: boolean) =>
+        set((state) => ({
+          user: state.user
+            ? { ...state.user, isSignupOnboardingDone: done }
+            : null,
+        })),
+      setSignupOnboardingStep: (step: number) =>
+        set((state) => ({
+          user: state.user
+            ? { ...state.user, signupOnboardingStep: step }
+            : null,
+        })),
+      setOnboardingStep: (step: number) => {
+        try {
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(
+              "softtech_onboarding_step",
+              String(step),
+            );
+          }
+        } catch (e) {
+          console.warn("Could not save onboarding step to localStorage:", e);
+        }
+        set((state) => {
+          if (state.user?.id) {
+            updateCompanyOnboardingStepApi(state.user.id, step).catch((err) =>
+              console.warn("Could not persist onboarding step to server:", err),
+            );
+          }
+          return {
+            user: state.user ? { ...state.user, onboardingStep: step } : null,
+          };
+        });
+      },
       updateApiUiConfig: (apiId, config) =>
         set((state) => ({
           apisList: state.apisList.map((api) => {
@@ -141,7 +188,7 @@ export const useAuthStore = create<AuthStore>()(
               : api,
           ),
         })),
-      setGoogleMapsApiKey: (key) => set({ googleMapsApiKey: key }),
+      setMapsApiKey: (key) => set({ MapsApiKey: key }),
       clearAuth: () =>
         set({
           user: null,
@@ -156,7 +203,7 @@ export const useAuthStore = create<AuthStore>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         apisList: state.apisList,
-        googleMapsApiKey: state.googleMapsApiKey,
+        MapsApiKey: state.MapsApiKey,
         selectedLayout: state.selectedLayout,
       }),
     },

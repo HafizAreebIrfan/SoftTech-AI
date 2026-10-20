@@ -60,15 +60,15 @@ export const SimulatedWidgetPreview: FC<SimulatedWidgetPreviewProps> = ({
     <div
       className={styles.container}
       style={{
-        background: colors.Headerbackground,
-        border: `1px solid ${colors.CardBorderSecondary}`,
+        background: colors.BackgroundSecondary,
+        border: `1px solid ${colors.BorderSecondary}`,
         boxShadow: `0 10px 40px ${colors.OverlayShadow}`,
       }}
     >
       {/* ChatGPT Header Simulation */}
       <div
         className={styles.header}
-        style={{ borderBottom: `1px solid ${colors.CardBorder}` }}
+        style={{ borderBottom: `1px solid ${colors.Border}` }}
       >
         <div className={styles.headerLeft}>
           <div
@@ -111,7 +111,7 @@ export const SimulatedWidgetPreview: FC<SimulatedWidgetPreviewProps> = ({
             <div
               className={styles.promptBubble}
               style={{
-                background: colors.UISelectionCardBackground,
+                background: colors.BackgroundGradientOne,
                 color: colors.TextHeading,
               }}
             >
@@ -130,8 +130,8 @@ export const SimulatedWidgetPreview: FC<SimulatedWidgetPreviewProps> = ({
             <div
               className={styles.widgetCard}
               style={{
-                background: colors.Card,
-                border: `1px solid ${colors.CardBorder}`,
+                background: colors.Background,
+                border: `1px solid ${colors.BorderSecondary}`,
                 boxShadow: `0 8px 24px ${hexToRgba(primaryAccent, 0.15)}`,
               }}
             >

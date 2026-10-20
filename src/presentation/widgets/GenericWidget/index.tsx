@@ -1,7 +1,10 @@
 import React, { useMemo, useEffect } from "react";
 import { useMcpToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import { useApplyGlobalThemeVars } from "../../../infrastructure/store/themeStore";
-import { useCartStore, buildCartDataFromItems } from "../../../infrastructure/store/cartStore";
+import {
+  useCartStore,
+  buildCartDataFromItems,
+} from "../../../infrastructure/store/cartStore";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import { CatalogLayout } from "../layouts/CatalogLayout";
 import { TableLayout } from "../layouts/TableLayout";
@@ -13,11 +16,11 @@ import { OptionPickerBlock } from "../components/OptionPickerBlock/OptionPickerB
 import { DetailBlock } from "../components/DetailBlock";
 import { MapCatalogLayout } from "../layouts/MapCatalogLayout";
 import { useMcpWidgetStore } from "../../../infrastructure/store/mcpWidgetStore";
-import { getValue } from "../../../utils";
 import type { NormalizedWidgetData } from "../../../interfaces/mcp/normalizedwidget.interface";
 import styles from "../../../styles/genericwidgetrenderer.module.css";
 import { buildPresentationPlan } from "../helper/WidgetDeciderHelper";
-import { setOpenInApp } from "../../../utils/mcpBridge";
+import { setOpenInApp } from "../../../utils/mcp";
+import { env } from "../../../infrastructure/config/env";
 
 const GenericWidgetInner: React.FC = () => {
   const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
@@ -58,7 +61,8 @@ const GenericWidgetInner: React.FC = () => {
     {};
 
   const currentGlobalCheckoutUrl =
-    rawAuthStrategy?.hasGlobalCheckout !== false && rawAuthStrategy?.globalCheckoutUrl
+    rawAuthStrategy?.hasGlobalCheckout !== false &&
+    rawAuthStrategy?.globalCheckoutUrl
       ? rawAuthStrategy.globalCheckoutUrl
       : rawMetadata?.hasGlobalCheckout !== false &&
           (rawMetadata?.globalCheckoutUrl || rawMetadata?.webCheckoutUrl)
@@ -98,23 +102,25 @@ const GenericWidgetInner: React.FC = () => {
   // Clean, fresh metadata per tool call (prevents previous company's URLs leaking)
   const currentMetadata = useMemo(() => {
     // Read Google Maps API key: platform default from env takes priority, with metadata/storage fallbacks
-    let googleMapsApiKey =
-      (typeof import.meta !== "undefined" && import.meta.env?.VITE_GOOGLE_MAPS_API_KEY) ||
-      (rawMetadata?.googleMapsApiKey as string | undefined) ||
-      (typeof window !== "undefined"
-        ? (window as any).__WIDGET_METADATA__?.googleMapsApiKey ||
-          (window as any).VITE_GOOGLE_MAPS_API_KEY
-        : undefined);
+    let MapsApiKey = env.mapapikey;
+    // (typeof import.meta !== "undefined" &&
+    //   import.meta.env?.VITE_GOOGLE_MAPS_API_KEY) ||
+    // (rawMetadata?.MapsApiKey as string | undefined) ||
+    // (typeof window !== "undefined"
+    //   ? (window as any).__WIDGET_METADATA__?.MapsApiKey ||
+    //     (window as any).VITE_GOOGLE_MAPS_API_KEY
+    //   : undefined);
 
-    if (!googleMapsApiKey && typeof window !== "undefined") {
+    if (!MapsApiKey && typeof window !== "undefined") {
       try {
         const raw = localStorage.getItem("softtech-auth-store");
         if (raw) {
           const parsed = JSON.parse(raw);
-          googleMapsApiKey =
-            parsed?.state?.googleMapsApiKey || parsed?.googleMapsApiKey;
+          MapsApiKey = parsed?.state?.MapsApiKey || parsed?.MapsApiKey;
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     }
 
     return {
@@ -130,7 +136,7 @@ const GenericWidgetInner: React.FC = () => {
       mapEnabled: rawMetadata?.mapEnabled,
       mapOnly: rawMetadata?.mapOnly,
       uiEnabled: rawMetadata?.uiEnabled,
-      googleMapsApiKey,
+      MapsApiKey,
     };
   }, [
     rawMetadata,
@@ -200,7 +206,8 @@ const GenericWidgetInner: React.FC = () => {
       rawList = rawData;
     } else if (rawData && typeof rawData === "object") {
       const obj = rawData as Record<string, unknown>;
-      const dataPath = (collection?.dataPath as string | undefined) || undefined;
+      const dataPath =
+        (collection?.dataPath as string | undefined) || undefined;
       let list: unknown;
       if (dataPath && Array.isArray(obj[dataPath])) {
         list = obj[dataPath];
@@ -211,7 +218,8 @@ const GenericWidgetInner: React.FC = () => {
     }
 
     // Map primitives (e.g. array of category names ["beauty", "fragrances", ...]) into objects
-    const primaryKey = collection?.fields?.[0]?.key || collection?.itemLabel || "category";
+    const primaryKey =
+      collection?.fields?.[0]?.key || collection?.itemLabel || "category";
     const records = rawList.map((item, idx) => {
       if (typeof item === "object" && item !== null) {
         return item;
@@ -296,13 +304,12 @@ const GenericWidgetInner: React.FC = () => {
   ).toLowerCase();
 
   const isWeather =
-    /weather|forecast|temperature|climate/.test(entityName) &&
-    !/air_pollution|aqi/.test(entityName) ||
+    (/weather|forecast|temperature|climate/.test(entityName) &&
+      !/air_pollution|aqi/.test(entityName)) ||
     Boolean(
       rawData &&
       typeof rawData === "object" &&
-      ("current" in (rawData as object) ||
-        "forecast" in (rawData as object)) &&
+      ("current" in (rawData as object) || "forecast" in (rawData as object)) &&
       !("coord" in (rawData as object) && "list" in (rawData as object)),
     );
 
@@ -311,7 +318,8 @@ const GenericWidgetInner: React.FC = () => {
     Boolean(
       rawData &&
       typeof rawData === "object" &&
-      ("list" in (rawData as object) && "coord" in (rawData as object)),
+      "list" in (rawData as object) &&
+      "coord" in (rawData as object),
     );
 
   const normalizedLayout = isMapOnlyMode
@@ -322,9 +330,12 @@ const GenericWidgetInner: React.FC = () => {
     const activeSubView = subViewHistory[subViewHistory.length - 1];
     if (activeSubView) {
       if (activeSubView.blockType === "detail") {
+        const detailRecord = Array.isArray(activeSubView.data)
+          ? activeSubView.data[0]
+          : activeSubView.data;
         return (
           <DetailBlock
-            records={[activeSubView.data]}
+            records={detailRecord ? [detailRecord] : []}
             fields={fields}
             collection={collection}
             actions={content.actions}
@@ -516,9 +527,7 @@ const GenericWidgetInner: React.FC = () => {
             /* Empty cart → local page only, NO tool call. */
             <div className={styles.cartEmptyState}>
               <div className={styles.cartEmptyIcon}>🛒</div>
-              <h3 className={styles.cartEmptyTitle}>
-                Your cart is empty
-              </h3>
+              <h3 className={styles.cartEmptyTitle}>Your cart is empty</h3>
               <p className={styles.cartEmptyDesc}>
                 Browse the catalog and add items to your cart to see them here.
               </p>
@@ -574,7 +583,47 @@ class WidgetErrorBoundary extends React.Component<
   }
 
   render() {
-    return this.state.hasError ? null : this.props.children;
+    if (this.state.hasError) {
+      const hasSubView =
+        useMcpWidgetStore.getState().subViewHistory.length > 0;
+      if (hasSubView) {
+        return (
+          <div
+            style={{
+              padding: "24px 16px",
+              textAlign: "center",
+              color: "#94a3b8",
+              fontFamily: "'Poppins', sans-serif",
+            }}
+          >
+            <p style={{ margin: "0 0 14px 0", fontSize: "14px" }}>
+              Unable to load item details.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                this.setState({ hasError: false });
+                useMcpWidgetStore.getState().popSubView();
+              }}
+              style={{
+                background: "rgba(255, 255, 255, 0.08)",
+                color: "#ffffff",
+                border: "1px solid rgba(255, 255, 255, 0.16)",
+                borderRadius: "8px",
+                padding: "8px 16px",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              ← Back to list
+            </button>
+          </div>
+        );
+      }
+      return null;
+    }
+    return this.props.children;
   }
 }
 
@@ -583,4 +632,3 @@ export const GenericWidgetRenderer: React.FC = () => (
     <GenericWidgetInner />
   </WidgetErrorBoundary>
 );
-

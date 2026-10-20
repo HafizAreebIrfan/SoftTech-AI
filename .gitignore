@@ -30,3 +30,6 @@ OPENAI_PLUGIN_SKILLS_ARCHITECTURE.md
 scripts
 .cursor
 cursor-plugin
+postman_collection.json
+openapi.json
+swagger.json

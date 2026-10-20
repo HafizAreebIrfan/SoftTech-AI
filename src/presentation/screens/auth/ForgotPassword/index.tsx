@@ -5,6 +5,7 @@ import { SunIcon, MoonIcon } from "../../../../assets/icons";
 import { AnimatePresence, motion } from "motion/react";
 import dashboardLight from "../../../../assets/images/dashboard-light.png";
 import dashboardDark from "../../../../assets/images/dashboard-dark.png";
+import styles from "../../../../styles/forgotpassword.module.css";
 
 const ForgotPassword: FC = () => {
   const navigate = useNavigate();
@@ -21,10 +22,7 @@ const ForgotPassword: FC = () => {
 
   return (
     <div
-      className={`min-h-screen w-full flex overflow-hidden font-sans transition-colors duration-300`}
-      style={{
-        background: isDark ? "#0b0f19" : "#fff",
-      }}
+      className={`min-h-screen w-full flex overflow-hidden font-sans transition-colors duration-300 ${styles.pageContainer}`}
     >
       {/* LEFT COLUMN: Form Area */}
       <div
@@ -101,13 +99,7 @@ const ForgotPassword: FC = () => {
 
       {/* RIGHT COLUMN: Dashboard Mockup Area */}
       <div
-        className="hidden lg:flex w-3/4 relative transition-colors duration-300"
-        style={{
-          padding: "52px",
-          borderTopLeftRadius: "72px",
-          borderBottomLeftRadius: "72px",
-          background: isDark ? "#020304ff" : "#eff5fcff",
-        }}
+        className={`hidden lg:flex w-3/4 relative transition-colors duration-300 ${styles.rightMockupArea}`}
       >
         <div
           className={`w-full h-full rounded-[36px] relative overflow-hidden flex flex-col border shadow-2xl transition-colors duration-300 ${

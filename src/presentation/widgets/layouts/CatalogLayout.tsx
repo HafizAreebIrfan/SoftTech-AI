@@ -3,7 +3,7 @@ import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.inte
 import { CardsBlock } from "../components/CardsBlock";
 import { useCartStore, parseNumericPrice } from "../../../infrastructure/store/cartStore";
 import { getFieldValue } from "../../../utils/schema/getValue";
-import { callMcpTool, applyReQueryResult, getToolInput } from "../../../utils/mcpBridge";
+import { callMcpTool, applyReQueryResult, getToolInput } from "../../../utils/mcp";
 import { extractToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import styles from "../../../styles/cataloglayout.module.css";
 import { useRealtimeStream } from "../hooks/useRealtimeStream";

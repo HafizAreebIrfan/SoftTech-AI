@@ -7,7 +7,7 @@ import {
   markCheckoutPending,
   clearCheckoutPending,
   monitorCheckoutWindow,
-} from "../../../../utils/checkoutHelper";
+} from "../../../../utils/checkout";
 import styles from "../../../../styles/cartdrawer.module.css";
 
 export const CartDrawer: React.FC = () => {

@@ -12,7 +12,7 @@ import {
   findFavouriteAction,
   findFavouriteField,
 } from "../../helper/cardMeta";
-import { callMcpTool } from "../../../../utils/mcpBridge";
+import { callMcpTool } from "../../../../utils/mcp";
 
 interface MapCardItemProps {
   record: Record<string, any>;

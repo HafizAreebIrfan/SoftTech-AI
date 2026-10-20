@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { TableRow } from "./TableRow";
 import { getFieldValue } from "../../../../utils/schema/getValue";
 import { renderImage } from "../../helper/RenderImage";
-import { callMcpTool } from "../../../../utils/mcpBridge";
+import { callMcpTool } from "../../../../utils/mcp";
 import styles from "../../../../styles/tableblock.module.css";
 import type { FieldSchema } from "../../../../domain/entities/GenericWidget";
 import type { TableBlockProps } from "../../../../interfaces/mcp/tableblock.interface";

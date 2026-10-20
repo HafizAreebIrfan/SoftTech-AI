@@ -1,4 +1,4 @@
-import { callMcpTool } from "../../../utils/mcpBridge";
+import { callMcpTool } from "../../../utils/mcp";
 import { extractToolResult } from "../../../infrastructure/store/mcpWidgetStore";
 import { findDetailTool } from "./AudienceHelper";
 
@@ -104,6 +104,15 @@ export const enrichRecordViaDetailTool = async (
   const detailTool = findDetailTool(actions || []);
   const rawId = record?.id ?? record?._id;
   if (!detailTool?.tool || rawId === undefined || rawId === null) return record;
+
+  // Direct tool calling is required for silent background enrichment.
+  // If openai.callTool is not available (e.g. ChatGPT mobile app),
+  // return the record immediately to prevent sending follow-up chat messages or freezing the widget.
+  const openai =
+    typeof window !== "undefined" ? (window as any).openai : undefined;
+  if (!openai?.callTool) {
+    return record;
+  }
 
   const idStr = String(rawId);
   const numId = Number(rawId);

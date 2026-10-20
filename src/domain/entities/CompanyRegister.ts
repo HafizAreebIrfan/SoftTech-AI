@@ -60,6 +60,8 @@ export interface SignupResonse {
   apis: ApisInformation[] | null;
   uiPreference: {} | string | null;
   onboardingStep: number;
+  isSignupOnboardingDone?: boolean;
+  signupOnboardingStep?: number;
   status: string;
   createdAt: string;
   updatedAt: string;

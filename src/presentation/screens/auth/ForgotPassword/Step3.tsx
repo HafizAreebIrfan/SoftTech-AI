@@ -3,13 +3,18 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useThemeStore, useForgotPasswordStore } from "../../../../hooks";
 import { resetPassword } from "../../../../adapters/api/authApi";
-import { EyeIcon, EyeOffIcon, KeyIcon, LeftArrowIcon } from "../../../../assets/icons";
-import { showToast } from "../../../../utils/toasts";
+import {
+  EyeIcon,
+  EyeOffIcon,
+  KeyIcon,
+  LeftArrowIcon,
+} from "../../../../assets/icons";
+import { showToast } from "../../../../utils/toast";
 import { newPasswordSchema } from "../../../../infrastructure/validation/forgotPasswordSchemas";
 
 const ForgotPasswordStep3: FC = () => {
   const navigate = useNavigate();
-  const { isDark } = useThemeStore();
+  const { isDark, colors } = useThemeStore();
   const { email, otp, isOtpVerified, clearForgotPassword } =
     useForgotPasswordStore();
   const [showPassword, setShowPassword] = useState(false);
@@ -48,7 +53,8 @@ const ForgotPasswordStep3: FC = () => {
     e.preventDefault();
     const result = newPasswordSchema.safeParse(passwords);
     if (!result.success) {
-      const fieldErrors: { newPassword?: string; confirmPassword?: string } = {};
+      const fieldErrors: { newPassword?: string; confirmPassword?: string } =
+        {};
       result.error.issues.forEach((issue) => {
         const fieldName = issue.path[0] as "newPassword" | "confirmPassword";
         if (fieldName && !fieldErrors[fieldName]) {
@@ -71,7 +77,9 @@ const ForgotPasswordStep3: FC = () => {
       {/* Icon Box */}
       <div
         className={`w-12 h-12 rounded-xl border flex items-center justify-center mb-6 shadow-sm ${
-          isDark ? "border-slate-800 bg-slate-900/60" : "border-slate-200 bg-white"
+          isDark
+            ? "border-slate-800 bg-slate-900/60"
+            : "border-slate-200 bg-white"
         }`}
       >
         <KeyIcon size={22} color={isDark ? "#94a3b8" : "#475569"} />
@@ -158,7 +166,10 @@ const ForgotPasswordStep3: FC = () => {
               onChange={(e) => {
                 setPasswords({ ...passwords, confirmPassword: e.target.value });
                 if (errors.confirmPassword) {
-                  setErrors((prev) => ({ ...prev, confirmPassword: undefined }));
+                  setErrors((prev) => ({
+                    ...prev,
+                    confirmPassword: undefined,
+                  }));
                 }
               }}
               className={`block w-full px-4 pr-11 py-3 rounded-xl outline-none transition-all text-base border focus:ring-2 focus:ring-opacity-50 ${
@@ -195,8 +206,12 @@ const ForgotPasswordStep3: FC = () => {
           className={`w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-base font-semibold text-white transition-all duration-200 shadow-sm mt-2 ${
             isPending
               ? "opacity-70 cursor-not-allowed bg-blue-500"
-              : "bg-blue-600 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              : "focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           }`}
+          style={{
+            background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
+            cursor: "pointer",
+          }}
         >
           {isPending ? "Resetting..." : "Reset password"}
         </button>

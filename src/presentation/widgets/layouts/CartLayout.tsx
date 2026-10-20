@@ -3,13 +3,13 @@ import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.inte
 import { renderImage } from "../helper/RenderImage";
 import { renderCurrency } from "../helper/RenderCurrency";
 import { useCartStore, parseNumericPrice } from "../../../infrastructure/store/cartStore";
-import { callMcpTool } from "../../../utils/mcpBridge";
+import { callMcpTool } from "../../../utils/mcp";
 import {
   appendChatUrlToCheckout,
   markCheckoutPending,
   clearCheckoutPending,
   monitorCheckoutWindow,
-} from "../../../utils/checkoutHelper";
+} from "../../../utils/checkout";
 import styles from "../../../styles/cartlayout.module.css";
 
 interface CartLineItem {

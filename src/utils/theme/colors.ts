@@ -1,20 +1,21 @@
-/**
- * Centralized Design System Colors & Theme Tokens
- *
- * Semantic Hierarchy:
- * - Surface Background: Dark #0b0f19 | Light #ffffff
- * - Card Background (on top of surface): Dark #1e293b | Light #eff5fc
- * - Elevated / On-top-of-card / Borders: Dark #475569 | Light #e2e8f0 (slate-200)
- * - Brand Accent: Purple / Blue Gradient & Solid Indigo (#4f46e5, #6366f1, #7c3aed, #8b5cf6, #3b82f6)
- * - Button System: 3 tiers (Primary, Secondary, Tertiary)
- */
-
 export type ThemeColors = {
   // --- Surface & Structural Tokens ---
   Background: string;
   BackgroundSecondary: string;
+  BorderSecondary: string;
   SurfaceElevated: string;
   OverlayShadow: string;
+  BackdropBg: string;
+  CardActiveBg: string;
+  CardHoverBg: string;
+  CardActiveHeading: string;
+  CardHoverHeading: string;
+  CardActiveDesc: string;
+  CardActiveStepCountBg: string;
+  CardActiveStepCountText: string;
+  CardCompleteBg: string;
+  CardCompleteText: string;
+  CardCompleteBorder: string;
 
   Headerbackground: string;
   HeaderBoxShadow: string;
@@ -30,6 +31,10 @@ export type ThemeColors = {
   CardBorder: string;
   CardBorderSecondary: string;
   CardActiveBorder: string;
+
+  // --- Success Screen ---
+  SuccessScreenIconBg: string;
+  SuccessScreenIconColor: string;
 
   // --- Typography ---
   TextPrimary: string;
@@ -76,6 +81,10 @@ export type ThemeColors = {
   ButtonOverlayText: string;
   ButtonOverlaySecondary: string;
   ButtonOverlaySecondaryText: string;
+  ErrorButtonBg: string;
+  ErrorButtonText: string;
+  ErrorButtonBorder: string;
+  ErrorButtonHover: string;
 
   // --- Footer ---
   FooterText: string;
@@ -93,6 +102,7 @@ export type ThemeColors = {
   RatingIconColor: string;
   AuthIconColor: string;
   IconColor: string;
+  OverlayIconColor: string;
 
   // --- Interactive States & Feedback ---
   UISelectionCardBackground: string;
@@ -207,10 +217,22 @@ export type ThemeColors = {
 // ==========================================
 export const darkColors: ThemeColors = {
   // Surface & Structural
-  Background: "#0b0f19",
-  BackgroundSecondary: "#111827",
-  SurfaceElevated: "#475569",
+  Background: "#06080dff",
+  BackgroundSecondary: "#18191cff",
+  BorderSecondary: "#18191cff",
+  SurfaceElevated: "#2f2f2fff",
   OverlayShadow: "rgba(0, 0, 0, 0.75)",
+  BackdropBg: "#000000c1",
+  CardActiveBg: "#221e3bff",
+  CardHoverBg: "#4f46e5",
+  CardActiveHeading: "#6366f1",
+  CardHoverHeading: "#ffffff",
+  CardActiveDesc: "#94a3b8",
+  CardActiveStepCountBg: "#6366f1ff",
+  CardActiveStepCountText: "#ffffffff",
+  CardCompleteBg: "#10b981",
+  CardCompleteText: "#ffffff",
+  CardCompleteBorder: "#34d399",
 
   Headerbackground: "#0b0f19",
   HeaderBoxShadow: "rgba(0, 0, 0, 0.45)",
@@ -226,6 +248,10 @@ export const darkColors: ThemeColors = {
   CardBorder: "rgba(255, 255, 255, 0.08)",
   CardBorderSecondary: "#475569",
   CardActiveBorder: "#6366f1",
+
+  //Success Screen
+  SuccessScreenIconBg: "#4f46e5",
+  SuccessScreenIconColor: "#ffffff",
 
   // Typography
   TextPrimary: "#f8fafc",
@@ -275,6 +301,11 @@ export const darkColors: ThemeColors = {
   ButtonOverlaySecondary: "transparent",
   ButtonOverlaySecondaryText: "#ffffff",
 
+  ErrorButtonBg: "#ef4444",
+  ErrorButtonText: "#ffffff",
+  ErrorButtonBorder: "#ef4444",
+  ErrorButtonHover: "#dc2626",
+
   // Footer
   FooterText: "#94a3b8",
   FooterHeading: "#f8fafc",
@@ -292,6 +323,7 @@ export const darkColors: ThemeColors = {
   RatingIconColor: "#fbbf24",
   AuthIconColor: "#94a3b8",
   IconColor: "#94a3b8",
+  OverlayIconColor: "#ffffff",
 
   // Interactive & Feedback
   UISelectionCardBackground: "rgba(99, 102, 241, 0.12)",
@@ -415,9 +447,21 @@ export const darkColors: ThemeColors = {
 export const lightColors: ThemeColors = {
   // Surface & Structural
   Background: "#ffffff",
-  BackgroundSecondary: "#f8fafc",
+  BackgroundSecondary: "#f1f7fcff",
+  BorderSecondary: "#f1f7fcff",
   SurfaceElevated: "#e2e8f0",
   OverlayShadow: "rgba(15, 23, 42, 0.08)",
+  BackdropBg: "#000000c1",
+  CardActiveBg: "#e5e1faff",
+  CardHoverBg: "#4f46e5",
+  CardActiveHeading: "#6366f1",
+  CardHoverHeading: "#ffffff",
+  CardActiveDesc: "#94a3b8",
+  CardActiveStepCountBg: "#6366f1ff",
+  CardActiveStepCountText: "#ffffffff",
+  CardCompleteBg: "#10b981",
+  CardCompleteText: "#ffffff",
+  CardCompleteBorder: "#34d399",
 
   Headerbackground: "#ffffff",
   HeaderBoxShadow: "rgba(15, 23, 42, 0.05)",
@@ -433,6 +477,10 @@ export const lightColors: ThemeColors = {
   CardBorder: "#e2e8f0",
   CardBorderSecondary: "#cbd5e1",
   CardActiveBorder: "#4f46e5",
+
+  //Success Screen
+  SuccessScreenIconBg: "#7c3aed",
+  SuccessScreenIconColor: "#ffffff",
 
   // Typography
   TextPrimary: "#0f172a",
@@ -482,6 +530,11 @@ export const lightColors: ThemeColors = {
   ButtonOverlaySecondary: "transparent",
   ButtonOverlaySecondaryText: "#ffffff",
 
+  ErrorButtonBg: "#ef4444",
+  ErrorButtonText: "#ffffff",
+  ErrorButtonBorder: "#ef4444",
+  ErrorButtonHover: "#dc2626",
+
   // Footer
   FooterText: "#64748b",
   FooterHeading: "#0f172a",
@@ -499,6 +552,7 @@ export const lightColors: ThemeColors = {
   RatingIconColor: "#d97706",
   AuthIconColor: "#64748b",
   IconColor: "#64748b",
+  OverlayIconColor: "#ffffff",
 
   // Interactive & Feedback
   UISelectionCardBackground: "rgba(79, 70, 229, 0.08)",

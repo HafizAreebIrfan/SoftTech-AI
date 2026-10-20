@@ -79,22 +79,46 @@
   margin-block: 8px;
 }
 
-.formField input {
+.inputfield {
   width: 100%;
   border-radius: 8px;
   padding: 12px 16px 12px 48px;
   font-size: 14px;
   font-family: "Poppins", sans-serif;
   transition: all 0.25s ease;
+  background-color: var(--app-bg);
+  color: var(--app-text-body);
+  border: 1px solid var(--app-border);
 }
 
-.formField select {
+.inputfield:focus {
+  box-shadow: none;
+  border: 1px solid var(--app-card-active-border);
+}
+
+.selectfield {
   width: 100%;
   border-radius: 8px;
   padding: 12px 16px 12px 48px;
   font-size: 14px;
   font-family: "Poppins", sans-serif;
   transition: all 0.25s ease;
+  border: 1px solid var(--app-border);
+}
+
+.backbutton {
+  background-color: var(--app-bg);
+  color: var(--app-text-body);
+  border-radius: 12px;
+  border: 1px solid var(--app-border);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  padding: 8px 12px;
+}
+
+.backbutton:hover {
+  background-color: var(--app-bg-secondary);
 }
 
 .formField textarea {
@@ -228,10 +252,17 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
+  background: linear-gradient(
+    120deg,
+    var(--app-btn-grad-1),
+    var(--app-btn-grad-2)
+  );
+  color: var(--app-text-overlay);
 }
 
 .btn:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(var(--app-overlay-shadow));
 }
 
 /* ==========================================================================
@@ -310,6 +341,33 @@
   .apiBlockBody {
     padding: 20px 24px;
   }
+}
+
+.apiBlockHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  gap: 12px;
+  border-radius: 12px 12px 0 0;
+  transition: background 0.15s ease;
+}
+
+.apiBlockTitle {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.apiBlockBody {
+  padding: 18px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .fieldLabel {
@@ -504,14 +562,14 @@
 .configGrid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
+  gap: 20px;
   align-items: flex-start;
   padding-top: 8px;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1100px) {
   .configGrid {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.95fr);
   }
 }
 
@@ -519,24 +577,14 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-@media (min-width: 1024px) {
-  .requestCol {
-    grid-column: span 7 / span 7;
-  }
+  min-width: 0;
 }
 
 .responseCol {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-@media (min-width: 1024px) {
-  .responseCol {
-    grid-column: span 5 / span 5;
-  }
+  min-width: 0;
 }
 
 .tabBar {
@@ -545,6 +593,8 @@
   font-size: 14px;
   font-weight: 700;
   font-family: "Poppins", sans-serif;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .tabBtn {
@@ -560,6 +610,8 @@
   border-left: none;
   border-right: none;
   opacity: 0.6;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .tabBtn:hover {
@@ -691,6 +743,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   border-bottom: 1px solid var(--app-card-border);
   padding-bottom: 8px;
 }
@@ -698,9 +752,10 @@
 .responseTitle {
   font-family: "JOST", sans-serif;
   font-weight: 700;
-  font-size: 18px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .statusBadge {
@@ -887,7 +942,7 @@
   font-family: "Poppins", sans-serif;
   font-weight: 600;
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--app-text-body);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -902,10 +957,6 @@
   .backBtn {
     width: auto;
   }
-}
-
-.backBtn:hover {
-  color: #ffffff;
 }
 
 .stepIndicatorGroup {
@@ -960,7 +1011,7 @@
 
 @media (min-width: 1024px) {
   .step3LeftPane {
-    grid-column: span 4 / span 4;
+    grid-column: span 5 / span 5;
   }
 }
 
@@ -972,7 +1023,7 @@
 
 @media (min-width: 1024px) {
   .step3RightPane {
-    grid-column: span 8 / span 8;
+    grid-column: span 7 / span 7;
   }
 }
 
@@ -981,12 +1032,14 @@
   font-size: 24px;
   font-weight: 800;
   margin-bottom: 4px;
+  color: var(--app-text-heading);
 }
 
 .step3Desc {
   font-family: "Poppins", sans-serif;
   font-size: 12px;
   line-height: 1.6;
+  color: var(--app-text-body);
 }
 
 .step3Label {
@@ -997,6 +1050,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 12px;
+  color: var(--app-text-secondary);
 }
 
 .swatchGrid {
@@ -1023,6 +1077,9 @@
   gap: 12px;
   padding: 10px;
   border-radius: 12px;
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-border-secondary);
+  box-shadow: 0 10px 40px var(--app-overlay-shadow);
 }
 
 .hexColorInput {
@@ -1042,52 +1099,7 @@
   border: none;
   outline: none;
   flex: 1;
-}
-
-.aiSummaryCard {
-  padding: 16px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.aiSummaryHeader {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.aiSummaryTitle {
-  font-size: 12px;
-  font-family: "Poppins", sans-serif;
-  font-weight: 700;
-}
-
-.aiSummaryText {
-  font-size: 11px;
-  font-family: "Poppins", sans-serif;
-  line-height: 1.6;
-}
-
-.audienceTabsContainer {
-  display: flex;
-  align-items: center;
-  padding: 6px;
-  border-radius: 12px;
-  width: fit-content;
-  margin-right: auto;
-}
-
-.audienceTabBtn {
-  padding: 8px 16px;
-  font-size: 12px;
-  font-family: "Poppins", sans-serif;
-  font-weight: 700;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  border: none;
+  color: var(--app-text-heading);
 }
 
 .step3Footer {
@@ -1098,6 +1110,7 @@
   align-items: center;
   gap: 16px;
   padding-top: 16px;
+  border-top: 1px solid var(--app-border, rgba(255, 255, 255, 0.1));
 }
 
 @media (min-width: 640px) {
@@ -1119,6 +1132,7 @@
   cursor: pointer;
   border: none;
   background: transparent;
+  color: var(--app-text-body);
 }
 
 @media (min-width: 640px) {
@@ -1147,6 +1161,7 @@
   font-family: "Poppins", sans-serif;
   font-weight: 600;
   text-transform: uppercase;
+  color: var(--app-text-body, #94a3b8);
 }
 
 /* Step 2 1-Click Import & Realtime Classes */
@@ -1175,7 +1190,9 @@
   border: none;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
   font-family: "Poppins", sans-serif;
   color: #ffffff;
 }
@@ -1294,6 +1311,7 @@
   font-size: 0.9375rem;
   font-weight: 700;
   margin: 0;
+  color: var(--app-text-heading);
 }
 
 .apiConfigSubheading {
@@ -1301,6 +1319,7 @@
   font-size: 0.75rem;
   margin: 0;
   line-height: 1.4;
+  color: var(--app-text-body);
 }
 
 .apiConfigStats {
@@ -1312,6 +1331,9 @@
   font-size: 0.6875rem;
   font-weight: 600;
   white-space: nowrap;
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-border-secondary);
+  color: var(--app-text-secondary);
 }
 
 .apiConfigList {
@@ -1330,7 +1352,11 @@
   padding: 0.625rem 0.875rem;
   border-radius: 0.625rem;
   gap: 0.75rem;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-border-secondary);
 }
 
 .apiConfigRowLeft {
@@ -1363,6 +1389,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--app-text-heading);
 }
 
 .apiConfigEndpoint {
@@ -1371,6 +1398,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--app-text-secondary);
 }
 
 .apiConfigRowRight {
@@ -1391,6 +1419,11 @@
   font-size: 0.6875rem;
   font-weight: 600;
   user-select: none;
+  color: var(--app-text-secondary);
+}
+
+.toggleLabelActive {
+  color: var(--app-text-heading) !important;
 }
 
 .toggleSwitch {
@@ -1404,6 +1437,11 @@
   transition: background-color 0.2s ease;
   display: inline-flex;
   align-items: center;
+  background-color: var(--app-card-border-secondary);
+}
+
+.toggleSwitchActive {
+  background-color: var(--app-btn-grad-1) !important;
 }
 
 .toggleThumb {
@@ -1412,13 +1450,70 @@
   width: 0.875rem;
   height: 0.875rem;
   border-radius: 50%;
-  background-color: #ffffff;
+  background-color: var(--app-bg);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px var(--app-overlay-shadow);
 }
 
 .toggleSwitchActive .toggleThumb {
   transform: translateX(0.875rem);
 }
 
+.signupTitle {
+  color: var(--app-text-heading);
+}
 
+.signupSubtitle {
+  color: var(--app-text-body);
+}
+
+.fieldLabel {
+  color: var(--app-text-body);
+}
+
+.fieldError {
+  color: var(--app-warning-text, #ef4444);
+}
+
+.subdomainInputGroup {
+  border: 1px solid var(--app-card-border);
+}
+
+.selectOption {
+  background-color: var(--app-bg);
+  color: var(--app-text-body);
+}
+
+.primarySubmitBtn {
+  background: linear-gradient(
+    120deg,
+    var(--app-btn-grad-1),
+    var(--app-btn-grad-2)
+  );
+}
+
+.signupSuccessContainer {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.signupSuccessCard {
+  background: var(--app-header-bg);
+  border: 1px solid var(--app-card-border);
+}
+
+.roadmapPreviewCard {
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-border-secondary);
+}
+
+.signupPageWrapper {
+  background: var(--app-bg);
+  color: var(--app-text-heading);
+}
+
+.brandLogoText {
+  color: var(--app-text-heading);
+}

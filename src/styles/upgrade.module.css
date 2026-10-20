@@ -1,0 +1,283 @@
+.upgradeContainer {
+  min-height: 100vh;
+  width: 100%;
+  background: var(--app-bg);
+  color: var(--app-text-heading);
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem 1.5rem;
+  box-sizing: border-box;
+}
+
+.upgradeInner {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-border);
+  color: var(--app-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backBtn:hover {
+  background: var(--app-btn-tertiary-hover);
+  color: var(--app-text-heading);
+  border-color: var(--app-card-active-border);
+}
+
+.headerSection {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: var(--app-text-highlighted-heading);
+}
+
+.title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  background: linear-gradient(135deg, var(--app-text-heading) 0%, var(--app-text-highlighted-heading) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: var(--app-text-secondary);
+  max-width: 680px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.75rem;
+  margin-top: 1rem;
+}
+
+.planCard {
+  border-radius: 20px;
+  border: 1px solid var(--app-border);
+  background: var(--app-bg-secondary);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+.planCard:hover {
+  border-color: var(--app-border-hover);
+  transform: translateY(-2px);
+}
+
+.planCardFeatured {
+  border-color: var(--app-card-active-border);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, var(--app-bg-secondary) 100%);
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.12);
+}
+
+.featuredRibbon {
+  position: absolute;
+  top: -12px;
+  right: 24px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+
+.planHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.planName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+}
+
+.planDesc {
+  font-size: 0.85rem;
+  color: var(--app-text-secondary);
+  line-height: 1.5;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.priceAmount {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--app-text-heading);
+}
+
+.pricePeriod {
+  font-size: 0.85rem;
+  color: var(--app-text-secondary);
+}
+
+.featuresList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  flex: 1;
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.85rem;
+  color: var(--app-text-secondary);
+  line-height: 1.4;
+}
+
+.featureIcon {
+  color: var(--app-text-highlighted-heading);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.planCta {
+  width: 100%;
+  padding: 0.85rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.ctaSecondary {
+  background: transparent;
+  border: 1px solid var(--app-border);
+  color: var(--app-text-heading);
+}
+
+.ctaSecondary:hover {
+  background: var(--app-btn-tertiary-hover);
+}
+
+.ctaPrimary {
+  background: var(--app-btn-primary-bg);
+  border: none;
+  color: var(--app-btn-primary-text);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+}
+
+.ctaPrimary:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.whyCustomSection {
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-border);
+  border-radius: 20px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.whyHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.whyTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+}
+
+.whyDesc {
+  font-size: 0.85rem;
+  color: var(--app-text-secondary);
+}
+
+.whyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.whyCard {
+  padding: 1.25rem;
+  border-radius: 14px;
+  background: var(--app-bg);
+  border: 1px solid var(--app-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.whyCardTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.whyCardDesc {
+  font-size: 0.8rem;
+  color: var(--app-text-secondary);
+  line-height: 1.5;
+}

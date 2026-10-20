@@ -13,7 +13,7 @@ import type { McpToolResultPayload } from "../../domain/entities/GenericWidget";
  *    (no conflictingBookings/bookings, no available/open/slots/dates keys, no
  *    availability action) → the calendar is hidden and plain date inputs show.
  */
-const baseCar = {
+export const baseCar = {
   id: "car-1",
   make: "Tesla",
   model: "Model 3 Long Range",

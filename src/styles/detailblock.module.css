@@ -11,6 +11,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  container-type: inline-size;
 }
 
 .backBtn {
@@ -37,7 +38,7 @@
 
 .layoutTwoCol {
   display: grid;
-  grid-template-columns: 3fr 2fr; /* 60 / 40 */
+  grid-template-columns: 3fr 2fr; /* 60 / 40 on desktop */
   gap: 24px;
   width: 100%;
   box-sizing: border-box;
@@ -45,8 +46,86 @@
 
 @media (max-width: 960px) {
   .layoutTwoCol {
-    grid-template-columns: 1fr;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+    width: 100% !important;
   }
+
+  .mainCol,
+  .sidebarCol {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .heroBanner {
+    height: 240px !important;
+    max-height: 260px !important;
+    width: 100% !important;
+  }
+
+  .bookingBox {
+    position: static !important;
+    width: 100% !important;
+  }
+}
+
+@container (max-width: 768px) {
+  .layoutTwoCol {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+    width: 100% !important;
+  }
+
+  .mainCol,
+  .sidebarCol {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .heroBanner {
+    height: 240px !important;
+    max-height: 260px !important;
+    width: 100% !important;
+  }
+
+  .bookingBox {
+    position: static !important;
+    width: 100% !important;
+  }
+}
+
+:global([data-preview-viewport="mobile"]) .layoutTwoCol,
+.containerMobile .layoutTwoCol {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px !important;
+  width: 100% !important;
+}
+
+:global([data-preview-viewport="mobile"]) .mainCol,
+:global([data-preview-viewport="mobile"]) .sidebarCol,
+.containerMobile .mainCol,
+.containerMobile .sidebarCol {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+
+:global([data-preview-viewport="mobile"]) .heroBanner,
+.containerMobile .heroBanner {
+  height: 240px !important;
+  max-height: 260px !important;
+  width: 100% !important;
+}
+
+:global([data-preview-viewport="mobile"]) .bookingBox,
+.containerMobile .bookingBox {
+  position: static !important;
+  width: 100% !important;
 }
 
 /* Docked (map) variant — a compact single-column panel floating over a
@@ -59,13 +138,23 @@
 }
 
 .containerDocked .layoutTwoCol {
-  grid-template-columns: 1fr;
-  gap: 16px;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  width: 100% !important;
+}
+
+.containerDocked .mainCol,
+.containerDocked .sidebarCol {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
 }
 
 .containerDocked .heroBanner {
-  height: 190px;
-  max-height: 32vh;
+  height: 190px !important;
+  max-height: 32vh !important;
+  width: 100% !important;
 }
 
 /* Left Column: Hero, Specs, Features, About, Pricing, Reviews */

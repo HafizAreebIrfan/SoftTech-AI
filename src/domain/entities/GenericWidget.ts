@@ -64,7 +64,13 @@ export interface CollectionFacet {
   options?: Array<{ label: string; value: string | number }>;
 }
 
-export type CollectionPurpose = "product" | "profile" | "utility" | "action" | "analytics" | "location";
+export type CollectionPurpose =
+  | "product"
+  | "profile"
+  | "utility"
+  | "action"
+  | "analytics"
+  | "location";
 
 export interface CollectionResult {
   entity?: string;
@@ -125,7 +131,7 @@ export interface WidgetMetadata {
   /** Backend-injected: false when company disabled map for this tool. */
   mapEnabled?: boolean;
   /** Frontend-injected: Google Maps API key for map rendering. */
-  googleMapsApiKey?: string;
+  MapsApiKey?: string;
   /** Fullscreen "Open in {company}" → catalog page. */
   hasProductPages?: boolean;
   shopCatalogUrl?: string;
@@ -205,6 +211,7 @@ export interface McpWidgetState {
   pushSubView: (view: McpSubView) => void;
   popSubView: () => void;
   clearSubViews: () => void;
+  updateActiveSubViewData?: (data: unknown) => void;
 }
 
 export interface WidgetAction {

@@ -6,10 +6,9 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background-color: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeIn {
@@ -23,23 +22,25 @@
 
 .modalContainer {
   width: 100%;
-  max-width: 880px;
+  max-width: 900px;
   max-height: 92vh;
   display: flex;
   flex-direction: column;
-  border-radius: 1rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 25px 60px -15px rgba(0, 0, 0, 0.25),
+    0 0 0 1px var(--app-overlay-shadow);
   overflow: hidden;
   animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  background: var(--modal-bg, #0f172a);
-  border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.1));
-  color: var(--modal-text-heading, #ffffff);
+  background: var(--app-bg);
+  border: 1px solid var(--app-border-secondary);
+  color: var(--app-text-primary);
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: scale(0.97) translateY(12px);
+    transform: scale(0.98) translateY(12px);
   }
   to {
     opacity: 1;
@@ -51,105 +52,105 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--modal-border, rgba(255, 255, 255, 0.08));
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-bg);
 }
 
 .headerInfo {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.875rem;
 }
 
 .headerIconWrapper {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
   flex-shrink: 0;
 }
 
 .headerTitle {
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 800;
   margin: 0;
-  letter-spacing: -0.01em;
-  color: var(--modal-text-heading, #ffffff);
-  font-family: "JOST", "Poppins", sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--app-text-primary);
 }
 
 .headerSubtitle {
   font-size: 0.8125rem;
-  margin: 0.125rem 0 0;
-  color: var(--modal-text-body, #94a3b8);
-  font-family: "Poppins", sans-serif;
+  margin: 0.15rem 0 0;
+  color: var(--app-text-body);
+  line-height: 1.4;
 }
 
 .closeButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--app-border);
   background: transparent;
   cursor: pointer;
-  color: var(--modal-text-body, #94a3b8);
+  color: var(--app-text-primary);
   transition: all 0.15s ease;
 }
 
 .closeButton:hover {
-  color: var(--modal-text-heading, #ffffff);
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--app-text-primary);
+  background: var(--app-bg-secondary);
 }
 
-/* Nav Tabs */
+/* Primary Tabs (OpenAPI vs Postman) */
 .tabNav {
   display: flex;
-  padding: 0 1.5rem;
-  border-bottom: 1px solid var(--modal-border, rgba(255, 255, 255, 0.08));
-  gap: 1.5rem;
-  background: rgba(0, 0, 0, 0.12);
+  padding: 0.5rem 1.75rem;
+  border-bottom: 1px solid var(--app-border);
+  gap: 0.75rem;
+  background: var(--app-bg);
 }
 
 .tabBtn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.875rem 0.25rem;
-  font-size: 0.875rem;
+  padding: 0.55rem 1rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
   background: transparent;
   cursor: pointer;
   position: relative;
-  transition: color 0.15s ease;
-  font-family: "Poppins", sans-serif;
-  color: var(--modal-text-body, #94a3b8);
+  transition: all 0.15s ease;
+  color: var(--app-text-primary);
+}
+
+.tabBtn:hover:not(.tabBtnActive) {
+  color: var(--app-text-primary);
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .tabBtnActive {
-  color: var(--modal-brand, #6366f1) !important;
+  background: var(--app-bg-secondary);
+  color: var(--app-text-primary);
   font-weight: 700;
+  border-color: var(--app-border-secondary);
+  box-shadow: 0 2px 8px rgba(var(--app-overlay-shadow));
 }
 
 .tabIndicator {
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  background: var(--modal-brand, #6366f1);
+  display: none;
 }
 
 .modalBody {
-  padding: 1.25rem 1.5rem;
+  padding: 1.5rem 1.75rem;
   overflow-y: auto;
   flex: 1;
   display: flex;
@@ -160,78 +161,75 @@
 /* Sub-Mode Selector (URL vs File vs Paste) */
 .subModeRow {
   display: flex;
-  gap: 0.5rem;
-  background: rgba(0, 0, 0, 0.16);
-  padding: 0.25rem;
-  border-radius: 8px;
-  border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.06));
+  gap: 0.375rem;
+  background: var(--app-bg);
+  padding: 0.3rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-border-secondary);
   width: fit-content;
 }
 
 .subModeBtn {
-  padding: 0.375rem 0.875rem;
-  border-radius: 6px;
+  padding: 0.4rem 0.9rem;
+  border-radius: 7px;
   border: none;
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   background: transparent;
-  color: var(--modal-text-body, #94a3b8);
-  font-family: "Poppins", sans-serif;
+  color: var(--app-text-primary);
   transition: all 0.15s ease;
 }
 
+.subModeBtn:hover:not(.subModeBtnActive) {
+  color: var(--app-text-primary);
+}
+
 .subModeBtnActive {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--modal-text-heading, #ffffff) !important;
+  background: var(--app-bg-secondary);
+  color: var(--app-text-primary) !important;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(var(--app-overlay-shadow));
 }
 
 /* URL Input Group */
 .urlInputRow {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 
 .inputField {
   flex: 1;
-  padding: 0.625rem 0.875rem;
-  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
   font-size: 0.875rem;
   outline: none;
-  background: var(--modal-input-bg, #020617);
-  border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.1));
-  color: var(--modal-text-heading, #ffffff);
-  font-family: "Poppins", sans-serif;
-  transition: border-color 0.15s ease;
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-border-secondary);
+  color: var(--app-text-primary);
+  transition: all 0.15s ease;
 }
 
 .inputField:focus {
-  border-color: var(--modal-brand, #6366f1) !important;
+  border-color: var(--app-card-active-border) !important;
+  box-shadow: 0 0 0 3px rgba(var(--app-overlay-shadow));
 }
 
 .actionBtn {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.625rem 1.25rem;
-  border-radius: 8px;
+  gap: 0.5rem;
+  padding: 0.65rem 1.35rem;
+  border-radius: 10px;
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   border: none;
   white-space: nowrap;
-  background: linear-gradient(120deg, var(--modal-btn-one, #6366f1), var(--modal-btn-two, #8b5cf6));
-  color: #ffffff;
-  font-family: "Poppins", sans-serif;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
-  transition: opacity 0.15s ease, transform 0.1s ease;
-}
-
-.actionBtn:hover:not(:disabled) {
-  opacity: 0.92;
-  transform: translateY(-1px);
+  background: var(--app-btn-primary-bg);
+  color: var(--app-btn-primary-text);
+  box-shadow: 0 4px 14px var(--app-overlay-shadow);
+  transition: all 0.15s ease;
 }
 
 .actionBtn:active:not(:disabled) {
@@ -241,122 +239,127 @@
 .actionBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 /* Dropzone */
 .dropzone {
-  border: 2px dashed var(--modal-border, rgba(255, 255, 255, 0.15));
-  border-radius: 10px;
-  padding: 2rem 1rem;
+  border: 2px dashed var(--app-border-secondary);
+  border-radius: 14px;
+  padding: 2.25rem 1.5rem;
   text-align: center;
   cursor: pointer;
-  background: var(--modal-input-bg, #020617);
+  background: var(--app-bg-secondary);
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 
 .dropzone:hover {
-  border-color: var(--modal-brand, #6366f1);
-  background: rgba(99, 102, 241, 0.04);
+  border-color: var(--app-card-active-border);
+  background: rgba(var(--app-overlay-shadow));
 }
 
 .dropzoneTitle {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--modal-text-heading, #ffffff);
-  font-family: "Poppins", sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--app-text-primary);
 }
 
 .dropzoneSub {
-  font-size: 0.75rem;
-  color: var(--modal-text-body, #94a3b8);
-  font-family: "Poppins", sans-serif;
+  font-size: 0.78125rem;
+  color: var(--app-text-secondary);
+  max-width: 440px;
+  line-height: 1.4;
 }
 
 /* Textarea for Paste */
 .rawTextarea {
   width: 100%;
   min-height: 180px;
-  max-height: 300px;
-  padding: 0.75rem;
-  border-radius: 8px;
-  background: var(--modal-input-bg, #020617);
-  border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.1));
-  color: var(--modal-text-heading, #ffffff);
+  max-height: 280px;
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  background: var(--app-bg-secondary);
+  border: 1px solid var(--app-border-secondary);
+  color: var(--app-text-primary);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.8125rem;
-  line-height: 1.45;
+  line-height: 1.5;
   outline: none;
   resize: vertical;
+  transition: all 0.15s ease;
 }
 
 .rawTextarea:focus {
-  border-color: var(--modal-brand, #6366f1) !important;
+  border-color: var(--app-card-active-border) !important;
+  box-shadow: 0 0 0 3px rgba(var(--app-overlay-shadow));
 }
 
 .pasteActionRow {
   display: flex;
   justify-content: flex-end;
-  margin-top: 0.5rem;
+  margin-top: 0.625rem;
 }
 
 /* Warnings Callout */
 .warningBanner {
   display: flex;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  background: rgba(234, 179, 8, 0.1);
-  border: 1px solid rgba(234, 179, 8, 0.3);
-  color: #facc15;
+  padding: 0.875rem 1.125rem;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #d97706;
   font-size: 0.8125rem;
   align-items: flex-start;
-  font-family: "Poppins", sans-serif;
+  line-height: 1.4;
 }
 
-/* Filter Controls Toolbar (Audience & Auth Exclude) */
+/* Filter Controls Toolbar */
 .filterToolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.08));
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  background: var(--modal-toolbar-bg, #f1f5f9);
+  border: 1px solid var(--modal-border, #e2e8f0);
 }
 
 .scopeFilterRow {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  background: rgba(0, 0, 0, 0.25);
+  gap: 0.25rem;
+  background: var(--modal-input-bg, #ffffff);
   padding: 0.2rem;
-  border-radius: 6px;
-  border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  border: 1px solid var(--modal-border, #e2e8f0);
 }
 
 .scopeFilterBtn {
-  padding: 0.3rem 0.65rem;
-  border-radius: 5px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
   border: none;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   background: transparent;
-  color: var(--modal-text-body, #94a3b8);
-  font-family: "Poppins", sans-serif;
+  color: var(--modal-text-body, #64748b);
   transition: all 0.15s ease;
 }
 
+.scopeFilterBtn:hover:not(.scopeFilterBtnActive) {
+  color: var(--modal-text-heading, #0f172a);
+}
+
 .scopeFilterBtnActive {
-  background: var(--modal-brand, #6366f1);
+  background: #2563eb;
   color: #ffffff !important;
-  font-weight: 600;
 }
 
 .excludeAuthToggleRow {
@@ -369,15 +372,14 @@
 
 .excludeAuthCheckbox {
   cursor: pointer;
-  accent-color: var(--modal-brand, #6366f1);
-  width: 0.95rem;
-  height: 0.95rem;
+  accent-color: #2563eb;
+  width: 1rem;
+  height: 1rem;
 }
 
 .excludeAuthLabel {
-  font-size: 0.75rem;
-  color: var(--modal-text-body, #94a3b8);
-  font-family: "Poppins", sans-serif;
+  font-size: 0.78125rem;
+  color: var(--modal-text-body, #64748b);
   cursor: pointer;
 }
 
@@ -385,8 +387,7 @@
 .previewSection {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 0.25rem;
+  gap: 0.875rem;
 }
 
 .previewHeader {
@@ -394,7 +395,7 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.625rem;
 }
 
 .metaBadgeRow {
@@ -407,24 +408,25 @@
 
 .docTitle {
   font-weight: 700;
-  font-size: 0.875rem;
-  color: var(--modal-text-heading, #ffffff);
-  font-family: "Poppins", sans-serif;
+  font-size: 0.9375rem;
+  color: var(--modal-text-heading, #0f172a);
 }
 
 .metaTag {
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--modal-text-heading, #ffffff);
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  background: var(--modal-toolbar-bg, #f1f5f9);
+  border: 1px solid var(--modal-border, #e2e8f0);
+  color: var(--modal-text-heading, #0f172a);
   font-size: 0.75rem;
   font-weight: 600;
-  font-family: "Poppins", sans-serif;
 }
 
 .metaSelectedCount {
-  background: rgba(99, 102, 241, 0.15) !important;
-  color: var(--modal-brand, #818cf8) !important;
+  background: rgba(37, 99, 235, 0.1) !important;
+  color: #2563eb !important;
+  border-color: rgba(37, 99, 235, 0.25) !important;
+  font-weight: 700;
 }
 
 .headerControlsRight {
@@ -434,26 +436,27 @@
 }
 
 .searchBox {
-  padding: 0.375rem 0.75rem;
-  border-radius: 6px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
   font-size: 0.8125rem;
   outline: none;
-  width: 190px;
-  background: var(--modal-input-bg, #020617);
-  border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.1));
-  color: var(--modal-text-heading, #ffffff);
-  font-family: "Poppins", sans-serif;
+  width: 200px;
+  background: var(--modal-input-bg, #ffffff);
+  border: 1px solid var(--modal-input-border, #cbd5e1);
+  color: var(--modal-text-heading, #0f172a);
+  transition: all 0.15s ease;
 }
 
 .searchBox:focus {
-  border-color: var(--modal-brand, #6366f1) !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .endpointsList {
   display: flex;
   flex-direction: column;
-  gap: 0.375rem;
-  max-height: 260px;
+  gap: 0.45rem;
+  max-height: 280px;
   overflow-y: auto;
   padding-right: 0.25rem;
 }
@@ -462,10 +465,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.625rem 0.875rem;
-  border-radius: 8px;
-  background: var(--modal-input-bg, #020617);
-  border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.08));
+  padding: 0.65rem 0.95rem;
+  border-radius: 10px;
+  background: var(--modal-card-bg, #f8fafc);
+  border: 1px solid var(--modal-border, #e2e8f0);
   transition: all 0.15s ease;
   cursor: pointer;
   user-select: none;
@@ -473,12 +476,13 @@
 }
 
 .endpointItemSelected {
-  background: rgba(99, 102, 241, 0.08) !important;
-  border-color: rgba(99, 102, 241, 0.35) !important;
+  background: rgba(37, 99, 235, 0.08) !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
 }
 
 .endpointItem:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(37, 99, 235, 0.03);
+  border-color: rgba(37, 99, 235, 0.25);
 }
 
 .endpointItemLeft {
@@ -491,29 +495,29 @@
 
 .endpointCheckbox {
   cursor: pointer;
-  accent-color: var(--modal-brand, #6366f1);
-  width: 1rem;
-  height: 1rem;
+  accent-color: #2563eb;
+  width: 1.05rem;
+  height: 1.05rem;
 }
 
 .methodBadge {
   font-size: 0.6875rem;
-  font-weight: 700;
-  padding: 0.1875rem 0.4375rem;
-  border-radius: 4px;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   flex-shrink: 0;
 }
 
 .methodGet {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
 }
 
 .methodPost {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
+  background: rgba(37, 99, 235, 0.15);
+  color: #2563eb;
 }
 
 .methodPut {
@@ -544,13 +548,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--modal-text-heading, #ffffff);
-  font-family: "Poppins", sans-serif;
+  color: var(--modal-text-heading, #0f172a);
 }
 
 .endpointPath {
   font-size: 0.75rem;
-  color: var(--modal-text-body, #94a3b8);
+  color: var(--modal-text-body, #64748b);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   white-space: nowrap;
   overflow: hidden;
@@ -566,32 +569,32 @@
 
 .featureBadge {
   font-size: 0.6875rem;
-  padding: 0.125rem 0.375rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--modal-text-body, #94a3b8);
-  font-family: "Poppins", sans-serif;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  background: var(--modal-toolbar-bg, #f1f5f9);
+  color: var(--modal-text-body, #64748b);
   text-transform: capitalize;
+  font-weight: 600;
 }
 
 .authBadge {
-  background: rgba(234, 179, 8, 0.15) !important;
-  color: #eab308 !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #d97706 !important;
 }
 
 .streamBadge {
-  background: rgba(168, 85, 247, 0.15) !important;
-  color: #a855f7 !important;
+  background: rgba(168, 85, 247, 0.12) !important;
+  color: #9333ea !important;
 }
 
 .sampleBadge {
-  background: rgba(34, 197, 94, 0.15) !important;
-  color: #22c55e !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #059669 !important;
 }
 
 .internalAuthBadge {
-  background: rgba(239, 68, 68, 0.15) !important;
-  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
 }
 
 /* Modal Footer */
@@ -599,8 +602,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--modal-border, rgba(255, 255, 255, 0.08));
+  padding: 1.125rem 1.75rem;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-bg);
   flex-wrap: wrap;
   gap: 0.75rem;
 }
@@ -608,22 +612,22 @@
 .modeToggleGroup {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.25rem;
   font-size: 0.8125rem;
 }
 
 .modeRadio {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.4rem;
   cursor: pointer;
   user-select: none;
-  color: var(--modal-text-body, #94a3b8);
-  font-family: "Poppins", sans-serif;
+  color: var(--app-text-secondary);
+  font-weight: 500;
 }
 
 .radioInput {
-  accent-color: var(--modal-brand, #6366f1);
+  accent-color: #2563eb;
   cursor: pointer;
 }
 
@@ -634,19 +638,17 @@
 }
 
 .secondaryBtn {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  padding: 0.6rem 1.15rem;
+  border-radius: 10px;
   font-size: 0.8125rem;
-  font-weight: 500;
-  border: 1px solid var(--modal-border, rgba(255, 255, 255, 0.12));
+  font-weight: 600;
+  border: 1px solid var(--app-border);
   background: transparent;
-  color: var(--modal-text-body, #94a3b8);
-  font-family: "Poppins", sans-serif;
+  color: var(--app-text-primary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .secondaryBtn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--modal-text-heading, #ffffff);
+  background: var(--app-bg-secondary);
 }

@@ -1,6 +1,7 @@
 .container {
   width: 100%;
   margin-bottom: 1rem;
+  container-type: inline-size;
 }
 
 .grid {
@@ -286,7 +287,7 @@
 /* Responsive: phone — single column, comfortable touch targets. */
 @media (max-width: 480px) {
   .grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
     gap: 12px;
   }
 
@@ -307,4 +308,29 @@
     font-size: 12.5px;
     padding: 4px 0;
   }
+}
+
+@container (max-width: 500px) {
+  .grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .bannerWrapper,
+  .bannerWrapperPlain {
+    height: 170px !important;
+  }
+}
+
+:global([data-preview-viewport="mobile"]) .grid,
+.containerMobile .grid {
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+:global([data-preview-viewport="mobile"]) .bannerWrapper,
+:global([data-preview-viewport="mobile"]) .bannerWrapperPlain,
+.containerMobile .bannerWrapper,
+.containerMobile .bannerWrapperPlain {
+  height: 170px !important;
 }

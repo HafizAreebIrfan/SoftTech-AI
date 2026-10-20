@@ -1,84 +1,445 @@
-import { FC } from "react";
+import { FC, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { BoltIcon, HelpIcon, MoonIcon, RocketIcon, SlidersIcon } from "../../../../assets/icons";
-import { useThemeStore } from "../../../../hooks";
-import styles from "../../../../styles/accountflow.module.css";
-import { getAccountFlowThemeVars } from "../flowTheme";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  CheckIcon,
+  HelpIcon,
+  MoonIcon,
+  RocketIcon,
+  SunIcon,
+  SparklesIcon,
+  RightArrowIcon,
+  CloseIcon,
+  CodeIcon,
+  TerminalIcon,
+  ShieldLockIcon,
+} from "../../../../assets/icons";
+import { useAuthStore, useThemeStore } from "../../../../hooks";
+import { showToast } from "../../../../utils/toast/toasts";
+import { logout } from "../../../../adapters/api/authApi";
+import styles from "../../../../styles/onboardingDashboard.module.css";
 
 const OnboardingDashboard: FC = () => {
   const navigate = useNavigate();
-  const { colors } = useThemeStore();
+  const { colors, isDark, toggleTheme } = useThemeStore();
+  const { user, setOnboardingStep, clearAuth } = useAuthStore();
+
+  // Active step: 1 (MCP Simulation), 2 (Plan Selection), 3 (ChatGPT Deployment)
+  const currentStep = Math.min(Math.max(user?.onboardingStep || 1, 1), 3);
+
+  // Modals
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false);
+  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+
+  const stepItems = [
+    {
+      step: 1,
+      route: "/mcp_simulation",
+      title: "1. Test MCP & APIs",
+      desc: "Simulate tool calls & ChatGPT widgets",
+      detail:
+        "Validate your connected APIs against the Model Context Protocol. Run live prompts to test ChatGPT action schemas, inspect tool execution, and view dynamic response widgets.",
+      badge: "STEP 1 OF 3 • PROTOCOL SIMULATION",
+      cta: "Launch MCP Simulation",
+      icon: TerminalIcon,
+    },
+    {
+      step: 2,
+      route: "/plans",
+      title: "2. Computational Plan",
+      desc: "Select request quota & enterprise tier",
+      detail:
+        "Scale your API intelligence layer with our precision-engineered computational tiers. Select your request volume, edge latency routing, and checkout options.",
+      badge: "STEP 2 OF 3 • COMPUTATIONAL CAPACITY",
+      cta: "Configure Computational Plan",
+      icon: CodeIcon,
+    },
+    {
+      step: 3,
+      route: "/deployment",
+      title: "3. Deploy to ChatGPT",
+      desc: "Connect Custom GPT & launch gateway",
+      detail:
+        "Obtain your production OpenAPI 3.1 schema and MCP SSE tunnel credentials to connect with Custom GPTs and launch your live integration into OpenAI's ecosystem.",
+      badge: "STEP 3 OF 3 • DEPLOYMENT & GATEWAY",
+      cta: "Deploy to ChatGPT",
+      icon: RocketIcon,
+    },
+  ];
+
+  const activeStepConfig =
+    stepItems.find((s) => s.step === currentStep) || stepItems[0];
+
+  const handleStepClick = (item: (typeof stepItems)[0]) => {
+    setOnboardingStep(item.step);
+    navigate({ to: item.route });
+  };
+
+  const handleConfirmExit = async () => {
+    setIsExiting(true);
+    try {
+      // 1. Save step to store & localStorage
+      setOnboardingStep(currentStep);
+
+      // 2. Call backend logout cleanly
+      try {
+        await logout();
+      } catch (e) {
+        console.warn("Logout error:", e);
+      }
+
+      clearAuth();
+      showToast("Progress saved! You can resume anytime.", "info");
+      navigate({ to: "/login", replace: true });
+    } catch (err) {
+      clearAuth();
+      navigate({ to: "/login", replace: true });
+    } finally {
+      setIsExiting(false);
+      setIsExitModalOpen(false);
+    }
+  };
 
   return (
-    <div className={styles.onboardingShell} style={getAccountFlowThemeVars(colors)}>
-      <header className={styles.onboardingTopbar}>
-        <h1 className={styles.smallBrand}>SoftTech AI</h1>
-        <div className={styles.profileShell}>
-          <HelpIcon size={20} color={colors.TextBody} />
-          <MoonIcon size={20} color={colors.TextBody} />
-          <span className={styles.profilePlan}>PRO PLAN</span>
-          <div className={styles.avatar}>AC</div>
+    <div className={styles.pageShell}>
+      <header className={styles.topbar}>
+        <div className={styles.brandGroup}>
+          <span
+            className={styles.brandLogo}
+            onClick={() => navigate({ to: "/onboarding_dashboard" })}
+          >
+            SoftTech AI
+          </span>
+          <span className={styles.brandBadge}>Setup Console</span>
+        </div>
+
+        <div className={styles.headerActions}>
+          <div className={styles.userBadge}>
+            <div className={styles.userAvatar}>
+              {user?.name ? user.name.slice(0, 2).toUpperCase() : "AC"}
+            </div>
+            <span className={styles.userText}>
+              {user?.name || user?.email || "Account"}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className={styles.headerIconBtn}
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            aria-label="Toggle Theme"
+          >
+            {isDark ? (
+              <SunIcon size={18} color="currentColor" />
+            ) : (
+              <MoonIcon size={18} color="currentColor" />
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={styles.headerIconBtn}
+            onClick={() => setIsHelpModalOpen(true)}
+            title="Help & Guidance"
+            aria-label="Help"
+          >
+            <HelpIcon size={18} color="currentColor" />
+          </button>
+
+          <button
+            type="button"
+            className={styles.exitButton}
+            onClick={() => setIsExitModalOpen(true)}
+          >
+            Save & Exit
+          </button>
         </div>
       </header>
-      <main className={styles.onboardingMain}>
-        <section className={styles.onboardingHero}>
-          <h2 className={styles.title}>Welcome, Acme Corp</h2>
-          <p className={styles.subtitle}>
-            System status: All celestial bodies aligned. Let&apos;s finish your
-            configuration.
-          </p>
-        </section>
 
-        <div className={styles.sectionHeader}>
-          <h3>Continue Setup</h3>
-          <div className={styles.sectionRule} />
+      <div className={styles.mainWrapper}>
+        <div className={styles.wizardContainer}>
+          <aside className={styles.stepperSidebar}>
+            <div>
+              <div className={styles.stepperHeader}>
+                <span className={styles.stepperKicker}>
+                  <SparklesIcon size={13} color="currentColor" /> SETUP WORKFLOW
+                </span>
+                <h2 className={styles.stepperTitle}>
+                  {user?.name || "Account"} Setup
+                </h2>
+                <p className={styles.stepperSubtitle}>
+                  Follow the 3 guided steps to validate your MCP tools and
+                  deploy to ChatGPT.
+                </p>
+              </div>
+
+              <div className={styles.stepsList}>
+                {stepItems.map((item, idx) => {
+                  const isPast = currentStep > item.step;
+                  const isActive = currentStep === item.step;
+
+                  return (
+                    <div key={item.step}>
+                      <a
+                        href={item.route}
+                        className={`${styles.stepRow} ${isActive ? styles.stepRowActive : ""}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleStepClick(item);
+                        }}
+                      >
+                        <div className={styles.stepIndicatorCol}>
+                          <div
+                            className={`${styles.stepBadgeCircle} ${
+                              isPast
+                                ? styles.badgeCompleted
+                                : isActive
+                                  ? styles.badgeActive
+                                  : styles.badgePending
+                            }`}
+                          >
+                            {isPast ? (
+                              <CheckIcon size={16} color="#ffffff" />
+                            ) : (
+                              item.step
+                            )}
+                          </div>
+                        </div>
+
+                        <div className={styles.stepInfoCol}>
+                          <span
+                            className={`${styles.stepLabel} ${
+                              isActive ? styles.stepLabelActive : ""
+                            }`}
+                          >
+                            {item.title}
+                          </span>
+                          <span className={styles.stepDesc}>{item.desc}</span>
+                        </div>
+                      </a>
+
+                      {idx < stepItems.length - 1 && (
+                        <div style={{ paddingLeft: "1.45rem" }}>
+                          <div
+                            className={`${styles.stepConnectingLine} ${
+                              isPast ? styles.lineCompleted : ""
+                            }`}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Assistance Card */}
+            <div className={styles.sidebarHelpCard}>
+              <div className={styles.helpCardTop}>
+                <HelpIcon size={16} color="currentColor" />
+                <span>Need Assistance?</span>
+              </div>
+              <p className={styles.helpCardText}>
+                Our protocol engineers can help configure custom API tools,
+                OAuth2, and OpenAPI schemas.
+              </p>
+              <button
+                type="button"
+                className={styles.helpCardLink}
+                onClick={() => setIsHelpModalOpen(true)}
+              >
+                Read MCP Guide ↗
+              </button>
+            </div>
+          </aside>
+
+          {/* Main Hub Overview */}
+          <main className={styles.hubMainContent}>
+            {/* Active Step Highlight Banner */}
+            <div className={styles.hubHeaderBanner}>
+              <div className={styles.hubBannerLeft}>
+                <span className={styles.hubBannerKicker}>
+                  {activeStepConfig.badge}
+                </span>
+                <h3 className={styles.hubBannerTitle}>
+                  {activeStepConfig.title}
+                </h3>
+                <p className={styles.hubBannerDesc}>
+                  {activeStepConfig.detail}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStepClick(activeStepConfig)}
+                className={styles.hubBannerBtn}
+              >
+                <span>{activeStepConfig.cta} ↗</span>
+              </button>
+            </div>
+
+            {/* 3 Step Stage Cards */}
+            <div className={styles.hubCardGrid}>
+              {stepItems.map((item) => {
+                const isCompleted = currentStep > item.step;
+                const isCurrent = currentStep === item.step;
+                const StepIcon = item.icon;
+
+                return (
+                  <div
+                    key={item.step}
+                    className={`${styles.hubStageCard} ${
+                      isCurrent ? styles.hubStageCardActive : ""
+                    }`}
+                  >
+                    <div className="flex flex-col gap-3">
+                      <div className={styles.hubStageHeader}>
+                        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                          <StepIcon size={20} color="currentColor" />
+                        </div>
+                        <span
+                          className={`${styles.hubStagePill} ${
+                            isCompleted
+                              ? styles.pillCompleted
+                              : isCurrent
+                                ? styles.pillActive
+                                : styles.pillPending
+                          }`}
+                        >
+                          {isCompleted
+                            ? "✓ Completed"
+                            : isCurrent
+                              ? "● In Progress"
+                              : "Upcoming"}
+                        </span>
+                      </div>
+
+                      <div className={styles.hubStageBody}>
+                        <h4 className={styles.hubStageTitle}>{item.title}</h4>
+                        <p className={styles.hubStageDesc}>{item.detail}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleStepClick(item)}
+                      className={`${styles.hubStageBtn} ${
+                        isCurrent ? styles.hubStageBtnActive : ""
+                      }`}
+                    >
+                      <span>{item.cta}</span>
+                      <RightArrowIcon size={14} color="currentColor" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </main>
         </div>
-        <section className={styles.grid}>
-          <button
-            className={`${styles.card} ${styles.optionCard}`}
-            onClick={() => navigate({ to: "/mcp_simulation" })}
-            type="button"
-          >
-            <div className={styles.iconBox}>
-              <SlidersIcon size={28} color={colors.TextGradientOne} />
-            </div>
-            <h3 className={styles.cardTitle}>Test MCP & APIs</h3>
-            <p className={styles.cardText}>
-              Run isolated simulations to ensure protocol integrity before global
-              deployment.
-            </p>
-            <span className={styles.cardAction}>Start testing -&gt;</span>
-          </button>
+      </div>
 
-          <button
-            className={`${styles.card} ${styles.optionCard}`}
-            onClick={() => navigate({ to: "/plans_softtech_ai_updated" })}
-            type="button"
+      {isExitModalOpen && (
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => setIsExitModalOpen(false)}
+        >
+          <div
+            className={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className={styles.iconBox}>
-              <BoltIcon size={28} color={colors.TextGradientTwo} />
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Save Progress &amp; Exit?</h3>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setIsExitModalOpen(false)}
+              >
+                <CloseIcon size={18} color="currentColor" />
+              </button>
             </div>
-            <h3 className={styles.cardTitle}>Choose a Plan</h3>
-            <p className={styles.cardText}>
-              Unlock unlimited requests and dedicated support for your enterprise
-              needs.
-            </p>
-            <span className={styles.cardAction}>Explore pricing -&gt;</span>
-          </button>
 
-          <button className={`${styles.card} ${styles.optionCard} ${styles.deployOptionCard}`} type="button">
-            <div className={styles.iconBox}>
-              <RocketIcon size={28} color={colors.TextOverlay} />
-            </div>
-            <h3 className={styles.cardTitle}>Deploy to ChatGPT</h3>
-            <p className={styles.cardText}>
-              Push your protocol to the global stage and reach millions of users
-              instantly.
+            <p className={styles.modalText}>
+              Your current setup progress (Step {currentStep} of 3) will be
+              preserved in your account. You will be safely signed out and can
+              resume your onboarding anytime by logging back in.
             </p>
-            <span className={styles.cardAction}>Launch now</span>
-          </button>
-        </section>
-      </main>
+
+            <div className={styles.modalActionsRow}>
+              <button
+                type="button"
+                className={styles.modalCancelBtn}
+                onClick={() => setIsExitModalOpen(false)}
+                disabled={isExiting}
+              >
+                Stay Here
+              </button>
+              <button
+                type="button"
+                className={styles.modalConfirmBtn}
+                onClick={handleConfirmExit}
+                disabled={isExiting}
+              >
+                {isExiting ? "Saving & Exiting..." : "Save & Exit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isHelpModalOpen && (
+        <div
+          className={styles.modalBackdrop}
+          onClick={() => setIsHelpModalOpen(false)}
+        >
+          <div
+            className={styles.modalCard}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>
+                Model Context Protocol (MCP) Guide
+              </h3>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setIsHelpModalOpen(false)}
+              >
+                <CloseIcon size={18} color="currentColor" />
+              </button>
+            </div>
+
+            <p className={styles.modalText}>
+              <strong>What is MCP?</strong> Model Context Protocol is an open
+              standard that enables AI models like ChatGPT to securely call
+              external tools and retrieve live structured business data.
+            </p>
+
+            <p className={styles.modalText}>
+              <strong>How it works with SoftTech AI:</strong>
+              <br />
+              1. <strong>Tools:</strong> Your REST APIs are automatically
+              synthesized into OpenAPI 3.1 MCP tool declarations.
+              <br />
+              2. <strong>Widgets:</strong> Responses are transformed into
+              interactive ChatGPT cards and charts.
+              <br />
+              3. <strong>Gateway:</strong> A low-latency SSE tunnel relays
+              queries between OpenAI and your endpoints securely.
+            </p>
+
+            <div className={styles.modalActionsRow}>
+              <button
+                type="button"
+                className={styles.modalCancelBtn}
+                onClick={() => setIsHelpModalOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

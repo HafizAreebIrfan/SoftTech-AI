@@ -325,22 +325,27 @@ export const CardItem: React.FC<CardItemProps> = ({
   const isOut = statusStr ? OUT_OF_STOCK_RE.test(statusStr) : explicitlyUnavailable;
   const showBadge = Boolean(statusStr) || explicitlyUnavailable;
 
-  const actionUrlStr = rec.url || rec.link;
-  const CardContainer = actionUrlStr ? "a" : "div";
-  const containerProps = actionUrlStr
-    ? {
-        href: actionUrlStr,
-        target: "_blank",
-        rel: "noopener noreferrer",
-        className: styles.cardItem,
-      }
-    : {
-        className: styles.cardItem,
-        onClick: () => onSelect?.(rec),
-      };
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button") || target.closest("a")) {
+      return;
+    }
+    onSelect?.(rec);
+  };
 
   return (
-    <CardContainer {...containerProps}>
+    <div
+      className={styles.cardItem}
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect?.(rec);
+        }
+      }}
+    >
       {/* Real image → fills the card edge-to-edge (`cover`), matching the map
           card so the grid reads consistently.
           No image → gradient banner behind a neutral placeholder icon. */}
@@ -422,6 +427,6 @@ export const CardItem: React.FC<CardItemProps> = ({
           </button>
         </div>
       </div>
-    </CardContainer>
+    </div>
   );
 };

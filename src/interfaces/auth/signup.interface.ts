@@ -97,7 +97,10 @@ export interface SignupStore {
   >;
   saveStatus: "idle" | "saving" | "saved" | "error";
   isStepTwoPending: boolean;
-
+  isSignupOnboardingDone: boolean;
+  signupOnboardingStep: number;
+  setSignupOnboardingDone: (done: boolean) => void;
+  setSignupOnboardingStep: (step: number) => void;
   setCompanyId: (id: string | null) => void;
   setStepOneData: (data: Partial<StepOneData>) => void;
   setLastSavedStepOneData: (data: StepOneData | null) => void;
@@ -127,6 +130,7 @@ export interface SignupStore {
   handleTestApi: (api: ApiConnection) => Promise<void>;
   handleSaveSampleResponse: (apiId: string, sampleJson: string) => void;
   triggerAutoSave: () => void;
+  saveOnboardingProgress: () => Promise<void>;
   handleStepTwoSubmit: (
     navigate: (opts: { to: string }) => void,
   ) => Promise<void>;

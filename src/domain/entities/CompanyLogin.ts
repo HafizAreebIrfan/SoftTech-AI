@@ -3,6 +3,11 @@ export interface User {
   name: string;
   email: string;
   role?: string;
+  isSignupOnboardingDone?: boolean;
+  signupOnboardingStep?: number;
+  onboardingStep?: number;
+  status?: string;
+  mcpSlug?: string;
 }
 
 export interface LoginCredentials {

@@ -4,11 +4,13 @@ import { useThemeStore } from "../../../infrastructure/store/themeStore";
 import { Link } from "@tanstack/react-router";
 import { CloseIcon, MenuIcon, MoonIcon, SunIcon } from "../../../assets/icons";
 import { useHomeState } from "../../../hooks";
+import { env } from "../../../infrastructure/config/env";
 
 const Navbar: React.FC = () => {
   const { isDark, colors, toggleTheme } = useThemeStore();
   const { isMobileMenuOpen, toggleMobileMenu, closeMobileMenu } =
     useHomeState();
+
   useEffect(() => {
     const globalNavbar = document.getElementById("top-navbar");
 
@@ -74,20 +76,21 @@ const Navbar: React.FC = () => {
               Start Building
             </Link>
 
-            <Link to="/checkout" className={styles.primaryBtn}>
-              Preview
-            </Link>
-
             {/* Dev-only: standalone widget preview harness (never ships). */}
             {import.meta.env.DEV && (
-              <a
-                href="/preview.html"
-                target="_blank"
-                rel="noreferrer"
-                className={styles.primaryBtn}
-              >
-                Widget Preview
-              </a>
+              <>
+                <Link to="/checkoutdummy" className={styles.primaryBtn}>
+                  Preview
+                </Link>
+                <a
+                  href="/preview.html"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.primaryBtn}
+                >
+                  Widget Preview
+                </a>
+              </>
             )}
 
             <button
@@ -154,7 +157,10 @@ const Navbar: React.FC = () => {
 
         <div className={styles.divider}></div>
 
-        <div className={styles.mobileActions} style={{ flexDirection: "column", gap: "0.75rem" }}>
+        <div
+          className={styles.mobileActions}
+          style={{ flexDirection: "column", gap: "0.75rem" }}
+        >
           <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
             <Link
               to="/login"
@@ -173,7 +179,7 @@ const Navbar: React.FC = () => {
           </div>
           <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
             <Link
-              to="/checkout"
+              to="/checkoutdummy"
               className={styles.mobilePrimaryBtn}
               style={{ flex: 1, textAlign: "center" }}
               onClick={closeMobileMenu}
@@ -181,7 +187,7 @@ const Navbar: React.FC = () => {
               Preview
             </Link>
             <Link
-              to="/admin-preview"
+              to="/admin-dashboard"
               className={styles.mobilePrimaryBtn}
               style={{ flex: 1, textAlign: "center" }}
               onClick={closeMobileMenu}

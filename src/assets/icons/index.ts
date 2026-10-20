@@ -43,3 +43,8 @@ export { default as ShieldLockIcon } from './ShieldLockIcon/index';
 export { default as XMarkIcon } from './XMarkIcon/index';
 
 export { default as UploadIcon } from './UploadIcon/index';
+export { default as BuildingIcon } from './BuildingIcon/index';
+export { default as GlobeIcon } from './GlobeIcon/index';
+export { default as DevicesIcon } from './DevicesIcon/index';
+export { default as AlertCircleIcon } from './AlertCircleIcon/index';
+export { default as GridPatternIcon } from './GridPatternIcon/index';

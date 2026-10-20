@@ -11,13 +11,21 @@ import {
   SearchIcon,
   SpinnerIcon,
   SunIcon,
+  AlertCircleIcon,
+  GridPatternIcon,
 } from "../../../../assets/icons";
-import { useThemeStore, useAuthStore, useLoginStore } from "../../../../hooks";
+import {
+  useThemeStore,
+  useAuthStore,
+  useLoginStore,
+  useSignupStore,
+} from "../../../../hooks";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { useForm } from "@tanstack/react-form";
-import { showToast } from "../../../../utils/toasts";
+import { showToast } from "../../../../utils/toast";
 import { z } from "zod";
+import styles from "../../../../styles/login.module.css";
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email address"),
@@ -37,16 +45,69 @@ const Login: FC = () => {
   } = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
+      const rawUser = data?.user || data;
       const user = {
-        id: data?._id || data?.user?._id || data?.user?.id || "",
-        name: data?.companyName || data?.user?.name || "",
-        email: data?.email || data?.user?.email || "",
-        role: data?.role || data?.user?.role || "",
+        id: data?._id || rawUser?._id || rawUser?.id || "",
+        name: rawUser?.companyName || rawUser?.name || "",
+        email: rawUser?.email || "",
+        role: data?.role || rawUser?.role || "company",
+        isSignupOnboardingDone: Boolean(rawUser?.isSignupOnboardingDone),
+        signupOnboardingStep:
+          typeof rawUser?.signupOnboardingStep === "number"
+            ? rawUser.signupOnboardingStep
+            : 1,
+        onboardingStep:
+          typeof rawUser?.onboardingStep === "number"
+            ? rawUser.onboardingStep
+            : 1,
+        status: rawUser?.status || "",
+        apis: rawUser?.apis || [],
+        uiPreference: rawUser?.uiPreference,
       };
+
       setAuth(user);
+
+      // Synchronize signup store with user's company and onboarding status
+      const signupStore = useSignupStore.getState();
+      signupStore.setCompanyId(user.id);
+      signupStore.setSignupOnboardingDone(user.isSignupOnboardingDone);
+      signupStore.setSignupOnboardingStep(user.signupOnboardingStep);
+
       showToast("Logged in successfully!", "success");
+
+      // 1. Admin redirect
+      if (user.role === "admin") {
+        navigate({ to: "/admin-dashboard", replace: true });
+        return;
+      }
+
+      // 2. Signup onboarding (First flow) not finished:
+      // Redirect to onboarding step with no way back to dashboard
+      if (!user.isSignupOnboardingDone) {
+        const step = user.signupOnboardingStep || 1;
+        const targetRoute =
+          step === 2 ? "/signup/onboarding-step2" : "/signup/onboarding-step1";
+        navigate({
+          to: targetRoute,
+          replace: true,
+        });
+        return;
+      }
+
+      // 3. Second flow of onboarding not finished:
+      // Redirect to onboarding dashboard instead of public dashboard
+      const isOnboardingDashboardFinished = user.onboardingStep >= 4;
+      if (!isOnboardingDashboardFinished) {
+        navigate({
+          to: "/onboarding_dashboard",
+          replace: true,
+        });
+        return;
+      }
+
+      // 4. Fully finished: navigate to public dashboard
       navigate({
-        to: user.role === "admin" ? "/admin-preview" : "/dashboard",
+        to: "/company-dashboard",
         replace: true,
       });
     },
@@ -82,10 +143,7 @@ const Login: FC = () => {
 
   return (
     <div
-      className="min-h-screen w-full flex overflow-hidden font-sans transition-colors duration-300"
-      style={{
-        background: isDark ? "#0b0f19" : "#fff",
-      }}
+      className={`min-h-screen w-full flex overflow-hidden font-sans transition-colors duration-300 ${styles.loginContainer}`}
     >
       {/* LEFT COLUMN: FORM */}
       <div className="w-full lg:w-1/2 flex flex-col justify-between min-h-screen lg:h-screen overflow-y-auto relative z-10 p-6 sm:p-12 lg:px-24 xl:px-32">
@@ -100,10 +158,7 @@ const Login: FC = () => {
               <div className="w-4 h-4 border-2 border-white rounded-sm transform rotate-45"></div>
             </div>
             <span
-              className="text-xl font-bold tracking-tight transition-transform group-hover:scale-105"
-              style={{
-                color: isDark ? colors.TextHeading : "#1e293b",
-              }}
+              className={`text-xl font-bold tracking-tight transition-transform group-hover:scale-105 ${styles.brandText}`}
             >
               SoftTech AI
             </span>
@@ -132,15 +187,11 @@ const Login: FC = () => {
           >
             <div className="mb-8">
               <h1
-                className="text-4xl font-bold mb-3 tracking-tight"
-                style={{ color: isDark ? colors.TextHeading : "#0f172a" }}
+                className={`text-4xl font-bold mb-3 tracking-tight ${styles.loginTitle}`}
               >
                 Log in to your Account
               </h1>
-              <p
-                className="text-base"
-                style={{ color: isDark ? colors.TextBody : "#64748b" }}
-              >
+              <p className={`text-base ${styles.loginSubtitle}`}>
                 Welcome back!
               </p>
             </div>
@@ -183,15 +234,7 @@ const Login: FC = () => {
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
-                        className={`block w-full pl-12 pr-4 py-3.5 rounded-xl outline-none transition-all text-base border focus:ring-2 focus:ring-opacity-50 ${isDark ? "bg-[#0f1115] border-slate-800 text-white focus:border-indigo-500 focus:ring-indigo-500/20" : "bg-slate-50/50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"}`}
-                        style={{
-                          borderColor:
-                            field.state.meta.errors?.length > 0
-                              ? isDark
-                                ? colors.WarningBorder
-                                : "#ef4444"
-                              : undefined,
-                        }}
+                        className={`block w-full pl-12 pr-4 py-3.5 rounded-xl outline-none transition-all text-base border focus:ring-2 focus:ring-opacity-50 ${isDark ? "bg-[#0f1115] border-slate-800 text-white focus:border-indigo-500 focus:ring-indigo-500/20" : "bg-slate-50/50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"} ${field.state.meta.errors?.length > 0 ? styles.inputError : ""}`}
                       />
                       {field.state.meta.errors?.length > 0 && (
                         <motion.span
@@ -236,15 +279,7 @@ const Login: FC = () => {
                         onBlur={field.handleBlur}
                         type={showPassword ? "text" : "password"}
                         onChange={(e) => field.handleChange(e.target.value)}
-                        className={`block w-full pl-12 pr-12 py-3.5 rounded-xl outline-none transition-all text-base border focus:ring-2 focus:ring-opacity-50 ${isDark ? "bg-[#0f1115] border-slate-800 text-white focus:border-indigo-500 focus:ring-indigo-500/20" : "bg-slate-50/50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"}`}
-                        style={{
-                          borderColor:
-                            field.state.meta.errors?.length > 0
-                              ? isDark
-                                ? colors.WarningBorder
-                                : "#ef4444"
-                              : undefined,
-                        }}
+                        className={`block w-full pl-12 pr-12 py-3.5 rounded-xl outline-none transition-all text-base border focus:ring-2 focus:ring-opacity-50 ${isDark ? "bg-[#0f1115] border-slate-800 text-white focus:border-indigo-500 focus:ring-indigo-500/20" : "bg-slate-50/50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"} ${field.state.meta.errors?.length > 0 ? styles.inputError : ""}`}
                       />
                       <button
                         type="button"
@@ -307,18 +342,10 @@ const Login: FC = () => {
                     className="overflow-hidden"
                   >
                     <div className="p-3 mt-2 rounded-lg text-sm font-medium text-red-600 bg-red-50 border border-red-100 flex items-center gap-2">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 flex-shrink-0"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
+                      <AlertCircleIcon
+                        size={20}
+                        color={colors.ErrorBadgeText}
+                      />
                       {(loginError as any).message ||
                         "Invalid credentials. Please verify your details."}
                     </div>
@@ -330,36 +357,11 @@ const Login: FC = () => {
               <button
                 type="submit"
                 disabled={isPending}
-                className={`cursor-pointer w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-base font-bold text-white transition-all duration-300 transform ${isPending ? "opacity-70 cursor-not-allowed" : "hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"} ${isDark ? "bg-indigo-600 hover:bg-indigo-500 focus:ring-indigo-600" : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"}`}
-                style={{
-                  background: isDark
-                    ? `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`
-                    : `linear-gradient(240deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
-                }}
+                className={`cursor-pointer w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-base font-bold text-white transition-all duration-300 transform ${isPending ? "opacity-70 cursor-not-allowed" : "hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2"} ${styles.submitBtn}`}
               >
                 {isPending ? (
                   <span className="flex items-center gap-2">
                     <SpinnerIcon size={12} color={colors.IconColor} />
-                    {/* <svg
-                      className="animate-spin h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg> */}
                     Authenticating...
                   </span>
                 ) : (
@@ -394,41 +396,16 @@ const Login: FC = () => {
       {/* RIGHT COLUMN: BRANDING / GRAPHIC (Split Screen) */}
       {}
       <div
-        className={`hidden lg:flex w-3/4 relative flex-col items-center justify-center p-12 overflow-hidden 
+        className={`hidden lg:flex w-3/4 relative flex-col items-center justify-center p-12 overflow-hidden ${styles.splitScreenBranding}
           ${isDark ? "bg-gradient-to-br from-indigo-900 to-[#0f1115]" : "bg-[#0F5FE9]"}`}
-        style={{
-          borderTopLeftRadius: "72px",
-          borderBottomLeftRadius: "72px",
-        }}
       >
         {/* Decorative background elements */}
         <div className="absolute inset-0 z-0 opacity-20">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-white blur-[120px]"></div>
           <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-300 blur-[100px]"></div>
 
-          {/* Subtle pattern or grid could go here */}
-          <svg
-            className="absolute inset-0 h-full w-full"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <defs>
-              <pattern
-                id="grid-pattern"
-                width="40"
-                height="40"
-                patternUnits="userSpaceOnUse"
-              >
-                <path
-                  d="M0 40V0H40"
-                  fill="none"
-                  stroke="white"
-                  strokeOpacity="0.1"
-                  strokeWidth="1"
-                ></path>
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid-pattern)"></rect>
-          </svg>
+          {/* Subtle pattern or grid */}
+          <GridPatternIcon />
         </div>
 
         {/* Central Graphic / Mockup inspired by first image */}

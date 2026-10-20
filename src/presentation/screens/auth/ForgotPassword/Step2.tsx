@@ -7,7 +7,7 @@ import {
   verifyPasswordResetOtp,
 } from "../../../../adapters/api/authApi";
 import { EmailIcon, LeftArrowIcon } from "../../../../assets/icons";
-import { showToast } from "../../../../utils/toasts";
+import { showToast } from "../../../../utils/toast";
 import { otpSchema } from "../../../../infrastructure/validation/forgotPasswordSchemas";
 import OtpInputGroup from "./components/OtpInputGroup";
 
@@ -93,7 +93,9 @@ const ForgotPasswordStep2: FC = () => {
       {/* Icon Box */}
       <div
         className={`w-12 h-12 rounded-xl border flex items-center justify-center mb-6 shadow-sm ${
-          isDark ? "border-slate-800 bg-slate-900/60" : "border-slate-200 bg-white"
+          isDark
+            ? "border-slate-800 bg-slate-900/60"
+            : "border-slate-200 bg-white"
         }`}
       >
         <EmailIcon size={24} color={isDark ? "#94a3b8" : "#475569"} />
@@ -139,8 +141,11 @@ const ForgotPasswordStep2: FC = () => {
           className={`w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-base font-semibold text-white transition-all duration-200 shadow-sm ${
             otp.length !== 6 || isVerifying
               ? "opacity-70 cursor-not-allowed bg-blue-500"
-              : "bg-blue-600 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              : "focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           }`}
+          style={{
+            background: `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
+          }}
         >
           {isVerifying ? "Verifying..." : "Continue"}
         </button>

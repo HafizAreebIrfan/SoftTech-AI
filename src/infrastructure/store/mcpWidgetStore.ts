@@ -127,39 +127,135 @@ export const extractToolResult = (
   };
 };
 
+export const ACTIVE_COMPANY_KEY = "mcp_last_active_company";
+
+export const sanitizeCompanyKey = (val: string): string => {
+  return val.toLowerCase().trim().replace(/[^a-z0-9_-]/g, "_") || "default";
+};
+
+export const extractCompanyKey = (payload?: unknown): string => {
+  if (typeof window !== "undefined") {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlCompany =
+        params.get("companySlug") ||
+        params.get("company") ||
+        params.get("mcpSlug") ||
+        params.get("companyId");
+      if (urlCompany) {
+        return sanitizeCompanyKey(urlCompany);
+      }
+    } catch {}
+  }
+
+  const raw = (payload || {}) as Record<string, any>;
+  const sc = (raw.structuredContent || raw) as Record<string, any>;
+  const meta = (sc.metadata ||
+    raw._meta?.widget?.metadata ||
+    raw._meta?.metadata ||
+    {}) as Record<string, any>;
+  const auth = (sc.authStrategy ||
+    meta.authStrategy ||
+    {}) as Record<string, any>;
+
+  const candidate =
+    meta.companySlug ||
+    meta.mcpSlug ||
+    sc.companySlug ||
+    sc.mcpSlug ||
+    meta.companyId ||
+    meta.companyName ||
+    auth.companySlug ||
+    auth.companyName ||
+    sc.companyName ||
+    (typeof window !== "undefined" &&
+      (window as any).__WIDGET_METADATA__?.companyName) ||
+    "default";
+
+  return sanitizeCompanyKey(String(candidate));
+};
+
 const getInitialToolResult = (): McpToolResultPayload | null => {
   if (typeof window === "undefined") return null;
 
   try {
-    // Prefer the FRESH per-instance host tool output over our own persisted
-    // widgetState, so a reopened / newly-mounted widget shows its own result
-    // instead of the last one we saved (fixes cross-widget contamination). (#7)
+    // 1. Prefer fresh per-instance host tool output
     const bootstrap =
       (window as any).__SOFTTECH_AI_WIDGET_BOOTSTRAP__ ||
-      (window as any).openai?.toolOutput ||
-      (window as any).openai?.widgetState;
+      (window as any).openai?.toolOutput;
 
-    const extracted = extractToolResult(bootstrap);
-    if (extracted) return extracted;
+    const extractedBootstrap = extractToolResult(bootstrap);
+    if (extractedBootstrap) return extractedBootstrap;
 
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Freshness-stamped envelope { savedAt, payload }: ignore stale entries so
-      // a widget the user has moved on from can't reappear on restore. (#7)
+    // Determine current active company
+    const activeCompanyKey =
+      extractCompanyKey() ||
+      localStorage.getItem(ACTIVE_COMPANY_KEY) ||
+      "default";
+    const companyVarName = `company_${activeCompanyKey}`;
+
+    // 2. Check openai.widgetState isolated company variables
+    const widgetState = (window as any).openai?.widgetState;
+    if (widgetState && typeof widgetState === "object") {
+      if (
+        widgetState[companyVarName] &&
+        typeof widgetState[companyVarName] === "object"
+      ) {
+        const compEntry = widgetState[companyVarName];
+        const compPayload = compEntry?.payload || compEntry;
+        const compExtracted = extractToolResult(compPayload);
+        if (compExtracted) return compExtracted;
+      }
+      if (widgetState.companies && typeof widgetState.companies === "object") {
+        const compPayload = widgetState.companies[activeCompanyKey];
+        const compExtracted = extractToolResult(compPayload);
+        if (compExtracted) return compExtracted;
+      }
+      // If widgetState has direct payload for the active company
+      const directExtracted = extractToolResult(widgetState);
+      if (directExtracted) {
+        const payloadCompany = extractCompanyKey(directExtracted);
+        if (payloadCompany === activeCompanyKey || activeCompanyKey === "default") {
+          return directExtracted;
+        }
+      }
+    }
+
+    // 3. Check localStorage for this company's isolated key
+    const companyStorageKey = `mcp_widget_result_${activeCompanyKey}`;
+    const companySaved = localStorage.getItem(companyStorageKey);
+    if (companySaved) {
+      const parsed = JSON.parse(companySaved);
       if (
         parsed &&
         typeof parsed === "object" &&
         "savedAt" in parsed &&
         "payload" in parsed
       ) {
-        if (Date.now() - Number((parsed as any).savedAt) > STORAGE_TTL_MS) {
-          return null;
+        if (Date.now() - Number(parsed.savedAt) <= STORAGE_TTL_MS) {
+          return extractToolResult(parsed.payload);
         }
-        return extractToolResult((parsed as any).payload);
+      } else {
+        return extractToolResult(parsed);
       }
-      // Legacy bare payload (saved before the envelope existed).
-      return extractToolResult(parsed);
+    }
+
+    // 4. Fallback to legacy shared storage key if matching
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        "savedAt" in parsed &&
+        "payload" in parsed
+      ) {
+        if (Date.now() - Number((parsed as any).savedAt) <= STORAGE_TTL_MS) {
+          return extractToolResult((parsed as any).payload);
+        }
+      } else {
+        return extractToolResult(parsed);
+      }
     }
   } catch (e) {
     console.error("[MCP Widget] Failed restoring state:", e);
@@ -181,20 +277,45 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
 
     try {
       if (typeof window !== "undefined") {
-        // Freshness-stamped so getInitialToolResult can expire stale restores.
+        const companyKey = extractCompanyKey(payload);
+        const companyVarName = `company_${companyKey}`;
+        const companyStorageKey = `mcp_widget_result_${companyKey}`;
+
+        // Save company-scoped state in localStorage and track active company
+        localStorage.setItem(
+          companyStorageKey,
+          JSON.stringify({ savedAt: Date.now(), companyKey, payload }),
+        );
+        localStorage.setItem(ACTIVE_COMPANY_KEY, companyKey);
+
+        // Keep legacy shared key updated with active result as fallback
         localStorage.setItem(
           STORAGE_KEY,
-          JSON.stringify({ savedAt: Date.now(), payload }),
+          JSON.stringify({ savedAt: Date.now(), companyKey, payload }),
         );
+
         if ((window as any).openai?.setWidgetState) {
           const prev = (window as any).openai.widgetState || {};
-          // Merge into (don't replace) host widgetState, and clear the shared
-          // TableBlock modal keys so a new result never reopens a stale table
-          // detail. payload keys (structuredContent/content/_meta) don't
-          // collide with TableBlock's records/selectedRecord/... keys. (#7)
+          const prevCompanies = prev.companies || {};
+
+          // Store each company mcp widget state in its OWN dedicated variable/key
+          // so ChatGPT model never conflates different companies or hallucinates stale data
           (window as any).openai.setWidgetState({
             ...prev,
-            ...payload,
+            activeCompany: companyKey,
+            [companyVarName]: {
+              savedAt: Date.now(),
+              companyKey,
+              payload,
+            },
+            companies: {
+              ...prevCompanies,
+              [companyKey]: payload,
+            },
+            // Active view payload keys for host display
+            structuredContent: payload.structuredContent,
+            content: payload.content,
+            _meta: payload._meta,
             selectedRecord: null,
             editingRecord: null,
             isCreating: false,
@@ -214,7 +335,25 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
   resetToolResult: () => {
     try {
       if (typeof window !== "undefined") {
+        const activeKey =
+          localStorage.getItem(ACTIVE_COMPANY_KEY) || "default";
+        localStorage.removeItem(`mcp_widget_result_${activeKey}`);
         localStorage.removeItem(STORAGE_KEY);
+
+        if ((window as any).openai?.setWidgetState) {
+          const prev = (window as any).openai.widgetState || {};
+          const companyVarName = `company_${activeKey}`;
+          const updatedCompanies = { ...(prev.companies || {}) };
+          delete updatedCompanies[activeKey];
+
+          const updatedState = { ...prev };
+          delete updatedState[companyVarName];
+          updatedState.companies = updatedCompanies;
+          updatedState.structuredContent = null;
+          updatedState.content = null;
+
+          (window as any).openai.setWidgetState(updatedState);
+        }
       }
     } catch (e) {
       // ignore
@@ -239,6 +378,27 @@ export const useMcpWidgetStore = create<McpWidgetState>((set) => ({
 
   clearSubViews: () => {
     set({ subViewHistory: [] });
+  },
+
+  updateActiveSubViewData: (data: unknown) => {
+    set((state) => {
+      if (state.subViewHistory.length === 0) return state;
+      const lastIndex = state.subViewHistory.length - 1;
+      const lastView = state.subViewHistory[lastIndex];
+      const updatedView = {
+        ...lastView,
+        data:
+          typeof lastView.data === "object" &&
+          typeof data === "object" &&
+          lastView.data &&
+          data
+            ? { ...lastView.data, ...data }
+            : data,
+      };
+      const newHistory = [...state.subViewHistory];
+      newHistory[lastIndex] = updatedView;
+      return { subViewHistory: newHistory };
+    });
   },
 }));
 

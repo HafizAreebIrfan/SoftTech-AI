@@ -10,7 +10,7 @@ import {
   analyzeSingleCompanyApi,
   saveCompanyUiSelection,
 } from "../../adapters/api/authApi";
-import { showToast } from "../../utils/toasts";
+import { showToast } from "../../utils/toast";
 
 const getBaseUrl = (urlStr: string): string => {
   try {
@@ -100,7 +100,7 @@ export const parseJsonToRows = (
   jsonStr: string | undefined,
   defaultDynamic: boolean = true,
 ): ParamRow[] => {
-  if (!jsonStr || !jsonStr.trim()) {
+  if (!jsonStr || (typeof jsonStr === "string" ? !jsonStr.trim() : false)) {
     return [
       {
         id: `row-${Date.now()}-0`,
@@ -245,8 +245,15 @@ export const truncateSampleResponse = (
   jsonStr: string | undefined,
   maxChars: number = 8000,
 ): string => {
-  if (!jsonStr || !jsonStr.trim()) return "";
-  if (jsonStr.length <= maxChars) return jsonStr;
+  if (!jsonStr) return "";
+  const str =
+    typeof jsonStr === "string"
+      ? jsonStr.trim()
+      : typeof jsonStr === "object"
+      ? JSON.stringify(jsonStr)
+      : String(jsonStr).trim();
+  if (!str) return "";
+  if (str.length <= maxChars) return str;
 
   try {
     const parsed = JSON.parse(jsonStr);
@@ -388,6 +395,13 @@ export const useSignupStore = create<SignupStore>()(
       apiTestStates: {},
       saveStatus: "idle",
       isStepTwoPending: false,
+      isSignupOnboardingDone: false,
+      signupOnboardingStep: 1,
+
+      setSignupOnboardingDone: (isSignupOnboardingDone: boolean) =>
+        set({ isSignupOnboardingDone }),
+      setSignupOnboardingStep: (signupOnboardingStep: number) =>
+        set({ signupOnboardingStep }),
 
       setSelectedThemeColor: (selectedThemeColor: string) => {
         set({ selectedThemeColor });
@@ -800,12 +814,18 @@ export const useSignupStore = create<SignupStore>()(
       },
 
       handleSaveSampleResponse: async (apiId, sampleJson) => {
-        let formattedJson = sampleJson;
+        let formattedJson = "";
         try {
-          const parsed = JSON.parse(sampleJson);
+          const parsed =
+            typeof sampleJson === "string"
+              ? JSON.parse(sampleJson.trim())
+              : typeof sampleJson === "object" && sampleJson !== null
+              ? sampleJson
+              : JSON.parse(String(sampleJson || ""));
           formattedJson = JSON.stringify(parsed, null, 2);
         } catch (e) {
-          // Store raw string if not valid JSON
+          formattedJson =
+            typeof sampleJson === "string" ? sampleJson : String(sampleJson || "");
         }
 
         const trimmedJson = trimSampleJson(formattedJson);
@@ -1098,11 +1118,168 @@ export const useSignupStore = create<SignupStore>()(
         }, 3000);
       },
 
+      saveOnboardingProgress: async () => {
+        const {
+          companyId,
+          apisList,
+          selectedLayout,
+          selectedThemeColor,
+          selectedAudienceDefault,
+          signupOnboardingStep,
+        } = get();
+        if (!companyId) return;
+
+        // 1. If APIs exist, save API details to backend
+        if (apisList && apisList.length > 0) {
+          const apisPayload = apisList.map((api) => {
+            const isbearertoken =
+              api.apiAuthType === "Bearer Token"
+                ? { bearerToken: api.apiCredentials }
+                : {};
+            const isapikey =
+              api.apiAuthType === "API Key"
+                ? { apiKey: api.apiCredentials, authHeader: api.apiAuthHeader }
+                : {};
+            const isoauth =
+              api.apiAuthType === "OAuth 2.0"
+                ? {
+                    oauthTokenUrl: api.oauthTokenUrl,
+                    oauthClientId: api.oauthClientId,
+                    oauthClientSecret: api.apiCredentials,
+                    oauth: {
+                      tokenUrl: api.oauthTokenUrl,
+                      clientId: api.oauthClientId,
+                      clientSecret: api.apiCredentials,
+                      flow: "client_credentials",
+                    },
+                  }
+                : {};
+            const isuseroauth =
+              api.apiAuthType === "User OAuth"
+                ? {
+                    authType: "oauth_user",
+                    authtype: "oauth_user",
+                    oauthAuthorizationUrl: api.oauthAuthorizationUrl,
+                    oauthTokenUrl: api.oauthTokenUrl,
+                    oauthClientId: api.oauthClientId,
+                    oauthClientSecret: api.apiCredentials,
+                    oauth: {
+                      authorizationUrl: api.oauthAuthorizationUrl,
+                      tokenUrl: api.oauthTokenUrl,
+                      clientId: api.oauthClientId,
+                      clientSecret: api.apiCredentials,
+                      flow: "authorization_code",
+                    },
+                  }
+                : {};
+
+            const paramRows = parseJsonToRows(
+              api.apiQueryParams,
+              true,
+            ).filter((r) => r.key.trim() !== "");
+            const paramsArray = paramRows.map((r) => ({
+              key: r.key.trim(),
+              value: r.value.trim(),
+              isDynamic: Boolean(r.isDynamic),
+            }));
+
+            const bodyRows = parseJsonToRows(api.apiRequestBody, true).filter(
+              (r) => r.key.trim() !== "",
+            );
+            const bodyArray = bodyRows.map((r) => ({
+              key: r.key.trim(),
+              value: r.value.trim(),
+              isDynamic: Boolean(r.isDynamic),
+            }));
+
+            const headerRows = parseJsonToRows(api.apiHeaders, false).filter(
+              (r) => r.key.trim() !== "",
+            );
+            const headersArray = headerRows.map((r) => ({
+              key: r.key.trim(),
+              value: r.value.trim(),
+            }));
+
+            const sampleResp =
+              get().apiTestStates[api.id]?.sampleResponse ||
+              api.sampleResponse ||
+              (api as any).sampleresponse ||
+              "";
+
+            const isBodyMethod =
+              api.apiMethod === "POST" ||
+              api.apiMethod === "PUT" ||
+              api.apiMethod === "PATCH";
+
+            return {
+              name: api.apiName,
+              method: api.apiMethod,
+              baseUrl: getBaseUrl(api.apiEndpoint),
+              endpoint: getEndpointPath(api.apiEndpoint),
+              authType: api.apiAuthType,
+              authtype: api.apiAuthType,
+              headers: headersArray,
+              params: paramsArray,
+              body: isBodyMethod ? bodyArray : [],
+              sampleResponse: sampleResp,
+              testedonregister:
+                get().apiTestStates[api.id]?.status === "success",
+              platformType: api.platformType || "web",
+              audience: api.audience || "customer",
+              webCheckoutUrl:
+                api.webCheckoutUrl || api.apiCheckoutTemplate || undefined,
+              mobileDeepLink: api.mobileDeepLink || undefined,
+              isRealtimeApi: Boolean(api.isRealtimeApi),
+              streamUrl: api.streamUrl || undefined,
+              apiSchema:
+                api.apiSchema ||
+                api.schema ||
+                get().apiTestStates[api.id]?.apiSchema ||
+                undefined,
+              schema:
+                api.apiSchema ||
+                api.schema ||
+                get().apiTestStates[api.id]?.apiSchema ||
+                undefined,
+              ...isbearertoken,
+              ...isapikey,
+              ...isoauth,
+              ...isuseroauth,
+              mcpDescription: api.mcpDescription || undefined,
+              isWidgetEnabled:
+                api.isWidgetEnabled !== undefined
+                  ? Boolean(api.isWidgetEnabled)
+                  : true,
+              isMapViewEnabled: Boolean(api.isMapViewEnabled),
+            };
+          });
+
+          try {
+            await saveCompanyApiDetails(companyId, apisPayload);
+          } catch (e) {
+            console.warn("Auto save API details error on exit:", e);
+          }
+        }
+
+        // 2. If at step 2 or later, save UI selection
+        if (signupOnboardingStep >= 2) {
+          try {
+            await saveCompanyUiSelection(companyId, {
+              layout: selectedLayout || "auto",
+              themeColor: selectedThemeColor || "#6366f1",
+              audienceDefault: selectedAudienceDefault || "customer",
+            });
+          } catch (e) {
+            console.warn("Auto save UI preferences error on exit:", e);
+          }
+        }
+      },
+
       handleStepTwoSubmit: async (navigate) => {
         const { companyId, apisList } = get();
         if (!companyId) {
           showToast("Company ID is missing. Please restart signup.", "error");
-          navigate({ to: "/signup/step1" });
+          navigate({ to: "/signup/company" });
           return;
         }
 
@@ -1234,11 +1411,12 @@ export const useSignupStore = create<SignupStore>()(
           const res = await saveCompanyApiDetails(companyId, apisPayload);
           set({ isStepTwoPending: false });
           if (res && res.success) {
+            set({ signupOnboardingStep: 2 });
             showToast(
               "API configurations & AI schemas saved successfully!",
               "success",
             );
-            navigate({ to: "/signup/step3" });
+            navigate({ to: "/signup/onboarding-step2" });
           } else {
             const rawErrorMsg = res?.message || "AI Schema Analysis Failed.";
             const toastMsg = `API Save Failed: ${rawErrorMsg}`;
@@ -1418,6 +1596,8 @@ export const useSignupStore = create<SignupStore>()(
         apiTestStates: state.apiTestStates,
         selectedLayout: state.selectedLayout,
         selectedThemeColor: state.selectedThemeColor,
+        isSignupOnboardingDone: state.isSignupOnboardingDone,
+        signupOnboardingStep: state.signupOnboardingStep,
       }),
     },
   ),

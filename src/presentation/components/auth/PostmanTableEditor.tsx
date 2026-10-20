@@ -16,7 +16,7 @@ import {
   ClipboardIcon,
   CodeIcon,
 } from "../../../assets/icons";
-import { showToast } from "../../../utils/toasts";
+import { showToast } from "../../../utils/toast";
 import styles from "../../../styles/postmanTableEditor.module.css";
 
 export const PostmanTableEditor: FC<PostmanTableEditorProps> = ({

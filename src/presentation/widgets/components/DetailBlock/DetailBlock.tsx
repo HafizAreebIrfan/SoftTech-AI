@@ -9,19 +9,19 @@ import {
   interpolateTemplate,
   callMcpTool,
   setOpenInApp,
-} from "../../../../utils/mcpBridge";
+} from "../../../../utils/mcp";
 import {
   extractAllImageUrls,
   extractFirstImageUrl,
 } from "../../helper/RenderImage/getproxiedimageurl";
 import { renderImage } from "../../helper/RenderImage";
-import { appendChatUrlToCheckout } from "../../../../utils/checkoutHelper";
+import { appendChatUrlToCheckout } from "../../../../utils/checkout";
 import {
   useCartStore,
   findCartAction,
   parseNumericPrice,
 } from "../../../../infrastructure/store/cartStore";
-import { addToCartAndSync } from "../../../../utils/cartFlow";
+import { addToCartAndSync } from "../../../../utils/cart";
 import { getValue } from "../../../../utils";
 import { enrichRecordViaDetailTool } from "../../helper/detailEnrichment";
 
@@ -80,13 +80,13 @@ const derivePricePeriod = (key: string): string => {
  * Precedence: explicit currency code (Intl) → explicit symbol prefix →
  * regional heuristics (Pakistan Rs.) → generic standard price.
  */
-const formatPrice = (value: unknown, record: Record<string, any>): string => {
+const formatPrice = (value: unknown, record?: Record<string, any>): string => {
   if (value === null || value === undefined || value === "") return "";
   if (typeof value === "string" && /[^\d.,\s-]/.test(value))
     return value.trim();
 
   const num = parseNumericPrice(value);
-  const code = record.currency || record.currencyCode || record.priceCurrency;
+  const code = record?.currency || record?.currencyCode || record?.priceCurrency;
   if (typeof code === "string" && /^[A-Za-z]{3}$/.test(code)) {
     try {
       return new Intl.NumberFormat(undefined, {
@@ -97,7 +97,7 @@ const formatPrice = (value: unknown, record: Record<string, any>): string => {
       /* unknown code — fall through */
     }
   }
-  const symbol = record.currencySymbol || record.symbol;
+  const symbol = record?.currencySymbol || record?.symbol;
   if (typeof symbol === "string" && symbol.trim()) {
     return `${symbol.trim()} ${num.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   }
@@ -219,9 +219,19 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   const subViewHistory = useMcpWidgetStore((state) => state.subViewHistory);
   const openCart = useCartStore((state) => state.openCart);
   const isDocked = variant === "mapDock";
+  const isMobile =
+    (typeof document !== "undefined" &&
+      document.documentElement.dataset.previewViewport === "mobile") ||
+    (typeof window !== "undefined" && window.innerWidth <= 768);
 
   const targetRecord = useMemo<Record<string, any> | null>(() => {
     if (records.length > 0 && records[0] && typeof records[0] === "object") {
+      if (Array.isArray(records[0])) {
+        const first = records[0].find(
+          (it: any) => it && typeof it === "object" && !Array.isArray(it),
+        );
+        return first ? (first as Record<string, any>) : null;
+      }
       return records[0] as Record<string, any>;
     }
     return null;
@@ -1006,6 +1016,14 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
       return;
     }
 
+    // Only run automatic background tool calls when direct tool calling is available.
+    // If running in mobile sandbox without callTool, do not trigger background calls.
+    const openai =
+      typeof window !== "undefined" ? (window as any).openai : undefined;
+    if (!openai?.callTool) {
+      return;
+    }
+
     // Find an availability tool generically (verb/name shape only — no entity
     // names). Matches ids like "check_car_availability", "getAvailability",
     // "room_calendar", "slots", "schedule", "vacancies", …
@@ -1661,7 +1679,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
     );
 
     return (
-      <div className={styles.container}>
+      <div className={`${styles.container} ${isMobile ? styles.containerMobile : ""}`}>
         <div className={styles.childHeaderBar}>
           <button
             type="button"
@@ -1712,7 +1730,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
   /* ------------------------------ Guards ------------------------------- */
   if (!targetRecord) {
     return (
-      <div className={styles.container}>
+      <div className={`${styles.container} ${isMobile ? styles.containerMobile : ""}`}>
         {canGoBack && (
           <button type="button" className={styles.backBtn} onClick={handleBack}>
             &larr; Back
@@ -2599,7 +2617,7 @@ export const DetailBlock: React.FC<DetailBlockProps> = ({
 
   return (
     <div
-      className={`${styles.container} ${isDocked ? styles.containerDocked : ""}`}
+      className={`${styles.container} ${isDocked ? styles.containerDocked : ""} ${isMobile ? styles.containerMobile : ""}`}
       style={{ ["--widget-accent" as any]: themeColor }}
     >
       {canGoBack && (

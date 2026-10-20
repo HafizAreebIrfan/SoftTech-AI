@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import styles from "../../../styles/mapcataloglayout.module.css";
 import { WidgetLayoutProps } from "../../../interfaces/mcp/normalizedwidget.interface";
 import { MapBlock } from "../components/MapBlock/MapBlock";
@@ -6,7 +12,9 @@ import { MapCardCarousel } from "../components/MapBlock/MapCardCarousel";
 import { CardsBlock } from "../components/CardsBlock";
 import { DetailBlock } from "../components/DetailBlock";
 import { enrichRecordViaDetailTool } from "../helper/detailEnrichment";
-import { requestDisplayMode } from "../../../utils/mcpBridge";
+import { requestDisplayMode } from "../../../utils/mcp";
+import { env } from "../../../infrastructure/config/env";
+import { useMcpWidgetStore } from "../../../infrastructure/store/mcpWidgetStore";
 
 export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
   title = "Results based on your search",
@@ -19,6 +27,10 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
   audience,
   presentationPlan,
 }) => {
+  const pushSubView = useMcpWidgetStore((state) => state.pushSubView);
+  const updateActiveSubViewData = useMcpWidgetStore(
+    (state) => state.updateActiveSubViewData,
+  );
   const [viewMode, setViewMode] = useState<"map" | "grid">("map");
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   // Map "full map + floating detail": tapping a card opens the item detail as a
@@ -42,7 +54,8 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
   const enrichSeqRef = useRef(0);
 
   const typedRecords = useMemo(
-    () => (Array.isArray(records) ? (records as Array<Record<string, any>>) : []),
+    () =>
+      Array.isArray(records) ? (records as Array<Record<string, any>>) : [],
     [records],
   );
 
@@ -58,7 +71,16 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
         val.length > 0 &&
         typeof val[0] === "object" &&
         val[0] !== null &&
-        !["bookings", "reviews", "features", "amenities", "images", "photos", "fields", "specifications"].includes(key)
+        ![
+          "bookings",
+          "reviews",
+          "features",
+          "amenities",
+          "images",
+          "photos",
+          "fields",
+          "specifications",
+        ].includes(key)
       ) {
         return true;
       }
@@ -76,7 +98,16 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
         val.length > 0 &&
         typeof val[0] === "object" &&
         val[0] !== null &&
-        !["bookings", "reviews", "features", "amenities", "images", "photos", "fields", "specifications"].includes(key)
+        ![
+          "bookings",
+          "reviews",
+          "features",
+          "amenities",
+          "images",
+          "photos",
+          "fields",
+          "specifications",
+        ].includes(key)
       ) {
         rawItems = val;
         break;
@@ -91,9 +122,18 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
         (item.make && item.model ? `${item.make} ${item.model}`.trim() : "") ||
         `Option ${idx + 1}`;
       const priceCandidate =
-        item.$price ?? item.price ?? item.pricePerDay ?? item.dailyRate ?? item.rate ?? item.cost;
+        item.$price ??
+        item.price ??
+        item.pricePerDay ??
+        item.dailyRate ??
+        item.rate ??
+        item.cost;
       const imageCandidate =
-        item.$image || item.image || item.thumbnail || item.photo || (Array.isArray(item.images) ? item.images[0] : null);
+        item.$image ||
+        item.image ||
+        item.thumbnail ||
+        item.photo ||
+        (Array.isArray(item.images) ? item.images[0] : null);
 
       return {
         ...item,
@@ -153,7 +193,26 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     }
     if (parts.length > 0) return parts.join(" · ");
     return `${filteredRecords.length} available`;
-  }, [subtitle, isLocationWithNestedItems, typedRecords, collection, selectedRecord, filteredRecords.length]);
+  }, [
+    subtitle,
+    isLocationWithNestedItems,
+    typedRecords,
+    collection,
+    selectedRecord,
+    filteredRecords.length,
+  ]);
+
+  const layoutContainerRef = useRef<HTMLDivElement>(null);
+
+  const isMobileViewport = useCallback(() => {
+    if (typeof window === "undefined") return false;
+    if (document.documentElement.dataset.previewViewport === "mobile") return true;
+    if (document.documentElement.dataset.previewViewport === "desktop") return false;
+    if (layoutContainerRef.current && layoutContainerRef.current.clientWidth > 0) {
+      return layoutContainerRef.current.clientWidth <= 768;
+    }
+    return window.innerWidth <= 768;
+  }, []);
 
   // Open (or swap) the docked detail panel for a card. Opens instantly with the
   // summary record + requests the fullscreen map, then enriches via the shared
@@ -198,30 +257,80 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
     return () => window.removeEventListener("resize", onResize);
   }, [detailRecord, closeDetail]);
 
+  // Card tap → On mobile, opens the exact same single item view (pushSubView) covering the whole layout.
+  // On desktop, opens the docked floating sidebar over the map.
+  const handleOpenFullDetail = useCallback(
+    (rec: Record<string, any>, idx: number) => {
+      setSelectedIndex(idx);
+
+      if (isMobileViewport()) {
+        const detailTitle = String(
+          rec.$title ||
+            rec.title ||
+            rec.name ||
+            (rec.make && rec.model ? `${rec.make} ${rec.model}` : "") ||
+            collection?.entity ||
+            "Details",
+        );
+        pushSubView({
+          title: detailTitle,
+          data: rec,
+          blockType: "detail",
+        });
+        enrichRecordViaDetailTool(rec, actions, collection)
+          .then((enriched) => {
+            if (enriched && enriched !== rec) {
+              updateActiveSubViewData?.(enriched);
+            }
+          })
+          .catch(() => {});
+        return;
+      }
+
+      openDetailFor(rec, idx);
+    },
+    [
+      isMobileViewport,
+      pushSubView,
+      updateActiveSubViewData,
+      actions,
+      collection,
+      openDetailFor,
+    ],
+  );
+
   // Map marker / carousel arrow → highlight + auto-center.
+  // On mobile: tapping already-selected marker opens the single item view full screen.
   const handleSelectRecord = useCallback(
     (rec: Record<string, any>, idx: number) => {
+      if (isMobileViewport()) {
+        if (selectedIndex === idx) {
+          handleOpenFullDetail(rec, idx);
+        } else {
+          setSelectedIndex(idx);
+        }
+        return;
+      }
+
       if (detailRecord) {
         openDetailFor(rec, idx);
       } else {
         setSelectedIndex(idx);
       }
     },
-    [detailRecord, openDetailFor],
-  );
-
-  // Card tap → open / replace the docked detail panel over the map.
-  const handleOpenFullDetail = useCallback(
-    (rec: Record<string, any>, idx: number) => {
-      openDetailFor(rec, idx);
-    },
-    [openDetailFor],
+    [
+      isMobileViewport,
+      selectedIndex,
+      handleOpenFullDetail,
+      detailRecord,
+      openDetailFor,
+    ],
   );
 
   const isMapOnly = Boolean(
     (window as any).__WIDGET_METADATA__?.mapOnly ||
     ((window as any).__WIDGET_METADATA__?.uiEnabled === false &&
-      (window as any).__WIDGET_METADATA__?.mapEnabled === true)
+      (window as any).__WIDGET_METADATA__?.mapEnabled === true),
   );
 
   // Leaving the map for the grid closes the docked detail + restores inline.
@@ -238,7 +347,7 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
   }, [isMapOnly, viewMode]);
 
   return (
-    <div className={styles.layoutContainer}>
+    <div ref={layoutContainerRef} className={styles.layoutContainer}>
       {/* Header Bar only shown in grid view; map view is pure fullscreen with no top title/desc */}
       {viewMode === "grid" && (
         <div className={styles.headerBar}>
@@ -326,13 +435,7 @@ export const MapCatalogLayout: React.FC<WidgetLayoutProps> = ({
             selectedRecord={selectedRecord}
             onSelectRecord={handleSelectRecord}
             height="100%"
-            apiKey={
-              import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
-              (typeof window !== "undefined"
-                ? (window as any).__WIDGET_METADATA__?.googleMapsApiKey ||
-                  (window as any).VITE_GOOGLE_MAPS_API_KEY
-                : undefined)
-            }
+            apiKey={env.mapapikey}
           />
 
           {detailRecord && (

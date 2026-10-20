@@ -7,4 +7,5 @@ export const env = {
   apiBaseUrl: "https://softtech-ai.onrender.com",
   apiBaseUrlLocal: "http://localhost:4000",
   socketUrl: "https://softtech-ai.onrender.com",
+  mapapikey: "cb1_4o5v_1_721fc431e6e98c838eb6c8ad",
 } as const;

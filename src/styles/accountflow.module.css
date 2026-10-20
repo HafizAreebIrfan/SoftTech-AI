@@ -1,181 +1,14 @@
 .flowShell,
 .onboardingShell {
   min-height: 100vh;
-  background: var(--flow-bg);
-  color: var(--flow-text);
+  background: var(--app-bg-secondary);
+  color: var(--app-text-primary);
   font-family: "Manrope", sans-serif;
 }
 
 .flowShell {
   position: relative;
   overflow-x: hidden;
-  background:
-    radial-gradient(circle at 50% 50%, var(--flow-primary-faint), transparent 38rem),
-    radial-gradient(circle at bottom left, var(--flow-primary-glow), transparent 34rem),
-    radial-gradient(circle at bottom right, var(--flow-secondary-glow), transparent 34rem),
-    var(--flow-bg);
-}
-
-.onboardingTopbar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  height: 60px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 1.5rem;
-  border-bottom: 1px solid var(--flow-border);
-  background: var(--flow-header);
-  backdrop-filter: blur(20px);
-}
-
-.smallBrand {
-  margin: 0;
-  background: linear-gradient(90deg, var(--flow-button-one), var(--flow-button-two));
-  color: transparent;
-  font-family: "Plus Jakarta Sans", sans-serif;
-  font-size: 1.125rem;
-  font-weight: 800;
-  letter-spacing: 0;
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-
-.profileShell {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.profilePlan {
-  color: var(--flow-muted);
-  font-family: "Inter", sans-serif;
-  font-size: 0.75rem;
-}
-
-.avatar {
-  display: flex;
-  width: 2rem;
-  height: 2rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.5rem;
-  background: var(--flow-primary-soft);
-  color: var(--flow-primary);
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 2rem;
-  width: 100%;
-  max-width: 80rem;
-  margin: 0 auto;
-  padding: 3rem 2rem 2rem;
-  background: var(--flow-header);
-  backdrop-filter: blur(20px);
-}
-
-.eyebrow {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: var(--flow-primary);
-  font-family: "Inter", sans-serif;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.brand {
-  margin: 0;
-  color: var(--flow-heading);
-  font-family: "Plus Jakarta Sans", sans-serif;
-  font-size: clamp(2rem, 4vw, 2.5rem);
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.wizard {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.wizardItem {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.wizardDot {
-  display: flex;
-  width: 2.5rem;
-  height: 2.5rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: var(--flow-surface-highest);
-  color: var(--flow-muted);
-  font-weight: 800;
-}
-
-.wizardDotActive {
-  background: linear-gradient(135deg, var(--flow-button-one), var(--flow-button-two));
-  color: var(--flow-button-text);
-  box-shadow: 0 12px 28px var(--flow-button-glow);
-}
-
-.wizardDotDone {
-  color: var(--flow-primary);
-}
-
-.wizardCopy {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.wizardKicker {
-  color: var(--flow-muted);
-  font-family: "Inter", sans-serif;
-  font-size: 0.625rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.wizardKickerActive {
-  color: var(--flow-primary);
-}
-
-.wizardLabel {
-  color: var(--flow-muted);
-  font-size: 0.875rem;
-  font-weight: 700;
-}
-
-.wizardLabelActive {
-  color: var(--flow-heading);
-}
-
-.wizardLine {
-  width: 2rem;
-  height: 2px;
-  background: var(--flow-surface-highest);
-}
-
-.wizardActions {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  color: var(--flow-muted);
 }
 
 .main,
@@ -197,13 +30,9 @@
   padding-bottom: 6rem;
 }
 
-.hero,
-.onboardingHero {
-  text-align: center;
-}
-
 .hero {
   margin-bottom: 3rem;
+  text-align: left;
 }
 
 .onboardingHero {
@@ -212,41 +41,21 @@
 
 .title {
   margin: 0 0 1rem;
-  color: var(--flow-heading);
+  color: var(--app-text-primary);
   font-family: "Plus Jakarta Sans", sans-serif;
-  font-size: clamp(2.5rem, 6vw, 3.75rem);
+  font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: 0;
+  text-align: left;
 }
 
 .subtitle {
   max-width: 38rem;
-  margin: 0 auto;
-  color: var(--flow-muted);
-  font-size: 1.1rem;
+  color: var(--app-text-body);
+  font-size: 0.9rem;
   line-height: 1.7;
-}
-
-.sectionHeader {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-
-.sectionHeader h3 {
-  margin: 0;
-  color: var(--flow-heading);
-  font-family: "Plus Jakarta Sans", sans-serif;
-  font-size: 1.5rem;
-  font-weight: 800;
-}
-
-.sectionRule {
-  flex: 1;
-  height: 1px;
-  background: var(--flow-border);
+  text-align: left !important;
 }
 
 .grid {
@@ -256,14 +65,13 @@
 }
 
 .card {
-  position: relative;
   overflow: hidden;
-  border: 1px solid var(--flow-border);
-  border-radius: 2rem;
-  background: var(--flow-glass);
-  padding: 2rem;
-  box-shadow: 0 20px 40px var(--flow-shadow);
-  backdrop-filter: blur(20px);
+  position: relative;
+  border: 1px solid var(--app-border-secondary);
+  border-radius: 12px;
+  background: var(--app-bg-elevated);
+  padding: 20px;
+  box-shadow: 0 20px 40px var(--app-overlay-shadow);
 }
 
 .optionCard {
@@ -273,7 +81,10 @@
   background: var(--flow-surface);
   text-align: left;
   cursor: pointer;
-  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .optionCard:hover {
@@ -284,7 +95,11 @@
 
 .deployOptionCard {
   border: 0;
-  background: linear-gradient(135deg, var(--flow-primary-container), var(--flow-secondary-container));
+  background: linear-gradient(
+    135deg,
+    var(--flow-primary-container),
+    var(--flow-secondary-container)
+  );
 }
 
 .deployOptionCard .cardText {
@@ -343,10 +158,10 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem;
-  border: 1px solid var(--flow-border);
+  border: 1px solid var(--app-border-secondary);
   border-radius: 999px;
-  background: var(--flow-surface-high);
-  box-shadow: 0 12px 30px var(--flow-shadow);
+  background: var(--app-bg);
+  box-shadow: 0 12px 30px var(--app-overlay-shadow);
 }
 
 .toggleActive,
@@ -355,52 +170,54 @@
   border-radius: 999px;
   padding: 0.5rem 1.5rem;
   font-size: 0.875rem;
+  cursor: pointer;
 }
 
 .toggleActive {
-  background: var(--flow-primary);
-  color: var(--flow-bg);
+  background: var(--app-cardhover-bg);
+  color: var(--app-cardhover-heading);
   font-weight: 800;
 }
 
 .toggleInactive {
   background: transparent;
-  color: var(--flow-muted);
+  color: var(--app-cardactive-desc);
   font-weight: 600;
 }
 
 .highlightCard {
   z-index: 1;
-  border: 2px solid var(--flow-primary);
+  border: 2px solid var(--app-cardhover-bg);
   transform: scale(1.05);
-  box-shadow: 0 32px 64px var(--flow-button-glow);
 }
 
 .popularBadge {
   position: absolute;
-  top: -1px;
+  top: -30px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 0.4rem 1.5rem;
+  padding: 0.4rem 2.5rem;
   border-radius: 0 0 0.75rem 0.75rem;
-  background: var(--flow-primary);
-  color: var(--flow-bg);
-  font-family: "Inter", sans-serif;
+  background: var(--app-cardactive-bg);
+  color: var(--app-cardhover-heading);
+  font-family: "Poppins", sans-serif;
   font-size: 0.625rem;
   font-weight: 800;
   letter-spacing: 0.15em;
+  text-align: left !important;
   text-transform: uppercase;
+  z-index: 999999;
 }
 
 .price {
-  color: var(--flow-heading);
+  color: var(--app-text-primary);
   font-family: "Plus Jakarta Sans", sans-serif;
   font-size: 2.5rem;
   font-weight: 800;
 }
 
 .priceSub {
-  color: var(--flow-muted);
+  color: var(--app-text-body);
   font-size: 1rem;
 }
 
@@ -415,13 +232,14 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: var(--flow-text);
+  color: var(--app-text-primary);
   font-size: 0.875rem;
   font-weight: 600;
 }
 
 .button {
   display: inline-flex;
+  cursor: pointer;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
@@ -429,21 +247,27 @@
   min-height: 3.5rem;
   border: 0;
   border-radius: 0.85rem;
-  background: linear-gradient(135deg, var(--flow-button-one), var(--flow-button-two));
-  color: var(--flow-button-text);
+  background: linear-gradient(
+    135deg,
+    var(--app-btn-grad-1),
+    var(--app-btn-grad-2)
+  );
+  color: var(--app-btn-primary-text);
   font-family: "Plus Jakarta Sans", sans-serif;
   font-weight: 800;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
 }
 
 .button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 34px var(--flow-button-glow);
   filter: brightness(1.06);
 }
 
 .secondaryButton {
-  background: var(--flow-surface-highest);
+  background: var(--app-btn-pricing);
   color: var(--flow-heading);
 }
 
@@ -479,7 +303,7 @@
 }
 
 .label {
-  color: var(--flow-muted);
+  color: var(--app-text-primary);
   font-family: "Inter", sans-serif;
   font-size: 0.75rem;
   font-weight: 800;
@@ -491,14 +315,14 @@
   width: 100%;
   border: 0;
   border-radius: 0.85rem;
-  background: var(--flow-surface-highest);
-  color: var(--flow-heading);
+  background: var(--app-bg);
+  color: var(--app-text-primary);
   padding: 1rem 1.1rem;
   outline: none;
 }
 
 .input:focus {
-  box-shadow: 0 0 0 2px var(--flow-primary);
+  box-shadow: 0 0 0 2px var(--app-border-primary);
 }
 
 .formSplit {
@@ -512,8 +336,8 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 0;
-  border-bottom: 1px solid var(--flow-border);
-  color: var(--flow-muted);
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-text-primary);
 }
 
 .summaryStrong {
@@ -579,10 +403,10 @@
 .mcpPanel,
 .executionLog,
 .widgetPreview {
-  border: 1px solid var(--flow-border);
+  border: 1px solid var(--app-border-secondary);
   border-radius: 1rem;
-  background: var(--flow-glass);
-  box-shadow: 0 20px 40px var(--flow-shadow);
+  background: var(--app-bg-elevated);
+  box-shadow: 0 20px 40px var(--app-overlay-shadow);
 }
 
 .mcpPanel {
@@ -826,8 +650,12 @@
   justify-content: center;
   margin-bottom: 1.5rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, var(--flow-button-one), var(--flow-button-two));
-  box-shadow: 0 0 30px var(--flow-button-glow);
+  background: linear-gradient(
+    135deg,
+    var(--app-btn-grad-1),
+    var(--app-btn-grad-2)
+  );
+  box-shadow: 0 0 30px var(--app-overlay-shadow);
 }
 
 .deploymentSteps {
@@ -880,7 +708,11 @@
 
 .timelineDotActive {
   border: 0;
-  background: linear-gradient(135deg, var(--flow-button-one), var(--flow-button-two));
+  background: linear-gradient(
+    135deg,
+    var(--flow-button-one),
+    var(--flow-button-two)
+  );
   color: var(--flow-button-text);
   box-shadow: 0 0 15px var(--flow-button-glow);
 }
@@ -903,7 +735,11 @@
   width: 65%;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--flow-primary), var(--flow-secondary));
+  background: linear-gradient(
+    90deg,
+    var(--flow-primary),
+    var(--flow-secondary)
+  );
 }
 
 @media (max-width: 900px) {

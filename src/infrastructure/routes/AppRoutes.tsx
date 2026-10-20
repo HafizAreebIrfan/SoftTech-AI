@@ -10,34 +10,35 @@ import Homescreen from "../../presentation/screens/public/Marketing/home";
 import Login from "../../presentation/screens/auth/Login";
 import Signup from "../../presentation/screens/auth/Signup";
 import SignupStep1 from "../../presentation/screens/auth/Signup/Step1";
-import SignupStep2 from "../../presentation/screens/auth/Signup/Step2";
-import SignupStep3 from "../../presentation/screens/auth/Signup/Step3";
-import ProvisioningScreen from "../../presentation/screens/auth/Signup/ProvisioningScreen";
+import SignupSuccess from "../../presentation/screens/auth/Signup/SignupSuccess";
 import ForgotPassword from "../../presentation/screens/auth/ForgotPassword";
 import ForgotPasswordStep1 from "../../presentation/screens/auth/ForgotPassword/Step1";
 import ForgotPasswordStep2 from "../../presentation/screens/auth/ForgotPassword/Step2";
 import ForgotPasswordStep3 from "../../presentation/screens/auth/ForgotPassword/Step3";
-import Dashboard from "../../presentation/screens/private/Dashboard";
+import CompanyDashboard from "../../presentation/screens/company/CompanyDashboard/index";
 import NotFound from "../../presentation/screens/public/NotFound";
 import ServiceUnavailable from "../../presentation/screens/public/ServiceUnavailable";
 import PublicLayout from "../../presentation/layouts/PublicLayout";
 import AuthLayout from "../../presentation/layouts/AuthLayout";
 import CheckoutDummy from "../../presentation/screens/public/DummyPages/checkoutdummy";
 import { useAuthStore } from "../store/authStore";
+import { useSignupStore } from "../store/signupStore";
 import AdminPreview from "../../presentation/screens/admin/AdminPreview";
-import ProcessingIntegration from "../../presentation/screens/onboarding/ProcessingIntegration";
 import IntegrationSuccess from "../../presentation/screens/onboarding/IntegrationSuccess";
 import OnboardingDashboard from "../../presentation/screens/onboarding/OnboardingDashboard";
 import McpSimulation from "../../presentation/screens/onboarding/McpSimulation";
-import Plans from "../../presentation/screens/onboarding/PlansSofttechAiUpdated";
-import Checkout from "../../presentation/screens/onboarding/CheckoutSofttechAiRefined";
-import PaymentResult from "../../presentation/screens/onboarding/PaymentResultSofttechAiUpdated";
-import Deployment from "../../presentation/screens/onboarding/DeploymentSofttechAiRefined";
-import DeploymentInProgress from "../../presentation/screens/onboarding/DeploymentInProgressSofttechAi";
-import CompanyDashboard from "../../presentation/screens/company/CompanyDashboard";
+import Plans from "../../presentation/screens/onboarding/Plans";
+import Checkout from "../../presentation/screens/onboarding/Checkout";
+import PaymentResult from "../../presentation/screens/onboarding/PaymentResult";
+import Deployment from "../../presentation/screens/onboarding/Deployment";
+import DeploymentInProgress from "../../presentation/screens/onboarding/DeploymentInProgress";
+import Upgrade from "../../presentation/screens/onboarding/Upgrade";
 import ApiManagement from "../../presentation/screens/company/ApiManagement";
 import CompanyAnalytics from "../../presentation/screens/company/CompanyAnalytics";
 import Profile from "../../presentation/screens/company/Profile";
+import OnboardingSuccess from "../../presentation/screens/auth/Signup/Onboarding/OnboardingSuccess";
+import OnboardingStep1 from "../../presentation/screens/auth/Signup/Onboarding/OnboardingStep1";
+import OnboardingStep2 from "../../presentation/screens/auth/Signup/Onboarding/OnboardingStep2";
 
 // 1. Establish the absolute root route (renders an Outlet container)
 const rootRoute = createRootRoute({
@@ -51,14 +52,50 @@ const publicLayout = createRoute({
   component: PublicLayout,
 });
 
+const getOnboardingRedirect = () => {
+  const { isAuthenticated, user } = useAuthStore.getState();
+  const { isSignupOnboardingDone, signupOnboardingStep } =
+    useSignupStore.getState();
+
+  if (!isAuthenticated) {
+    return "/login";
+  }
+
+  if (user?.role === "admin") {
+    return null;
+  }
+
+  const isSignupDone = Boolean(
+    user?.isSignupOnboardingDone || isSignupOnboardingDone,
+  );
+  if (!isSignupDone) {
+    const step = user?.signupOnboardingStep || signupOnboardingStep || 1;
+    return step === 2 ? "/signup/onboarding-step2" : "/signup/onboarding-step1";
+  }
+
+  const isSecondDone = (user?.onboardingStep || 1) >= 4;
+  if (!isSecondDone) {
+    return "/onboarding_dashboard";
+  }
+
+  return null;
+};
+
 const authLayout = createRoute({
   getParentRoute: () => rootRoute,
   id: "_auth", // Prefix with underscore for pathless layout
   component: AuthLayout,
   beforeLoad: () => {
-    const { isAuthenticated } = useAuthStore.getState();
+    const { isAuthenticated, user } = useAuthStore.getState();
     if (isAuthenticated) {
-      throw redirect({ to: "/dashboard" });
+      if (user?.role === "admin") {
+        throw redirect({ to: "/admin-dashboard" });
+      }
+      const redirectPath = getOnboardingRedirect();
+      if (redirectPath && redirectPath !== "/login") {
+        throw redirect({ to: redirectPath });
+      }
+      throw redirect({ to: "/company-dashboard" });
     }
   },
 });
@@ -72,7 +109,7 @@ const indexRoute = createRoute({
 
 const adminPreviewRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/admin-preview",
+  path: "/admin-dashboard",
   component: AdminPreview,
   beforeLoad: () => {
     const { isAuthenticated, user } = useAuthStore.getState();
@@ -80,7 +117,7 @@ const adminPreviewRoute = createRoute({
       throw redirect({ to: "/login" });
     }
     if (user?.role !== "admin") {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ to: "/company-dashboard" });
     }
   },
 });
@@ -92,7 +129,7 @@ const loginRoute = createRoute({
 });
 
 const signupRoute = createRoute({
-  getParentRoute: () => authLayout,
+  getParentRoute: () => rootRoute,
   path: "/signup",
   component: Signup,
 });
@@ -101,32 +138,106 @@ const signupIndexRoute = createRoute({
   getParentRoute: () => signupRoute,
   path: "/",
   loader: () => {
-    throw redirect({ to: "/signup/step1" });
+    throw redirect({ to: "/signup/company" });
   },
 });
 
 const signupStep1Route = createRoute({
   getParentRoute: () => signupRoute,
-  path: "/step1",
+  path: "/company",
   component: SignupStep1,
+  beforeLoad: () => {
+    const { isAuthenticated, user } = useAuthStore.getState();
+    if (isAuthenticated && user?.role !== "admin") {
+      const redirectPath = getOnboardingRedirect();
+      if (redirectPath && redirectPath !== "/login") {
+        throw redirect({ to: redirectPath });
+      }
+      throw redirect({ to: "/company-dashboard" });
+    }
+  },
 });
 
-const signupStep2Route = createRoute({
+const signupOnboardingStep1 = createRoute({
   getParentRoute: () => signupRoute,
-  path: "/step2",
-  component: SignupStep2,
+  path: "/onboarding-step1",
+  component: OnboardingStep1,
+  beforeLoad: () => {
+    const { isAuthenticated, user } = useAuthStore.getState();
+    const { companyId } = useSignupStore.getState();
+    const effectiveCompanyId = companyId || user?.id;
+    if (!isAuthenticated && !effectiveCompanyId) {
+      throw redirect({ to: "/signup/company" });
+    }
+  },
 });
 
-const signupStep3Route = createRoute({
+const signupOnboardingStep2 = createRoute({
   getParentRoute: () => signupRoute,
-  path: "/step3",
-  component: SignupStep3,
+  path: "/onboarding-step2",
+  component: OnboardingStep2,
+  beforeLoad: () => {
+    const { companyId, apisList, signupOnboardingStep } =
+      useSignupStore.getState();
+    const { isAuthenticated, user } = useAuthStore.getState();
+    const effectiveCompanyId = companyId || user?.id;
+    if (!isAuthenticated && !effectiveCompanyId) {
+      throw redirect({ to: "/signup/company" });
+    }
+    const isStep1Done =
+      Boolean(effectiveCompanyId) &&
+      (signupOnboardingStep >= 2 ||
+        (typeof user?.signupOnboardingStep === "number" &&
+          user.signupOnboardingStep >= 2) ||
+        (apisList &&
+          apisList.length > 0 &&
+          apisList.some(
+            (a) =>
+              a.apiName?.trim() &&
+              a.apiEndpoint?.trim() &&
+              a.apiEndpoint !== "https://",
+          )));
+    if (!isStep1Done) {
+      throw redirect({ to: "/signup/onboarding-step1" });
+    }
+  },
 });
 
-const signupProvisioningRoute = createRoute({
+const SignupOnboardingSuccess = createRoute({
   getParentRoute: () => signupRoute,
-  path: "/provisioning",
-  component: ProvisioningScreen,
+  path: "/onboarding-success",
+  component: OnboardingSuccess,
+  beforeLoad: () => {
+    const { companyId, apisList, signupOnboardingStep } =
+      useSignupStore.getState();
+    const { isAuthenticated, user } = useAuthStore.getState();
+    const effectiveCompanyId = companyId || user?.id;
+    if (!isAuthenticated && !effectiveCompanyId) {
+      throw redirect({ to: "/signup/company" });
+    }
+    const isStep1Done =
+      Boolean(effectiveCompanyId) &&
+      (signupOnboardingStep >= 2 ||
+        (typeof user?.signupOnboardingStep === "number" &&
+          user.signupOnboardingStep >= 2) ||
+        (apisList &&
+          apisList.length > 0 &&
+          apisList.some(
+            (a) =>
+              a.apiName?.trim() &&
+              a.apiEndpoint?.trim() &&
+              a.apiEndpoint !== "https://",
+          )));
+    if (!isStep1Done) {
+      throw redirect({ to: "/signup/onboarding-step1" });
+    }
+  },
+});
+
+const signupSuccessRoute = createRoute({
+  getParentRoute: () => signupRoute,
+  path: "/success",
+  component: SignupSuccess,
 });
 
 const forgotPasswordRoute = createRoute({
@@ -161,30 +272,6 @@ const forgotPasswordStep3Route = createRoute({
   component: ForgotPasswordStep3,
 });
 
-const dashboardRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/dashboard",
-  component: Dashboard,
-  beforeLoad: () => {
-    const { isAuthenticated } = useAuthStore.getState();
-    if (!isAuthenticated) {
-      throw redirect({ to: "/login" });
-    }
-  },
-});
-
-const processingIntegrationRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/processing-integration",
-  component: ProcessingIntegration,
-  beforeLoad: () => {
-    const { isAuthenticated } = useAuthStore.getState();
-    if (!isAuthenticated) {
-      throw redirect({ to: "/login" });
-    }
-  },
-});
-
 const integrationSuccessRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/integration-success",
@@ -202,9 +289,22 @@ const onboardingDashboardRoute = createRoute({
   path: "/onboarding_dashboard",
   component: OnboardingDashboard,
   beforeLoad: () => {
-    const { isAuthenticated } = useAuthStore.getState();
+    const { isAuthenticated, user } = useAuthStore.getState();
+    const { isSignupOnboardingDone, signupOnboardingStep } =
+      useSignupStore.getState();
     if (!isAuthenticated) {
       throw redirect({ to: "/login" });
+    }
+    if (user?.role === "admin") return;
+    const isSignupDone = Boolean(
+      user?.isSignupOnboardingDone || isSignupOnboardingDone,
+    );
+    if (!isSignupDone) {
+      const step = user?.signupOnboardingStep || signupOnboardingStep || 1;
+      throw redirect({
+        to:
+          step === 2 ? "/signup/onboarding-step2" : "/signup/onboarding-step1",
+      });
     }
   },
 });
@@ -214,16 +314,21 @@ const mcpSimulationRoute = createRoute({
   path: "/mcp_simulation",
   component: McpSimulation,
   beforeLoad: () => {
-    const { isAuthenticated } = useAuthStore.getState();
+    const { isAuthenticated, user } = useAuthStore.getState();
     if (!isAuthenticated) {
       throw redirect({ to: "/login" });
+    }
+    if ((user?.onboardingStep || 1) >= 4) {
+      throw redirect({
+        href: "/company-dashboard?tab=simulation",
+      } as any);
     }
   },
 });
 
-const plansSofttechRoute = createRoute({
+const plans = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/plans_softtech_ai_updated",
+  path: "/plans",
   component: Plans,
   beforeLoad: () => {
     const { isAuthenticated } = useAuthStore.getState();
@@ -233,9 +338,9 @@ const plansSofttechRoute = createRoute({
   },
 });
 
-const checkoutSofttechRoute = createRoute({
+const checkout = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/checkout_softtech_ai_refined",
+  path: "/checkout",
   component: Checkout,
   beforeLoad: () => {
     const { isAuthenticated } = useAuthStore.getState();
@@ -247,13 +352,13 @@ const checkoutSofttechRoute = createRoute({
 
 const checkoutDummy = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/checkout",
+  path: "/checkoutdummy",
   component: CheckoutDummy,
 });
 
-const paymentResultSofttechRoute = createRoute({
+const paymentResult = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/payment_result_softtech_ai_updated",
+  path: "/paymentresult",
   component: PaymentResult,
   beforeLoad: () => {
     const { isAuthenticated } = useAuthStore.getState();
@@ -263,9 +368,9 @@ const paymentResultSofttechRoute = createRoute({
   },
 });
 
-const deploymentSofttechRoute = createRoute({
+const deployment = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/deployment_softtech_ai_refined",
+  path: "/deployment",
   component: Deployment,
   beforeLoad: () => {
     const { isAuthenticated } = useAuthStore.getState();
@@ -275,9 +380,9 @@ const deploymentSofttechRoute = createRoute({
   },
 });
 
-const deploymentInProgressSofttechRoute = createRoute({
+const deploymentInProgress = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/deployment_in_progress_softtech_ai",
+  path: "/deployment_in_progress",
   component: DeploymentInProgress,
   beforeLoad: () => {
     const { isAuthenticated } = useAuthStore.getState();
@@ -287,14 +392,31 @@ const deploymentInProgressSofttechRoute = createRoute({
   },
 });
 
-const companyDashboardRoute = createRoute({
+const upgradeRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/company_dashboard",
-  component: CompanyDashboard,
+  path: "/upgrade",
+  component: Upgrade,
   beforeLoad: () => {
-    const { isAuthenticated } = useAuthStore.getState();
+    const { isAuthenticated, user } = useAuthStore.getState();
     if (!isAuthenticated) {
       throw redirect({ to: "/login" });
+    }
+    if ((user?.onboardingStep || 1) >= 4) {
+      throw redirect({
+        href: "/company-dashboard?tab=upgrade",
+      } as any);
+    }
+  },
+});
+
+const companyDashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/company-dashboard",
+  component: CompanyDashboard,
+  beforeLoad: () => {
+    const redirectPath = getOnboardingRedirect();
+    if (redirectPath) {
+      throw redirect({ to: redirectPath });
     }
   },
 });
@@ -308,6 +430,9 @@ const apiManagementRoute = createRoute({
     if (!isAuthenticated) {
       throw redirect({ to: "/login" });
     }
+    throw redirect({
+      href: "/company-dashboard?tab=apis",
+    } as any);
   },
 });
 
@@ -320,6 +445,9 @@ const companyAnalyticsRoute = createRoute({
     if (!isAuthenticated) {
       throw redirect({ to: "/login" });
     }
+    throw redirect({
+      href: "/company-dashboard?tab=analytics",
+    } as any);
   },
 });
 
@@ -332,6 +460,9 @@ const companyProfileRoute = createRoute({
     if (!isAuthenticated) {
       throw redirect({ to: "/login" });
     }
+    throw redirect({
+      href: "/company-dashboard?tab=settings",
+    } as any);
   },
 });
 
@@ -339,6 +470,14 @@ const notFoundRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/404",
   component: NotFound,
+});
+
+import { PreviewApp } from "../../preview/PreviewApp";
+
+const widgetPreviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/preview",
+  component: PreviewApp,
 });
 
 const serviceUnavailableRoute = createRoute({
@@ -353,13 +492,6 @@ const routeTree = rootRoute.addChildren([
   adminPreviewRoute,
   authLayout.addChildren([
     loginRoute,
-    signupRoute.addChildren([
-      signupIndexRoute,
-      signupStep1Route,
-      signupStep2Route,
-      signupStep3Route,
-      signupProvisioningRoute,
-    ]),
     forgotPasswordRoute.addChildren([
       forgotPasswordIndexRoute,
       forgotPasswordStep1Route,
@@ -367,21 +499,29 @@ const routeTree = rootRoute.addChildren([
       forgotPasswordStep3Route,
     ]),
   ]),
-  processingIntegrationRoute,
+  signupRoute.addChildren([
+    signupIndexRoute,
+    signupStep1Route,
+    signupSuccessRoute,
+    signupOnboardingStep1,
+    signupOnboardingStep2,
+    SignupOnboardingSuccess,
+  ]),
   integrationSuccessRoute,
   onboardingDashboardRoute,
   mcpSimulationRoute,
-  plansSofttechRoute,
-  checkoutSofttechRoute,
+  plans,
+  checkout,
   checkoutDummy,
-  paymentResultSofttechRoute,
-  deploymentSofttechRoute,
-  deploymentInProgressSofttechRoute,
+  paymentResult,
+  deployment,
+  deploymentInProgress,
+  upgradeRoute,
   companyDashboardRoute,
   apiManagementRoute,
   companyAnalyticsRoute,
   companyProfileRoute,
-  dashboardRoute,
+  widgetPreviewRoute,
   notFoundRoute,
   serviceUnavailableRoute,
 ]);

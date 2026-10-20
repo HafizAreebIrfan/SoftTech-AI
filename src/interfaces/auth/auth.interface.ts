@@ -1,6 +1,14 @@
 import { User } from "../../domain/entities/CompanyLogin";
 
-export type ToolUiType = "auto" | "catalog" | "mapcatalog" | "table" | "dashboard" | "profile" | "hidden";
+export type ToolUiType =
+  | "auto"
+  | "custom"
+  | "catalog"
+  | "mapcatalog"
+  | "table"
+  | "dashboard"
+  | "profile"
+  | "hidden";
 
 export interface ToolUiConfig {
   uiEnabled: boolean;
@@ -47,7 +55,7 @@ export interface AuthStore {
   isAuthenticated: boolean;
   authReady: boolean;
   apisList: ApiConnection[];
-  googleMapsApiKey: string;
+  MapsApiKey: string;
   selectedLayout:
     | "dashboard"
     | "catalog"
@@ -73,6 +81,9 @@ export interface AuthStore {
   ) => void;
   updateApiUiConfig: (apiId: string, config: Partial<ToolUiConfig>) => void;
   updateApiDescription: (apiId: string, description: string) => void;
-  setGoogleMapsApiKey: (key: string) => void;
+  setMapsApiKey: (key: string) => void;
+  setSignupOnboardingDone: (done: boolean) => void;
+  setSignupOnboardingStep: (step: number) => void;
+  setOnboardingStep: (step: number) => void;
   clearAuth: () => void;
 }

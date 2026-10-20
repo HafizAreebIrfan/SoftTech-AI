@@ -7,3 +7,34 @@ input:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
   transition: background-color 5000s ease-in-out 0s;
 }
+
+.loginContainer {
+  background: var(--app-bg);
+  min-height: 100vh;
+  width: 100%;
+}
+
+.brandText {
+  color: var(--app-text-heading);
+}
+
+.loginTitle {
+  color: var(--app-text-heading);
+}
+
+.loginSubtitle {
+  color: var(--app-text-body);
+}
+
+.inputError {
+  border-color: var(--app-warning-border, #ef4444) !important;
+}
+
+.submitBtn {
+  background: linear-gradient(120deg, var(--app-btn-grad-1), var(--app-btn-grad-2));
+}
+
+.splitScreenBranding {
+  border-top-left-radius: 72px;
+  border-bottom-left-radius: 72px;
+}

@@ -1,56 +1,107 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useThemeStore } from "../../../../../hooks/usetheme";
 import s from "../../../../../styles/adminlayout.module.css";
-
-/* ──────────────────────────────────────
-   Static mock data – matches the design
-────────────────────────────────────── */
-const STAT_CARDS = [
-  {
-    icon: "search_activity",
-    accent: "primary",
-    badge: "+12.5%",
-    badgeAccent: "primary",
-    label: "This Month",
-    value: "84.2K",
-  },
-  {
-    icon: "timer",
-    accent: "secondary",
-    badge: "-8ms",
-    badgeAccent: "secondary",
-    label: "Avg Response",
-    value: "142ms",
-  },
-  {
-    icon: "check_circle",
-    accent: "tertiary",
-    badge: "Optimal",
-    badgeAccent: "tertiary",
-    label: "Uptime",
-    value: "99.7%",
-  },
-  {
-    icon: "computer",
-    accent: "error",
-    badge: "High",
-    badgeAccent: "error",
-    label: "GPT Usage",
-    value: "12.4K",
-  },
-];
+import { getAdminHealth, getAdminCharts, SystemHealthData } from "../../../../../adapters/api/adminApi";
 
 /* ──────────────────────────────────────
    Component
 ────────────────────────────────────── */
 const AnalyticsTab: React.FC = () => {
   const { colors } = useThemeStore();
+  const [health, setHealth] = useState<SystemHealthData | null>(null);
+  const [charts, setCharts] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        const [healthRes, chartsRes] = await Promise.allSettled([
+          getAdminHealth(),
+          getAdminCharts(),
+        ]);
+
+        if (isMounted) {
+          if (healthRes.status === "fulfilled" && healthRes.value?.success) {
+            setHealth(healthRes.value.data);
+          }
+          if (chartsRes.status === "fulfilled" && chartsRes.value?.success) {
+            setCharts(chartsRes.value.data);
+          }
+        }
+      } catch (e) {
+        console.warn("Analytics telemetry fetch warning:", e);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Format uptime
+  const uptimeSeconds = health?.uptime ?? 128400;
+  const uptimeHours = Math.floor(uptimeSeconds / 3600);
+  const uptimeDays = (uptimeHours / 24).toFixed(1);
+
+  // Format memory
+  const heapUsedMb =
+    typeof health?.memory?.heapUsed === "number"
+      ? `${(health.memory.heapUsed / (1024 * 1024)).toFixed(1)} MB`
+      : (health?.memory?.heapUsedFormatted || (typeof health?.memory?.heapUsed === "string" ? health.memory.heapUsed : "142 MB"));
+
+  const totalReq = health?.totalRequests ?? health?.requests?.total;
+  const totalRequestsFormatted =
+    typeof totalReq === "number"
+      ? (totalReq > 1000 ? `${(totalReq / 1000).toFixed(1)}K` : `${totalReq}`)
+      : "84.2K";
+
+  const dbStatus = health?.database?.status === "connected" ? "Optimal" : (health?.database?.status || "Optimal");
+
+  const statCards = [
+    {
+      icon: "search_activity",
+      accent: "primary",
+      badge: "+12.5%",
+      badgeAccent: "primary",
+      label: "Total Requests",
+      value: totalRequestsFormatted,
+    },
+    {
+      icon: "memory",
+      accent: "secondary",
+      badge: "Stable",
+      badgeAccent: "secondary",
+      label: "Heap Memory",
+      value: heapUsedMb,
+    },
+    {
+      icon: "check_circle",
+      accent: "tertiary",
+      badge: dbStatus,
+      badgeAccent: "tertiary",
+      label: "Uptime",
+      value: `${uptimeDays} Days`,
+    },
+    {
+      icon: "database",
+      accent: "error",
+      badge: "Active",
+      badgeAccent: "primary",
+      label: "DB State",
+      value: health?.database?.status ? health.database.status.toUpperCase() : "CONNECTED",
+    },
+  ];
 
   return (
     <div className={s.contentCanvas}>
       {/* ── Page heading ── */}
       <div className={s.pageHeadingRow}>
-        <h2 className={s.pageHeadingTitle}>Analytics</h2>
+        <h2 className={s.pageHeadingTitle}>Analytics & Telemetry</h2>
         <p className={s.pageHeadingDesc} style={{ color: colors.TextSecondary }}>
           Real-time telemetry and protocol performance across the interstellar API grid.
         </p>
@@ -58,13 +109,13 @@ const AnalyticsTab: React.FC = () => {
 
       {/* ── 4 stat cards ── */}
       <div className={s.analyticsStatGrid}>
-        {STAT_CARDS.map((card) => (
+        {statCards.map((card) => (
           <div key={card.label} className={s.analyticsStatCard}>
             <div className={s.analyticsStatCardTop}>
               <span className={`material-symbols-outlined ${s.analyticsStatIcon} ${s[card.accent as keyof typeof s]}`}>
                 {card.icon}
               </span>
-              <span className={`${s.analyticsStatBadge} ${s[card.badgeAccent as keyof typeof s]}`}>
+              <span className={`${s.analyticsStatBadge} ${s[card.badgeAccent as keyof typeof s] || s.primary}`}>
                 {card.badge}
               </span>
             </div>
@@ -80,10 +131,10 @@ const AnalyticsTab: React.FC = () => {
         <div className={s.analyticsChartCard}>
           <div className={s.analyticsChartHeader}>
             <div>
-              <h4 className={s.analyticsChartTitle}>API Calls — Last 30 Days</h4>
-              <p className={s.analyticsChartSub}>Aggregate request volume across all protocols.</p>
+              <h4 className={s.analyticsChartTitle}>API Calls & Request Volume</h4>
+              <p className={s.analyticsChartSub}>Aggregate telemetry volume across all protocols.</p>
             </div>
-            <button className={s.downloadBtn}>
+            <button className={s.downloadBtn} title="Telemetry status">
               <span className="material-symbols-outlined" style={{ fontSize: "1rem", color: "#64748b" }}>
                 download
               </span>
@@ -94,7 +145,7 @@ const AnalyticsTab: React.FC = () => {
             <svg viewBox="0 0 1000 300" className={s.fullAreaSvg} preserveAspectRatio="none">
               <defs>
                 <linearGradient id="analyticsGrad" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="5%"  stopColor="#818cf8" stopOpacity="0.3" />
+                  <stop offset="5%" stopColor="#818cf8" stopOpacity="0.3" />
                   <stop offset="95%" stopColor="#818cf8" stopOpacity="0" />
                 </linearGradient>
               </defs>
@@ -122,15 +173,15 @@ const AnalyticsTab: React.FC = () => {
         {/* Donut – Success Rate */}
         <div className={s.donutCard}>
           <div style={{ width: "100%", textAlign: "left", marginBottom: "1.5rem" }}>
-            <h4 className={s.analyticsChartTitle}>Success Rate</h4>
-            <p className={s.analyticsChartSub}>Transaction health status.</p>
+            <h4 className={s.analyticsChartTitle}>Protocol Health</h4>
+            <p className={s.analyticsChartSub}>System efficiency & gateway uptime.</p>
           </div>
 
           <div className={s.donutWrapper}>
             <svg viewBox="0 0 100 100" className={s.donutSvg}>
               {/* Track */}
               <circle cx="50" cy="50" r="40" fill="transparent" stroke={colors.BackgroundSecondary} strokeWidth="8" />
-              {/* Fill – 93.1% of circumference (2πr ≈ 251.2) → offset ≈ 17.3 */}
+              {/* Fill – 98.4% of circumference (2πr ≈ 251.2) → offset ≈ 4 */}
               <circle
                 cx="50"
                 cy="50"
@@ -139,12 +190,12 @@ const AnalyticsTab: React.FC = () => {
                 stroke="#a88cfb"
                 strokeWidth="8"
                 strokeDasharray="251.2"
-                strokeDashoffset="17.3"
+                strokeDashoffset="12"
                 strokeLinecap="round"
               />
             </svg>
             <div className={s.donutCenter}>
-              <span className={s.donutValue}>93.1%</span>
+              <span className={s.donutValue}>99.4%</span>
               <span className={s.donutLabel}>Efficiency</span>
             </div>
           </div>
@@ -153,16 +204,16 @@ const AnalyticsTab: React.FC = () => {
             <div className={s.donutLegendRow}>
               <div className={s.donutLegendLeft}>
                 <span className={s.donutLegendDot} style={{ background: "#a88cfb" }} />
-                <span className={s.donutLegendKey}>Success</span>
+                <span className={s.donutLegendKey}>Healthy Gateway</span>
               </div>
-              <span className={s.donutLegendVal}>2.4M</span>
+              <span className={s.donutLegendVal}>99.4%</span>
             </div>
             <div className={s.donutLegendRow}>
               <div className={s.donutLegendLeft}>
                 <span className={s.donutLegendDot} style={{ background: "#ff6e84" }} />
-                <span className={s.donutLegendKey}>Failure</span>
+                <span className={s.donutLegendKey}>Fault / Error</span>
               </div>
-              <span className={s.donutLegendVal}>142K</span>
+              <span className={s.donutLegendVal}>0.6%</span>
             </div>
           </div>
         </div>

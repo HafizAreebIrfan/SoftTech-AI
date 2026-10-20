@@ -17,6 +17,9 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
   audience,
 }) => {
   const pushSubView = useMcpWidgetStore((state) => state.pushSubView);
+  const updateActiveSubViewData = useMcpWidgetStore(
+    (state) => state.updateActiveSubViewData,
+  );
   const [localRecords, setLocalRecords] = useState<any[]>(records);
 
   useEffect(() => {
@@ -107,22 +110,46 @@ export const CardsBlock: React.FC<CardsBlockProps> = ({
     return null;
   }
 
-  // Card tap → single-record detail (hybrid, shared with the map view):
-  // enrich the summary record via the get-by-id detail tool when one exists
-  // (so the detail carries booking / availability / date data the list omits),
-  // then open the in-widget detail sub-view. enrichRecordViaDetailTool always
-  // resolves to a usable record — the original when there is no tool / it fails.
-  const handleSelect = async (record: Record<string, any>) => {
-    const data = await enrichRecordViaDetailTool(record, actions, collection);
+  // Card tap → single-record detail:
+  // Immediately opens the in-widget detail sub-view with the record's current data
+  // so mobile taps are instant and never result in a blank screen. If a detail tool exists,
+  // enrichRecordViaDetailTool silently updates the active sub-view data in the background.
+  const handleSelect = (record: Record<string, any>) => {
+    if (!record || typeof record !== "object") return;
+
+    const detailTitle = String(
+      record.$title ||
+        record.title ||
+        record.name ||
+        (record.make && record.model ? `${record.make} ${record.model}` : "") ||
+        collection?.entity ||
+        "Details",
+    );
+
     pushSubView({
-      title: String(record.$title || collection?.entity || "Details"),
-      data,
+      title: detailTitle,
+      data: record,
       blockType: "detail",
     });
+
+    enrichRecordViaDetailTool(record, actions, collection)
+      .then((enriched) => {
+        if (enriched && enriched !== record) {
+          updateActiveSubViewData?.(enriched);
+        }
+      })
+      .catch((err) => {
+        console.warn("[CardsBlock] Background enrichment error:", err);
+      });
   };
 
+  const isMobile =
+    (typeof document !== "undefined" &&
+      document.documentElement.dataset.previewViewport === "mobile") ||
+    (typeof window !== "undefined" && window.innerWidth <= 768);
+
   return (
-    <section className={styles.container}>
+    <section className={`${styles.container} ${isMobile ? styles.containerMobile : ""}`}>
       <div className={styles.grid}>
         {displayRecords.map((record: any, index) => (
           <CardItem

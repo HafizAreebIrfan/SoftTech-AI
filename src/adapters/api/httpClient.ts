@@ -1,4 +1,4 @@
-import { showToast } from "../../utils/toasts";
+import { showToast } from "../../utils/toast";
 import { useErrorStore } from "../../infrastructure/store/errorStore";
 
 const criticalStatuses = [503, 500, 403, 401, 404];
@@ -80,6 +80,44 @@ export const post = async (
     return res.json();
   } catch (error: any) {
     console.error("Centralized API Post Error:", error);
+    if (
+      error.message &&
+      (error.message.includes("Failed to fetch") ||
+        error.message.includes("fetch"))
+    ) {
+      showToast("Server is unreachable. Please try again later.", "error");
+    }
+    throw error;
+  }
+};
+
+export const put = async (
+  url: string,
+  payload: unknown,
+  options?: { skipRedirect?: boolean },
+) => {
+  try {
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      handleHttpError(res, url, options?.skipRedirect);
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(
+        errorData.error ||
+          errorData.message ||
+          errorData.msg ||
+          `HTTP error! status: ${res.status}`,
+      );
+    }
+
+    return res.json();
+  } catch (error: any) {
+    console.error("Centralized API Put Error:", error);
     if (
       error.message &&
       (error.message.includes("Failed to fetch") ||

@@ -43,11 +43,16 @@ export const useThemeStore = create<ThemeStore>()((set) => ({
 }));
 
 const isHex = (color?: string): color is string =>
-  typeof color === "string" && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color.trim());
+  typeof color === "string" &&
+  /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color.trim());
 
 const parseHex = (hex: string): [number, number, number] => {
   let c = hex.trim().replace("#", "");
-  if (c.length === 3) c = c.split("").map((x) => x + x).join("");
+  if (c.length === 3)
+    c = c
+      .split("")
+      .map((x) => x + x)
+      .join("");
   const num = parseInt(c, 16);
   return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
 };
@@ -77,7 +82,6 @@ export const useApplyGlobalThemeVars = (accent?: string) => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
 
-
     // Header & Navigation
     root.style.setProperty("--app-header-bg", colors.Headerbackground);
     root.style.setProperty("--app-header-box-shadow", colors.HeaderBoxShadow);
@@ -99,15 +103,40 @@ export const useApplyGlobalThemeVars = (accent?: string) => {
     // Global Backgrounds
     root.style.setProperty("--app-bg", colors.Background);
     root.style.setProperty("--app-bg-secondary", colors.BackgroundSecondary);
+    root.style.setProperty("--app-bg-elevated", colors.SurfaceElevated);
+    root.style.setProperty("--app-border-secondary", colors.BorderSecondary);
     root.style.setProperty("--app-overlay-shadow", colors.OverlayShadow);
-    root.style.setProperty("--app-box-shadow", colors.OverlayShadow); // Fallback for old codebase
+    root.style.setProperty("--app-box-shadow", colors.OverlayShadow);
+    root.style.setProperty("--app-backdrop-bg", colors.BackdropBg);
+    root.style.setProperty("--app-cardactive-bg", colors.CardActiveBg);
+    root.style.setProperty("--app-cardhover-bg", colors.CardHoverBg);
+    root.style.setProperty(
+      "--app-cardactive-heading",
+      colors.CardActiveHeading,
+    );
+    root.style.setProperty("--app-cardhover-heading", colors.CardHoverHeading);
+    root.style.setProperty("--app-cardactive-desc", colors.CardActiveDesc);
+    root.style.setProperty(
+      "--app-cardactivestepcount-bg",
+      colors.CardActiveStepCountBg,
+    );
+    root.style.setProperty(
+      "--app-cardactivestepcount-text",
+      colors.CardActiveStepCountText,
+    );
+    root.style.setProperty("--app-cardcomplete-bg", colors.CardCompleteBg);
+    root.style.setProperty("--app-cardcomplete-text", colors.CardCompleteText);
+    root.style.setProperty(
+      "--app-cardcomplete-border",
+      colors.CardCompleteBorder,
+    );
     root.style.setProperty(
       "--app-ui-selection-card-background",
       colors.UISelectionCardBackground,
     );
 
     // Cards
-    root.style.setProperty("--app-surface", colors.Card); // Fallback for old codebase
+    root.style.setProperty("--app-surface", colors.Card);
     root.style.setProperty("--app-card", colors.Card);
     root.style.setProperty("--app-card-secondary", colors.CardSecondary);
     root.style.setProperty("--app-card-border", colors.CardBorder);
@@ -116,6 +145,14 @@ export const useApplyGlobalThemeVars = (accent?: string) => {
       colors.CardBorderSecondary,
     );
     root.style.setProperty("--app-card-active-border", colors.CardActiveBorder);
+    root.style.setProperty(
+      "--app-success-screen-icon-bg",
+      colors.SuccessScreenIconBg,
+    );
+    root.style.setProperty(
+      "--app-success-screen-icon-color",
+      colors.SuccessScreenIconColor,
+    );
 
     // Typography
     root.style.setProperty("--app-text-primary", colors.TextPrimary);
@@ -141,15 +178,32 @@ export const useApplyGlobalThemeVars = (accent?: string) => {
     // 3-Tier Buttons
     root.style.setProperty("--app-btn-primary-bg", colors.ButtonPrimaryBg);
     root.style.setProperty("--app-btn-primary-text", colors.ButtonPrimaryText);
-    root.style.setProperty("--app-btn-primary-hover", colors.ButtonPrimaryHover);
+    root.style.setProperty(
+      "--app-btn-primary-hover",
+      colors.ButtonPrimaryHover,
+    );
     root.style.setProperty("--app-btn-secondary-bg", colors.ButtonSecondaryBg);
-    root.style.setProperty("--app-btn-secondary-text", colors.ButtonSecondaryText);
-    root.style.setProperty("--app-btn-secondary-border", colors.ButtonSecondaryBorder);
-    root.style.setProperty("--app-btn-secondary-hover", colors.ButtonSecondaryHover);
+    root.style.setProperty(
+      "--app-btn-secondary-text",
+      colors.ButtonSecondaryText,
+    );
+    root.style.setProperty(
+      "--app-btn-secondary-border",
+      colors.ButtonSecondaryBorder,
+    );
+    root.style.setProperty(
+      "--app-btn-secondary-hover",
+      colors.ButtonSecondaryHover,
+    );
     root.style.setProperty("--app-btn-tertiary-bg", colors.ButtonTertiaryBg);
-    root.style.setProperty("--app-btn-tertiary-text", colors.ButtonTertiaryText);
-    root.style.setProperty("--app-btn-tertiary-hover", colors.ButtonTertiaryHover);
-    root.style.setProperty("--app-surface-elevated", colors.SurfaceElevated);
+    root.style.setProperty(
+      "--app-btn-tertiary-text",
+      colors.ButtonTertiaryText,
+    );
+    root.style.setProperty(
+      "--app-btn-tertiary-hover",
+      colors.ButtonTertiaryHover,
+    );
     root.style.setProperty("--app-button-secondary", colors.ButtonSecondary); // Fallback
     root.style.setProperty(
       "--app-delete-api-button-bg",
@@ -203,6 +257,10 @@ export const useApplyGlobalThemeVars = (accent?: string) => {
       "--app-toggle-table-view-border",
       colors.ToggleTableTextViewBorder,
     );
+    root.style.setProperty("--app-errorbtn-bg", colors.ErrorButtonBg);
+    root.style.setProperty("--app-errorbtn-text", colors.ErrorButtonText);
+    root.style.setProperty("--app-errorbtn-border", colors.ErrorButtonBorder);
+    root.style.setProperty("--app-errorbtn-hover", colors.ErrorButtonHover);
 
     // Header specific Buttons
     root.style.setProperty(
@@ -386,4 +444,3 @@ export const useApplyGlobalThemeVars = (accent?: string) => {
     root.setAttribute("data-theme", isDark ? "dark" : "light");
   }, [colors, isDark, accent]);
 };
-

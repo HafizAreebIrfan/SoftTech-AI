@@ -27,9 +27,24 @@ const navItems: Array<{
   to: string;
   icon: FC<{ size: number; color: string }>;
 }> = [
-  { id: "dashboard", label: "Dashboard", to: "/company_dashboard", icon: LayoutGridIcon },
-  { id: "api", label: "API Management", to: "/api_management", icon: DatabaseIcon },
-  { id: "analytics", label: "Analytics", to: "/company_analytics", icon: SlidersIcon },
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    to: "/company-dashboard",
+    icon: LayoutGridIcon,
+  },
+  {
+    id: "api",
+    label: "API Management",
+    to: "/api_management",
+    icon: DatabaseIcon,
+  },
+  {
+    id: "analytics",
+    label: "Analytics",
+    to: "/company_analytics",
+    icon: SlidersIcon,
+  },
   { id: "profile", label: "Profile", to: "/company_profile", icon: UserIcon },
 ];
 
@@ -76,7 +91,10 @@ const CompanyShell: FC<CompanyShellProps> = ({ active, children }) => {
                   title={isSidebarCollapsed ? item.label : undefined}
                   type="button"
                 >
-                  <Icon size={20} color={isActive ? colors.TextGradientOne : colors.TextBody} />
+                  <Icon
+                    size={20}
+                    color={isActive ? colors.TextGradientOne : colors.TextBody}
+                  />
                   {!isSidebarCollapsed && <span>{item.label}</span>}
                 </button>
               );
@@ -111,7 +129,11 @@ const CompanyShell: FC<CompanyShellProps> = ({ active, children }) => {
               <MenuIcon size={20} color={colors.TextBody} />
             </button>
             <div className={styles.topRight}>
-              <button className={styles.topbarButton} title="Help" type="button">
+              <button
+                className={styles.topbarButton}
+                title="Help"
+                type="button"
+              >
                 <HelpIcon size={20} color={colors.TextBody} />
               </button>
               <button
@@ -127,7 +149,13 @@ const CompanyShell: FC<CompanyShellProps> = ({ active, children }) => {
                 )}
               </button>
               <div className={styles.topbarDivider} />
-              <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.14em" }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: "0.14em",
+                }}
+              >
                 PRO PLAN
               </span>
               <div className={styles.avatar}>AC</div>

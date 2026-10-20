@@ -1,108 +1,148 @@
 .dashboardWrapper {
   min-height: 100vh;
   display: flex;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: var(--app-bg);
+  color: var(--app-text-body);
   font-family: "Outfit", sans-serif;
   overflow: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* ==========================================================================
+   Sidebar Navigation
+   ========================================================================== */
 .sidebar {
-  width: 280px;
+  width: 270px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 2rem 1.5rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 1.75rem 1.25rem;
+  border-right: 1px solid var(--app-border);
+  background-color: var(--app-bg-secondary);
   height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
   z-index: 50;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .mainContent {
   flex-grow: 1;
-  margin-left: 280px;
+  margin-left: 270px;
   height: 100vh;
   overflow-y: auto;
-  padding: 2.5rem;
+  padding: 2.25rem 2.5rem 4rem;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
-  transition: all 0.3s ease;
+  gap: 2rem;
+  background-color: var(--app-bg);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .logoArea {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 2.5rem;
+  margin-bottom: 2rem;
+  padding: 0 0.5rem;
 }
 
 .logoText {
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--app-text-grad-1), var(--app-text-grad-2), var(--app-text-grad-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .navLinks {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .navLink {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--app-text-secondary);
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
-}
-
-.navLinkActive {
-  color: #ffffff;
-  background: rgba(99, 102, 241, 0.1);
-  box-shadow: inset 0 0 12px rgba(99, 102, 241, 0.1);
+  width: 100%;
 }
 
 .navLink:hover:not(.navLinkActive) {
-  color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--app-text-heading);
+  background-color: var(--app-btn-tertiary-hover);
+}
+
+.navLinkActive {
+  color: var(--app-text-heading);
+  background-color: var(--app-ui-selection-card-background);
+  border-color: var(--app-card-active-border);
+  box-shadow: inset 0 0 12px rgba(99, 102, 241, 0.08);
 }
 
 .sidebarBottom {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--app-border);
+}
+
+.userCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+}
+
+.userAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--app-ui-selection-card-background);
+  color: var(--app-text-highlighted-heading);
+  flex-shrink: 0;
 }
 
 .userInfo {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
 .companyName {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
+  color: var(--app-text-heading);
   letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .userEmail {
-  font-size: 0.75rem;
-  color: #64748b;
-  word-break: break-all;
+  font-size: 0.72rem;
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .logoutBtn {
@@ -110,15 +150,16 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
+  padding: 0.65rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid var(--app-border-error);
   background: var(--app-logout-button-background);
   color: var(--app-border-error);
+  width: 100%;
 }
 
 .logoutBtn:hover {
@@ -126,53 +167,105 @@
   color: var(--app-text-overlay);
 }
 
+/* ==========================================================================
+   Header & Action Bar
+   ========================================================================== */
 .dashboardHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--app-border);
   padding-bottom: 1.5rem;
+  gap: 1.5rem;
 }
 
 .welcomeTitle {
-  font-size: 2rem;
+  font-size: 1.85rem;
   font-weight: 800;
   letter-spacing: -0.03em;
+  color: var(--app-text-heading);
   margin-bottom: 0.25rem;
 }
 
 .subtitle {
-  font-size: 0.95rem;
-  color: #64748b;
+  font-size: 0.88rem;
+  color: var(--app-text-secondary);
+  line-height: 1.4;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.saveBtn {
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.6rem 1.15rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--app-btn-primary-bg);
+  color: var(--app-btn-primary-text);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+  transition: all 0.2s ease;
+}
+
+.saveBtn:hover:not(:disabled) {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.themeBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--app-border);
+  background: var(--app-bg-secondary);
+  color: var(--app-text-heading);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.themeBtn:hover {
+  background: var(--app-btn-tertiary-hover);
+}
+
+/* ==========================================================================
+   Executive Stats Grid
+   ========================================================================== */
 .statsGrid {
   display: grid;
-  grid-cols-1: 1fr;
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .statsGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
 }
 
 .statCard {
-  padding: 1.5rem;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 1.25rem 1.4rem;
+  border-radius: 16px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg-secondary);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
+  gap: 0.65rem;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .statCard:hover {
   transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.2);
+  border-color: var(--app-card-active-border);
 }
 
 .statHeader {
@@ -182,199 +275,1162 @@
 }
 
 .statTitle {
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #64748b;
+  letter-spacing: 0.08em;
+  color: var(--app-text-secondary);
 }
 
-.statValue {
-  font-size: 1.8rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.layoutToggle {
-  display: flex;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 0.25rem;
+.statIcon {
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
-  gap: 0.25rem;
-  width: fit-content;
-}
-
-.layoutToggleBtn {
-  padding: 0.35rem 0.75rem;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  background: transparent;
-  color: #64748b;
-}
-
-.layoutToggleBtnActive {
-  background: rgba(99, 102, 241, 0.2);
-  color: #818cf8;
-}
-
-.workspaceCard {
-  padding: 2rem;
-  border-radius: 24px;
-  display: flex;
-  flex-direction: column;
-  width: 700px;
-  gap: 1.5rem;
-}
-
-.workspaceHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.workspaceTitle {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.bentoGrid {
-  display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .bentoGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.bentoItem {
-  padding: 1.5rem;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 160px;
-}
-
-.bentoItemLarge {
-  composes: bentoItem;
-}
-
-@media (min-width: 768px) {
-  .bentoItemLarge {
-    grid-column: span 2;
-  }
-}
-
-.listLayout {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.listItem {
-  padding: 1.25rem 1.5rem;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all 0.2s ease;
-}
-
-.listItem:hover {
-  transform: translateX(4px);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.cardsLayout {
-  display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 1.5rem;
-}
-
-@media (min-width: 768px) {
-  .cardsLayout {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-.cardItem {
-  padding: 1.5rem;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.tableLayout {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-}
-
-.tableTh {
-  padding: 1rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #64748b;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.tableTd {
-  padding: 1rem;
-  font-size: 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.methodBadge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.65rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-}
-
-.methodGet {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-}
-
-.methodPost {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-}
-
-.methodPut {
-  background: rgba(234, 179, 8, 0.1);
-  color: #eab308;
-}
-
-.themeBtn {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(255, 255, 255, 0.02);
+  background-color: var(--app-ui-selection-card-background);
+  color: var(--app-text-highlighted-heading);
+}
+
+.statValue {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--app-text-heading);
+}
+
+.statSubtext {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--app-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.statSubtextActive {
+  composes: statSubtext;
+  color: var(--app-method-get-text);
+}
+
+.pulseDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--app-method-get-text);
+  animation: pulseDotAnim 2s infinite;
+}
+
+@keyframes pulseDotAnim {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.7; }
+}
+
+/* ==========================================================================
+   Protocol Gateway Integration Card
+   ========================================================================== */
+.gatewayCard {
+  padding: 1.5rem 1.75rem;
+  border-radius: 18px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.gatewayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.gatewayTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gatewayDesc {
+  font-size: 0.78rem;
+  color: var(--app-text-secondary);
+  margin-top: 0.2rem;
+}
+
+.simulateBtn {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.55rem 1rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--app-btn-primary-bg);
+  color: var(--app-btn-primary-text);
+  transition: all 0.2s ease;
+}
+
+.simulateBtn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.gatewayGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.gatewayBox {
+  padding: 1.15rem;
+  border-radius: 14px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.gatewayBoxHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gatewayBoxTitle {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+}
+
+.copyBtn {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  color: var(--app-text-highlighted-heading);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: background 0.2s ease;
+}
+
+.copyBtn:hover {
+  background-color: var(--app-btn-tertiary-hover);
+}
+
+.codeBox {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--app-text-secondary);
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border-secondary);
+  word-break: break-all;
+}
+
+/* ==========================================================================
+   Tools & Actions Summary Table
+   ========================================================================== */
+.tableCard {
+  padding: 1.5rem 1.75rem;
+  border-radius: 18px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tableCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tableCardTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+}
+
+.tableLink {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--app-text-highlighted-heading);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.tableLink:hover {
+  opacity: 0.8;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
+.summaryTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+.summaryTh {
+  padding: 0.75rem 1rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--app-text-secondary);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.summaryTr {
+  border-bottom: 1px solid var(--app-border);
+  transition: background-color 0.15s ease;
+}
+
+.summaryTr:hover {
+  background-color: var(--app-btn-tertiary-hover);
+}
+
+.summaryTd {
+  padding: 0.9rem 1rem;
+  color: var(--app-text-body);
+}
+
+.toolNameCol {
+  font-weight: 700;
+  color: var(--app-text-heading);
+}
+
+.toolMcpCol {
+  font-family: monospace;
+  color: var(--app-text-highlighted-heading);
+}
+
+.endpointCol {
+  font-family: monospace;
+  color: var(--app-text-secondary);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   HTTP Method Badges & Status Pills
+   ========================================================================== */
+.methodBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.methodGet {
+  background-color: var(--app-method-get-bg);
+  color: var(--app-method-get-text);
+  border: 1px solid var(--app-method-get-border);
+}
+
+.methodPost {
+  background-color: var(--app-method-post-bg);
+  color: var(--app-method-post-text);
+  border: 1px solid var(--app-method-post-border);
+}
+
+.methodPut {
+  background-color: var(--app-method-put-bg);
+  color: var(--app-method-put-text);
+  border: 1px solid var(--app-method-put-border);
+}
+
+.methodPatch {
+  background-color: var(--app-method-patch-bg);
+  color: var(--app-method-patch-text);
+  border: 1px solid var(--app-method-patch-border);
+}
+
+.methodDelete {
+  background-color: var(--app-method-delete-bg);
+  color: var(--app-method-delete-text);
+  border: 1px solid var(--app-method-delete-border);
+}
+
+.widgetPillOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background-color: var(--app-success-badge-bg);
+  color: var(--app-success-badge-text);
+  border: 1px solid var(--app-success-badge-border);
+}
+
+.widgetPillOff {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background-color: var(--app-btn-tertiary-hover);
+  color: var(--app-text-secondary);
+  border: 1px solid var(--app-border);
+}
+
+.simulateSmallBtn {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-card-active-border);
+  background: var(--app-ui-selection-card-background);
+  color: var(--app-text-highlighted-heading);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.themeBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
+.simulateSmallBtn:hover {
+  background: var(--app-card-active-border);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   API Management Screen Classes
+   ========================================================================== */
+.apiSummaryBar {
+  padding: 1.15rem 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.apiSummaryTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+}
+
+.apiSummarySubtitle {
+  font-size: 0.75rem;
+  color: var(--app-text-secondary);
+  margin-top: 0.15rem;
+}
+
+.apiSummaryActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ghostBtn {
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-border);
+  background: var(--app-bg);
+  color: var(--app-text-body);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ghostBtn:hover {
+  background: var(--app-btn-tertiary-hover);
+  color: var(--app-text-heading);
+}
+
+.apiCardsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.apiCard {
+  border-radius: 16px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg-secondary);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.apiCardExpanded {
+  border-color: var(--app-card-active-border);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+}
+
+.apiCardHeaderBtn {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.apiInfoCol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.apiTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.apiNameTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.apiEndpointText {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevronIcon {
+  color: var(--app-text-secondary);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.chevronExpanded {
+  transform: rotate(180deg);
+}
+
+.apiExpandedBody {
+  padding: 0.75rem 1.25rem 1.25rem;
+  border-top: 1px solid var(--app-border);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.apiMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  font-size: 0.74rem;
+  color: var(--app-text-secondary);
+}
+
+.apiMetaVal {
+  color: var(--app-text-heading);
+  font-weight: 600;
+}
+
+.apiControlsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background-color: var(--app-bg);
+  border: 1px solid var(--app-border);
+}
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--app-text-heading);
+  cursor: pointer;
+  user-select: none;
+}
+
+.switchTrack {
+  position: relative;
+  display: inline-flex;
+  height: 22px;
+  width: 40px;
+  border-radius: 999px;
+  background-color: var(--app-border);
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.switchTrackActive {
+  background-color: var(--app-text-highlighted-heading);
+}
+
+.switchThumb {
+  display: inline-block;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  transform: translateX(3px);
+  transition: transform 0.2s ease;
+  margin-top: 3px;
+}
+
+.switchThumbActive {
+  transform: translateX(21px);
+}
+
+.layoutSelectorWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--app-text-secondary);
+}
+
+.selectLayout {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg);
+  color: var(--app-text-heading);
+  outline: none;
+  cursor: pointer;
+}
+
+.directiveCard {
+  padding: 1.15rem;
+  border-radius: 14px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.directiveHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.directiveTitle {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.directiveSubtitle {
+  font-size: 0.7rem;
+  color: var(--app-text-secondary);
+  display: block;
+}
+
+.directiveActions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.directiveActionBtn {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+  border-radius: 7px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.2s ease;
+}
+
+.synthesizeBtn {
+  composes: directiveActionBtn;
+  border: none;
+  background: var(--app-btn-primary-bg);
+  color: var(--app-btn-primary-text);
+}
+
+.synthesizeBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.polishBtn {
+  composes: directiveActionBtn;
+  border: 1px solid var(--app-border);
+  background: transparent;
+  color: var(--app-text-secondary);
+}
+
+.polishBtn:hover {
+  background: var(--app-btn-tertiary-hover);
+  color: var(--app-text-heading);
+}
+
+.schemaUploadBtn {
+  composes: directiveActionBtn;
+  border: 1px solid var(--app-warning-border);
+  background: var(--app-warning-background);
+  color: var(--app-warning-text);
+}
+
+.schemaReuploadBtn {
+  composes: directiveActionBtn;
+  border: 1px solid var(--app-border);
+  background: var(--app-bg-secondary);
+  color: var(--app-text-highlighted-heading);
+}
+
+.schemaReuploadBtn:hover:not(:disabled) {
+  background: var(--app-btn-tertiary-hover);
+  border-color: var(--app-card-active-border);
+}
+
+.schemaVerifiedBtn {
+  composes: directiveActionBtn;
+  border: 1px solid var(--app-success-badge-border);
+  background: var(--app-success-badge-bg);
+  color: var(--app-success-badge-text);
+  cursor: pointer;
+}
+
+.saveApiBtn {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+  border: 1px solid var(--app-border);
+  background: var(--app-bg-secondary);
+  color: var(--app-text-heading);
+}
+
+.saveApiBtn:hover:not(:disabled) {
+  background: var(--app-btn-tertiary-hover);
+  border-color: var(--app-card-active-border);
+  color: var(--app-text-highlighted-heading);
+}
+
+.saveApiBtnUnsaved {
+  border-color: var(--app-card-active-border);
+  background: var(--app-btn-primary-bg);
+  color: var(--app-btn-primary-text);
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25);
+}
+
+.saveApiBtnUnsaved:hover:not(:disabled) {
+  opacity: 0.92;
+  color: var(--app-btn-primary-text);
+}
+
+.unsavedBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.unsavedBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #f59e0b;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.directiveTextarea {
+  width: 100%;
+  font-size: 0.78rem;
+  font-family: inherit;
+  line-height: 1.5;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg-secondary);
+  color: var(--app-text-heading);
+  resize: vertical;
+  min-height: 70px;
+  outline: none;
+}
+
+.directiveTextarea:focus {
+  border-color: var(--app-card-active-border);
+}
+
+.directiveFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.7rem;
+}
+
+.charCount {
+  font-family: monospace;
+  color: var(--app-text-secondary);
+}
+
+.complianceTag {
+  color: var(--app-method-get-text);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Settings & Profile Screen Classes
+   ========================================================================== */
+.curatorCard {
+  padding: 1.75rem;
+  border-radius: 18px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.curatorGrid {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .curatorGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.curatorLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.curatorSectionLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+  margin-bottom: 0.6rem;
+  display: block;
+}
+
+.swatchesGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.65rem;
+}
+
+.swatchBtn {
+  height: 42px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.swatchBtn:hover {
+  transform: scale(1.05);
+}
+
+.swatchBtnSelected {
+  box-shadow: 0 0 0 2px var(--app-bg-secondary), 0 0 0 4px var(--app-card-active-border);
+  transform: scale(1.06);
+}
+
+.customHexRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.colorPickerInput {
+  width: 44px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--app-border);
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.hexTextInput {
+  flex: 1;
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg);
+  color: var(--app-text-heading);
+  outline: none;
+}
+
+.audienceToggleGroup {
+  display: flex;
+  border-radius: 10px;
+  padding: 4px;
+  background-color: var(--app-bg);
+  border: 1px solid var(--app-border);
+  gap: 4px;
+}
+
+.audienceBtn {
+  flex: 1;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: var(--app-text-secondary);
+  transition: all 0.2s ease;
+}
+
+.audienceBtnActive {
+  background: var(--app-btn-primary-bg);
+  color: var(--app-btn-primary-text);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+
+.previewCardBox {
+  border-radius: 16px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg);
+  padding: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.profileHeroCard {
+  padding: 1.5rem;
+  border-radius: 16px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg);
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.avatarBox {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: var(--app-btn-primary-bg);
+  color: var(--app-btn-primary-text);
+  font-size: 1.35rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.detailsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.detailItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--app-border);
+  font-size: 0.8rem;
+}
+
+.detailItemLabel {
+  color: var(--app-text-secondary);
+  font-weight: 600;
+}
+
+.detailItemVal {
+  color: var(--app-text-heading);
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   Analytics Screen Classes
+   ========================================================================== */
+.analyticsGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 960px) {
+  .analyticsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chartCard {
+  padding: 1.5rem 1.75rem;
+  border-radius: 18px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.chartSvgWrap {
+  height: 240px;
+  width: 100%;
+}
+
+.donutCenterWrap {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 1rem auto;
+}
+
+.donutCenterText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.methodDistributionGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.methodBarRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.methodBarHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.methodBarTrack {
+  height: 8px;
+  border-radius: 999px;
+  background-color: var(--app-surface);
+  overflow: hidden;
+}
+
+.methodBarFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* ==========================================================================
+   Sample JSON & AI Schema Analysis Modal
+   ========================================================================== */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--app-backdrop-bg);
+  backdrop-filter: blur(6px);
+}
+
+.modalDialog {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 20px;
+  padding: 1.75rem;
+  border: 1px solid var(--app-card-border);
+  background-color: var(--app-header-bg);
+  box-shadow: 0 20px 40px var(--app-overlay-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  border-bottom: 1px solid var(--app-border);
+  padding-bottom: 1rem;
+}
+
+.modalTitle {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--app-text-heading);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modalDesc {
+  font-size: 0.78rem;
+  color: var(--app-text-secondary);
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+
+.modalCloseBtn {
+  background: transparent;
+  border: none;
+  color: var(--app-text-secondary);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.modalCloseBtn:hover {
+  color: var(--app-text-heading);
+}
+
+.modalTextarea {
+  width: 100%;
+  font-family: monospace;
+  font-size: 0.76rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--app-border);
+  background-color: var(--app-bg);
+  color: var(--app-method-get-text);
+  outline: none;
+  resize: vertical;
+  min-height: 220px;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid var(--app-border);
+  padding-top: 1rem;
+}
+
+.modalCancelBtn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-border);
+  background: transparent;
+  color: var(--app-text-body);
+  cursor: pointer;
+}
+
+.modalCancelBtn:hover {
+  background: var(--app-btn-tertiary-hover);
+}
+
+.modalSubmitBtn {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.55rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--app-btn-primary-bg);
+  color: var(--app-btn-primary-text);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.modalSubmitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Responsive Adaptations
+   ========================================================================== */
+@media (max-width: 860px) {
+  .sidebar {
+    display: none;
+  }
+  .mainContent {
+    margin-left: 0;
+    padding: 1.5rem 1rem 3rem;
+  }
 }

@@ -4,8 +4,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { useThemeStore, useForgotPasswordStore } from "../../../../hooks";
 import { requestPasswordResetOtp } from "../../../../adapters/api/authApi";
 import { LeftArrowIcon, LockIcon } from "../../../../assets/icons";
-import { showToast } from "../../../../utils/toasts";
+import { showToast } from "../../../../utils/toast";
 import { emailSchema } from "../../../../infrastructure/validation/forgotPasswordSchemas";
+import styles from "../../../../styles/forgotpassword.module.css";
 
 const ForgotPasswordStep1: FC = () => {
   const navigate = useNavigate();
@@ -109,15 +110,10 @@ const ForgotPasswordStep1: FC = () => {
         <button
           type="submit"
           disabled={isPending}
-          style={{
-            background: isDark
-              ? `linear-gradient(120deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`
-              : `linear-gradient(240deg, ${colors.ButtonGradientOne}, ${colors.ButtonGradientTwo})`,
-          }}
-          className={`cursor-pointer w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-base font-semibold text-white transition-all duration-200 shadow-sm ${
+          className={`cursor-pointer w-full flex justify-center items-center py-3.5 px-4 rounded-xl text-base font-semibold text-white transition-all duration-200 shadow-sm ${styles.primaryActionBtn} ${
             isPending
-              ? "opacity-70 cursor-not-allowed bg-blue-500"
-              : "bg-blue-600 hover:bg-blue-700 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              ? "opacity-70 cursor-not-allowed"
+              : "hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           }`}
         >
           {isPending ? "Sending..." : "Reset password"}
