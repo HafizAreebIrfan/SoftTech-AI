@@ -146,9 +146,9 @@ const Login: FC = () => {
       className={`min-h-screen w-full flex overflow-hidden font-sans transition-colors duration-300 ${styles.loginContainer}`}
     >
       {/* LEFT COLUMN: FORM */}
-      <div className="w-full lg:w-1/2 flex flex-col justify-between min-h-screen lg:h-screen overflow-y-auto relative z-10 p-6 sm:p-12 lg:px-24 xl:px-32">
+      <div className="w-full lg:w-3/4 flex flex-col justify-between min-h-screen lg:h-screen overflow-y-auto relative z-10 p-6 sm:p-12 lg:px-24 xl:px-32">
         {/* Header / Logo */}
-        <header className="flex justify-between items-center w-full mb-8 lg:mb-0">
+        <header className="flex w-full max-w-md mx-auto flex flex-row justify-between item-center">
           <div
             className="flex items-center gap-2 cursor-pointer group"
             onClick={() => navigate({ to: "/" })}
@@ -387,120 +387,131 @@ const Login: FC = () => {
 
         {/* Footer */}
         <div
-          className={`text-xs text-center lg:text-left mt-8 ${isDark ? "text-slate-600" : "text-slate-400"}`}
+          className={`text-xs flex justify-center text-center lg:text-left mt-8 ${isDark ? "text-slate-600" : "text-slate-400"}`}
         >
           &copy; {new Date().getFullYear()} SoftTech AI. All rights reserved.
         </div>
       </div>
 
       {/* RIGHT COLUMN: BRANDING / GRAPHIC (Split Screen) */}
-      {}
-      <div
-        className={`hidden lg:flex w-3/4 relative flex-col items-center justify-center p-12 overflow-hidden ${styles.splitScreenBranding}
-          ${isDark ? "bg-gradient-to-br from-indigo-900 to-[#0f1115]" : "bg-[#0F5FE9]"}`}
-      >
-        {/* Decorative background elements */}
-        <div className="absolute inset-0 z-0 opacity-20">
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-white blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-300 blur-[100px]"></div>
-
-          {/* Subtle pattern or grid */}
-          <GridPatternIcon />
-        </div>
-
-        {/* Central Graphic / Mockup inspired by first image */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-          className="relative z-10 w-full max-w-lg"
+      <aside className="hidden lg:flex w-[440px] xl:w-[500px] 2xl:w-[540px] shrink-0 h-screen p-4 xl:p-6 flex-col items-center justify-center sticky top-0 right-0">
+        <div
+          className={`w-full h-full rounded-[2.5rem] flex flex-col justify-between p-7 xl:p-10 text-white relative overflow-hidden shadow-2xl shadow-black-600/30 select-none
+          ${isDark ? "bg-gradient-to-br from-indigo-900 to-[#0f1115]" : "bg-[#0f1115]"}`}
         >
-          {/* Abstract graphic representing connectivity/dashboard */}
-          <div className="relative aspect-square flex items-center justify-center">
-            {/* Large circle behind */}
-            <div className="absolute w-[80%] h-[80%] rounded-full bg-blue-500/30 border border-blue-400/20 shadow-2xl backdrop-blur-sm"></div>
-            <div className="absolute w-[60%] h-[60%] rounded-full bg-blue-400/30 border border-blue-300/20 backdrop-blur-md"></div>
+          <div
+            className={`absolute -top-24 -right-24 w-96 h-96 rounded-full ${isDark ? "bg-purple-400/25" : "bg-purple-400/15"} blur-3xl pointer-events-none`}
+          />
+          <div
+            className={`absolute -bottom-24 -left-24 w-96 h-96 rounded-full ${isDark ? "bg-purple-400/25" : "bg-purple-400/15"} blur-3xl pointer-events-none`}
+          />
+          {/* Decorative background elements */}
+          <div className="absolute inset-0 z-0 opacity-20">
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-white blur-[120px]"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-300 blur-[100px]"></div>
 
-            {/* Dashboard Mockup Panel */}
-            <div className="relative z-20 w-[60%] h-[70%] bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden ml-auto transform translate-x-12 flex flex-col">
-              {/* Fake Browser/Window Header */}
-              <div className="h-8 bg-white/10 border-b border-white/10 flex items-center px-4 gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
-              </div>
-              {/* Fake Content */}
-              <div className="flex-1 p-4 space-y-4">
-                <div className="w-full h-8 bg-white/10 rounded-lg animate-pulse"></div>
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex-shrink-0"></div>
-                  <div className="flex-1 space-y-2 py-1">
-                    <div className="w-3/4 h-3 bg-white/20 rounded"></div>
-                    <div className="w-1/2 h-3 bg-white/10 rounded"></div>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-white/20 flex-shrink-0"></div>
-                  <div className="flex-1 space-y-2 py-1">
-                    <div className="w-2/3 h-3 bg-white/20 rounded"></div>
-                    <div className="w-1/3 h-3 bg-white/10 rounded"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Floating Nodes (simulating connections) */}
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="absolute left-[10%] top-[25%] w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-xl z-30"
-            >
-              <SearchIcon size={24} color={colors.IconColor} />
-            </motion.div>
-
-            <motion.div
-              animate={{ y: [0, 15, 0] }}
-              transition={{
-                repeat: Infinity,
-                duration: 5,
-                ease: "easeInOut",
-                delay: 1,
-              }}
-              className="absolute left-[5%] top-[50%] w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-xl z-30"
-            >
-              <PhoneIcon size={20} color={colors.IconColor} />
-            </motion.div>
-
-            <motion.div
-              animate={{ y: [0, -12, 0] }}
-              transition={{
-                repeat: Infinity,
-                duration: 4.5,
-                ease: "easeInOut",
-                delay: 0.5,
-              }}
-              className="absolute left-[20%] bottom-[20%] w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-xl z-30"
-            >
-              <EmailIcon size={28} color={colors.IconColor} />
-            </motion.div>
+            {/* Subtle pattern or grid */}
+            <GridPatternIcon />
           </div>
-        </motion.div>
 
-        {/* Text Content below graphic */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="relative z-10 text-center text-white mt-12 max-w-md mx-auto space-y-4"
-        >
-          <h2 className="text-3xl font-bold tracking-tight">
-            Connect with every application.
-          </h2>
-          <p className="text-blue-100 text-lg">
-            Everything you need in an easily customizable dashboard.
-          </p>
-        </motion.div>
-      </div>
+          {/* Central Graphic / Mockup inspired by first image */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            className="relative z-10 w-full max-w-lg"
+          >
+            {/* Abstract graphic representing connectivity/dashboard */}
+            <div className="relative aspect-square flex items-center justify-center">
+              {/* Large circle behind */}
+              <div className="absolute w-[80%] h-[80%] rounded-full bg-blue-500/30 border border-blue-400/20 shadow-2xl backdrop-blur-sm"></div>
+              <div className="absolute w-[60%] h-[60%] rounded-full bg-blue-400/30 border border-blue-300/20 backdrop-blur-md"></div>
+
+              {/* Dashboard Mockup Panel */}
+              <div className="relative z-20 w-[60%] h-[70%] bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden ml-auto transform translate-x-12 flex flex-col">
+                {/* Fake Browser/Window Header */}
+                <div className="h-8 bg-white/10 border-b border-white/10 flex items-center px-4 gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                </div>
+                {/* Fake Content */}
+                <div className="flex-1 p-4 space-y-4">
+                  <div className="w-full h-8 bg-white/10 rounded-lg animate-pulse"></div>
+                  <div className="flex gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex-shrink-0"></div>
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="w-3/4 h-3 bg-white/20 rounded"></div>
+                      <div className="w-1/2 h-3 bg-white/10 rounded"></div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white/20 flex-shrink-0"></div>
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="w-2/3 h-3 bg-white/20 rounded"></div>
+                      <div className="w-1/3 h-3 bg-white/10 rounded"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating Nodes (simulating connections) */}
+              <motion.div
+                animate={{ y: [0, -10, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 4,
+                  ease: "easeInOut",
+                }}
+                className="absolute left-[10%] top-[25%] w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-xl z-30"
+              >
+                <SearchIcon size={24} color={colors.IconColor} />
+              </motion.div>
+
+              <motion.div
+                animate={{ y: [0, 15, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 5,
+                  ease: "easeInOut",
+                  delay: 1,
+                }}
+                className="absolute left-[5%] top-[50%] w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-xl z-30"
+              >
+                <PhoneIcon size={20} color={colors.IconColor} />
+              </motion.div>
+
+              <motion.div
+                animate={{ y: [0, -12, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 4.5,
+                  ease: "easeInOut",
+                  delay: 0.5,
+                }}
+                className="absolute left-[20%] bottom-[20%] w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-xl z-30"
+              >
+                <EmailIcon size={28} color={colors.IconColor} />
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Text Content below graphic */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="relative z-10 text-center text-white mt-12 max-w-md mx-auto space-y-4"
+          >
+            <h2 className="text-3xl font-bold tracking-tight">
+              Connect with every application.
+            </h2>
+            <p className="text-blue-100 text-lg">
+              Everything you need in an easily customizable dashboard.
+            </p>
+          </motion.div>
+        </div>
+      </aside>
     </div>
   );
 };

@@ -77,7 +77,7 @@ const Navbar: React.FC = () => {
             </Link>
 
             {/* Dev-only: standalone widget preview harness (never ships). */}
-            {import.meta.env.DEV && (
+            {env.isDev && (
               <>
                 <Link to="/checkoutdummy" className={styles.primaryBtn}>
                   Preview
@@ -177,36 +177,37 @@ const Navbar: React.FC = () => {
               Start Building
             </Link>
           </div>
-          <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
-            <Link
-              to="/checkoutdummy"
-              className={styles.mobilePrimaryBtn}
-              style={{ flex: 1, textAlign: "center" }}
-              onClick={closeMobileMenu}
-            >
-              Preview
-            </Link>
-            <Link
-              to="/admin-dashboard"
-              className={styles.mobilePrimaryBtn}
-              style={{ flex: 1, textAlign: "center" }}
-              onClick={closeMobileMenu}
-            >
-              Admin Preview
-            </Link>
-          </div>
-          {/* Dev-only: standalone widget preview harness (never ships). */}
-          {import.meta.env.DEV && (
-            <a
-              href="/preview.html"
-              target="_blank"
-              rel="noreferrer"
-              className={styles.mobilePrimaryBtn}
-              style={{ width: "100%", textAlign: "center" }}
-              onClick={closeMobileMenu}
-            >
-              Widget Preview
-            </a>
+          {!env.isDev && (
+            <>
+              <div style={{ display: "flex", gap: "1rem", width: "100%" }}>
+                <Link
+                  to="/checkoutdummy"
+                  className={styles.mobilePrimaryBtn}
+                  style={{ flex: 1, textAlign: "center" }}
+                  onClick={closeMobileMenu}
+                >
+                  Preview
+                </Link>
+                <Link
+                  to="/admin-dashboard"
+                  className={styles.mobilePrimaryBtn}
+                  style={{ flex: 1, textAlign: "center" }}
+                  onClick={closeMobileMenu}
+                >
+                  Admin Preview
+                </Link>
+              </div>
+              <a
+                href="/preview.html"
+                target="_blank"
+                rel="noreferrer"
+                className={styles.mobilePrimaryBtn}
+                style={{ width: "100%", textAlign: "center" }}
+                onClick={closeMobileMenu}
+              >
+                Widget Preview
+              </a>
+            </>
           )}
         </div>
       </div>
