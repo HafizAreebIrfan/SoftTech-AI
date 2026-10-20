@@ -8,8 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-preview
+/preview
 preview.html
+!src/preview/
 dist
 dist-ssr
 *.local
