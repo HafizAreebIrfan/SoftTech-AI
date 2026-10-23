@@ -138,18 +138,13 @@ const SignupStep3: FC = () => {
 
   useEffect(() => {
     if (!companyId && !isAuthenticated) {
-      showToast("Please complete Signup first.", "warning");
-      navigate({ to: "/signup/company" });
+      navigate({ to: "/signup/company", replace: true });
     }
   }, [companyId, isAuthenticated, navigate]);
 
   const handleStepThreeSubmit = () => {
     if (!companyId) {
-      showToast(
-        "Looks like you are not registered. Please register first.",
-        "error",
-      );
-      navigate({ to: "/signup/company" });
+      navigate({ to: "/signup/company", replace: true });
       return;
     }
 

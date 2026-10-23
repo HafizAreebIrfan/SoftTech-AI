@@ -139,7 +139,7 @@ export const SignupSuccess: FC = () => {
           onClick={handleContinue}
           className={`w-full sm:w-auto text-white px-8 py-3.5 active:scale-[0.99] rounded-xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${styles.primarySubmitBtn}`}
         >
-          <span>Continue to Onboarding (Step 1)</span>
+          <span>Continue to Onboarding</span>
         </button>
       </div>
     </motion.div>

@@ -154,14 +154,58 @@ export const parseJsonToRows = (
           typeof normalizedItem === "object" &&
           normalizedItem !== null
         ) {
+          const rawKey = String(normalizedItem.key ?? normalizedItem.name ?? "");
+          const rawVal = String(normalizedItem.value ?? "");
+          const isDyn =
+            normalizedItem.isDynamic !== undefined
+              ? Boolean(normalizedItem.isDynamic)
+              : defaultDynamic;
+
+          // If this row contains a wrapped object (e.g. key === 'fields' | 'data' | 'payload' | 'body')
+          // where value is a stringified JSON object, unwrap into individual rows!
+          if (
+            (rawKey === "fields" ||
+              rawKey === "data" ||
+              rawKey === "payload" ||
+              rawKey === "body") &&
+            rawVal.trim().startsWith("{")
+          ) {
+            try {
+              let inner = JSON.parse(rawVal);
+              if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+                if (
+                  inner[rawKey] &&
+                  typeof inner[rawKey] === "object" &&
+                  !Array.isArray(inner[rawKey])
+                ) {
+                  inner = inner[rawKey];
+                }
+                const innerEntries = Object.entries(inner);
+                if (innerEntries.length > 0) {
+                  innerEntries.forEach(([ik, iv], sIdx) => {
+                    rows.push({
+                      id: `row-${Date.now()}-${idx}-${sIdx}`,
+                      key: ik,
+                      value:
+                        typeof iv === "object"
+                          ? JSON.stringify(iv)
+                          : String(iv ?? ""),
+                      isDynamic: isDyn,
+                    });
+                  });
+                  return;
+                }
+              }
+            } catch {
+              // Fallback to normal row
+            }
+          }
+
           rows.push({
             id: `row-${Date.now()}-${idx}`,
-            key: String(normalizedItem.key ?? normalizedItem.name ?? ""),
-            value: String(normalizedItem.value ?? ""),
-            isDynamic:
-              normalizedItem.isDynamic !== undefined
-                ? Boolean(normalizedItem.isDynamic)
-                : defaultDynamic,
+            key: rawKey,
+            value: rawVal,
+            isDynamic: isDyn,
           });
         } else {
           rows.push({
@@ -196,6 +240,26 @@ export const parseJsonToRows = (
           },
         ];
       }
+
+      // If this is a single wrapper object (e.g. { "fields": { ... } } or { "data": { ... } }),
+      // unwrap its properties into separate rows so fields are never merged into 1 key.
+      if (
+        entries.length === 1 &&
+        typeof entries[0][1] === "object" &&
+        entries[0][1] !== null &&
+        !Array.isArray(entries[0][1])
+      ) {
+        const innerEntries = Object.entries(entries[0][1]);
+        if (innerEntries.length > 0) {
+          return innerEntries.map(([k, v], idx) => ({
+            id: `row-${Date.now()}-${idx}`,
+            key: k,
+            value: typeof v === "object" ? JSON.stringify(v) : String(v ?? ""),
+            isDynamic: defaultDynamic,
+          }));
+        }
+      }
+
       return entries.map(([k, v], idx) => {
         const valStr =
           typeof v === "object" ? JSON.stringify(v) : String(v ?? "");
@@ -250,8 +314,8 @@ export const truncateSampleResponse = (
     typeof jsonStr === "string"
       ? jsonStr.trim()
       : typeof jsonStr === "object"
-      ? JSON.stringify(jsonStr)
-      : String(jsonStr).trim();
+        ? JSON.stringify(jsonStr)
+        : String(jsonStr).trim();
   if (!str) return "";
   if (str.length <= maxChars) return str;
 
@@ -371,23 +435,23 @@ export const useSignupStore = create<SignupStore>()(
       },
       lastSavedStepOneData: null,
       apisList: [
-        {
-          id: "1",
-          apiName: "Default API",
-          apiEndpoint: "https://api.example.com/data",
-          apiMethod: "GET",
-          audience: "customer",
-          apiAuthType: "No Auth",
-          apiCredentials: "",
-          apiQueryParams: "",
-          apiCheckoutTemplate: "",
-          apiAuthHeader: "",
-          oauthTokenUrl: "",
-          oauthClientId: "",
-          apiHeaders: "",
-          isRealtimeApi: false,
-          streamUrl: "",
-        },
+        // {
+        //   id: "1",
+        //   apiName: "Default API",
+        //   apiEndpoint: "https://api.example.com/data",
+        //   apiMethod: "GET",
+        //   audience: "customer",
+        //   apiAuthType: "No Auth",
+        //   apiCredentials: "",
+        //   apiQueryParams: "",
+        //   apiCheckoutTemplate: "",
+        //   apiAuthHeader: "",
+        //   oauthTokenUrl: "",
+        //   oauthClientId: "",
+        //   apiHeaders: "",
+        //   isRealtimeApi: false,
+        //   streamUrl: "",
+        // },
       ],
       selectedLayout: "auto",
       selectedThemeColor: "#6366f1",
@@ -442,6 +506,96 @@ export const useSignupStore = create<SignupStore>()(
             console.error("Step 3 auto-save failed:", e);
           }
         }, 800);
+      },
+
+      syncFromUser: (user: any) => {
+        if (!user) return;
+        const newCompanyId = user.id || user._id || "";
+        set((state) => {
+          const shouldUpdateApis =
+            !state.apisList ||
+            state.apisList.length === 0 ||
+            (state.apisList.length === 1 && !state.apisList[0].apiName?.trim());
+
+          let mappedApis = state.apisList;
+          if (
+            shouldUpdateApis &&
+            Array.isArray(user.apis) &&
+            user.apis.length > 0
+          ) {
+            mappedApis = user.apis.map((api: any, index: number) => {
+              let endpointStr = "";
+              if (api.baseUrl && api.endpoint) {
+                endpointStr = `${api.baseUrl}${api.endpoint}`;
+              } else if (api.endpoint) {
+                endpointStr = api.endpoint;
+              }
+
+              return {
+                id: api.id || api._id || `api-${index + 1}`,
+                apiName: api.name || "",
+                apiMethod: api.method || "GET",
+                apiEndpoint: endpointStr,
+                apiAuthType: api.authType || "No Auth",
+                apiCredentials:
+                  api.apiKey ||
+                  api.bearerToken ||
+                  api.oauthClientSecret ||
+                  "",
+                apiAuthHeader: api.authHeader || "",
+                basicUsername: api.basicUsername || "",
+                basicPassword: api.basicPassword || "",
+                bearerToken: api.bearerToken || "",
+                apiKeyVal: api.apiKey || "",
+                apiQueryParams: Array.isArray(api.params)
+                  ? JSON.stringify(api.params)
+                  : api.params || "",
+                apiHeaders: Array.isArray(api.headers)
+                  ? JSON.stringify(api.headers)
+                  : api.headers || "",
+                apiRequestBody: Array.isArray(api.body)
+                  ? JSON.stringify(api.body)
+                  : api.body || "",
+                sampleResponse:
+                  api.sampleResponse || api.sampleresponse || "",
+                isWidgetEnabled:
+                  api.isWidgetEnabled !== undefined
+                    ? Boolean(api.isWidgetEnabled)
+                    : true,
+                isMapViewEnabled: Boolean(api.isMapViewEnabled),
+                platformType: api.platformType || "web",
+                audience: api.audience || "customer",
+                mcpDescription: api.mcpDescription || "",
+              };
+            });
+          }
+
+          return {
+            companyId: newCompanyId || state.companyId,
+            stepOneData: {
+              ...state.stepOneData,
+              companyName:
+                user.companyName ||
+                user.name ||
+                state.stepOneData.companyName,
+              adminEmail: user.email || state.stepOneData.adminEmail,
+              subdomain: user.mcpSlug || state.stepOneData.subdomain,
+            },
+            signupOnboardingStep:
+              typeof user.signupOnboardingStep === "number"
+                ? user.signupOnboardingStep
+                : state.signupOnboardingStep,
+            isSignupOnboardingDone: Boolean(user.isSignupOnboardingDone),
+            selectedLayout:
+              user.uiPreference?.layout || state.selectedLayout,
+            selectedThemeColor:
+              user.uiPreference?.themeColor || state.selectedThemeColor,
+            selectedAudienceDefault:
+              user.uiPreference?.audienceDefault ||
+              state.selectedAudienceDefault,
+            apisList: mappedApis,
+          };
+        });
       },
 
       setCompanyId: (companyId) => set({ companyId }),
@@ -820,12 +974,14 @@ export const useSignupStore = create<SignupStore>()(
             typeof sampleJson === "string"
               ? JSON.parse(sampleJson.trim())
               : typeof sampleJson === "object" && sampleJson !== null
-              ? sampleJson
-              : JSON.parse(String(sampleJson || ""));
+                ? sampleJson
+                : JSON.parse(String(sampleJson || ""));
           formattedJson = JSON.stringify(parsed, null, 2);
         } catch (e) {
           formattedJson =
-            typeof sampleJson === "string" ? sampleJson : String(sampleJson || "");
+            typeof sampleJson === "string"
+              ? sampleJson
+              : String(sampleJson || "");
         }
 
         const trimmedJson = trimSampleJson(formattedJson);
@@ -1172,11 +1328,35 @@ export const useSignupStore = create<SignupStore>()(
                     },
                   }
                 : {};
+            const isbasicauth =
+              api.apiAuthType === "Basic Auth"
+                ? (() => {
+                    const rawCreds =
+                      api.basicUsername || api.basicPassword
+                        ? `${api.basicUsername || ""}:${api.basicPassword || ""}`
+                        : api.apiCredentials || "";
+                    let b64 = "";
+                    try {
+                      b64 = rawCreds.startsWith("Basic ")
+                        ? rawCreds
+                        : `Basic ${btoa(rawCreds)}`;
+                    } catch {
+                      b64 = rawCreds.startsWith("Basic ")
+                        ? rawCreds
+                        : `Basic ${rawCreds}`;
+                    }
+                    return {
+                      authType: "basic",
+                      authtype: "basic",
+                      authHeader: "Authorization",
+                      apiKey: b64,
+                    };
+                  })()
+                : {};
 
-            const paramRows = parseJsonToRows(
-              api.apiQueryParams,
-              true,
-            ).filter((r) => r.key.trim() !== "");
+            const paramRows = parseJsonToRows(api.apiQueryParams, true).filter(
+              (r) => r.key.trim() !== "",
+            );
             const paramsArray = paramRows.map((r) => ({
               key: r.key.trim(),
               value: r.value.trim(),
@@ -1199,6 +1379,29 @@ export const useSignupStore = create<SignupStore>()(
               key: r.key.trim(),
               value: r.value.trim(),
             }));
+
+            if (api.apiAuthType === "Basic Auth") {
+              const rawCreds =
+                api.basicUsername || api.basicPassword
+                  ? `${api.basicUsername || ""}:${api.basicPassword || ""}`
+                  : api.apiCredentials || "";
+              let b64 = "";
+              try {
+                b64 = rawCreds.startsWith("Basic ")
+                  ? rawCreds
+                  : `Basic ${btoa(rawCreds)}`;
+              } catch {
+                b64 = rawCreds.startsWith("Basic ")
+                  ? rawCreds
+                  : `Basic ${rawCreds}`;
+              }
+              const hasAuth = headersArray.some(
+                (h) => h.key.toLowerCase() === "authorization",
+              );
+              if (!hasAuth && b64) {
+                headersArray.push({ key: "Authorization", value: b64 });
+              }
+            }
 
             const sampleResp =
               get().apiTestStates[api.id]?.sampleResponse ||
@@ -1243,6 +1446,7 @@ export const useSignupStore = create<SignupStore>()(
                 undefined,
               ...isbearertoken,
               ...isapikey,
+              ...isbasicauth,
               ...isoauth,
               ...isuseroauth,
               mcpDescription: api.mcpDescription || undefined,
@@ -1327,6 +1531,31 @@ export const useSignupStore = create<SignupStore>()(
                     },
                   }
                 : {};
+            const isbasicauth =
+              api.apiAuthType === "Basic Auth"
+                ? (() => {
+                    const rawCreds =
+                      api.basicUsername || api.basicPassword
+                        ? `${api.basicUsername || ""}:${api.basicPassword || ""}`
+                        : api.apiCredentials || "";
+                    let b64 = "";
+                    try {
+                      b64 = rawCreds.startsWith("Basic ")
+                        ? rawCreds
+                        : `Basic ${btoa(rawCreds)}`;
+                    } catch {
+                      b64 = rawCreds.startsWith("Basic ")
+                        ? rawCreds
+                        : `Basic ${rawCreds}`;
+                    }
+                    return {
+                      authType: "basic",
+                      authtype: "basic",
+                      authHeader: "Authorization",
+                      apiKey: b64,
+                    };
+                  })()
+                : {};
 
             const paramRows = parseJsonToRows(api.apiQueryParams, true).filter(
               (r) => r.key.trim() !== "",
@@ -1353,6 +1582,29 @@ export const useSignupStore = create<SignupStore>()(
               key: r.key.trim(),
               value: r.value.trim(),
             }));
+
+            if (api.apiAuthType === "Basic Auth") {
+              const rawCreds =
+                api.basicUsername || api.basicPassword
+                  ? `${api.basicUsername || ""}:${api.basicPassword || ""}`
+                  : api.apiCredentials || "";
+              let b64 = "";
+              try {
+                b64 = rawCreds.startsWith("Basic ")
+                  ? rawCreds
+                  : `Basic ${btoa(rawCreds)}`;
+              } catch {
+                b64 = rawCreds.startsWith("Basic ")
+                  ? rawCreds
+                  : `Basic ${rawCreds}`;
+              }
+              const hasAuth = headersArray.some(
+                (h) => h.key.toLowerCase() === "authorization",
+              );
+              if (!hasAuth && b64) {
+                headersArray.push({ key: "Authorization", value: b64 });
+              }
+            }
 
             const sampleResp =
               get().apiTestStates[api.id]?.sampleResponse ||
@@ -1397,6 +1649,7 @@ export const useSignupStore = create<SignupStore>()(
                 undefined,
               ...isbearertoken,
               ...isapikey,
+              ...isbasicauth,
               ...isoauth,
               ...isuseroauth,
               mcpDescription: api.mcpDescription || undefined,

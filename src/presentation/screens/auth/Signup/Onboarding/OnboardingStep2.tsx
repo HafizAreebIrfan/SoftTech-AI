@@ -6,6 +6,7 @@ import {
   useAuthStore,
   useSignupStore,
 } from "../../../../../hooks";
+import { verifySession } from "../../../../../adapters/api/authApi";
 import {
   CheckIcon,
   LeftArrowIcon,
@@ -112,25 +113,36 @@ const OnboardingStep2: FC = () => {
   };
 
   useEffect(() => {
+    let isMounted = true;
     if (!effectiveCompanyId && !isAuthenticated) {
-      showToast("Please complete Signup first.", "warning");
-      navigate({ to: "/signup/company", replace: true });
+      verifySession()
+        .then((session) => {
+          if (!isMounted) return;
+          if (session?.user) {
+            setAuth(session.user);
+            useSignupStore.getState().syncFromUser?.(session.user);
+          } else {
+            navigate({ to: "/signup/company", replace: true });
+          }
+        })
+        .catch(() => {
+          if (!isMounted) return;
+          navigate({ to: "/signup/company", replace: true });
+        });
       return;
     }
 
     if (!isStep1Done) {
-      showToast("Please complete Onboarding Step 1 first.", "warning");
       navigate({ to: "/signup/onboarding-step1", replace: true });
     }
-  }, [effectiveCompanyId, isAuthenticated, isStep1Done, navigate]);
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveCompanyId, isAuthenticated, isStep1Done, navigate, setAuth]);
 
   const handleStepThreeSubmit = () => {
-    if (!companyId) {
-      showToast(
-        "Looks like you are not registered. Please register first.",
-        "error",
-      );
-      navigate({ to: "/signup/company" });
+    if (!effectiveCompanyId) {
+      navigate({ to: "/signup/company", replace: true });
       return;
     }
 

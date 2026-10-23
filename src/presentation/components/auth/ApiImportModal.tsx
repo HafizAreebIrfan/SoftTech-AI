@@ -719,19 +719,6 @@ export const ApiImportModal: FC<ApiImportModalProps> = ({
               {/* Meta Header */}
               <div className={styles.previewHeader}>
                 <div className={styles.metaBadgeRow}>
-                  <span className={styles.docTitle}>
-                    {docMeta?.title ||
-                      docMeta?.collectionName ||
-                      "Discovered APIs"}
-                  </span>
-                  {docMeta?.version && (
-                    <span className={styles.metaTag}>v{docMeta.version}</span>
-                  )}
-                  {docMeta?.baseUrl && (
-                    <span className={styles.metaTag}>
-                      Base: {docMeta.baseUrl}
-                    </span>
-                  )}
                   <span
                     className={`${styles.metaTag} ${styles.metaSelectedCount}`}
                   >

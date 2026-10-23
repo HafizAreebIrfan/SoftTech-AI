@@ -100,8 +100,7 @@ const SignupStep2: FC = () => {
 
   React.useEffect(() => {
     if (!companyId) {
-      showToast("Please complete Signup first.", "warning");
-      navigate({ to: "/signup/company" });
+      navigate({ to: "/signup/company", replace: true });
     }
   }, [companyId, navigate]);
 

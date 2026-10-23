@@ -6,6 +6,7 @@ input:-webkit-autofill:active {
   /* Using a massive transition delay is the best modern hack to keep Tailwind's background colors on autofill */
   -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
   transition: background-color 5000s ease-in-out 0s;
+  -webkit-text-fill-color: var(--app-text-heading) !important;
 }
 
 .loginContainer {
@@ -31,10 +32,29 @@ input:-webkit-autofill:active {
 }
 
 .submitBtn {
-  background: linear-gradient(120deg, var(--app-btn-grad-1), var(--app-btn-grad-2));
+  background: linear-gradient(
+    120deg,
+    var(--app-btn-grad-1),
+    var(--app-btn-grad-2)
+  );
 }
 
 .splitScreenBranding {
   border-top-left-radius: 72px;
   border-bottom-left-radius: 72px;
+}
+
+.logininput {
+  background-color: var(--app-bg-secondary);
+  border: none !important;
+  outline: none !important;
+  color: var(--app-text-heading);
+}
+.logininput:focus {
+  border: none !important;
+  outline: none !important;
+}
+.logininput:hover {
+  border: none !important;
+  outline: none !important;
 }

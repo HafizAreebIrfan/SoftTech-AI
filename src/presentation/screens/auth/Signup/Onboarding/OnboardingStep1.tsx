@@ -1,7 +1,8 @@
 import React, { FC, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { useThemeStore } from "../../../../../hooks";
+import { useThemeStore, useAuthStore } from "../../../../../hooks";
+import { verifySession } from "../../../../../adapters/api/authApi";
 import {
   useSignupStore,
   parseJsonToRows,
@@ -100,12 +101,36 @@ const OnboardingStep1: FC = () => {
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
+  const { user, setAuth } = useAuthStore();
+  const effectiveCompanyId = companyId || user?.id || (user as any)?._id;
+
   React.useEffect(() => {
-    if (!companyId) {
-      showToast("Please complete Signup first.", "warning");
-      navigate({ to: "/signup/company" });
+    let isMounted = true;
+    if (!effectiveCompanyId) {
+      // Quietly check if session can be verified from server/DB without showing any toasts!
+      verifySession()
+        .then((session) => {
+          if (!isMounted) return;
+          if (session?.user) {
+            setAuth(session.user);
+            useSignupStore.getState().syncFromUser?.(session.user);
+          } else {
+            // Silently redirect without any error toast
+            navigate({ to: "/signup/company", replace: true });
+          }
+        })
+        .catch(() => {
+          if (!isMounted) return;
+          // Silently redirect without any error toast
+          navigate({ to: "/signup/company", replace: true });
+        });
+    } else if (!companyId && user) {
+      useSignupStore.getState().syncFromUser?.(user);
     }
-  }, [companyId, navigate]);
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveCompanyId, companyId, user, navigate, setAuth]);
 
   const [collapsedApiIds, setCollapsedApiIds] = useState<
     Record<string, boolean>
@@ -200,11 +225,6 @@ const OnboardingStep1: FC = () => {
         {/* Header Title & 1-Click Import Action */}
         <div className={styles.step2HeaderContainer}>
           <div className={styles.step2HeaderTextCol}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                Onboarding Step 1 of 2
-              </span>
-            </div>
             <h2
               className={styles.headerTitle}
               style={{ color: colors.TextHeading }}
@@ -218,18 +238,6 @@ const OnboardingStep1: FC = () => {
               Postman.
             </p>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setIsImportModalOpen(true)}
-            className={styles.step2HeaderImportBtn}
-            style={{
-              background: `linear-gradient(120deg, ${colors.ButtonGradientOne || "#6366f1"}, ${colors.ButtonGradientTwo || "#8b5cf6"})`,
-            }}
-          >
-            <SparklesIcon size={15} color="#ffffff" />
-            <span>1-Click Import (Swagger / Postman)</span>
-          </button>
         </div>
 
         {apisList.map((api, index) => {
@@ -525,7 +533,10 @@ const OnboardingStep1: FC = () => {
                             let formatted = "";
                             if (typeof rawSample === "string") {
                               formatted = rawSample;
-                            } else if (rawSample && typeof rawSample === "object") {
+                            } else if (
+                              rawSample &&
+                              typeof rawSample === "object"
+                            ) {
                               try {
                                 formatted = JSON.stringify(rawSample, null, 2);
                               } catch {
@@ -1143,18 +1154,33 @@ const OnboardingStep1: FC = () => {
                                   "No Auth",
                                   "API Key",
                                   "Bearer Token",
+                                  "Basic Auth",
                                   "OAuth 2.0",
                                 ].map((authOption) => (
                                   <button
                                     key={authOption}
                                     type="button"
-                                    onClick={() =>
-                                      updateApiField(
-                                        api.id,
-                                        "apiAuthType",
-                                        authOption,
-                                      )
-                                    }
+                                    onClick={() => {
+                                      if (api.apiAuthType === authOption) return;
+                                      updateApiField(api.id, "apiAuthType", authOption);
+                                      if (authOption === "Basic Auth") {
+                                        updateApiField(api.id, "apiAuthHeader", "Authorization");
+                                      } else if (authOption === "Bearer Token") {
+                                        updateApiField(api.id, "apiAuthHeader", "Authorization");
+                                        const cur = api.apiCredentials || "";
+                                        if (cur.includes(":") || cur.startsWith("Basic ")) {
+                                          updateApiField(api.id, "apiCredentials", "");
+                                        }
+                                      } else if (authOption === "API Key") {
+                                        if (!api.apiAuthHeader || api.apiAuthHeader === "Authorization") {
+                                          updateApiField(api.id, "apiAuthHeader", "X-API-Key");
+                                        }
+                                        const cur = api.apiCredentials || "";
+                                        if (cur.includes(":") || cur.startsWith("Basic ")) {
+                                          updateApiField(api.id, "apiCredentials", "");
+                                        }
+                                      }
+                                    }}
                                     className={styles.authTypeBtn}
                                     style={{
                                       color:
@@ -1247,14 +1273,19 @@ const OnboardingStep1: FC = () => {
                                           : "password"
                                       }
                                       placeholder="e.g. eyJhbGciOiJIUzI1NiIsIn..."
-                                      value={api.apiCredentials || ""}
-                                      onChange={(e) =>
-                                        updateApiField(
-                                          api.id,
-                                          "apiCredentials",
-                                          e.target.value,
-                                        )
+                                      value={
+                                        api.bearerToken !== undefined
+                                          ? api.bearerToken
+                                          : api.apiCredentials?.includes(":") || api.apiCredentials?.startsWith("Basic ")
+                                            ? ""
+                                            : api.apiCredentials || ""
                                       }
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        updateApiField(api.id, "bearerToken", val);
+                                        updateApiField(api.id, "apiCredentials", val);
+                                        updateApiField(api.id, "apiAuthHeader", "Authorization");
+                                      }}
                                       className={styles.inputWithIcon}
                                       style={{
                                         background: colors.BackgroundSecondary,
@@ -1283,6 +1314,151 @@ const OnboardingStep1: FC = () => {
                               </div>
                             )}
 
+                            {api.apiAuthType === "Basic Auth" && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "0.75rem",
+                                }}
+                              >
+                                <div className={styles.authInputGrid}>
+                                  <div>
+                                    <label
+                                      className={styles.fieldLabel}
+                                      style={{ color: colors.TextBody }}
+                                    >
+                                      Username or Email{" "}
+                                      <span style={{ color: colors.WarningText }}>
+                                        *
+                                      </span>
+                                    </label>
+                                    <div className={styles.inputRelative}>
+                                      <span className={styles.inputIconLeft}>
+                                        <SlidersIcon
+                                          size={14}
+                                          color={colors.IconColor}
+                                        />
+                                      </span>
+                                      <input
+                                        type="text"
+                                        placeholder="e.g. user@example.com"
+                                        value={
+                                          api.basicUsername !== undefined
+                                            ? api.basicUsername
+                                            : api.apiCredentials?.includes(":")
+                                              ? api.apiCredentials.split(":")[0]
+                                              : ""
+                                        }
+                                        onChange={(e) => {
+                                          const user = e.target.value;
+                                          const pass =
+                                            api.basicPassword !== undefined
+                                              ? api.basicPassword
+                                              : api.apiCredentials?.includes(":")
+                                                ? api.apiCredentials.split(":").slice(1).join(":")
+                                                : "";
+                                          updateApiField(api.id, "basicUsername", user);
+                                          updateApiField(api.id, "apiCredentials", `${user}:${pass}`);
+                                          updateApiField(api.id, "apiAuthHeader", "Authorization");
+                                        }}
+                                        className={styles.inputWithIcon}
+                                        style={{
+                                          background: colors.BackgroundSecondary,
+                                          borderColor: colors.CardBorder,
+                                          color: colors.TextHeading,
+                                          fontFamily: "monospace",
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label
+                                      className={styles.fieldLabel}
+                                      style={{ color: colors.TextBody }}
+                                    >
+                                      Password or API Token{" "}
+                                      <span style={{ color: colors.WarningText }}>
+                                        *
+                                      </span>
+                                    </label>
+                                    <div className={styles.inputRelative}>
+                                      <span className={styles.inputIconLeft}>
+                                        <LockIcon
+                                          size={14}
+                                          color={colors.IconColor}
+                                        />
+                                      </span>
+                                      <input
+                                        type={
+                                          showApiKeyMask[api.id]
+                                            ? "text"
+                                            : "password"
+                                        }
+                                        placeholder="e.g. Jira API Token or Password"
+                                        value={
+                                          api.basicPassword !== undefined
+                                            ? api.basicPassword
+                                            : api.apiCredentials?.includes(":")
+                                              ? api.apiCredentials.split(":").slice(1).join(":")
+                                              : ""
+                                        }
+                                        onChange={(e) => {
+                                          const pass = e.target.value;
+                                          const user =
+                                            api.basicUsername !== undefined
+                                              ? api.basicUsername
+                                              : api.apiCredentials?.includes(":")
+                                                ? api.apiCredentials.split(":")[0]
+                                                : "";
+                                          updateApiField(api.id, "basicPassword", pass);
+                                          updateApiField(api.id, "apiCredentials", `${user}:${pass}`);
+                                          updateApiField(api.id, "apiAuthHeader", "Authorization");
+                                        }}
+                                        className={styles.inputWithIcon}
+                                        style={{
+                                          background: colors.BackgroundSecondary,
+                                          borderColor: colors.CardBorder,
+                                          color: colors.TextHeading,
+                                          fontFamily: "monospace",
+                                        }}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setShowApiKeyMask((prev) => ({
+                                            ...prev,
+                                            [api.id]: !prev[api.id],
+                                          }))
+                                        }
+                                        className={styles.passwordToggleBtn}
+                                      >
+                                        <EyeIcon
+                                          size={14}
+                                          color={colors.IconColor}
+                                        />
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div
+                                  style={{
+                                    fontSize: "11px",
+                                    color: colors.TextBody,
+                                    opacity: 0.8,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                  }}
+                                >
+                                  <ShieldLockIcon size={13} color={colors.BrandIndigo} />
+                                  <span>
+                                    Automatically transmitted via <code>Authorization: Basic &lt;base64&gt;</code>. Ideal for Jira, Confluence, and GitHub.
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+
                             {api.apiAuthType === "API Key" && (
                               <div className={styles.authInputGrid}>
                                 <div>
@@ -1305,7 +1481,11 @@ const OnboardingStep1: FC = () => {
                                     <input
                                       type="text"
                                       placeholder="e.g. X-API-Key or Authorization"
-                                      value={api.apiAuthHeader || ""}
+                                      value={
+                                        api.apiAuthHeader && api.apiAuthHeader !== "Authorization"
+                                          ? api.apiAuthHeader
+                                          : api.apiAuthHeader || "X-API-Key"
+                                      }
                                       onChange={(e) =>
                                         updateApiField(
                                           api.id,
@@ -1347,14 +1527,18 @@ const OnboardingStep1: FC = () => {
                                           : "password"
                                       }
                                       placeholder="e.g. 39e38d5b03284e..."
-                                      value={api.apiCredentials || ""}
-                                      onChange={(e) =>
-                                        updateApiField(
-                                          api.id,
-                                          "apiCredentials",
-                                          e.target.value,
-                                        )
+                                      value={
+                                        api.apiKeyVal !== undefined
+                                          ? api.apiKeyVal
+                                          : api.apiCredentials?.includes(":") || api.apiCredentials?.startsWith("Basic ")
+                                            ? ""
+                                            : api.apiCredentials || ""
                                       }
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        updateApiField(api.id, "apiKeyVal", val);
+                                        updateApiField(api.id, "apiCredentials", val);
+                                      }}
                                       className={styles.inputWithIcon}
                                       style={{
                                         background: colors.BackgroundSecondary,
@@ -1843,7 +2027,11 @@ const OnboardingStep1: FC = () => {
             <div className={styles.addIconBg}>
               <Plus size={14} color={colors.BrandIndigo} />
             </div>
-            <span className={styles.addApiText}>Add Another API Endpoint</span>
+            <span className={styles.addApiText}>
+              {apisList.length > 0
+                ? "Add Another API Endpoint"
+                : "Add API Endpoint"}
+            </span>
           </button>
 
           <button
@@ -1852,11 +2040,11 @@ const OnboardingStep1: FC = () => {
             className={styles.btnSecondaryImport}
             style={{
               background: colors.BackgroundSecondary,
-              border: `1px dashed ${colors.BrandIndigo || "#6366f1"}`,
+              border: `1px dashed ${colors.BrandIndigo}`,
             }}
           >
             <div className={styles.secondaryImportIconBg}>
-              <UploadIcon size={14} color={colors.BrandIndigo || "#6366f1"} />
+              <UploadIcon size={14} color={colors.BrandIndigo} />
             </div>
             <span
               className={styles.addApiText}
@@ -2121,10 +2309,7 @@ const OnboardingStep1: FC = () => {
                     );
                     return;
                   }
-                  handleSaveSampleResponse(
-                    uploadingSampleApiId,
-                    text,
-                  );
+                  handleSaveSampleResponse(uploadingSampleApiId, text);
                   setUploadingSampleApiId(null);
                 }}
                 style={{

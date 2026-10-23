@@ -63,6 +63,7 @@ export interface SignupResonse {
   isSignupOnboardingDone?: boolean;
   signupOnboardingStep?: number;
   status: string;
+  token?: string;
   createdAt: string;
   updatedAt: string;
 }

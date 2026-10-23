@@ -16,7 +16,7 @@ export const login = async (credentials: LoginCredentials): Promise<any> => {
 
 export const registerCompanyInfo = async (
   payload: any,
-): Promise<{ success: boolean; message: string; data: SignupResonse }> => {
+): Promise<{ success: boolean; message: string; data: SignupResonse; token?: string }> => {
   const url = `${isDev}/api/companies/registerstep`;
   return post(url, payload, { skipRedirect: true });
 };
@@ -93,7 +93,14 @@ export const saveCompanyUiSelection = async (
 
 export const verifySession = async (): Promise<{ user?: User }> => {
   const url = `${isDev}/api/company/login`;
-  return get(url, { skipRedirect: true });
+  return get(url, { skipRedirect: true, silent: true });
+};
+
+export const getCompanyApi = async (
+  companyId: string,
+): Promise<{ success: boolean; data?: any }> => {
+  const url = `${isDev}/api/companies/${companyId}`;
+  return get(url, { skipRedirect: true, silent: true });
 };
 
 export const logout = async (): Promise<any> => {

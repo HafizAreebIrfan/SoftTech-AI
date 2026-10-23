@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { useAuthStore } from "./useAuth";
 import { verifySession } from "../adapters/api/authApi";
 
+import { useSignupStore } from "../infrastructure/store/signupStore";
+
 export const useAuthSync = () => {
   const { setAuth, clearAuth, setAuthReady, isAuthenticated } = useAuthStore();
 
@@ -11,6 +13,7 @@ export const useAuthSync = () => {
         const session = await verifySession();
         if (session?.user) {
           setAuth(session.user);
+          useSignupStore.getState().syncFromUser?.(session.user);
         } else {
           if (isAuthenticated) {
             clearAuth();

@@ -43,6 +43,10 @@ const SignupStep1: FC = () => {
     onSuccess: (res) => {
       if (res && res.success && res.data) {
         const newCompanyId = res.data._id;
+        const authToken = (res as any).token || res.data?.token;
+        if (authToken) {
+          localStorage.setItem("authToken", authToken);
+        }
         setCompanyId(newCompanyId);
         setLastSavedStepOneData({ ...stepOneData });
         setSignupOnboardingStep(1);

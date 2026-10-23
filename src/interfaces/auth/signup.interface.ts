@@ -54,6 +54,10 @@ export interface ApiConnection {
   mcpDescription?: string;
   isWidgetEnabled?: boolean;
   isMapViewEnabled?: boolean;
+  basicUsername?: string;
+  basicPassword?: string;
+  bearerToken?: string;
+  apiKeyVal?: string;
 }
 
 export interface StepOneData {
@@ -127,6 +131,7 @@ export interface SignupStore {
       | "cards",
   ) => void;
   clearSignupProgress: () => void;
+  syncFromUser?: (user: any) => void;
   handleTestApi: (api: ApiConnection) => Promise<void>;
   handleSaveSampleResponse: (apiId: string, sampleJson: string) => void;
   triggerAutoSave: () => void;

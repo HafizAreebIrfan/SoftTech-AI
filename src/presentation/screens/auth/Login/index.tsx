@@ -65,6 +65,9 @@ const Login: FC = () => {
         uiPreference: rawUser?.uiPreference,
       };
 
+      if (data?.token) {
+        localStorage.setItem("authToken", data.token);
+      }
       setAuth(user);
 
       // Synchronize signup store with user's company and onboarding status
@@ -173,7 +176,7 @@ const Login: FC = () => {
             {isDark ? (
               <SunIcon size={18} color={colors.HeaderIconColor} />
             ) : (
-              <MoonIcon size={18} color="#475569" />
+              <MoonIcon size={18} color={colors.HeaderIconColor} />
             )}
           </button>
         </header>
@@ -234,7 +237,7 @@ const Login: FC = () => {
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
-                        className={`block w-full pl-12 pr-4 py-3.5 rounded-xl outline-none transition-all text-base border focus:ring-2 focus:ring-opacity-50 ${isDark ? "bg-[#0f1115] border-slate-800 text-white focus:border-indigo-500 focus:ring-indigo-500/20" : "bg-slate-50/50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"} ${field.state.meta.errors?.length > 0 ? styles.inputError : ""}`}
+                        className={`block w-full pl-12 pr-4 py-3.5 rounded-xl outline-none transition-all text-base ${field.state.meta.errors?.length > 0 ? styles.inputError : ""} ${styles.logininput}`}
                       />
                       {field.state.meta.errors?.length > 0 && (
                         <motion.span
@@ -279,7 +282,7 @@ const Login: FC = () => {
                         onBlur={field.handleBlur}
                         type={showPassword ? "text" : "password"}
                         onChange={(e) => field.handleChange(e.target.value)}
-                        className={`block w-full pl-12 pr-12 py-3.5 rounded-xl outline-none transition-all text-base border focus:ring-2 focus:ring-opacity-50 ${isDark ? "bg-[#0f1115] border-slate-800 text-white focus:border-indigo-500 focus:ring-indigo-500/20" : "bg-slate-50/50 border-slate-200 text-slate-900 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"} ${field.state.meta.errors?.length > 0 ? styles.inputError : ""}`}
+                        className={`block w-full pl-12 pr-12 py-3.5 rounded-xl outline-none transition-all text-base ${field.state.meta.errors?.length > 0 ? styles.inputError : ""} ${styles.logininput}`}
                       />
                       <button
                         type="button"
