@@ -700,6 +700,19 @@ const trySingularPathParams = async (
   return undefined;
 };
 
+const setDeepProperty = (target: Record<string, any>, path: string, value: any): void => {
+  const parts = path.split(".");
+  let current = target;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    if (!current[part] || typeof current[part] !== "object") {
+      current[part] = {};
+    }
+    current = current[part];
+  }
+  current[parts[parts.length - 1]] = value;
+};
+
 const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
   const rawInput = typeof input === "object" && input !== null ? input : {};
   const inputParams =
@@ -709,8 +722,16 @@ const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
 
   const bodyFields = normalizeConfiguredParameters(api.body);
 
+  const isJiraIssueEndpoint =
+    /((/rest/api/[23]/issue(/|$))|(/issue/?$))/i.test(api.endpoint || "") &&
+    !api.endpoint?.includes("/comment") &&
+    !api.endpoint?.includes("/transitions") &&
+    !api.endpoint?.includes("/worklog") &&
+    !api.endpoint?.includes("/attachments") &&
+    !api.endpoint?.includes("/assignee");
+
   if (bodyFields.length > 0) {
-    const body: Record<string, any> = {};
+    let body: Record<string, any> = {};
 
     for (const field of bodyFields) {
       const key = cleanParameterKey(field.key);
@@ -724,9 +745,19 @@ const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
       );
 
       if (value !== undefined && value !== null) {
-        body[key] = value;
+        if (key.includes(".")) {
+          setDeepProperty(body, key, value);
+        } else {
+          body[key] = value;
+        }
       }
     }
+
+    // Auto-wrap under "fields: { ... }" for Jira issue creation/updates if fields are unnested
+    if (isJiraIssueEndpoint && !body.fields && (body.summary || body.issuetype || body.project)) {
+      body = { fields: body };
+    }
+
     return body;
   }
 
@@ -759,14 +790,23 @@ const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
     "item_id",
   ]);
 
-  const fallbackBody: Record<string, any> = {};
+  let fallbackBody: Record<string, any> = {};
   for (const [k, v] of Object.entries(rawInput)) {
     if (v === undefined || v === null) continue;
     if (excludedKeys.has(k)) continue;
     // Strip $-prefixed widget UI markers
     if (k.startsWith("$")) continue;
-    fallbackBody[k] = coerceJsonValue(v);
+    if (k.includes(".")) {
+      setDeepProperty(fallbackBody, k, coerceJsonValue(v));
+    } else {
+      fallbackBody[k] = coerceJsonValue(v);
+    }
   }
+
+  if (isJiraIssueEndpoint && !fallbackBody.fields && (fallbackBody.summary || fallbackBody.issuetype || fallbackBody.project)) {
+    return { fields: fallbackBody };
+  }
+
   return fallbackBody;
 };
 

@@ -22,11 +22,23 @@ export async function registerCompanyInfoController(
 ): Promise<void> {
   try {
     const result = await registerCompanyInfo(companyRepository, req.body);
+    const userRole = (result as any).role || "company";
+    const token = createToken(result._id, userRole);
+    res.cookie("jwt", token, authCookieOptions);
+
+    const safeResult =
+      typeof (result as any).toObject === "function"
+        ? (result as any).toObject()
+        : result;
 
     res.status(200).json({
       success: true,
       message: "Company info saved successfully",
-      data: result,
+      token,
+      data: {
+        ...safeResult,
+        token,
+      },
     });
   } catch (error) {
     next(error);
@@ -59,12 +71,12 @@ export async function saveCompanyApiDetailsController(
       return;
     }
 
-    // Check if API details are already saved
+    // Check if company exists
     const existingCompany = await companyRepository.findById(companyId as string);
-    if (existingCompany && existingCompany.apis && existingCompany.apis.length > 0) {
-      res.status(409).json({
+    if (!existingCompany) {
+      res.status(404).json({
         success: false,
-        message: "API details have already been configured for this company. To modify, please contact support.",
+        message: "Company not found. Please complete signup first.",
       });
       return;
     }
@@ -133,12 +145,12 @@ export async function saveCompanyUiSelectionController(
       return;
     }
 
-    // Check if UI preference is already saved
+    // Check if company exists
     const existingCompany = await companyRepository.findById(companyId as string);
-    if (existingCompany && existingCompany.uiPreference) {
-      res.status(409).json({
+    if (!existingCompany) {
+      res.status(404).json({
         success: false,
-        message: "UI preference has already been configured for this company. To modify, please contact support.",
+        message: "Company not found. Please complete signup first.",
       });
       return;
     }
