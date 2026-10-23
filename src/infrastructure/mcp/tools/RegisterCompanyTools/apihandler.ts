@@ -723,7 +723,7 @@ const buildRequestBody = (api: IApi, input: any): Record<string, any> => {
   const bodyFields = normalizeConfiguredParameters(api.body);
 
   const isJiraIssueEndpoint =
-    /((/rest/api/[23]/issue(/|$))|(/issue/?$))/i.test(api.endpoint || "") &&
+    /((\/rest\/api\/[23]\/issue(\/|$))|(\/issue\/?$))/i.test(api.endpoint || "") &&
     !api.endpoint?.includes("/comment") &&
     !api.endpoint?.includes("/transitions") &&
     !api.endpoint?.includes("/worklog") &&
