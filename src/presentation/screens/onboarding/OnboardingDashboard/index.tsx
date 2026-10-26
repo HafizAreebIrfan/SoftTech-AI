@@ -1,5 +1,5 @@
 import { FC, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Outlet, useRouterState } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
   CheckIcon,
@@ -17,6 +17,7 @@ import {
 import { useAuthStore, useThemeStore } from "../../../../hooks";
 import { showToast } from "../../../../utils/toast/toasts";
 import { logout } from "../../../../adapters/api/authApi";
+import { getDashboardOnboardingStep } from "../../auth/Signup/Onboarding/onboardingStep";
 import styles from "../../../../styles/onboardingDashboard.module.css";
 
 const OnboardingDashboard: FC = () => {
@@ -25,7 +26,7 @@ const OnboardingDashboard: FC = () => {
   const { user, setOnboardingStep, clearAuth } = useAuthStore();
 
   // Active step: 1 (MCP Simulation), 2 (Plan Selection), 3 (ChatGPT Deployment)
-  const currentStep = Math.min(Math.max(user?.onboardingStep || 1, 1), 3);
+  const currentStep = Math.min(getDashboardOnboardingStep(user), 3);
 
   // Modals
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
@@ -35,6 +36,7 @@ const OnboardingDashboard: FC = () => {
   const stepItems = [
     {
       step: 1,
+      segment: "mcp",
       route: "/mcp_simulation",
       title: "1. Test MCP & APIs",
       desc: "Simulate tool calls & ChatGPT widgets",
@@ -46,6 +48,7 @@ const OnboardingDashboard: FC = () => {
     },
     {
       step: 2,
+      segment: "plans",
       route: "/plans",
       title: "2. Computational Plan",
       desc: "Select request quota & enterprise tier",
@@ -57,6 +60,7 @@ const OnboardingDashboard: FC = () => {
     },
     {
       step: 3,
+      segment: "deploy",
       route: "/deployment",
       title: "3. Deploy to ChatGPT",
       desc: "Connect Custom GPT & launch gateway",
@@ -71,9 +75,25 @@ const OnboardingDashboard: FC = () => {
   const activeStepConfig =
     stepItems.find((s) => s.step === currentStep) || stepItems[0];
 
+  // A nested step screen is mounted when the URL is /onboarding_dashboard/mcp|plans|deploy.
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const activeSegment =
+    stepItems
+      .map((item) => item.segment)
+      .find((segment) =>
+        pathname.startsWith(`/onboarding_dashboard/${segment}`),
+      ) || null;
+
   const handleStepClick = (item: (typeof stepItems)[0]) => {
-    setOnboardingStep(item.step);
-    navigate({ to: item.route });
+    // Steps stay locked until the current one is completed — never skip ahead.
+    if (item.step > currentStep) {
+      showToast(
+        `Complete step ${currentStep} first to unlock this step.`,
+        "warning",
+      );
+      return;
+    }
+    navigate({ to: `/onboarding_dashboard/${item.segment}` });
   };
 
   const handleConfirmExit = async () => {
@@ -177,16 +197,31 @@ const OnboardingDashboard: FC = () => {
 
               <div className={styles.stepsList}>
                 {stepItems.map((item, idx) => {
+                  const isLocked = item.step > currentStep;
                   const isPast = currentStep > item.step;
-                  const isActive = currentStep === item.step;
+                  // Highlight the row of the mounted sub-screen, otherwise the
+                  // current workflow step.
+                  const isActive = activeSegment
+                    ? item.segment === activeSegment
+                    : currentStep === item.step;
 
                   return (
                     <div key={item.step}>
                       <a
-                        href={item.route}
-                        className={`${styles.stepRow} ${isActive ? styles.stepRowActive : ""}`}
+                        href={`/onboarding_dashboard/${item.segment}`}
+                        className={`${styles.stepRow} ${isActive ? styles.stepRowActive : ""} ${
+                          isLocked ? styles.stepRowLocked : ""
+                        }`}
+                        aria-disabled={isLocked || undefined}
                         onClick={(e) => {
                           e.preventDefault();
+                          if (isLocked) {
+                            showToast(
+                              `Complete step ${currentStep} first to unlock this step.`,
+                              "warning",
+                            );
+                            return;
+                          }
                           handleStepClick(item);
                         }}
                       >
@@ -197,7 +232,9 @@ const OnboardingDashboard: FC = () => {
                                 ? styles.badgeCompleted
                                 : isActive
                                   ? styles.badgeActive
-                                  : styles.badgePending
+                                  : isLocked
+                                    ? styles.badgeLocked
+                                    : styles.badgePending
                             }`}
                           >
                             {isPast ? (
@@ -216,7 +253,10 @@ const OnboardingDashboard: FC = () => {
                           >
                             {item.title}
                           </span>
-                          <span className={styles.stepDesc}>{item.desc}</span>
+                          <span className={styles.stepDesc}>
+                            {isLocked ? "🔒 " : ""}
+                            {item.desc}
+                          </span>
                         </div>
                       </a>
 
@@ -255,86 +295,101 @@ const OnboardingDashboard: FC = () => {
             </div>
           </aside>
 
-          {/* Main Hub Overview */}
+          {/* Main Hub Overview — or the mounted nested step screen */}
           <main className={styles.hubMainContent}>
-            {/* Active Step Highlight Banner */}
-            <div className={styles.hubHeaderBanner}>
-              <div className={styles.hubBannerLeft}>
-                <span className={styles.hubBannerKicker}>
-                  {activeStepConfig.badge}
-                </span>
-                <h3 className={styles.hubBannerTitle}>
-                  {activeStepConfig.title}
-                </h3>
-                <p className={styles.hubBannerDesc}>
-                  {activeStepConfig.detail}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => handleStepClick(activeStepConfig)}
-                className={styles.hubBannerBtn}
-              >
-                <span>{activeStepConfig.cta} ↗</span>
-              </button>
-            </div>
-
-            {/* 3 Step Stage Cards */}
-            <div className={styles.hubCardGrid}>
-              {stepItems.map((item) => {
-                const isCompleted = currentStep > item.step;
-                const isCurrent = currentStep === item.step;
-                const StepIcon = item.icon;
-
-                return (
-                  <div
-                    key={item.step}
-                    className={`${styles.hubStageCard} ${
-                      isCurrent ? styles.hubStageCardActive : ""
-                    }`}
-                  >
-                    <div className="flex flex-col gap-3">
-                      <div className={styles.hubStageHeader}>
-                        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
-                          <StepIcon size={20} color="currentColor" />
-                        </div>
-                        <span
-                          className={`${styles.hubStagePill} ${
-                            isCompleted
-                              ? styles.pillCompleted
-                              : isCurrent
-                                ? styles.pillActive
-                                : styles.pillPending
-                          }`}
-                        >
-                          {isCompleted
-                            ? "✓ Completed"
-                            : isCurrent
-                              ? "● In Progress"
-                              : "Upcoming"}
-                        </span>
-                      </div>
-
-                      <div className={styles.hubStageBody}>
-                        <h4 className={styles.hubStageTitle}>{item.title}</h4>
-                        <p className={styles.hubStageDesc}>{item.detail}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleStepClick(item)}
-                      className={`${styles.hubStageBtn} ${
-                        isCurrent ? styles.hubStageBtnActive : ""
-                      }`}
-                    >
-                      <span>{item.cta}</span>
-                      <RightArrowIcon size={14} color="currentColor" />
-                    </button>
+            {activeSegment ? (
+              <Outlet />
+            ) : (
+              <>
+                {/* Active Step Highlight Banner */}
+                <div className={styles.hubHeaderBanner}>
+                  <div className={styles.hubBannerLeft}>
+                    <span className={styles.hubBannerKicker}>
+                      {activeStepConfig.badge}
+                    </span>
+                    <h3 className={styles.hubBannerTitle}>
+                      {activeStepConfig.title}
+                    </h3>
+                    <p className={styles.hubBannerDesc}>
+                      {activeStepConfig.detail}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
+                  <button
+                    type="button"
+                    onClick={() => handleStepClick(activeStepConfig)}
+                    className={styles.hubBannerBtn}
+                  >
+                    <span>{activeStepConfig.cta} ↗</span>
+                  </button>
+                </div>
+
+                {/* 3 Step Stage Cards */}
+                <div className={styles.hubCardGrid}>
+                  {stepItems.map((item) => {
+                    const isLocked = item.step > currentStep;
+                    const isCompleted = currentStep > item.step;
+                    const isCurrent = currentStep === item.step;
+                    const StepIcon = item.icon;
+
+                    return (
+                      <div
+                        key={item.step}
+                        className={`${styles.hubStageCard} ${
+                          isCurrent ? styles.hubStageCardActive : ""
+                        }`}
+                      >
+                        <div className="flex flex-col gap-3">
+                          <div className={styles.hubStageHeader}>
+                            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                              <StepIcon size={20} color="currentColor" />
+                            </div>
+                            <span
+                              className={`${styles.hubStagePill} ${
+                                isCompleted
+                                  ? styles.pillCompleted
+                                  : isCurrent
+                                    ? styles.pillActive
+                                    : styles.pillPending
+                              }`}
+                            >
+                              {isCompleted
+                                ? "✓ Completed"
+                                : isCurrent
+                                  ? "● In Progress"
+                                  : "🔒 Upcoming"}
+                            </span>
+                          </div>
+
+                          <div className={styles.hubStageBody}>
+                            <h4 className={styles.hubStageTitle}>
+                              {item.title}
+                            </h4>
+                            <p className={styles.hubStageDesc}>{item.detail}</p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          disabled={isLocked}
+                          aria-disabled={isLocked || undefined}
+                          onClick={() => handleStepClick(item)}
+                          className={`${styles.hubStageBtn} ${
+                            isCurrent ? styles.hubStageBtnActive : ""
+                          } ${isLocked ? styles.hubStageBtnDisabled : ""}`}
+                        >
+                          <span>
+                            {isLocked ? "Complete previous step" : item.cta}
+                          </span>
+                          {!isLocked && (
+                            <RightArrowIcon size={14} color="currentColor" />
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </main>
         </div>
       </div>

@@ -101,6 +101,11 @@ export const useAuthStore = create<AuthStore>()(
               typeof user?.onboardingStep === "number"
                 ? user.onboardingStep
                 : 1,
+            dashboardOnboardingStep:
+              typeof user?.dashboardOnboardingStep === "number"
+                ? Math.min(user.dashboardOnboardingStep, 3)
+                : 1,
+            isDashboardOnboardingDone: Boolean(user?.isDashboardOnboardingDone),
             status: user?.status || "",
             mcpSlug:
               user?.mcpSlug ||
@@ -153,8 +158,18 @@ export const useAuthStore = create<AuthStore>()(
               console.warn("Could not persist onboarding step to server:", err),
             );
           }
+          // Canonical shape: steps never exceed 3; completion lives in the
+          // boolean. Legacy `onboardingStep` stays in sync for old clients.
+          const isDashDone = step >= 4;
           return {
-            user: state.user ? { ...state.user, onboardingStep: step } : null,
+            user: state.user
+              ? {
+                  ...state.user,
+                  onboardingStep: step,
+                  dashboardOnboardingStep: isDashDone ? 3 : step,
+                  isDashboardOnboardingDone: isDashDone,
+                }
+              : null,
           };
         });
       },

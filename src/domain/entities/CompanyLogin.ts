@@ -6,6 +6,8 @@ export interface User {
   isSignupOnboardingDone?: boolean;
   signupOnboardingStep?: number;
   onboardingStep?: number;
+  dashboardOnboardingStep?: number;
+  isDashboardOnboardingDone?: boolean;
   status?: string;
   mcpSlug?: string;
 }

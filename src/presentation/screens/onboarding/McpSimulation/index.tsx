@@ -1,11 +1,9 @@
 import { FC, useState, useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  RocketIcon,
-  RightArrowIcon,
-} from "../../../../assets/icons";
+import { RocketIcon, RightArrowIcon } from "../../../../assets/icons";
 import { useAuthStore, useThemeStore } from "../../../../hooks";
 import { showToast } from "../../../../utils/toast/toasts";
+import { isDashboardOnboardingDone } from "../../auth/Signup/Onboarding/onboardingStep";
 import styles from "../../../../styles/accountflow.module.css";
 import {
   runLiveMcpSimulation,
@@ -24,7 +22,7 @@ const McpSimulation: FC<McpSimulationProps> = ({
   const { apisList, user, setOnboardingStep } = useAuthStore();
 
   const isCompanyInDashboard = Boolean(
-    isEmbeddedInDashboard || ((user?.onboardingStep || 1) >= 4)
+    isEmbeddedInDashboard || isDashboardOnboardingDone(user),
   );
 
   // Connected APIs from store
@@ -79,8 +77,11 @@ const McpSimulation: FC<McpSimulationProps> = ({
   );
   const [isSimulating, setIsSimulating] = useState(false);
   const [hasRun, setHasRun] = useState(false);
-  const [activeTab, setActiveTab] = useState<"chatgpt" | "inspector">("chatgpt");
-  const [executionResult, setExecutionResult] = useState<McpExecutionResult | null>(null);
+  const [activeTab, setActiveTab] = useState<"chatgpt" | "inspector">(
+    "chatgpt",
+  );
+  const [executionResult, setExecutionResult] =
+    useState<McpExecutionResult | null>(null);
   const [copiedState, setCopiedState] = useState<string | null>(null);
 
   // Dynamic parameters state allowing users to adjust query parameters
@@ -166,7 +167,9 @@ const McpSimulation: FC<McpSimulationProps> = ({
 
   const handleContinue = () => {
     setOnboardingStep(2);
-    navigate({ to: "/plans" });
+    navigate({
+      to: isEmbeddedInDashboard ? "/onboarding_dashboard/plans" : "/plans",
+    });
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -205,14 +208,22 @@ const McpSimulation: FC<McpSimulationProps> = ({
           : undefined
       }
     >
-      <main className={styles.mcpMain} style={isCompanyInDashboard ? { padding: 0 } : undefined}>
-        <section className={styles.mcpHero} style={isCompanyInDashboard ? { marginBottom: "1.5rem" } : undefined}>
+      <main
+        className={styles.mcpMain}
+        style={isCompanyInDashboard ? { padding: 0 } : undefined}
+      >
+        <section
+          className={styles.mcpHero}
+          style={isCompanyInDashboard ? { marginBottom: "1.5rem" } : undefined}
+        >
           <div>
-            <h2 className={styles.title}>Model Context Protocol (MCP) Simulation</h2>
+            <h2 className={styles.title}>
+              Model Context Protocol (MCP) Simulation
+            </h2>
             <p className={styles.subtitle}>
               Execute genuine live requests through your Model Context Protocol
-              gateway. Test real API tools, inspect raw JSON-RPC 2.0 payloads, and
-              verify authentic ChatGPT responses without an iframe.
+              gateway. Test real API tools, inspect raw JSON-RPC 2.0 payloads,
+              and verify authentic ChatGPT responses without an iframe.
             </p>
           </div>
         </section>
@@ -407,7 +418,9 @@ const McpSimulation: FC<McpSimulationProps> = ({
               <div className={styles.trafficLights}>
                 <span style={{ background: "#c94f65" }} />
                 <span style={{ background: "#c98839" }} />
-                <span style={{ background: colors.BrandEmerald || "#10b981" }} />
+                <span
+                  style={{ background: colors.BrandEmerald || "#10b981" }}
+                />
               </div>
               <div
                 style={{
@@ -479,7 +492,8 @@ const McpSimulation: FC<McpSimulationProps> = ({
                         fontWeight: 700,
                       }}
                     >
-                      {executionResult.statusCode || (executionResult.success ? 200 : 500)}
+                      {executionResult.statusCode ||
+                        (executionResult.success ? 200 : 500)}
                     </span>
                   )}
                 </button>
@@ -586,15 +600,21 @@ const McpSimulation: FC<McpSimulationProps> = ({
                               ? `/mcp/${user?.mcpSlug || "gateway"}`
                               : currentTool.endpoint}
                           </code>
-                          . {executionResult.textMessage || "Here is the verified live response:"}
+                          .{" "}
+                          {executionResult.textMessage ||
+                            "Here is the verified live response:"}
                         </>
                       ) : (
                         <span style={{ color: "#ef4444" }}>
                           Tool call error:{" "}
-                          <strong>{executionResult.error || "The server could not process the request."}</strong>
+                          <strong>
+                            {executionResult.error ||
+                              "The server could not process the request."}
+                          </strong>
                           <br />
                           <small style={{ color: colors.TextBody }}>
-                            Check the &quot;MCP Inspector&quot; tab above to view the raw JSON-RPC response and diagnostics.
+                            Check the &quot;MCP Inspector&quot; tab above to
+                            view the raw JSON-RPC response and diagnostics.
                           </small>
                         </span>
                       )
@@ -602,7 +622,8 @@ const McpSimulation: FC<McpSimulationProps> = ({
                       <>
                         Ready to test. Click{" "}
                         <strong>&quot;Run Simulation&quot;</strong> above to
-                        dispatch a live query to the Model Context Protocol engine.
+                        dispatch a live query to the Model Context Protocol
+                        engine.
                       </>
                     )}
                   </p>
@@ -626,10 +647,9 @@ const McpSimulation: FC<McpSimulationProps> = ({
                             ? `${item.make} ${item.model}${item.variant ? ` (${item.variant})` : ""}`
                             : item.label || `Record #${i + 1}`);
 
-                        const price =
-                          item.dailyRate
-                            ? `$${item.dailyRate}/day`
-                            : item.price || item.cost || item.amount || "";
+                        const price = item.dailyRate
+                          ? `$${item.dailyRate}/day`
+                          : item.price || item.cost || item.amount || "";
 
                         const status =
                           item.status ||
@@ -1018,7 +1038,9 @@ const McpSimulation: FC<McpSimulationProps> = ({
                       color: "#10b981",
                     }}
                   >
-                    {executionResult ? `${executionResult.latencyMs} ms` : "---"}
+                    {executionResult
+                      ? `${executionResult.latencyMs} ms`
+                      : "---"}
                   </div>
                 </div>
 

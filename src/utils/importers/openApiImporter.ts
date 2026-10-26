@@ -409,6 +409,32 @@ export function parseOpenApiDocument(
         }
       }
 
+      // Auto-fill mock response for mutation methods (POST, PUT, PATCH, DELETE)
+      if (!sampleResponse && upperMethod !== "GET") {
+        sampleResponse = JSON.stringify(
+          upperMethod === "POST"
+            ? {
+                id: `res_${10000 + apis.length + 1}`,
+                success: true,
+                status: "created",
+                message: `${apiName} created successfully`,
+              }
+            : upperMethod === "DELETE"
+              ? {
+                  success: true,
+                  status: "deleted",
+                  message: `${apiName} deleted successfully`,
+                }
+              : {
+                  success: true,
+                  status: "updated",
+                  message: `${apiName} updated successfully`,
+                },
+          null,
+          2,
+        );
+      }
+
       // Auth Scheme
       let apiAuthType = globalAuthType;
       let apiAuthHeader = globalAuthHeader;
@@ -497,8 +523,8 @@ export function parseOpenApiDocument(
           opSecurity.length > 0,
         ),
         sampleResponse: sampleResponse || undefined,
-        isTested: Boolean(sampleResponse),
-        isAnalyzed: false,
+        isTested: Boolean(sampleResponse) || upperMethod !== "GET",
+        isAnalyzed: Boolean(sampleResponse) || upperMethod !== "GET",
       });
     }
   }

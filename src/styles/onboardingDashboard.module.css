@@ -289,6 +289,26 @@
   color: var(--app-cardcomplete-text);
 }
 
+/* Locked (upcoming) steps — visually disabled */
+.stepRowLocked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.stepRowLocked:hover {
+  background: transparent;
+}
+
+.stepRowLocked .stepLabel {
+  color: var(--app-text-body);
+}
+
+.badgeLocked {
+  background: var(--app-bg-elevated);
+  border: 2px dashed var(--app-border-secondary);
+  color: var(--app-text-body);
+}
+
 .stepConnectingLine {
   width: 2px;
   height: 34px;
@@ -1723,4 +1743,15 @@
 
 .hubStageBtnActive:hover {
   opacity: 0.92;
+}
+
+.hubStageBtnDisabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.hubStageBtnDisabled:hover {
+  background: var(--app-bg-elevated, var(--app-bg));
+  border-color: var(--app-border-secondary);
+  color: var(--app-text-primary);
 }

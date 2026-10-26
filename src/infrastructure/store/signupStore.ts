@@ -30,6 +30,31 @@ const getEndpointPath = (urlStr: string): string => {
   }
 };
 
+/**
+ * Maps raw save-failure messages onto user-friendly auto-save toasts.
+ * The signup draft always lives in localStorage (softtech-signup-store),
+ * so these failures never mean data loss — the DB sync can be retried
+ * after re-login or once connectivity is restored.
+ */
+const mapAutoSaveError = (raw: string): string => {
+  const msg = String(raw || "");
+  if (
+    /\b(401|403)\b/.test(msg) ||
+    /unauthor|forbidden|not authenticated|invalid or expired|refresh token|authentication required|permission to access or modify/i.test(
+      msg,
+    )
+  ) {
+    return "Your session expired. Please log in again — your changes are saved locally and won't be lost.";
+  }
+  if (/already been configured|contact support/i.test(msg)) {
+    return "Your API details are already saved. No data was lost — your latest changes are kept locally and will be synced.";
+  }
+  if (/failed to fetch|load failed|networkerror|unreachable/i.test(msg)) {
+    return "Couldn't reach the server. Your changes are saved locally and will sync automatically once the connection is back.";
+  }
+  return msg;
+};
+
 export function trimSampleJson(jsonStr: string, maxLen = 8000): string {
   if (!jsonStr || typeof jsonStr !== "string") return jsonStr;
   if (jsonStr.length <= maxLen) return jsonStr;
@@ -418,6 +443,237 @@ export const getSuggestionTemplate = (
   return { title: "", description: "" };
 };
 
+export const generateMockForApi = (
+  api: Partial<ApiConnection>,
+  idx: number = 0,
+): string => {
+  const method = (api.apiMethod || "GET").toUpperCase();
+  const name = (api.apiName || "").toLowerCase();
+  const endpoint = (api.apiEndpoint || "").toLowerCase();
+
+  // 1. Non-GET methods (Mutations)
+  if (method === "POST") {
+    if (name.includes("issue") || endpoint.includes("issue")) {
+      return JSON.stringify(
+        {
+          id: `${10000 + idx + 1}`,
+          key: `PROJECT-${idx + 1}`,
+          self: api.apiEndpoint || "https://api.example.com/rest/api/3/issue",
+          status: "created",
+          message: "Issue created successfully",
+        },
+        null,
+        2,
+      );
+    }
+    if (name.includes("comment")) {
+      return JSON.stringify(
+        {
+          id: `comment_${100 + idx}`,
+          body: "Comment created successfully",
+          created: new Date().toISOString(),
+        },
+        null,
+        2,
+      );
+    }
+    if (name.includes("attachment") || name.includes("upload")) {
+      return JSON.stringify(
+        [
+          {
+            id: `att_${100 + idx}`,
+            filename: "attachment.png",
+            size: 1024,
+            mimeType: "image/png",
+            created: new Date().toISOString(),
+          },
+        ],
+        null,
+        2,
+      );
+    }
+    if (name.includes("search") || endpoint.includes("search")) {
+      return JSON.stringify(
+        {
+          total: 1,
+          issues: [
+            {
+              id: `${10000 + idx + 1}`,
+              key: `PROJECT-${idx + 1}`,
+              fields: {
+                summary: "Sample matched task",
+                status: { name: "In Progress" },
+                priority: { name: "High" },
+              },
+            },
+          ],
+        },
+        null,
+        2,
+      );
+    }
+    return JSON.stringify(
+      {
+        id: `res_${10000 + idx + 1}`,
+        success: true,
+        status: "created",
+        message: `${api.apiName || "Resource"} created successfully`,
+        createdAt: new Date().toISOString(),
+      },
+      null,
+      2,
+    );
+  }
+
+  if (method === "PUT" || method === "PATCH") {
+    return JSON.stringify(
+      {
+        success: true,
+        status: "updated",
+        message: `${api.apiName || "Resource"} updated successfully`,
+        updatedAt: new Date().toISOString(),
+      },
+      null,
+      2,
+    );
+  }
+
+  if (method === "DELETE") {
+    return JSON.stringify(
+      {
+        success: true,
+        status: "deleted",
+        message: `${api.apiName || "Resource"} deleted successfully`,
+      },
+      null,
+      2,
+    );
+  }
+
+  // 2. GET methods: Context-aware mock payloads
+  if (
+    name.includes("user") ||
+    endpoint.includes("user") ||
+    name.includes("myself") ||
+    endpoint.includes("myself")
+  ) {
+    return JSON.stringify(
+      {
+        accountId: `usr_${100 + idx}`,
+        displayName: "John Doe",
+        emailAddress: "john.doe@example.com",
+        active: true,
+        timeZone: "America/New_York",
+      },
+      null,
+      2,
+    );
+  }
+
+  if (name.includes("project") || endpoint.includes("project")) {
+    return JSON.stringify(
+      [
+        {
+          id: `proj_${idx + 1}`,
+          key: "PROJ",
+          name: "Core Project",
+          projectTypeKey: "software",
+        },
+      ],
+      null,
+      2,
+    );
+  }
+
+  if (name.includes("comment") || endpoint.includes("comment")) {
+    return JSON.stringify(
+      {
+        total: 1,
+        comments: [
+          {
+            id: `comm_${idx + 1}`,
+            author: { displayName: "Demo User" },
+            body: "Sample discussion comment",
+            created: new Date().toISOString(),
+          },
+        ],
+      },
+      null,
+      2,
+    );
+  }
+
+  if (name.includes("transition") || endpoint.includes("transition")) {
+    return JSON.stringify(
+      {
+        transitions: [
+          { id: "11", name: "To Do" },
+          { id: "21", name: "In Progress" },
+          { id: "31", name: "Done" },
+        ],
+      },
+      null,
+      2,
+    );
+  }
+
+  if (name.includes("field") || endpoint.includes("field")) {
+    return JSON.stringify(
+      [
+        { id: "summary", name: "Summary", custom: false },
+        { id: "description", name: "Description", custom: false },
+        { id: "customfield_10010", name: "Sprint", custom: true },
+      ],
+      null,
+      2,
+    );
+  }
+
+  if (name.includes("worklog") || endpoint.includes("worklog")) {
+    return JSON.stringify(
+      {
+        total: 1,
+        worklogs: [
+          {
+            id: `wl_${idx + 1}`,
+            timeSpent: "2h 30m",
+            timeSpentSeconds: 9000,
+            started: new Date().toISOString(),
+          },
+        ],
+      },
+      null,
+      2,
+    );
+  }
+
+  const cleanName = (api.apiName || "item")
+    .replace(/^get\s*/i, "")
+    .replace(/\s+/g, "_")
+    .toLowerCase();
+  const pluralName = cleanName.endsWith("s") ? cleanName : `${cleanName}s`;
+
+  return JSON.stringify(
+    {
+      total: 1,
+      page: 1,
+      pageSize: 20,
+      [pluralName]: [
+        {
+          id: `${1000 + idx + 1}`,
+          key: `REC-${idx + 1}`,
+          title: api.apiName || "Sample Record",
+          name: api.apiName || "Sample Record",
+          status: "Active",
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    },
+    null,
+    2,
+  );
+};
+
 let autoSaveTimer: any = null;
 let stepThreeAutoSaveTimer: any = null;
 
@@ -685,6 +941,70 @@ export const useSignupStore = create<SignupStore>()(
           saveStatus: "idle",
           isStepTwoPending: false,
         }),
+
+      clearApiTestLogs: (apiId) =>
+        set((state) => {
+          const next = { ...state.apiTestStates };
+          delete next[apiId];
+          return { apiTestStates: next };
+        }),
+
+      clearAllApiTestLogs: () =>
+        set({ apiTestStates: {} }),
+
+      autoGenerateAllMockSamples: () => {
+        const { apisList } = get();
+        if (!apisList || apisList.length === 0) {
+          showToast("No APIs available to generate samples for.", "warning");
+          return;
+        }
+
+        let generatedCount = 0;
+        const updatedApis = apisList.map((api, idx) => {
+          const rawSample = api.sampleResponse || (api as any).sampleresponse;
+          if (
+            rawSample &&
+            typeof rawSample === "string" &&
+            rawSample.trim().length > 2 &&
+            api.isTested
+          ) {
+            return api;
+          }
+
+          const mockJson =
+            rawSample &&
+            typeof rawSample === "string" &&
+            rawSample.trim().length > 2
+              ? rawSample
+              : generateMockForApi(api, idx);
+
+          generatedCount++;
+          return {
+            ...api,
+            sampleResponse: mockJson,
+            isTested: true,
+            isAnalyzed: true,
+          };
+        });
+
+        const updatedStates = { ...get().apiTestStates };
+        updatedApis.forEach((api) => {
+          updatedStates[api.id] = {
+            status: "success",
+            sampleResponse: api.sampleResponse,
+            logs: `[${new Date().toLocaleTimeString()}] ✓ Mock sample response ready (${api.apiMethod}). Ready for AI schema processing.\n`,
+          };
+        });
+
+        set({ apisList: updatedApis, apiTestStates: updatedStates });
+        get().triggerAutoSave();
+        showToast(
+          generatedCount > 0
+            ? `⚡ Auto-generated sample responses for ${generatedCount} API${generatedCount > 1 ? "s" : ""}!`
+            : "All APIs already have verified sample responses!",
+          "success",
+        );
+      },
 
       handleTestApi: async (api) => {
         const apiId = api.id;
@@ -1226,50 +1546,47 @@ export const useSignupStore = create<SignupStore>()(
 
             const res = await saveCompanyApiDetails(companyId, apisPayload);
             if (res && res.success) {
-              set({ saveStatus: "saved" });
+              set((state) => {
+                const next = { ...state.apiTestStates };
+                let cleaned = false;
+                for (const id in next) {
+                  if (next[id]?.logs?.includes("Auto-Save Error")) {
+                    const newLogs = next[id].logs
+                      .split("\n")
+                      .filter((l: string) => !l.includes("Auto-Save Error"))
+                      .join("\n")
+                      .trim();
+                    if (!newLogs) {
+                      delete next[id];
+                    } else {
+                      next[id] = {
+                        ...next[id],
+                        logs: newLogs,
+                        status:
+                          next[id].status === "error" ? "idle" : next[id].status,
+                      };
+                    }
+                    cleaned = true;
+                  }
+                }
+                return cleaned
+                  ? { saveStatus: "saved", apiTestStates: next }
+                  : { saveStatus: "saved" };
+              });
               showToast("Auto saved successfully!", "success");
             } else {
               set({ saveStatus: "error" });
-              const errMsg = res?.message || "Failed to save API details.";
+              const errMsg = mapAutoSaveError(
+                res?.message || "Failed to save API details.",
+              );
               showToast(`Auto-save failed: ${errMsg}`, "error");
-              set((state) => {
-                const updatedStates = { ...state.apiTestStates };
-                apisList.forEach((api, idx) => {
-                  const apiNum = idx + 1;
-                  const apiLabel = api.apiName
-                    ? `API #${apiNum} ("${api.apiName}")`
-                    : `API #${apiNum}`;
-                  updatedStates[api.id] = {
-                    status: "error",
-                    logs:
-                      (updatedStates[api.id]?.logs || "") +
-                      `\n[${new Date().toLocaleTimeString()}] ❌ Auto-Save Error in ${apiLabel}: ${errMsg}\n`,
-                  };
-                });
-                return { apiTestStates: updatedStates };
-              });
             }
           } catch (err: any) {
             set({ saveStatus: "error" });
-            const errMsg =
-              err.message || "Network / Server Error during API auto-save.";
-            showToast(`Auto-save error: ${errMsg}`, "error");
-            set((state) => {
-              const updatedStates = { ...state.apiTestStates };
-              apisList.forEach((api, idx) => {
-                const apiNum = idx + 1;
-                const apiLabel = api.apiName
-                  ? `API #${apiNum} ("${api.apiName}")`
-                  : `API #${apiNum}`;
-                updatedStates[api.id] = {
-                  status: "error",
-                  logs:
-                    (updatedStates[api.id]?.logs || "") +
-                    `\n[${new Date().toLocaleTimeString()}] ❌ Auto-Save Error in ${apiLabel}: ${errMsg}\n`,
-                };
-              });
-              return { apiTestStates: updatedStates };
-            });
+            const errMsg = mapAutoSaveError(
+              err?.message || "Network / Server Error during API auto-save.",
+            );
+            showToast(`Auto-save failed: ${errMsg}`, "error");
           }
         }, 3000);
       },
@@ -1671,7 +1988,9 @@ export const useSignupStore = create<SignupStore>()(
             );
             navigate({ to: "/signup/onboarding-step2" });
           } else {
-            const rawErrorMsg = res?.message || "AI Schema Analysis Failed.";
+            const rawErrorMsg = mapAutoSaveError(
+              res?.message || "AI Schema Analysis Failed.",
+            );
             const toastMsg = `API Save Failed: ${rawErrorMsg}`;
             showToast(toastMsg, "error");
 
@@ -1846,7 +2165,11 @@ export const useSignupStore = create<SignupStore>()(
         stepOneData: state.stepOneData,
         lastSavedStepOneData: state.lastSavedStepOneData,
         apisList: state.apisList,
-        apiTestStates: state.apiTestStates,
+        apiTestStates: Object.fromEntries(
+          Object.entries(state.apiTestStates || {}).filter(
+            ([_, v]) => v?.status === "success",
+          ),
+        ),
         selectedLayout: state.selectedLayout,
         selectedThemeColor: state.selectedThemeColor,
         isSignupOnboardingDone: state.isSignupOnboardingDone,

@@ -2,6 +2,12 @@
 @import "tailwindcss";
 @source "../";
 
+/* The app theme is controlled by the `data-theme` attribute on <html>
+   (themeStore), not the OS `prefers-color-scheme`. Align Tailwind's `dark:`
+   variant with it so dark utilities follow the in-app toggle in both
+   directions (prevents dark-on-light rows when OS is dark but app is light). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @layer base {
   * {
     box-sizing: border-box;

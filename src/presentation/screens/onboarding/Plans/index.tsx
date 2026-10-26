@@ -1,4 +1,5 @@
 import { FC, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   CheckIcon,
   RightArrowIcon,
@@ -13,7 +14,10 @@ import PaymentResult from "../PaymentResult";
 
 type Step2View = "plans" | "checkout" | "payment-success";
 
-const Plans: FC = () => {
+const Plans: FC<{ isEmbeddedInDashboard?: boolean }> = ({
+  isEmbeddedInDashboard = false,
+}) => {
+  const navigate = useNavigate();
   const { colors } = useThemeStore();
   const { user, setOnboardingStep } = useAuthStore();
 
@@ -337,7 +341,12 @@ const Plans: FC = () => {
               <button
                 type="button"
                 className={styles.button}
-                onClick={() => setOnboardingStep(1)}
+                onClick={() => {
+                  setOnboardingStep(1);
+                  if (isEmbeddedInDashboard) {
+                    navigate({ to: "/onboarding_dashboard/mcp" });
+                  }
+                }}
                 style={{
                   width: "auto",
                   minHeight: "3rem",
@@ -398,6 +407,7 @@ const Plans: FC = () => {
             selectedPlan={selectedPlan}
             isAnnual={isAnnual}
             totalAmount={totalAmount}
+            isEmbeddedInDashboard={isEmbeddedInDashboard}
           />
         )}
       </main>

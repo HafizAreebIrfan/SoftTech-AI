@@ -6,6 +6,7 @@ import {
   updateCompanyApis,
   updateCompanyApiUiSettings,
   analyzeSingleCompanyApi,
+  getCompanyApi,
 } from "../../../../adapters/api/authApi";
 import type {
   ToolUiType,
@@ -52,6 +53,7 @@ export const ApiManagement: FC<ApiManagementProps> = ({
     updateApiUiConfig,
     updateApiDescription,
     MapsApiKey,
+    setAuth,
   } = useAuthStore();
 
   const [expandedApi, setExpandedApi] = useState<string | null>(null);
@@ -207,6 +209,22 @@ export const ApiManagement: FC<ApiManagementProps> = ({
       }
 
       return {
+        _id: (api as any)._id || (api.id && !api.id.startsWith("api-") ? api.id : undefined),
+        id: api.id,
+        mcpToolName: api.mcpToolName,
+        apiKey:
+          (api as any).apiKey ||
+          api.apiKeyVal ||
+          (api.apiAuthType === "API Key" ? api.apiCredentials : undefined),
+        bearerToken:
+          (api as any).bearerToken ||
+          api.bearerToken ||
+          (api.apiAuthType === "Bearer Token" ? api.apiCredentials : undefined),
+        basicUsername: api.basicUsername,
+        basicPassword: api.basicPassword,
+        oauthClientSecret:
+          (api as any).oauthClientSecret ||
+          (api.apiAuthType === "OAuth 2.0" ? api.apiCredentials : undefined),
         name: api.apiName,
         method: api.apiMethod,
         baseUrl,
@@ -406,6 +424,10 @@ export const ApiManagement: FC<ApiManagementProps> = ({
 
       if (res && res.success !== false) {
         markApiSaved(api.id);
+        if (unsavedApiIds.size <= 1) {
+          localStorage.removeItem(draftKey);
+          setUnsavedApiIds(new Set());
+        }
         showToast(
           `✓ "${api.apiName || "API"}" updated successfully in database!`,
           "success",
@@ -676,6 +698,39 @@ export const ApiManagement: FC<ApiManagementProps> = ({
     }
   };
 
+  const [isSyncingDb, setIsSyncingDb] = useState(false);
+
+  // Sync state directly from live MongoDB database
+  const syncFromDatabase = async (silent = false) => {
+    if (!user?.id) return;
+    setIsSyncingDb(true);
+    try {
+      const res = await getCompanyApi(user.id);
+      if (res?.data) {
+        setAuth(res.data);
+        localStorage.removeItem(draftKey);
+        setUnsavedApiIds(new Set());
+        if (!silent) {
+          showToast("✓ Synced fresh configuration directly from database!", "success");
+        }
+      }
+    } catch (err: any) {
+      if (!silent) {
+        showToast(err.message || "Failed to sync latest data from database.", "error");
+      }
+    } finally {
+      setIsSyncingDb(false);
+    }
+  };
+
+  // Discard local draft modifications and reload live database data
+  const handleDiscardDraft = async () => {
+    localStorage.removeItem(draftKey);
+    setUnsavedApiIds(new Set());
+    await syncFromDatabase(true);
+    showToast("Local draft discarded. Restored live database configuration.", "info");
+  };
+
   // Save All Configurations using the dedicated update route (No 409 conflict!)
   const handleSaveChanges = async () => {
     if (!user?.id) {
@@ -698,16 +753,8 @@ export const ApiManagement: FC<ApiManagementProps> = ({
 
       if (res && res.success !== false) {
         setUnsavedApiIds(new Set());
-        const cleanDraft: DraftState = {
-          isSaved: true,
-          unsavedIds: [],
-          apis: apisList,
-        };
-        try {
-          localStorage.setItem(draftKey, JSON.stringify(cleanDraft));
-        } catch {
-          // ignore
-        }
+        localStorage.removeItem(draftKey);
+        await syncFromDatabase(true);
         showToast(
           "All configurations saved to database successfully!",
           "success",
@@ -768,20 +815,29 @@ export const ApiManagement: FC<ApiManagementProps> = ({
         <div className={styles.unsavedBanner}>
           <div className="flex items-center gap-2">
             <span>
-              ⚠️ <strong>Mandatory Save Required:</strong> You have{" "}
+              ⚠️ <strong>Local Draft Changes:</strong> You have{" "}
               {unsavedApiIds.size} API change{unsavedApiIds.size > 1 ? "s" : ""}{" "}
-              saved in local draft only. Click 'Save Configuration' or 'Save
-              API' to persist to the database.
+              saved in local draft only. Click 'Save All to Database' or 'Discard Draft' to sync with database.
             </span>
           </div>
-          <button
-            type="button"
-            onClick={handleSaveChanges}
-            disabled={isSaving}
-            className={styles.saveBtn}
-          >
-            {isSaving ? "Saving..." : "Save All to Database"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className={styles.ghostBtn}
+              style={{ borderColor: "rgba(239, 68, 68, 0.4)", color: "#f87171" }}
+            >
+              Discard Draft & Load DB
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveChanges}
+              disabled={isSaving}
+              className={styles.saveBtn}
+            >
+              {isSaving ? "Saving..." : "Save All to Database"}
+            </button>
+          </div>
         </div>
       )}
 
@@ -817,6 +873,15 @@ export const ApiManagement: FC<ApiManagementProps> = ({
             </span>
           </div>
 
+          <button
+            type="button"
+            onClick={() => syncFromDatabase(false)}
+            disabled={isSyncingDb}
+            className={styles.ghostBtn}
+            title="Reload latest configuration directly from database"
+          >
+            {isSyncingDb ? "Syncing..." : "Sync from DB 🔄"}
+          </button>
           <button
             type="button"
             onClick={() => handleToggleAllApis(true)}

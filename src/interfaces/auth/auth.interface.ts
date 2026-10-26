@@ -23,6 +23,12 @@ export interface ApiConnection {
   apiEndpoint: string;
   apiAuthType: string;
   apiCredentials?: string;
+  basicUsername?: string;
+  basicPassword?: string;
+  bearerToken?: string;
+  apiKeyVal?: string;
+  apiKey?: string;
+  oauthClientSecret?: string;
   apiQueryParams?: string;
   apiCheckoutTemplate?: string;
   apiAuthHeader?: string;

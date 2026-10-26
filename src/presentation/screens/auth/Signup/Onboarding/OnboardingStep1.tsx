@@ -6,6 +6,7 @@ import { verifySession } from "../../../../../adapters/api/authApi";
 import {
   useSignupStore,
   parseJsonToRows,
+  generateMockForApi,
 } from "../../../../../infrastructure/store/signupStore";
 import { stepTwoSchema } from "../../../../../infrastructure/validation/signupSchemas";
 import { useSignupContext } from "../index";
@@ -90,6 +91,7 @@ const OnboardingStep1: FC = () => {
     handleAddApi,
     handleDeleteApi,
     apiTestStates,
+    clearApiTestLogs,
     isStepTwoPending,
     handleTestApi,
     handleSaveSampleResponse,
@@ -97,6 +99,7 @@ const OnboardingStep1: FC = () => {
     handleEndpointUrlChange,
     importApisBatch,
     stepOneData,
+    autoGenerateAllMockSamples,
   } = useSignupStore();
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -168,8 +171,10 @@ const OnboardingStep1: FC = () => {
 
   const allApisTestedSuccessfully = apisList.every(
     (api) =>
+      api.apiMethod !== "GET" || // Mutations (POST, PUT, DELETE, PATCH) never block progression!
       api.isTested ||
       api.isAnalyzed ||
+      Boolean(api.sampleResponse) ||
       apiTestStates[api.id]?.status === "success",
   );
 
@@ -181,7 +186,7 @@ const OnboardingStep1: FC = () => {
     if (isStepTwoPending) return "Saving...";
     if (anyApiHasError) return "Fix API Errors to Continue";
     if (!allApisTestedSuccessfully)
-      return "Upload Samples for All APIs to Continue";
+      return "Upload Samples or Click 'Auto-Fill' to Continue";
     return "Continue to Onboarding Step 2 →";
   };
 
@@ -196,7 +201,7 @@ const OnboardingStep1: FC = () => {
 
     if (!allApisTestedSuccessfully) {
       showToast(
-        "Please upload sample responses for all APIs before continuing.",
+        "Please upload sample responses for GET APIs or click 'Auto-Fill All Samples ⚡' to continue.",
         "warning",
       );
       return;
@@ -1954,11 +1959,89 @@ const OnboardingStep1: FC = () => {
                               alignItems: "center",
                               gap: "0.5rem",
                             }}
-                          />
+                          >
+                            {(apiTestStates[api.id]?.logs ||
+                              apiTestStates[api.id]?.status === "error") && (
+                              <button
+                                type="button"
+                                onClick={() => clearApiTestLogs(api.id)}
+                                title="Clear output and reset error status"
+                                className={`${styles.terminalActionBtn} ${styles.terminalActionBtnDanger}`}
+                              >
+                                <XMarkIcon size={12} />
+                                <span>Clear</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleTestApi(api)}
+                              disabled={apiTestStates[api.id]?.status === "loading"}
+                              title="Re-test this API connection"
+                              className={styles.terminalActionBtn}
+                            >
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  animation:
+                                    apiTestStates[api.id]?.status === "loading"
+                                      ? "spin 1s linear infinite"
+                                      : "none",
+                                }}
+                              >
+                                <RefreshIcon size={12} />
+                              </span>
+                              <span>
+                                {apiTestStates[api.id]?.status === "loading"
+                                  ? "Testing..."
+                                  : "Re-test"}
+                              </span>
+                            </button>
+                          </div>
                         </div>
 
                         {/* Terminal body */}
                         <div className={styles.terminalBody}>
+                          {apiTestStates[api.id]?.status === "error" &&
+                            !api.isTested &&
+                            !api.isAnalyzed && (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  padding: "0.4rem 0.65rem",
+                                  marginBottom: "0.5rem",
+                                  borderRadius: "0.375rem",
+                                  background:
+                                    colors.ErrorBadgeBg ||
+                                    "rgba(239, 68, 68, 0.12)",
+                                  border: `1px solid ${colors.ErrorBadgeBorder || "rgba(239, 68, 68, 0.25)"}`,
+                                  color: colors.ErrorBadgeText || "#ef4444",
+                                  fontSize: "0.75rem",
+                                }}
+                              >
+                                <span style={{ fontWeight: 600 }}>
+                                  Test / Connection Issue
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => clearApiTestLogs(api.id)}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: colors.ErrorBadgeText || "#ef4444",
+                                    cursor: "pointer",
+                                    fontWeight: 700,
+                                    fontSize: "0.75rem",
+                                    textDecoration: "underline",
+                                    padding: 0,
+                                  }}
+                                >
+                                  Dismiss
+                                </button>
+                              </div>
+                            )}
                           {apiTestStates[api.id]?.logs ? (
                             <pre
                               className={styles.logPre}
@@ -2051,6 +2134,27 @@ const OnboardingStep1: FC = () => {
               style={{ color: colors.TextHeading }}
             >
               Import OpenAPI / Postman
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={autoGenerateAllMockSamples}
+            className={styles.btnSecondaryImport}
+            title="Auto-fill realistic sample responses for all APIs with one click"
+            style={{
+              background: colors.BackgroundSecondary,
+              border: `1px solid ${colors.BrandIndigo}`,
+            }}
+          >
+            <div className={styles.secondaryImportIconBg}>
+              <SparklesIcon size={14} color={colors.BrandIndigo} />
+            </div>
+            <span
+              className={styles.addApiText}
+              style={{ color: colors.TextHeading }}
+            >
+              Auto-Fill All Samples ⚡
             </span>
           </button>
         </div>
@@ -2280,6 +2384,38 @@ const OnboardingStep1: FC = () => {
                 marginTop: "1rem",
               }}
             >
+              <button
+                type="button"
+                onClick={() => {
+                  const curApi = apisList.find(
+                    (a) => a.id === uploadingSampleApiId,
+                  );
+                  if (curApi) {
+                    const idx = apisList.findIndex(
+                      (a) => a.id === uploadingSampleApiId,
+                    );
+                    setSampleInputText(generateMockForApi(curApi, idx));
+                    showToast("Filled realistic mock response template!", "info");
+                  }
+                }}
+                style={{
+                  padding: "0.5rem 0.875rem",
+                  borderRadius: "0.375rem",
+                  background: colors.Background,
+                  color: colors.BrandIndigo,
+                  border: `1px solid ${colors.BrandIndigo}`,
+                  cursor: "pointer",
+                  fontSize: "0.8125rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  fontWeight: 500,
+                  marginRight: "auto",
+                }}
+              >
+                <SparklesIcon size={13} color={colors.BrandIndigo} />
+                <span>Auto-Fill Mock JSON</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setUploadingSampleApiId(null)}

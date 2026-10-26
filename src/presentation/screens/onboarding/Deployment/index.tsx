@@ -10,7 +10,9 @@ import { useAuthStore, useThemeStore } from "../../../../hooks";
 import { showToast } from "../../../../utils/toast/toasts";
 import styles from "../../../../styles/accountflow.module.css";
 
-const Deployment: FC = () => {
+const Deployment: FC<{ isEmbeddedInDashboard?: boolean }> = ({
+  isEmbeddedInDashboard = false,
+}) => {
   const navigate = useNavigate();
   const { colors } = useThemeStore();
   const { user, setOnboardingStep } = useAuthStore();
@@ -333,7 +335,12 @@ const Deployment: FC = () => {
             <button
               type="button"
               className={styles.button}
-              onClick={() => setOnboardingStep(2)}
+              onClick={() => {
+                setOnboardingStep(2);
+                if (isEmbeddedInDashboard) {
+                  navigate({ to: "/onboarding_dashboard/plans" });
+                }
+              }}
               style={{
                 width: "auto",
                 minHeight: "3rem",

@@ -102,7 +102,15 @@ const CompanyDetailScreen: React.FC<CompanyDetailScreenProps> = ({ companyId, on
   const joinedDate = formatDate(company?.registrationDate || company?.createdAt);
   const plan = company?.currentPlan || company?.plan || "Enterprise";
   const status = company?.status || "Active";
-  const onboardingStep = company?.onboardingStep ? `Step ${company.onboardingStep}` : "Complete";
+  // Canonical flags: isDashboardOnboardingDone=true → complete; otherwise
+  // show the current dashboard step (legacy `onboardingStep` as fallback).
+  const onboardingStatus = company?.isDashboardOnboardingDone
+    ? "Complete"
+    : company?.dashboardOnboardingStep
+      ? `Dashboard Step ${company.dashboardOnboardingStep}`
+      : company?.onboardingStep
+        ? `Step ${company.onboardingStep}`
+        : "Complete";
 
   const handleRoleToggle = async () => {
     if (!companyId) return;
@@ -123,7 +131,7 @@ const CompanyDetailScreen: React.FC<CompanyDetailScreenProps> = ({ companyId, on
     { label: "MCP Subdomain", value: subdomain, type: "link" },
     { label: "Joined Date", value: joinedDate, type: "text" },
     { label: "API Endpoints", value: `${apis.length} Total`, type: "text" },
-    { label: "Setup Status", value: onboardingStep, type: "status" },
+    { label: "Setup Status", value: onboardingStatus, type: "status" },
   ];
 
   return (

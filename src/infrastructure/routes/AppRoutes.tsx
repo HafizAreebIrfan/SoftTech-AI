@@ -6,6 +6,10 @@ import {
   Outlet,
   redirect,
 } from "@tanstack/react-router";
+import {
+  getDashboardOnboardingStep,
+  isDashboardOnboardingDone,
+} from "../../presentation/screens/auth/Signup/Onboarding/onboardingStep";
 import Homescreen from "../../presentation/screens/public/Marketing/home";
 import Login from "../../presentation/screens/auth/Login";
 import Signup from "../../presentation/screens/auth/Signup";
@@ -73,8 +77,9 @@ const getOnboardingRedirect = () => {
     return step === 2 ? "/signup/onboarding-step2" : "/signup/onboarding-step1";
   }
 
-  const isSecondDone = (user?.onboardingStep || 1) >= 4;
-  if (!isSecondDone) {
+  // Dashboard onboarding phase. The legacy `onboardingStep` must never be
+  // read as a dashboard step — it tracks the old signup-phase numbering.
+  if (!isDashboardOnboardingDone(user)) {
     return "/onboarding_dashboard";
   }
 
@@ -86,7 +91,11 @@ const authLayout = createRoute({
   id: "_auth", // Prefix with underscore for pathless layout
   component: AuthLayout,
   beforeLoad: () => {
-    const { isAuthenticated, user } = useAuthStore.getState();
+    const { isAuthenticated, authReady, user } = useAuthStore.getState();
+    // Wait for session verification on boot — a stale persisted
+    // `isAuthenticated` must never be treated as truth until verified,
+    // otherwise the login screen itself becomes unreachable (deadlock).
+    if (!authReady) return;
     if (isAuthenticated) {
       if (user?.role === "admin") {
         throw redirect({ to: "/admin-dashboard" });
@@ -164,9 +173,14 @@ const signupOnboardingStep1 = createRoute({
   component: OnboardingStep1,
   beforeLoad: () => {
     const { isAuthenticated, user } = useAuthStore.getState();
+    // Onboarding requires a live session — a persisted draft companyId alone
+    // (stale or from another user's browser) must never grant entry.
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
     const { companyId } = useSignupStore.getState();
     const effectiveCompanyId = companyId || user?.id;
-    if (!isAuthenticated && !effectiveCompanyId) {
+    if (!effectiveCompanyId) {
       throw redirect({ to: "/signup/company" });
     }
   },
@@ -180,6 +194,10 @@ const signupOnboardingStep2 = createRoute({
     const { companyId, apisList, signupOnboardingStep } =
       useSignupStore.getState();
     const { isAuthenticated, user } = useAuthStore.getState();
+    // Requires a live session — see signupOnboardingStep1.
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
     const effectiveCompanyId = companyId || user?.id;
     if (!isAuthenticated && !effectiveCompanyId) {
       throw redirect({ to: "/signup/company" });
@@ -211,6 +229,10 @@ const SignupOnboardingSuccess = createRoute({
     const { companyId, apisList, signupOnboardingStep } =
       useSignupStore.getState();
     const { isAuthenticated, user } = useAuthStore.getState();
+    // Requires a live session — see signupOnboardingStep1.
+    if (!isAuthenticated) {
+      throw redirect({ to: "/login" });
+    }
     const effectiveCompanyId = companyId || user?.id;
     if (!isAuthenticated && !effectiveCompanyId) {
       throw redirect({ to: "/signup/company" });
@@ -306,7 +328,46 @@ const onboardingDashboardRoute = createRoute({
           step === 2 ? "/signup/onboarding-step2" : "/signup/onboarding-step1",
       });
     }
+    // Fully onboarded companies have no business in the setup console.
+    if (isDashboardOnboardingDone(user)) {
+      throw redirect({ to: "/company-dashboard" });
+    }
   },
+});
+
+// Guard factory: a nested onboarding step may only open when every earlier
+// step is completed (onboardingStep persists to DB + localStorage).
+const requireOnboardingStep = (step: number) => () => {
+  const { isAuthenticated, user } = useAuthStore.getState();
+  if (!isAuthenticated) {
+    throw redirect({ to: "/login" });
+  }
+  if (getDashboardOnboardingStep(user) < step) {
+    throw redirect({ to: "/onboarding_dashboard" });
+  }
+};
+
+// Nested step screens render inside the onboarding dashboard (keeps the left
+// sidebar) while the URL becomes /onboarding_dashboard/mcp|plans|deploy.
+const onboardingDashboardMcpRoute = createRoute({
+  getParentRoute: () => onboardingDashboardRoute,
+  path: "mcp",
+  component: () => <McpSimulation isEmbeddedInDashboard />,
+  beforeLoad: requireOnboardingStep(1),
+});
+
+const onboardingDashboardPlansRoute = createRoute({
+  getParentRoute: () => onboardingDashboardRoute,
+  path: "plans",
+  component: () => <Plans isEmbeddedInDashboard />,
+  beforeLoad: requireOnboardingStep(2),
+});
+
+const onboardingDashboardDeployRoute = createRoute({
+  getParentRoute: () => onboardingDashboardRoute,
+  path: "deploy",
+  component: () => <Deployment isEmbeddedInDashboard />,
+  beforeLoad: requireOnboardingStep(3),
 });
 
 const mcpSimulationRoute = createRoute({
@@ -318,7 +379,7 @@ const mcpSimulationRoute = createRoute({
     if (!isAuthenticated) {
       throw redirect({ to: "/login" });
     }
-    if ((user?.onboardingStep || 1) >= 4) {
+    if (isDashboardOnboardingDone(user)) {
       throw redirect({
         href: "/company-dashboard?tab=simulation",
       } as any);
@@ -401,7 +462,7 @@ const upgradeRoute = createRoute({
     if (!isAuthenticated) {
       throw redirect({ to: "/login" });
     }
-    if ((user?.onboardingStep || 1) >= 4) {
+    if (isDashboardOnboardingDone(user)) {
       throw redirect({
         href: "/company-dashboard?tab=upgrade",
       } as any);
@@ -508,7 +569,11 @@ const routeTree = rootRoute.addChildren([
     SignupOnboardingSuccess,
   ]),
   integrationSuccessRoute,
-  onboardingDashboardRoute,
+  onboardingDashboardRoute.addChildren([
+    onboardingDashboardMcpRoute,
+    onboardingDashboardPlansRoute,
+    onboardingDashboardDeployRoute,
+  ]),
   mcpSimulationRoute,
   plans,
   checkout,

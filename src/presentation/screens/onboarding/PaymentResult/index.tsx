@@ -9,14 +9,24 @@ const PaymentResult: FC<{
   selectedPlan: string;
   isAnnual: boolean;
   totalAmount: number;
-}> = ({ selectedPlan, isAnnual, totalAmount }) => {
+  isEmbeddedInDashboard?: boolean;
+}> = ({
+  selectedPlan,
+  isAnnual,
+  totalAmount,
+  isEmbeddedInDashboard = false,
+}) => {
   const navigate = useNavigate();
   const { colors } = useThemeStore();
   const { setOnboardingStep } = useAuthStore();
   const handleContinueToDeployment = () => {
     setOnboardingStep(3);
     showToast("Plan activated! Moving to ChatGPT Deployment.", "success");
-    navigate({ to: "/deployment" });
+    navigate({
+      to: isEmbeddedInDashboard
+        ? "/onboarding_dashboard/deploy"
+        : "/deployment",
+    });
   };
 
   return (

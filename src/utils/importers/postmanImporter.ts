@@ -94,6 +94,8 @@ function extractPostmanAuth(
   apiAuthType: string;
   apiAuthHeader?: string;
   apiCredentials?: string;
+  basicUsername?: string;
+  basicPassword?: string;
   isUserOAuth?: boolean;
   oauthAuthorizationUrl?: string;
   oauthTokenUrl?: string;
@@ -189,6 +191,8 @@ function extractPostmanAuth(
       apiAuthType: "Basic Auth",
       apiAuthHeader: "Authorization",
       apiCredentials: user && pass ? `${user}:${pass}` : user,
+      basicUsername: user,
+      basicPassword: pass,
     };
   }
 
@@ -344,6 +348,32 @@ export function parsePostmanCollection(
         }
       }
 
+      // Auto-fill mock response for mutation methods (POST, PUT, PATCH, DELETE)
+      if (!sampleResponse && upperMethod !== "GET") {
+        sampleResponse = JSON.stringify(
+          upperMethod === "POST"
+            ? {
+                id: `res_${10000 + apis.length + 1}`,
+                success: true,
+                status: "created",
+                message: `${apiName} created successfully`,
+              }
+            : upperMethod === "DELETE"
+              ? {
+                  success: true,
+                  status: "deleted",
+                  message: `${apiName} deleted successfully`,
+                }
+              : {
+                  success: true,
+                  status: "updated",
+                  message: `${apiName} updated successfully`,
+                },
+          null,
+          2,
+        );
+      }
+
       // Auth details extraction
       const effectiveAuth = request.auth || collectionAuth;
       const authInfo = extractPostmanAuth(effectiveAuth, varMap);
@@ -371,6 +401,8 @@ export function parsePostmanCollection(
         apiAuthType: authInfo.apiAuthType,
         apiAuthHeader: authInfo.apiAuthHeader || "Authorization",
         apiCredentials: authInfo.apiCredentials || "",
+        basicUsername: authInfo.basicUsername || "",
+        basicPassword: authInfo.basicPassword || "",
         isUserOAuth: authInfo.isUserOAuth,
         oauthAuthorizationUrl: authInfo.oauthAuthorizationUrl,
         oauthTokenUrl: authInfo.oauthTokenUrl,
@@ -389,8 +421,8 @@ export function parsePostmanCollection(
           Boolean(request.auth),
         ),
         sampleResponse: sampleResponse || undefined,
-        isTested: Boolean(sampleResponse),
-        isAnalyzed: false,
+        isTested: Boolean(sampleResponse) || upperMethod !== "GET",
+        isAnalyzed: Boolean(sampleResponse) || upperMethod !== "GET",
       });
     }
   }

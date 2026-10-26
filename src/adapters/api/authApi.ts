@@ -16,9 +16,22 @@ export const login = async (credentials: LoginCredentials): Promise<any> => {
 
 export const registerCompanyInfo = async (
   payload: any,
-): Promise<{ success: boolean; message: string; data: SignupResonse; token?: string }> => {
+): Promise<{
+  success: boolean;
+  message: string;
+  data: SignupResonse;
+  token?: string;
+  refreshToken?: string;
+}> => {
   const url = `${isDev}/api/companies/registerstep`;
-  return post(url, payload, { skipRedirect: true });
+  const res = await post(url, payload, { skipRedirect: true });
+  if (typeof window !== "undefined" && res) {
+    const token = res.token || res.data?.token;
+    const refreshToken = res.refreshToken || res.data?.refreshToken;
+    if (token) localStorage.setItem("authToken", token);
+    if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+  }
+  return res;
 };
 
 export const saveCompanyApiDetails = async (
@@ -91,9 +104,34 @@ export const saveCompanyUiSelection = async (
   return post(url, { uiPreference }, { skipRedirect: true });
 };
 
-export const verifySession = async (): Promise<{ user?: User }> => {
+export const verifySession = async (): Promise<{
+  user?: User;
+  token?: string;
+  refreshToken?: string;
+}> => {
   const url = `${isDev}/api/company/login`;
-  return get(url, { skipRedirect: true, silent: true });
+  const res = await get(url, { skipRedirect: true, silent: true });
+  if (typeof window !== "undefined" && res) {
+    if (res.token) localStorage.setItem("authToken", res.token);
+    if (res.refreshToken) localStorage.setItem("refreshToken", res.refreshToken);
+  }
+  return res;
+};
+
+export const refreshAuthToken = async (): Promise<{
+  success: boolean;
+  token?: string;
+  refreshToken?: string;
+  user?: User;
+}> => {
+  const url = `${isDev}/api/company/refresh-token`;
+  const refreshToken = typeof window !== "undefined" ? localStorage.getItem("refreshToken") : null;
+  const res = await post(url, { refreshToken }, { skipRedirect: true, silent: true });
+  if (typeof window !== "undefined" && res) {
+    if (res.token) localStorage.setItem("authToken", res.token);
+    if (res.refreshToken) localStorage.setItem("refreshToken", res.refreshToken);
+  }
+  return res;
 };
 
 export const getCompanyApi = async (
@@ -104,6 +142,35 @@ export const getCompanyApi = async (
 };
 
 export const logout = async (): Promise<any> => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("refreshToken");
+    // Clear all cached local drafts
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith("softtech_apis_draft_") || key === "softtech_apis_draft_default")) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // Ignore storage errors
+    }
+    try {
+      const storeStr = localStorage.getItem("softtech-signup-store");
+      if (storeStr) {
+        const parsed = JSON.parse(storeStr);
+        if (parsed?.state) {
+          parsed.state.apiTestStates = {};
+          localStorage.setItem("softtech-signup-store", JSON.stringify(parsed));
+        }
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
   return post(`${isDev}/api/company/logout`, {}, { skipRedirect: true });
 };
 

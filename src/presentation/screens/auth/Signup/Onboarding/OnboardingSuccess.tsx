@@ -65,6 +65,22 @@ const OnboardingSuccess: FC = () => {
   } = useAuthStore();
 
   const effectiveCompanyId = companyId || user?.id;
+
+  // MCP tenant URL: https://{companyname}.softtech-ai-app.onrender.com
+  // Prefers the user's registered mcpSlug / subdomain, then falls back to a
+  // slugified company name.
+  const companySlugSource: string =
+    (user as any)?.mcpSlug ||
+    stepOneData?.subdomain ||
+    stepOneData?.companyName ||
+    (user as any)?.name ||
+    "";
+  const mcpServerUrl = `https://${
+    String(companySlugSource)
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "")
+      .replace(/^-+|-+$/g, "") || "company"
+  }.softtech-ai-app.onrender.com`;
   const isStep1Done =
     Boolean(effectiveCompanyId) &&
     (signupOnboardingStep >= 2 ||
@@ -854,17 +870,12 @@ const OnboardingSuccess: FC = () => {
                 <input
                   type="text"
                   readOnly
-                  value={`https://api.softtech.ai/mcp/${companyId || "sandbox"}/sse`}
+                  value={mcpServerUrl}
                   className={styles.urlInputText}
                 />
                 <button
                   type="button"
-                  onClick={() =>
-                    copyField(
-                      `https://api.softtech.ai/mcp/${companyId || "sandbox"}/sse`,
-                      "sseUrl",
-                    )
-                  }
+                  onClick={() => copyField(mcpServerUrl, "sseUrl")}
                   className={`${styles.copyBtn} ${copiedField === "sseUrl" ? styles.copyBtnCopied : ""}`}
                 >
                   {copiedField === "sseUrl" ? (

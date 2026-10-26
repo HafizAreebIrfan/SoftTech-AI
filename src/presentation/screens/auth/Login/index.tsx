@@ -1,6 +1,7 @@
-import { FC } from "react";
+import { FC, useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { login } from "../../../../adapters/api/authApi";
+import { isDashboardOnboardingDone } from "../Signup/Onboarding/onboardingStep";
 import {
   EmailIcon,
   EyeIcon,
@@ -38,6 +39,18 @@ const Login: FC = () => {
   const { email, password, showPassword, togglepasswordvis } = useLoginStore();
   const navigate = useNavigate();
 
+  // Shown when the user was force-logged-out by an expired session
+  // (httpClient adds `?session=expired` to the redirect).
+  const [sessionExpired, setSessionExpired] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("session") === "expired") {
+      setSessionExpired(true);
+      // Strip the marker so refreshing / navigating doesn't re-show it.
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const {
     mutate: loginMutate,
     isPending,
@@ -60,6 +73,11 @@ const Login: FC = () => {
           typeof rawUser?.onboardingStep === "number"
             ? rawUser.onboardingStep
             : 1,
+        dashboardOnboardingStep:
+          typeof rawUser?.dashboardOnboardingStep === "number"
+            ? Math.min(rawUser.dashboardOnboardingStep, 3)
+            : 1,
+        isDashboardOnboardingDone: Boolean(rawUser?.isDashboardOnboardingDone),
         status: rawUser?.status || "",
         apis: rawUser?.apis || [],
         uiPreference: rawUser?.uiPreference,
@@ -68,13 +86,18 @@ const Login: FC = () => {
       if (data?.token) {
         localStorage.setItem("authToken", data.token);
       }
+      if (data?.refreshToken) {
+        localStorage.setItem("refreshToken", data.refreshToken);
+      }
       setAuth(user);
 
-      // Synchronize signup store with user's company and onboarding status
+      // Synchronize signup store with user's company and onboarding status.
+      // syncFromUser also rehydrates companyId + registered APIs from the DB
+      // whenever localStorage failed to load or was cleared, so the signup
+      // onboarding wizard is never empty for a company that already
+      // registered its APIs.
       const signupStore = useSignupStore.getState();
-      signupStore.setCompanyId(user.id);
-      signupStore.setSignupOnboardingDone(user.isSignupOnboardingDone);
-      signupStore.setSignupOnboardingStep(user.signupOnboardingStep);
+      signupStore.syncFromUser?.(rawUser);
 
       showToast("Logged in successfully!", "success");
 
@@ -99,7 +122,7 @@ const Login: FC = () => {
 
       // 3. Second flow of onboarding not finished:
       // Redirect to onboarding dashboard instead of public dashboard
-      const isOnboardingDashboardFinished = user.onboardingStep >= 4;
+      const isOnboardingDashboardFinished = isDashboardOnboardingDone(user);
       if (!isOnboardingDashboardFinished) {
         navigate({
           to: "/onboarding_dashboard",
@@ -189,6 +212,20 @@ const Login: FC = () => {
             transition={{ duration: 0.5 }}
           >
             <div className="mb-8">
+              {sessionExpired && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 p-3 rounded-lg text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 flex items-center gap-2"
+                >
+                  <AlertCircleIcon size={18} color={"#b45309"} />
+                  <span>
+                    Your session has expired. Please log in again — your
+                    onboarding progress is saved locally and will be there after
+                    login.
+                  </span>
+                </motion.div>
+              )}
               <h1
                 className={`text-4xl font-bold mb-3 tracking-tight ${styles.loginTitle}`}
               >

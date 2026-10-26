@@ -131,6 +131,9 @@ export interface SignupStore {
       | "cards",
   ) => void;
   clearSignupProgress: () => void;
+  clearApiTestLogs: (apiId: string) => void;
+  clearAllApiTestLogs: () => void;
+  autoGenerateAllMockSamples: () => void;
   syncFromUser?: (user: any) => void;
   handleTestApi: (api: ApiConnection) => Promise<void>;
   handleSaveSampleResponse: (apiId: string, sampleJson: string) => void;
