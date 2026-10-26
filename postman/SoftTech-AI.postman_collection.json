@@ -1,0 +1,374 @@
+{
+  "info": {
+    "name": "SoftTech AI API",
+    "description": "Postman collection for the SoftTech AI company onboarding, authentication, admin dashboard, health, and MCP APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.request.headers.upsert({ key: 'Accept', value: 'application/json' });"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4100" },
+    { "key": "companyId", "value": "" },
+    { "key": "companyEmail", "value": "company@example.com" },
+    { "key": "companyPassword", "value": "Password123!" },
+    { "key": "mcpSlug", "value": "acme-company" },
+    { "key": "mcpSessionId", "value": "" },
+    { "key": "mcpToolName", "value": "call_weather" },
+    { "key": "otp", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET API health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/"
+          }
+        },
+        {
+          "name": "GET system health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/system-health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Company Onboarding",
+      "item": [
+        {
+          "name": "POST register company",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const company = body.data || body.company || body;",
+                  "if (company._id) pm.collectionVariables.set('companyId', company._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"companyName\": \"Acme Company\",\n  \"mcpSlug\": \"{{mcpSlug}}\",\n  \"industry\": \"Technology\",\n  \"email\": \"{{companyEmail}}\",\n  \"password\": \"{{companyPassword}}\",\n  \"phone\": \"+1-555-0100\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/companies/register"
+          }
+        },
+        {
+          "name": "GET all companies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/companies"
+          }
+        },
+        {
+          "name": "GET company by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/companies/{{companyId}}"
+          }
+        },
+        {
+          "name": "POST save API details",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apis\": [\n    {\n      \"name\": \"Weather\",\n      \"baseUrl\": \"https://api.example.com\",\n      \"endpoint\": \"/weather\",\n      \"method\": \"GET\",\n      \"authType\": \"NONE\",\n      \"apiQueryParams\": \"{\\\"city\\\":\\\"London\\\"}\",\n      \"apiHeaders\": \"{\\\"Accept\\\":\\\"application/json\\\"}\",\n      \"mcpToolName\": \"call_weather\",\n      \"mcpDescription\": \"Get current weather data\",\n      \"inputFieldMap\": {},\n      \"outputFieldMap\": {},\n      \"sampleResponse\": {}\n    }\n  ]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/companies/{{companyId}}/apidetails"
+          }
+        },
+        {
+          "name": "POST save UI selection",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uiPreference\": {\n    \"layout\": \"grid\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/companies/{{companyId}}/uiselection"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "POST company login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body._id) pm.collectionVariables.set('companyId', body._id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{companyEmail}}\",\n  \"password\": \"{{companyPassword}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/company/login"
+          }
+        },
+        {
+          "name": "GET current company session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/company/login"
+          }
+        },
+        {
+          "name": "POST company logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/company/logout"
+          }
+        },
+        {
+          "name": "POST request password reset OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{companyEmail}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/company/forgot-password"
+          }
+        },
+        {
+          "name": "POST request test password reset OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.otp) pm.collectionVariables.set('otp', body.otp);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{companyEmail}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/company/forgot-password/test"
+          }
+        },
+        {
+          "name": "POST reset company password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{companyEmail}}\",\n  \"otp\": \"{{otp}}\",\n  \"password\": \"NewPassword123!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/company/forgot-password/reset"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Dashboard",
+      "item": [
+        {
+          "name": "GET dashboard stats",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/dashboard/stats" }
+        },
+        {
+          "name": "GET dashboard summary",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/dashboard/summary" }
+        },
+        {
+          "name": "GET dashboard charts",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/dashboard/charts" }
+        },
+        {
+          "name": "GET top companies",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/dashboard/top-companies?limit=5" }
+        },
+        {
+          "name": "GET new companies",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/dashboard/new-companies?limit=5" }
+        },
+        {
+          "name": "GET all admin companies",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/dashboard/all-companies" }
+        },
+        {
+          "name": "GET admin company detail",
+          "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/api/admin/dashboard/{{companyId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Activity Logs",
+      "item": [
+        {
+          "name": "POST create activity log",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"manual_test\",\n  \"actorId\": \"{{companyId}}\",\n  \"actorType\": \"company\",\n  \"meta\": {\n    \"source\": \"postman\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/api/admin/logs"
+          }
+        },
+        {
+          "name": "GET activity logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/admin/logs?limit=20&page=1&actorId={{companyId}}&actorType=company"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MCP",
+      "item": [
+        {
+          "name": "POST MCP initialize",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sessionId = pm.response.headers.get('mcp-session-id');",
+                  "if (sessionId) pm.collectionVariables.set('mcpSessionId', sessionId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json, text/event-stream" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"2025-03-26\",\n    \"capabilities\": {},\n    \"clientInfo\": {\n      \"name\": \"postman\",\n      \"version\": \"1.0.0\"\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/mcp/{{mcpSlug}}"
+          }
+        },
+        {
+          "name": "POST MCP tools list",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json, text/event-stream" },
+              { "key": "mcp-session-id", "value": "{{mcpSessionId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 2,\n  \"method\": \"tools/list\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/mcp/{{mcpSlug}}"
+          }
+        },
+        {
+          "name": "POST MCP call tool",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "application/json, text/event-stream" },
+              { "key": "mcp-session-id", "value": "{{mcpSessionId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 3,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"{{mcpToolName}}\",\n    \"arguments\": {\n      \"query\": \"London\"\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{baseUrl}}/mcp/{{mcpSlug}}"
+          }
+        },
+        {
+          "name": "DELETE MCP session",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json, text/event-stream" },
+              { "key": "mcp-session-id", "value": "{{mcpSessionId}}" }
+            ],
+            "url": "{{baseUrl}}/mcp/{{mcpSlug}}"
+          }
+        }
+      ]
+    }
+  ]
+}
