@@ -8,6 +8,8 @@ import {
   getGeminiLogsController,
   analyzeSingleApiController,
   getCompanyController,
+  updateCompanyOnboardingStepController,
+  completeSignupOnboardingController,
 } from "../../../controllers/companies/register/companyregistercontroller";
 import {
   authenticateToken,
@@ -65,6 +67,19 @@ CompanyRoutes.post(
   authenticateToken,
   requireCompanyOrAdmin,
   saveCompanyApiDetailsController,
+);
+
+CompanyRoutes.post(
+  "/:companyId/onboarding-step",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  updateCompanyOnboardingStepController,
+);
+CompanyRoutes.post(
+  "/:companyId/complete-signup-onboarding",
+  authenticateToken,
+  requireCompanyOrAdmin,
+  completeSignupOnboardingController,
 );
 
 CompanyRoutes.post(

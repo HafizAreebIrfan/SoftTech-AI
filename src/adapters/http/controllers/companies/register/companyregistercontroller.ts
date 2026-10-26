@@ -9,7 +9,9 @@ import { saveCompanyUiSelection } from "../../../../../application/useCases/comp
 import { analyzeSingleApi } from "../../../../../application/useCases/company/register/analyzecompanyapi";
 import {
   authCookieOptions,
+  refreshCookieOptions,
   createToken,
+  createRefreshToken,
 } from "../../../../../infrastructure/middlewares/AuthMiddleware/authmiddleware";
 import { getAILogs } from "../../../../../infrastructure/mcp/schema_analyzer/ailogsgenerator";
 
@@ -24,7 +26,9 @@ export async function registerCompanyInfoController(
     const result = await registerCompanyInfo(companyRepository, req.body);
     const userRole = (result as any).role || "company";
     const token = createToken(result._id, userRole);
+    const refreshToken = createRefreshToken(result._id, userRole);
     res.cookie("jwt", token, authCookieOptions);
+    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
     const safeResult =
       typeof (result as any).toObject === "function"
@@ -35,9 +39,11 @@ export async function registerCompanyInfoController(
       success: true,
       message: "Company info saved successfully",
       token,
+      refreshToken,
       data: {
         ...safeResult,
         token,
+        refreshToken,
       },
     });
   } catch (error) {
@@ -163,7 +169,10 @@ export async function saveCompanyUiSelectionController(
 
     const logintoken = result ? createToken((result as any)._id) : undefined;
     if (result && logintoken) {
+      const userRole = (result as any).role || "company";
+      const refreshToken = createRefreshToken((result as any)._id, userRole);
       res.cookie("jwt", logintoken, authCookieOptions);
+      res.cookie("refreshToken", refreshToken, refreshCookieOptions);
     }
 
     res.status(200).json({
@@ -277,6 +286,123 @@ export async function updateCompanyApisController(
       success: true,
       message: "API details updated successfully",
       data: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateCompanyOnboardingStepController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const companyId = req.params.companyId as string;
+    const { step } = req.body;
+
+    if (!companyId) {
+      res.status(400).json({
+        success: false,
+        message: "Company ID is missing",
+      });
+      return;
+    }
+
+    const stepNumber = Number(step);
+    if (!Number.isFinite(stepNumber) || stepNumber < 1 || stepNumber > 10) {
+      res.status(422).json({
+        success: false,
+        message: "Invalid onboarding step. Must be a number between 1 and 10.",
+      });
+      return;
+    }
+
+    const existingCompany = await companyRepository.findById(companyId);
+    if (!existingCompany) {
+      res.status(404).json({
+        success: false,
+        message: "Company not found. Please complete signup first.",
+      });
+      return;
+    }
+
+    // The onboarding-step endpoint tracks the DASHBOARD onboarding
+    // (MCP -> Plans -> Deploy). Canonical shape:
+    //   step >= 4  -> dashboardOnboardingStep stays 3 + isDashboardOnboardingDone
+    //   step < 4   -> dashboardOnboardingStep = step (current unlocked step)
+    // The legacy `onboardingStep` field belongs to the signup phase (1
+    // registered / 2 APIs / 3 UI selection) and must not be overwritten here.
+    const dashboardDone = stepNumber >= 4;
+    const clampedStep = dashboardDone ? 3 : stepNumber;
+
+    const update: Record<string, unknown> = {
+      dashboardOnboardingStep: clampedStep,
+      updatedAt: new Date(),
+    };
+    if (dashboardDone) {
+      update.isDashboardOnboardingDone = true;
+      // Fully onboarded companies are no longer "onboarding" for admin stats.
+      update.onBoarding = false;
+    }
+
+    const updated = await companyRepository.update(companyId, update);
+
+    res.status(200).json({
+      success: true,
+      message: `Onboarding step saved (${stepNumber}).`,
+      data: updated
+        ? {
+            dashboardOnboardingStep: (updated as any).dashboardOnboardingStep,
+            isDashboardOnboardingDone: (updated as any).isDashboardOnboardingDone,
+          }
+        : null,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function completeSignupOnboardingController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const companyId = req.params.companyId as string;
+
+    if (!companyId) {
+      res.status(400).json({
+        success: false,
+        message: "Company ID is missing",
+      });
+      return;
+    }
+
+    const existingCompany = await companyRepository.findById(companyId);
+    if (!existingCompany) {
+      res.status(404).json({
+        success: false,
+        message: "Company not found. Please complete signup first.",
+      });
+      return;
+    }
+
+    const updated = await companyRepository.update(companyId, {
+      isSignupOnboardingDone: true,
+      signupOnboardingStep: 3,
+      updatedAt: new Date(),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Signup onboarding marked as complete.",
+      data: updated
+        ? {
+            isSignupOnboardingDone: (updated as any).isSignupOnboardingDone,
+            signupOnboardingStep: (updated as any).signupOnboardingStep,
+          }
+        : null,
     });
   } catch (error) {
     next(error);

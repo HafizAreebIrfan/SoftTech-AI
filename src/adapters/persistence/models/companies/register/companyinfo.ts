@@ -22,6 +22,11 @@ export interface ICompanyDocument extends Document, ICompanyForgotPassword {
   currentPlan?: string | null;
   onBoarding?: boolean;
   onboardingStep: number;
+  /** Dashboard onboarding step: 1=MCP, 2=Plans, 3=Deploy (never 4). */
+  dashboardOnboardingStep: number;
+  isSignupOnboardingDone: boolean;
+  signupOnboardingStep: number;
+  isDashboardOnboardingDone: boolean;
   status: string;
   createdAt: Date;
   updatedAt: Date;
@@ -54,6 +59,10 @@ const CompanySchema = new mongoose.Schema<ICompanyDocument, ICompanyModel>(
     currentPlan: { type: String, default: null },
     onBoarding: { type: Boolean, default: true },
     onboardingStep: { type: Number, default: 1 },
+    dashboardOnboardingStep: { type: Number, default: 1 },
+    isSignupOnboardingDone: { type: Boolean, default: false },
+    signupOnboardingStep: { type: Number, default: 1 },
+    isDashboardOnboardingDone: { type: Boolean, default: false },
     status: {
       type: String,
       default: "draft",

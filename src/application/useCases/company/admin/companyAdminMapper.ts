@@ -27,5 +27,7 @@ export function mapCompanyForAdmin(company: any) {
     totalSpent: company.totalSpent ?? 0,
     onBoarding: company.onBoarding ?? true,
     onboardingStep: company.onboardingStep ?? null,
+    dashboardOnboardingStep: company.dashboardOnboardingStep ?? null,
+    isDashboardOnboardingDone: company.isDashboardOnboardingDone ?? false,
   };
 }

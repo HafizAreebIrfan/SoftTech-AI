@@ -98,6 +98,11 @@ export interface ICompany {
   googleMapsApiKey?: string;
   onBoarding?: boolean;
   onboardingStep?: number;
+  /** Dashboard onboarding step: 1=MCP, 2=Plans, 3=Deploy (never 4). */
+  dashboardOnboardingStep?: number;
+  isSignupOnboardingDone?: boolean;
+  signupOnboardingStep?: number;
+  isDashboardOnboardingDone?: boolean;
   status?: CompanyStatus | string;
   plan?: string;
   currentPlan?: string | null;

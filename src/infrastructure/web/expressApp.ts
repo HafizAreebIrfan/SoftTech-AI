@@ -35,6 +35,7 @@ export const buildApp = (): Express => {
     cors({
       origin: env.CORS_ORIGINS,
       credentials: true,
+      exposedHeaders: ["x-new-token", "x-new-refresh-token"],
     }),
   );
 

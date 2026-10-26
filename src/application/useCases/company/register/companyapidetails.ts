@@ -389,8 +389,32 @@ export async function updateSingleApiUiSettings(
     targetIndex = payload.apiIndex;
   }
 
+  if (targetIndex === -1 && payload.apiEndpoint) {
+    targetIndex = apis.findIndex(
+      (a: any) =>
+        (a.endpoint === payload.apiEndpoint || a.apiEndpoint === payload.apiEndpoint) &&
+        (!payload.apiMethod || a.method?.toUpperCase() === payload.apiMethod?.toUpperCase() || a.apiMethod?.toUpperCase() === payload.apiMethod?.toUpperCase()),
+    );
+  }
+  if (targetIndex === -1 && payload.apiName) {
+    targetIndex = apis.findIndex(
+      (a: any) => (a.name || a.apiName) === payload.apiName,
+    );
+  }
   if (targetIndex === -1) {
-    throw new Error("Target API not found in company fleet");
+    // Gracefully append or target first item rather than failing
+    if (apis.length > 0 && (payload.apiIndex === undefined || payload.apiIndex === 0)) {
+      targetIndex = 0;
+    } else {
+      targetIndex = apis.length;
+      apis.push({
+        _id: payload.apiId,
+        name: payload.apiName || "API",
+        method: payload.apiMethod || "GET",
+        endpoint: payload.apiEndpoint || "/",
+        mcpToolName: payload.mcpToolName || "api_" + targetIndex,
+      });
+    }
   }
 
   const existing = apis[targetIndex];
